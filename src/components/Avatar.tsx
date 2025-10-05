@@ -95,7 +95,11 @@ export function Avatar({ url, playerId, onAvatarUpdate, size = 'md', editable = 
     <div className="relative w-full h-full rounded-lg overflow-hidden bg-gray-800/50">
       {isUploading ? (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50">
-          <div className="animate-spin rounded-full h-6 w-6 border-2 border-red-500 border-t-transparent" />
+          <img 
+  src="/icons/wmremove-transformed.jpg" 
+  alt="Chargement..." 
+  className="animate-spin rounded-full h-6 w-6 object-cover" 
+/>
         </div>
       ) : url ? (
         <div 
