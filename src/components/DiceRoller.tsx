@@ -57,7 +57,7 @@ const getDiceIcon = (sides: number) => {
     case 12: return '🔷'; // Dodécaèdre
     case 20: return (
       <img 
-        src="/icons/wmremove-transformed.jpg" 
+        src="/icons/wmremove-transformed.png" 
         alt="D20" 
         className="w-16 h-16 object-contain"
         style={{ backgroundColor: 'transparent' }}
