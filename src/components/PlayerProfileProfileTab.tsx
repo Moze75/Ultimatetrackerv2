@@ -201,7 +201,12 @@ function SectionContainer({ icon, title, children, subtitle, defaultOpen = true 
 function LoadingInline() {
   return (
     <div className="flex items-center gap-2 text-gray-400 text-sm">
-      <Loader2 className="animate-spin" size={16} /> Chargement…
+      <img 
+  src="/icons/wmremove-transformed.jpg" 
+  alt="Chargement..." 
+  className="animate-spin rounded-full object-cover"
+  style={{ width: '16px', height: '16px' }}
+/> Chargement…
     </div>
   );
 }
