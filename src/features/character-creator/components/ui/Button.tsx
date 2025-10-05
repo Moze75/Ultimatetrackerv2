@@ -38,7 +38,12 @@ export default function Button({
       disabled={disabled || loading}
       {...props}
     >
-      {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+      {loading && <img 
+  src="/icons/wmremove-transformed.jpg" 
+  alt="Chargement..." 
+  className="animate-spin rounded-full object-cover"
+  style={{ width: '16px', height: '16px' }}
+/>}
       {children}
     </button>
   );
