@@ -202,7 +202,7 @@ function LoadingInline() {
   return (
     <div className="flex items-center gap-2 text-gray-400 text-sm">
       <img 
-  src="/icons/wmremove-transformed.jpg" 
+  src="/icons/wmremove-transformed.png" 
   alt="Chargement..." 
   className="animate-spin rounded-full object-cover"
   style={{ width: '16px', height: '16px' }}
