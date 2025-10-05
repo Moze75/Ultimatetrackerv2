@@ -39,7 +39,7 @@ export default function Button({
       {...props}
     >
       {loading && <img 
-  src="/icons/wmremove-transformed.jpg" 
+  src="/icons/wmremove-transformed.png" 
   alt="Chargement..." 
   className="animate-spin rounded-full object-cover"
   style={{ width: '16px', height: '16px' }}
