@@ -193,32 +193,40 @@ function App() {
   }, []);
 
   // Écran de chargement des composants dynamiques
-  if (!LoginPage || !CharacterSelectionPage || !GamePage) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto" />
-          <p className="text-gray-400">Chargement des composants...</p>
-        </div>
+if (!LoginPage || !CharacterSelectionPage || !GamePage) {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center space-y-4">
+        <img 
+          src="/icons/wmremove-transformed.jpg" 
+          alt="Chargement..." 
+          className="animate-spin rounded-full h-12 w-12 mx-auto object-cover" 
+        />
+        <p className="text-gray-400">Chargement des composants...</p>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   // Écran de chargement initial (session)
-  if (loading) {
-    return (
-      <>
-        <Toaster position="top-right" />
-        <InstallPrompt />
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto" />
-            <p className="text-gray-400">Chargement en cours...</p>
-          </div>
+if (loading) {
+  return (
+    <>
+      <Toaster position="top-right" />
+      <InstallPrompt />
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <img 
+            src="/icons/wmremove-transformed.jpg" 
+            alt="Chargement..." 
+            className="animate-spin rounded-full h-12 w-12 mx-auto object-cover" 
+          />
+          <p className="text-gray-400">Chargement en cours...</p>
         </div>
-      </>
-    );
-  }
+      </div>
+    </>
+  );
+}
 
   // Rendu avec ordre correct:
   // 1) Pas de session -> Login
