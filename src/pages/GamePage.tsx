@@ -619,16 +619,20 @@ const FLICK_VELOCITY_PX_PER_MS = 0.35;
   };
 
   /* ---------------- Loading / Error ---------------- */
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto"></div>
-          <p className="text-gray-400">Chargement en cours...</p>
-        </div>
+if (loading) {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center space-y-4">
+        <img 
+          src="/icons/wmremove-transformed.jpg" 
+          alt="Chargement..." 
+          className="animate-spin rounded-full h-12 w-12 mx-auto object-cover" 
+        />
+        <p className="text-gray-400">Chargement en cours...</p>
       </div>
-    );
-  }
+    </div>
+  );
+}
   if (connectionError) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
