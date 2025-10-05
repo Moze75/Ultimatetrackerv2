@@ -59,7 +59,8 @@ const getDiceIcon = (sides: number) => {
       <img 
         src="/icons/wmremove-transformed.jpg" 
         alt="D20" 
-        className="w-16 h-16 object-cover rounded-lg"
+        className="w-16 h-16 object-contain"
+        style={{ backgroundColor: 'transparent' }}
       />
     ); // Votre icône personnalisée pour le D20
     case 100: return '💯'; // Dé de pourcentage
@@ -67,7 +68,8 @@ const getDiceIcon = (sides: number) => {
       <img 
         src="/icons/wmremove-transformed.jpg" 
         alt="Dé" 
-        className="w-16 h-16 object-cover rounded-lg"
+        className="w-16 h-16 object-contain"
+        style={{ backgroundColor: 'transparent' }}
       />
     ); // Utilise aussi votre icône par défaut
   }
