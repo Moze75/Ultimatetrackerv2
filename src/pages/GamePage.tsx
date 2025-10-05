@@ -624,7 +624,7 @@ if (loading) {
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center space-y-4">
         <img 
-          src="/icons/wmremove-transformed.jpg" 
+          src="/icons/wmremove-transformed.png" 
           alt="Chargement..." 
           className="animate-spin rounded-full h-12 w-12 mx-auto object-cover" 
         />
