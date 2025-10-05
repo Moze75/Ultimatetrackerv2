@@ -66,7 +66,7 @@ const getDiceIcon = (sides: number) => {
     case 100: return '💯'; // Dé de pourcentage
     default: return (
       <img 
-        src="/icons/wmremove-transformed.jpg" 
+        src="/icons/wmremove-transformed.png" 
         alt="Dé" 
         className="w-16 h-16 object-contain"
         style={{ backgroundColor: 'transparent' }}
