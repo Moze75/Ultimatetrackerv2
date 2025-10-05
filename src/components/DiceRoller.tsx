@@ -55,9 +55,21 @@ const getDiceIcon = (sides: number) => {
     case 8: return '🔸'; // Octaèdre
     case 10: return '🔟'; // Décaèdre
     case 12: return '🔷'; // Dodécaèdre
-    case 20: return '🎲'; // Icosaèdre
+    case 20: return (
+      <img 
+        src="/icons/wmremove-transformed.jpg" 
+        alt="D20" 
+        className="w-16 h-16 object-cover rounded-lg"
+      />
+    ); // Votre icône personnalisée pour le D20
     case 100: return '💯'; // Dé de pourcentage
-    default: return '🎲';
+    default: return (
+      <img 
+        src="/icons/wmremove-transformed.jpg" 
+        alt="Dé" 
+        className="w-16 h-16 object-cover rounded-lg"
+      />
+    ); // Utilise aussi votre icône par défaut
   }
 };
 
