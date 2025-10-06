@@ -182,7 +182,7 @@ if (isCheckingConnection) {
     <div className="min-h-screen flex items-center justify-center" style={bgStyle}>
       <div className="text-center">
         <img 
-          src="/icons/wmremove-transformed.jpg" 
+          src="/icons/wmremove-transformed.png" 
           alt="Chargement..." 
           className="animate-spin h-12 w-12 mx-auto mb-4 object-contain"
           style={{ backgroundColor: 'transparent' }}
