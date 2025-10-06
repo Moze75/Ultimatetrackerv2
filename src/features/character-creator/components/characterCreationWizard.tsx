@@ -602,14 +602,19 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
         }}
       />
 
-      {loadingEquipment && (
-        <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center">
-          <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto mb-4" />
-            <p className="text-gray-200">Préparation de l'équipement...</p>
-          </div>
-        </div>
-      )}
+{loadingEquipment && (
+  <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center">
+    <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 text-center">
+      <img 
+        src="/icons/wmremove-transformed.png" 
+        alt="Chargement..." 
+        className="animate-spin h-12 w-12 mx-auto mb-4 object-contain"
+        style={{ backgroundColor: 'transparent' }}
+      />
+      <p className="text-gray-200">Préparation de l'équipement...</p>
+    </div>
+  </div>
+)}
 
       <div className="container mx-auto px-4 pt-0 pb-8">
         <div className="max-w-6xl mx-auto">
