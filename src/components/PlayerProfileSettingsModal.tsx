@@ -641,11 +641,11 @@ export function PlayerProfileSettingsModal({
     }
     if (gestureRef.current !== 'horizontal') return;
 
-    const threshold = 64;
-    if (slideFrom === 'right' && dx < -threshold) {
+    const threshold = 50;
+    if (slideFrom === 'right' && dx > threshold) {
       e.preventDefault();
       smoothClose();
-    } else if (slideFrom === 'left' && dx > threshold) {
+    } else if (slideFrom === 'left' && dx < -threshold) {
       e.preventDefault();
       smoothClose();
     }
@@ -660,21 +660,20 @@ export function PlayerProfileSettingsModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-gray-900">
-      <div
-        className={`
-    absolute inset-0 overflow-y-auto
-    transform transition-transform duration-300 ease-out
-    ${enter ? 'translate-x-0' : initialTranslate}
-  `}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Paramètres du personnage"
-        style={{ touchAction: 'pan-y' }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
+    <div
+      className={`
+        fixed inset-0 z-50 bg-gray-900 overflow-y-auto
+        transform transition-transform duration-300 ease-out
+        ${enter ? 'translate-x-0' : initialTranslate}
+      `}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Paramètres du personnage"
+      style={{ touchAction: 'pan-y' }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
         <div className="max-w-4xl mx-auto p-4 py-8 space-y-6">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-2xl font-bold text-gray-100">Paramètres du personnage</h2>
@@ -1394,7 +1393,6 @@ export function PlayerProfileSettingsModal({
             onUpdate={onUpdate}
           />
         </div>
-      </div>
     </div>
   );
 }
