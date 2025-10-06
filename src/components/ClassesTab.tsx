@@ -324,7 +324,12 @@ function ClassesTab({
           <div className="text-center text-white/70 py-10">Sélectionne une classe pour afficher les aptitudes.</div>
         ) : loading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-violet-400" />
+            <img 
+              src="/icons/wmremove-transformed.png" 
+              alt="Chargement..." 
+              className="animate-spin h-10 w-10 object-contain"
+              style={{ backgroundColor: 'transparent' }}
+            />
           </div>
         ) : visible.length === 0 ? (
           <div className="text-center text-white/70 py-10">
