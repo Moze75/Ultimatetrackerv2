@@ -14,7 +14,7 @@ export const authService = {
       email,
       password,
       options: {
-        emailRedirectTo: 'https://superb-horse-1f4661.netlify.app'
+        emailRedirectTo: 'https://d-d-ultimate-tracker-7ni7.bolt.host'
       }
     });
   },
@@ -47,7 +47,7 @@ export const authService = {
     return await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: 'https://superb-horse-1f4661.netlify.app',
+        redirectTo: 'https://d-d-ultimate-tracker-7ni7.bolt.host',
         queryParams: {
           access_type: 'offline',
           prompt: 'consent',
