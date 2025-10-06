@@ -583,7 +583,12 @@ export function SpellbookModal({
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="text-center space-y-4">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto" />
+                  <img 
+                    src="/icons/wmremove-transformed.jpg" 
+                    alt="Chargement..." 
+                    className="animate-spin h-8 w-8 mx-auto object-contain"
+                    style={{ backgroundColor: 'transparent' }}
+                  />
                   <p className="text-gray-400">Chargement des sorts...</p>
                 </div>
               </div>
