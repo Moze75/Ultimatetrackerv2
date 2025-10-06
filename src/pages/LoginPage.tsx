@@ -177,16 +177,21 @@ export function LoginPage() {
     resetForm();
   };
 
-  if (isCheckingConnection) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={bgStyle}>
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500 mx-auto mb-4"></div>
-          <p className="text-gray-200">Vérification de la connexion...</p>
-        </div>
+if (isCheckingConnection) {
+  return (
+    <div className="min-h-screen flex items-center justify-center" style={bgStyle}>
+      <div className="text-center">
+        <img 
+          src="/icons/wmremove-transformed.jpg" 
+          alt="Chargement..." 
+          className="animate-spin h-12 w-12 mx-auto mb-4 object-contain"
+          style={{ backgroundColor: 'transparent' }}
+        />
+        <p className="text-gray-200">Vérification de la connexion...</p>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   if (signUpSuccess) {
     return (
