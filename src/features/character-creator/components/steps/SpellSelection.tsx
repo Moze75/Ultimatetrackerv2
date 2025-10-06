@@ -381,14 +381,19 @@ const SpellSelection: React.FC<SpellSelectionProps> = ({
         </p>
       </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center space-y-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto" />
-            <p className="text-gray-400">Chargement des sorts...</p>
-          </div>
-        </div>
-      ) : (
+{loading ? (
+  <div className="flex items-center justify-center py-12">
+    <div className="text-center space-y-4">
+      <img 
+        src="/icons/wmremove-transformed.png" 
+        alt="Chargement..." 
+        className="animate-spin h-8 w-8 mx-auto object-contain"
+        style={{ backgroundColor: 'transparent' }}
+      />
+      <p className="text-gray-400">Chargement des sorts...</p>
+    </div>
+  </div>
+) : (
         <>
           <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
