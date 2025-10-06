@@ -1025,7 +1025,7 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
  {loading ? (
   <div className="flex items-center justify-center py-6">
     <img 
-      src="/icons/wmremove-transformed.jpg" 
+      src="/icons/wmremove-transformed.png" 
       alt="Chargement..." 
       className="animate-spin h-5 w-5 object-contain"
       style={{ backgroundColor: 'transparent' }}
