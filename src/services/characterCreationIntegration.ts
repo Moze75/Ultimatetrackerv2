@@ -394,7 +394,7 @@ async function insertSpellsForCharacter(
     const playerSpellsLinks = allSpells.map(spell => ({
       player_id: playerId,
       spell_id: spell.id,
-      is_prepared: true,
+      is_prepared: false,
     }));
 
     const { error: linksError } = await supabase
