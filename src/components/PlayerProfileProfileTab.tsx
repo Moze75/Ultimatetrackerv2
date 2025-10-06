@@ -307,10 +307,17 @@ export default function PlayerProfileProfileTab({ player }: PlayerProfileProfile
   // Souviens-toi de la dernière valeur réellement enregistrée
   const lastSavedHistoryRef = useRef<string>(characterHistoryProp || '');
   const debounceRef = useRef<number | null>(null);
+  const playerIdRef = useRef<string>(player.id);
 
   useEffect(() => {
-    setHistoryDraft(characterHistoryProp || '');
-    lastSavedHistoryRef.current = characterHistoryProp || '';
+    // Ne réinitialiser que si le player.id a changé (changement de personnage)
+    if (playerIdRef.current !== player.id) {
+      playerIdRef.current = player.id;
+      setHistoryDraft(characterHistoryProp || '');
+      lastSavedHistoryRef.current = characterHistoryProp || '';
+      setSaveErr(null);
+      setSaveOk(false);
+    }
   }, [player.id, characterHistoryProp]);
 
   // Sauvegarde "comme dans la modale": update direct sans .single(), puis relecture pour confirmer
@@ -323,22 +330,29 @@ export default function PlayerProfileProfileTab({ player }: PlayerProfileProfile
     }
 
     // Log session et user pour diagnostiquer RLS si besoin
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      // eslint-disable-next-line no-console
-      console.debug('[ProfileTab] updateCharacterHistory: user/session', { userId: userData?.user?.id, playerId: id });
-    } catch {
-      // ignore
-    }
+    const { data: userData } = await supabase.auth.getUser();
+    console.log('[ProfileTab] Sauvegarde character_history', {
+      userId: userData?.user?.id,
+      playerId: id,
+      valueLength: nextValue?.length || 0,
+      valuePreview: nextValue ? nextValue.substring(0, 50) + '...' : '(vide)'
+    });
 
-    // 1) Update direct (comme handleSave de la modale)
-    const { error: upErr } = await supabase.from('players').update({ character_history: nextValue }).eq('id', id);
+    // 1) Update direct
+    const { error: upErr } = await supabase
+      .from('players')
+      .update({ character_history: nextValue })
+      .eq('id', id);
+
     if (upErr) {
       console.error('[ProfileTab] Supabase update error', upErr);
-      throw new Error(upErr.message || 'Erreur update');
+      throw new Error(`Erreur de sauvegarde: ${upErr.message}`);
     }
 
-    // 2) Relecture pour confirmer la persistance et diagnostiquer RLS
+    // 2) Attendre un court instant pour la propagation
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // 3) Relecture pour confirmer la persistance
     const { data: row, error: readErr } = await supabase
       .from('players')
       .select('id, user_id, character_history')
@@ -347,54 +361,81 @@ export default function PlayerProfileProfileTab({ player }: PlayerProfileProfile
 
     if (readErr) {
       console.error('[ProfileTab] Supabase read-back error', readErr);
-      throw new Error(readErr.message || 'Erreur de relecture post-update');
+      throw new Error(`Erreur de relecture: ${readErr.message}`);
     }
 
-    // eslint-disable-next-line no-console
-    console.debug('[ProfileTab] Read-back row after update', row);
+    console.log('[ProfileTab] Valeur après update', {
+      rowFound: !!row,
+      savedValue: row?.character_history?.substring(0, 50) + '...',
+      matches: row?.character_history === nextValue
+    });
 
     if (!row) {
-      throw new Error("Ligne introuvable après update (RLS ?). Vérifiez que user_id de la ligne correspond à auth.uid().");
+      throw new Error("Ligne introuvable après update. Vérifiez les permissions RLS.");
     }
 
     if (row.character_history !== nextValue) {
+      console.warn('[ProfileTab] Valeur sauvegardée ne correspond pas', {
+        expected: nextValue.substring(0, 50),
+        actual: row.character_history?.substring(0, 50)
+      });
       throw new Error(
-        "La valeur lue après update ne correspond pas à la valeur envoyée. RLS, trigger ou hook peut bloquer la modification."
+        "La valeur lue ne correspond pas à la valeur envoyée. Vérifiez les permissions."
       );
     }
 
+    console.log('[ProfileTab] ✅ Sauvegarde confirmée avec succès');
     return true;
   }
 
   const saveHistory = async () => {
     if (savingHistory) return;
-    if ((lastSavedHistoryRef.current || '') === (historyDraft || '')) return;
 
+    const trimmedDraft = (historyDraft || '').trim();
+    const trimmedSaved = (lastSavedHistoryRef.current || '').trim();
+
+    if (trimmedDraft === trimmedSaved) {
+      console.log('[ProfileTab] Pas de changement à sauvegarder');
+      return;
+    }
+
+    console.log('[ProfileTab] Démarrage de la sauvegarde...');
     setSavingHistory(true);
     setSaveErr(null);
     setSaveOk(false);
+
     try {
-      const ok = await updateHistoryOnServer(historyDraft);
-      if (!ok) throw new Error('Échec de la sauvegarde');
-      lastSavedHistoryRef.current = historyDraft;
+      await updateHistoryOnServer(trimmedDraft);
+      lastSavedHistoryRef.current = trimmedDraft;
       setSaveOk(true);
-      setTimeout(() => setSaveOk(false), 2000);
+      console.log('[ProfileTab] ✅ Sauvegarde réussie');
+      setTimeout(() => setSaveOk(false), 3000);
     } catch (e: any) {
-      const msg = e?.message || (typeof e === 'object' ? JSON.stringify(e) : String(e));
+      const msg = e?.message || String(e);
+      console.error('[ProfileTab] ❌ Échec de la sauvegarde:', msg);
       setSaveErr(msg);
+      // Conserver l'erreur visible plus longtemps
+      setTimeout(() => setSaveErr(null), 5000);
     } finally {
       setSavingHistory(false);
     }
   };
 
-  // Autosave debounced 1.2s après la dernière frappe
+  // Autosave debounced 1.5s après la dernière frappe
   useEffect(() => {
-    if ((lastSavedHistoryRef.current || '') === (historyDraft || '')) return;
+    const trimmedDraft = (historyDraft || '').trim();
+    const trimmedSaved = (lastSavedHistoryRef.current || '').trim();
+
+    if (trimmedDraft === trimmedSaved) return;
     if (savingHistory) return;
+
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
+
     debounceRef.current = window.setTimeout(() => {
+      console.log('[ProfileTab] Autosave déclenché après délai');
       saveHistory();
-    }, 1200);
+    }, 1500);
+
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
@@ -571,20 +612,26 @@ export default function PlayerProfileProfileTab({ player }: PlayerProfileProfile
             rows={8}
             placeholder="Décrivez l'histoire de votre personnage..."
           />
-          <div className="flex items-center gap-2 h-6">
+          <div className="flex items-center gap-2 min-h-[24px]">
             {savingHistory && (
-              <span className="text-gray-400 flex items-center gap-1 text-sm">
-                <Loader2 size={14} className="animate-spin" /> Sauvegarde…
+              <span className="text-amber-400 flex items-center gap-1 text-sm animate-pulse">
+                <Loader2 size={14} className="animate-spin" /> Sauvegarde en cours…
               </span>
             )}
-            {saveOk && (
-              <span className="text-emerald-400 flex items-center gap-1 text-sm">
-                <Check size={14} /> Enregistré
+            {saveOk && !savingHistory && (
+              <span className="text-emerald-400 flex items-center gap-1 text-sm font-medium">
+                <Check size={14} /> Sauvegardé avec succès
               </span>
             )}
-            {saveErr && (
-              <span className="text-red-400 text-sm" title={saveErr}>
-                {saveErr}
+            {saveErr && !savingHistory && (
+              <div className="text-red-400 text-sm max-w-md">
+                <span className="font-medium">Erreur: </span>
+                <span title={saveErr}>{saveErr}</span>
+              </div>
+            )}
+            {!savingHistory && !saveOk && !saveErr && ((historyDraft || '').trim() !== (lastSavedHistoryRef.current || '').trim()) && (
+              <span className="text-gray-500 text-xs italic">
+                Modifications non sauvegardées
               </span>
             )}
           </div>
