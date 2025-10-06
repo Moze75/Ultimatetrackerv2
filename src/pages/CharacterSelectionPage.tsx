@@ -325,13 +325,18 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
           backgroundAttachment: 'fixed',
         }}
       >
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto" />
-          <p className="text-gray-200">Chargement des personnages...</p>
-        </div>
-      </div>
-    );
-  }
+<div className="text-center space-y-4">
+  <img 
+    src="/icons/wmremove-transformed.jpg" 
+    alt="Chargement..." 
+    className="animate-spin h-12 w-12 mx-auto object-contain"
+    style={{ backgroundColor: 'transparent' }}
+  />
+  <p className="text-gray-200">Chargement des personnages...</p>
+</div>
+</div>
+);
+}
  
   return (
     <div
