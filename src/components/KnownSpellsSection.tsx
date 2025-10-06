@@ -1022,10 +1022,15 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
           </div>
         )}
 
-        {loading ? (
-          <div className="flex items-center justify-center py-6">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500" />
-          </div>
+ {loading ? (
+  <div className="flex items-center justify-center py-6">
+    <img 
+      src="/icons/wmremove-transformed.jpg" 
+      alt="Chargement..." 
+      className="animate-spin h-5 w-5 object-contain"
+      style={{ backgroundColor: 'transparent' }}
+    />
+  </div>
         ) : knownSpells.length === 0 && levelsToRender.length === 0 ? (
           <div className="text-center py-6">
             <BookOpen className="w-12 h-12 mx-auto mb-3 text-gray-600" />
