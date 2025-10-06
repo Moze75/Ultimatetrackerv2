@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, Book, Swords, Shield, Zap, Eye, Users, Heart, Search, Wand2, Target, Move } from 'lucide-react';
+import { ChevronDown, ChevronRight, Book, Swords, Shield, Target, Eye, Users, Heart, Search, Wand2, Clock, Move, Lightbulb, MessageCircle } from 'lucide-react';
 
 interface StandardAction {
   id: string;
@@ -13,168 +13,169 @@ interface StandardAction {
 const STANDARD_ACTIONS: StandardAction[] = [
   {
     id: 'attack',
-    name: 'Attaquer',
+    name: 'Attaque',
     icon: <Swords className="w-5 h-5 text-red-500" />,
-    description: 'Effectuer une attaque au corps à corps ou à distance.',
+    description: 'Effectuer un jet d\'Attaque avec une arme ou une attaque à mains nues.',
     rules: [
-      'Jet d\'attaque : 1d20 + modificateur de caractéristique + bonus de maîtrise (si maîtrisé)',
-      'Si le jet égale ou dépasse la CA de la cible, l\'attaque touche',
-      'Lancez les dégâts selon l\'arme utilisée',
-      'Critique naturel sur un 20 : doublez les dés de dégâts'
+      'S\'équiper et se déséquiper : Vous pouvez vous équiper ou vous déséquiper d\'une arme avant ou après l\'attaque',
+      'S\'équiper comprend le fait de sortir l\'arme du fourreau ou de la ramasser',
+      'Se déséquiper consiste à la rengainer, la ranger ou la laisser choir',
+      'Se déplacer entre les attaques : Si vous avez plusieurs attaques (Attaque supplémentaire), vous pouvez vous déplacer entre elles'
     ],
     actionType: 'Action'
   },
   {
     id: 'dash',
-    name: 'Foncer',
+    name: 'Pointe',
     icon: <Move className="w-5 h-5 text-blue-500" />,
-    description: 'Doubler sa vitesse de déplacement pour ce tour.',
+    description: 'Recevoir du déplacement supplémentaire pour ce tour.',
     rules: [
-      'Votre vitesse de déplacement est doublée pour ce tour',
-      'Vous pouvez vous déplacer d\'une distance supplémentaire égale à votre vitesse',
-      'Ne permet pas d\'effectuer d\'autres actions',
-      'Peut être combiné avec un mouvement normal'
+      'Cette augmentation est égale à votre Vitesse, après application d\'éventuels modificateurs',
+      'Exemple : avec une Vitesse de 9 m, vous pouvez vous déplacer de 18 m à votre tour',
+      'Exemple : avec une Vitesse de 9 m réduite à 4,50 m, vous pouvez vous déplacer de 9 m au total'
     ],
     actionType: 'Action'
   },
   {
     id: 'disengage',
-    name: 'Se désengager',
+    name: 'Désengagement',
     icon: <Shield className="w-5 h-5 text-green-500" />,
-    description: 'Éviter les attaques d\'opportunité en se déplaçant.',
+    description: 'Éviter les attaques d\'Opportunité en se déplaçant.',
     rules: [
-      'Votre mouvement ne provoque pas d\'attaques d\'opportunité pour le reste du tour',
-      'Vous pouvez vous éloigner d\'ennemis adjacents sans risque',
-      'Utile pour repositionner un personnage fragile',
-      'Ne vous donne pas de mouvement supplémentaire'
+      'Votre déplacement ne provoque pas d\'attaque d\'Opportunité jusqu\'à la fin du tour',
+      'Permet de s\'éloigner d\'ennemis adjacents sans risque',
+      'Utile pour repositionner un personnage sans subir d\'attaques'
     ],
     actionType: 'Action'
   },
   {
     id: 'dodge',
-    name: 'Esquiver',
+    name: 'Esquive',
     icon: <Target className="w-5 h-5 text-purple-500" />,
     description: 'Se concentrer entièrement sur l\'évitement des attaques.',
     rules: [
-      'Les jets d\'attaque contre vous ont le désavantage',
-      'Vous avez l\'avantage aux jets de sauvegarde de Dextérité',
-      'L\'effet dure jusqu\'au début de votre prochain tour',
-      'Vous ne pouvez pas effectuer d\'autres actions'
-    ],
-    actionType: 'Action'
-  },
-  {
-    id: 'grapple',
-    name: 'Empoigner',
-    icon: <Users className="w-5 h-5 text-orange-500" />,
-    description: 'Saisir et immobiliser une créature.',
-    rules: [
-      'Remplace une attaque si vous avez plusieurs attaques',
-      'Jet de Force (Athlétisme) contre Force (Athlétisme) ou Dextérité (Acrobaties) de la cible',
-      'En cas de succès, la cible est agrippée',
-      'La cible agrippée a une vitesse de 0 et ne peut pas se déplacer'
+      'Tout jet d\'attaque contre vous par un assaillant que vous voyez subit le Désavantage',
+      'Vos jets de sauvegarde de Dextérité ont l\'Avantage',
+      'L\'effet dure jusqu\'au début de votre tour suivant',
+      'Vous perdez ces bénéfices si vous subissez l\'état Neutralisé ou si votre Vitesse tombe à 0'
     ],
     actionType: 'Action'
   },
   {
     id: 'help',
-    name: 'Aider',
+    name: 'Soutien',
     icon: <Heart className="w-5 h-5 text-pink-500" />,
     description: 'Aider un allié dans une tâche ou une attaque.',
     rules: [
-      'Donnez l\'avantage au prochain jet de caractéristique d\'un allié',
-      'Ou donnez l\'avantage à la prochaine attaque d\'un allié contre une créature à 1,50 m de vous',
-      'L\'avantage est perdu s\'il n\'est pas utilisé avant votre prochain tour',
-      'Vous devez être capable d\'aider de manière significative'
+      'Assister un test : Choisissez une de vos maîtrises de compétence ou d\'outil. Un allié proche a l\'Avantage au prochain test avec cette compétence/outil',
+      'Ce bénéfice expire si l\'allié n\'y recourt pas avant le début de votre tour suivant',
+      'Assister une attaque : Vous distrayez un ennemi dans un rayon de 1,50 m',
+      'Cela octroie l\'Avantage au jet d\'attaque suivant d\'un allié contre cet ennemi (expire au début de votre tour suivant)'
     ],
     actionType: 'Action'
   },
   {
     id: 'hide',
-    name: 'Se cacher',
+    name: 'Furtivité',
     icon: <Eye className="w-5 h-5 text-gray-500" />,
-    description: 'Tenter de devenir invisible aux ennemis.',
+    description: 'Tenter de se cacher.',
     rules: [
-      'Jet de Dextérité (Discrétion) contre Sagesse (Perception) passive des ennemis',
-      'Vous devez être hors de vue pour tenter de vous cacher',
-      'En cas de succès, vous êtes caché jusqu\'à ce que vous soyez découvert',
-      'Attaquer depuis une cachette donne l\'avantage'
-    ],
-    actionType: 'Action'
-  },
-  {
-    id: 'improvise',
-    name: 'Improviser',
-    icon: <Zap className="w-5 h-5 text-yellow-500" />,
-    description: 'Effectuer une action créative non listée.',
-    rules: [
-      'Décrivez votre action au MJ',
-      'Le MJ détermine si c\'est possible et quel jet effectuer',
-      'Généralement un jet de caractéristique approprié',
-      'La difficulté dépend de la complexité de l\'action'
+      'Test de Dextérité (Discrétion) DD 15',
+      'Conditions : Visibilité nulle, derrière un Abri supérieur ou total, et ne pas être dans le champ de vision d\'un ennemi',
+      'En cas de réussite : vous bénéficiez de l\'état Invisible tant que vous êtes caché',
+      'Notez le résultat : c\'est le DD pour qu\'une créature vous localise (test de Sagesse Perception)',
+      'Vous cessez d\'être caché si : vous émettez un son plus fort qu\'un murmure, un ennemi vous détecte, vous attaquez ou lancez un sort à composante verbale'
     ],
     actionType: 'Action'
   },
   {
     id: 'influence',
-    name: 'Influencer',
-    icon: <Users className="w-5 h-5 text-indigo-500" />,
-    description: 'Tenter d\'influencer une créature par la parole.',
+    name: 'Influence',
+    icon: <MessageCircle className="w-5 h-5 text-indigo-500" />,
+    description: 'Inciter un monstre à faire quelque chose.',
     rules: [
-      'Jet de Charisme (Persuasion, Intimidation, ou Tromperie)',
-      'La difficulté dépend de l\'attitude de la cible',
-      'Peut changer l\'attitude d\'une créature hostile en neutre',
-      'Nécessite un langage commun ou des gestes compréhensibles'
-    ],
-    actionType: 'Action'
-  },
-  {
-    id: 'cast_spell',
-    name: 'Lancer un sort',
-    icon: <Wand2 className="w-5 h-5 text-purple-400" />,
-    description: 'Lancer un sort avec un temps d\'incantation d\'1 action.',
-    rules: [
-      'Consomme un emplacement de sort du niveau approprié',
-      'Respectez les composantes requises (V, S, M)',
-      'La cible doit être à portée du sort',
-      'Certains sorts nécessitent un jet d\'attaque ou de sauvegarde'
+      'Décrivez ou incarnez la façon dont vous communiquez avec le monstre',
+      'Disposé : Si la requête est en accord avec ses désirs, aucun test nécessaire, il accède',
+      'Réticent : Si la requête répugne au monstre ou est contraire à son alignement, il refuse',
+      'Hésitant : Test de caractéristique selon l\'interaction (Intimidation, Persuasion, Représentation, Tromperie, Dressage)',
+      'DD par défaut : 15 ou Intelligence du monstre (le plus élevé)',
+      'En cas d\'échec, attendez 24 heures avant de réessayer de la même manière'
     ],
     actionType: 'Action'
   },
   {
     id: 'ready',
-    name: 'Préparer',
-    icon: <Target className="w-5 h-5 text-cyan-500" />,
-    description: 'Préparer une action à déclencher selon une condition.',
+    name: 'Intention',
+    icon: <Clock className="w-5 h-5 text-cyan-500" />,
+    description: 'Attendre une circonstance particulière avant d\'agir.',
     rules: [
-      'Choisissez une action et une condition de déclenchement',
-      'Votre réaction se déclenche quand la condition est remplie',
-      'Si la condition ne se produit pas, l\'action est perdue',
-      'Vous pouvez vous déplacer jusqu\'à votre vitesse dans le cadre de l\'action préparée'
+      'Entreprenez cette action à votre tour pour jouer votre Réaction avant le début de votre tour suivant',
+      'Décidez quelles circonstances perceptibles déclencheront votre Réaction',
+      'Choisissez l\'action que vous entreprendrez ou un déplacement (max votre Vitesse)',
+      'Quand le déclencheur intervient, vous pouvez jouer votre Réaction juste après ou ne pas en tenir compte',
+      'Pour un sort : lancez-le normalement mais retenez les énergies (requiert Concentration jusqu\'au début de votre tour suivant)',
+      'Le sort doit avoir un temps d\'incantation d\'une action'
     ],
     actionType: 'Action'
   },
   {
     id: 'search',
-    name: 'Chercher',
+    name: 'Observation',
     icon: <Search className="w-5 h-5 text-teal-500" />,
-    description: 'Chercher activement quelque chose dans l\'environnement.',
+    description: 'Discerner ce qui n\'est pas évident.',
     rules: [
-      'Jet de Sagesse (Perception) ou Intelligence (Investigation)',
-      'Permet de trouver des objets cachés, des passages secrets, etc.',
-      'Plus efficace que la Perception passive',
-      'Le MJ peut révéler des détails supplémentaires'
+      'Test de Sagesse visant à discerner ce qui n\'est pas évident',
+      'La compétence dépend de ce que vous essayez de détecter',
+      'Permet de trouver des objets cachés, des passages secrets, des créatures dissimulées',
+      'Plus efficace que la Perception passive'
+    ],
+    actionType: 'Action'
+  },
+  {
+    id: 'study',
+    name: 'Étude',
+    icon: <Book className="w-5 h-5 text-amber-500" />,
+    description: 'Rechercher une information importante.',
+    rules: [
+      'Test d\'Intelligence en consultant votre mémoire, un livre, un indice ou une autre source de savoir',
+      'À la recherche d\'une information importante sur un sujet donné',
+      'Le MD détermine le DD et ce que vous découvrez'
+    ],
+    actionType: 'Action'
+  },
+  {
+    id: 'cast_spell',
+    name: 'Magie',
+    icon: <Wand2 className="w-5 h-5 text-purple-400" />,
+    description: 'Lancer un sort ou utiliser une aptitude magique.',
+    rules: [
+      'Lancez un sort dont le temps d\'incantation est de une action',
+      'Ou recourez à une aptitude ou un objet magique dont l\'activation se fait au prix de l\'action Magie',
+      'Pour un sort de 1 minute ou plus : entreprenez l\'action Magie à chaque tour et maintenez votre Concentration',
+      'Si la Concentration est rompue, le sort échoue mais vous ne dépensez aucun emplacement de sort'
+    ],
+    actionType: 'Action'
+  },
+  {
+    id: 'use_object',
+    name: 'Utilisation',
+    icon: <Lightbulb className="w-5 h-5 text-yellow-500" />,
+    description: 'Interagir avec un objet.',
+    rules: [
+      'Vous interagissez souvent avec un objet en faisant autre chose (ex: dégainer une épée lors d\'une Attaque)',
+      'Lorsqu\'un objet requiert spécifiquement votre action, vous entreprenez l\'action Utilisation',
+      'Exemples : activer un levier, ouvrir une porte coincée, boire une potion'
     ],
     actionType: 'Action'
   }
 ];
 
 interface StandardActionsSectionProps {
-  player: any;
-  onUpdate: (player: any) => void;
+  player?: any;
+  onUpdate?: (player: any) => void;
 }
 
-export function StandardActionsSection({ player, onUpdate }: StandardActionsSectionProps) {
+export default function StandardActionsSection({ player, onUpdate }: StandardActionsSectionProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedAction, setSelectedAction] = useState<StandardAction | null>(null);
 
@@ -183,14 +184,14 @@ export function StandardActionsSection({ player, onUpdate }: StandardActionsSect
   };
 
   return (
-    <div className="stat-card">
+    <div className="bg-gray-900/50 rounded-lg border border-gray-800 shadow-xl">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="w-full flex items-center justify-between p-4 hover:bg-gray-800/50 rounded-lg transition-colors"
       >
         <div className="flex items-center gap-3">
           <Book className="text-orange-500" size={20} />
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-100">Actions standard</h2>
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-100">Actions standard (2024)</h2>
         </div>
         {isExpanded ? (
           <ChevronDown className="text-gray-400" size={20} />
