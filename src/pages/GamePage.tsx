@@ -613,7 +613,7 @@ const FLICK_VELOCITY_PX_PER_MS = 0.35;
             onInventoryUpdate={setInventory}
           />
         );
-      case 'profile': return <PlayerProfileProfileTab player={currentPlayer} />;
+      case 'profile': return <PlayerProfileProfileTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
       default: return null;
     }
   };

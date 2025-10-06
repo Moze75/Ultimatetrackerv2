@@ -227,9 +227,10 @@ function NotFound({ label, value }: { label: string; value?: string | null }) {
 
 export interface PlayerProfileProfileTabProps {
   player: Player;
+  onUpdate?: (player: Player) => void;
 }
 
-export default function PlayerProfileProfileTab({ player }: PlayerProfileProfileTabProps) {
+export default function PlayerProfileProfileTab({ player, onUpdate }: PlayerProfileProfileTabProps) {
   // Sélections
   const race = player.race || '';
   const historique = (player.background as string) || '';
@@ -385,6 +386,14 @@ export default function PlayerProfileProfileTab({ player }: PlayerProfileProfile
     }
 
     console.log('[ProfileTab] ✅ Sauvegarde confirmée avec succès');
+
+    // Notifier le parent du changement si le callback est fourni
+    if (onUpdate) {
+      const updatedPlayer = { ...player, character_history: nextValue };
+      onUpdate(updatedPlayer);
+      console.log('[ProfileTab] Parent notifié de la mise à jour');
+    }
+
     return true;
   }
 
