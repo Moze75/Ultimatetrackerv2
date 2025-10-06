@@ -604,16 +604,20 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
         onComplete={handleCreatorComplete}
       />
 
-      {/* Overlay de chargement Phase 2 : Création du personnage */}
-      {creating && (
-        <div className="fixed inset-0 z-[150] bg-black/90 flex items-center justify-center">
-          <div className="bg-gray-900 border border-gray-700 rounded-lg p-8 text-center max-w-md">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-red-500 mx-auto mb-6" />
-            <p className="text-xl text-gray-200 mb-2">Création du personnage...</p>
-            <p className="text-sm text-gray-400">Veuillez patienter</p>
-          </div>
-        </div>
-      )}
+{creating && (
+  <div className="fixed inset-0 z-[150] bg-black/90 flex items-center justify-center">
+    <div className="bg-gray-900 border border-gray-700 rounded-lg p-8 text-center max-w-md">
+      <img 
+        src="/icons/wmremove-transformed.png" 
+        alt="Chargement..." 
+        className="animate-spin h-16 w-16 mx-auto mb-6 object-contain"
+        style={{ backgroundColor: 'transparent' }}
+      />
+      <p className="text-xl text-gray-200 mb-2">Création du personnage...</p>
+      <p className="text-sm text-gray-400">Veuillez patienter</p>
+    </div>
+  </div>
+)}
 
       {/* Modal de bienvenue */}
       <WelcomeModal
