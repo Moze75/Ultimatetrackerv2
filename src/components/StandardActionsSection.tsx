@@ -184,7 +184,7 @@ export function StandardActionsSection({ player, onUpdate }: StandardActionsSect
   };
 
   return (
-    <div className="bg-gray-900/50 rounded-lg border border-gray-800 shadow-xl">
+    <div className="stat-card">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="w-full flex items-center justify-between p-4 hover:bg-gray-800/50 rounded-lg transition-colors"
