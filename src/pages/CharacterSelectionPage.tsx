@@ -327,7 +327,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
       >
 <div className="text-center space-y-4">
   <img 
-    src="/icons/wmremove-transformed.jpg" 
+    src="/icons/wmremove-transformed.png" 
     alt="Chargement..." 
     className="animate-spin h-12 w-12 mx-auto object-contain"
     style={{ backgroundColor: 'transparent' }}
