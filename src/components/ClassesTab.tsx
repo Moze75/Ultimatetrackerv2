@@ -49,7 +49,6 @@ function ClassesTab({
   sections: preloadedSections,
 }: Props) {
 
-  /* -------------------------------- State -------------------------------- */
   const [sections, setSections] = useState<AbilitySection[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -58,11 +57,9 @@ function ClassesTab({
 
   const [classResources, setClassResources] = useState<ClassResources | null | undefined>(player?.class_resources);
 
-  // Ripple plein écran
   const [screenRipple, setScreenRipple] = useState<{ x: number; y: number; key: number } | null>(null);
   const triggerScreenRippleFromEvent = createScreenRippleHandler(setScreenRipple);
 
-  // Header repliable
   const [classHeaderOpen, setClassHeaderOpen] = useState(true);
 
   const rawClass = (player?.class ?? playerClass ?? className ?? '').trim();
@@ -75,12 +72,10 @@ function ClassesTab({
   const finalLevel = Math.max(1, Number(finalLevelRaw) || 1);
   const characterId = player?.id ?? null;
 
-  /* ----------------------------- Sync resources ----------------------------- */
   useEffect(() => {
     setClassResources(player?.class_resources);
   }, [player?.class_resources, player?.id]);
 
-  /* ---------------------- Charger sections (aptitudes) ---------------------- */
   useEffect(() => {
     let mounted = true;
 
@@ -123,7 +118,6 @@ function ClassesTab({
     return () => { mounted = false; };
   }, [preloadedSections, rawClass, rawSubclass, finalLevel]);
 
-  /* ----------- Charger les états cochés (cases des aptitudes) --------------- */
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -147,7 +141,6 @@ function ClassesTab({
     return () => { mounted = false; };
   }, [characterId]);
 
-  /* ------- Auto-init silencieuse des ressources si manquantes --------------- */
   const initKeyRef = useRef<string | null>(null);
   useEffect(() => {
     (async () => {
@@ -187,10 +180,8 @@ function ClassesTab({
         console.error('[ClassesTab] auto-init class_resources error:', e);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [player?.id, displayClass, finalLevel, classResources, player]);
+  }, [player?.id, displayClass, finalLevel, classResources, player, onUpdate]);
 
-  /* ----------- Barde : cap dynamique sur inspiration bardique --------------- */
   const bardCapRef = useRef<string | null>(null);
   useEffect(() => {
     (async () => {
@@ -203,8 +194,6 @@ function ClassesTab({
 
       const key = `${player.id}:${cap}:${total ?? 'u'}:${used}`;
       if (bardCapRef.current === key) return;
-
-      if (typeof cap !== 'number') return;
 
       if (typeof total !== 'number' || total !== cap || used > cap) {
         const next = {
@@ -246,7 +235,6 @@ function ClassesTab({
     player,
   ]);
 
-  /* ---------------------------- Toggle aptitude ----------------------------- */
   async function handleToggle(featureKey: string, checked: boolean) {
     setCheckedMap(prev => {
       const next = new Map(prev);
@@ -271,7 +259,6 @@ function ClassesTab({
     firstMountRef.current = false;
   }, []);
 
-  /* ----------------------- Sections visibles par niveau --------------------- */
   const visible = useMemo(
     () =>
       sections
@@ -283,12 +270,11 @@ function ClassesTab({
   const hasClass = !!displayClass;
   const hasSubclass = !!displaySubclass;
 
-  /* ================================= Render ================================ */
   return (
     <>
       <div className="space-y-4">
 
-        {/* HEADER REPLIABLE AVEC STYLE GRADIENT D'ORIGINE */}
+        {/* HEADER REPLIABLE AVEC SON GRADIENT D'ORIGINE */}
         <div
           role="button"
           tabIndex={0}
@@ -325,33 +311,33 @@ function ClassesTab({
           </div>
         </div>
 
-        {/* CONTENU REPLIABLE */}
         {classHeaderOpen && (
           <div className="space-y-6">
-
             {!hasClass && (
               <div className="text-center text-white/70 py-6">
                 Sélectionne une classe pour afficher les aptitudes.
               </div>
             )}
 
-            {/* RESSOURCES DE CLASSE */}
+            {/* RESSOURCES DE CLASSE – wrapper supprimant tout header interne résiduel */}
             {hasClass && (
               <div className="space-y-3">
-                <div className="flex items-center gap-2 pl-1">
+                <div className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-yellow-400" />
-                  <span className="text-sm font-medium text-gray-300">
+                  <span className="text-base font-semibold text-gray-200">
                     Ressources de classe
                   </span>
                 </div>
-                <ClassResourcesCard
-                  playerClass={displayClass}
-                  resources={classResources || undefined}
-                  onUpdateResource={updateClassResource}
-                  player={player ?? undefined}
-                  level={finalLevel}
-                  onPulseScreen={triggerScreenRippleFromEvent}
-                />
+                <div className="[&_.stat-header]:hidden">
+                  <ClassResourcesCard
+                    playerClass={displayClass}
+                    resources={classResources || undefined}
+                    onUpdateResource={updateClassResource}
+                    player={player ?? undefined}
+                    level={finalLevel}
+                    onPulseScreen={triggerScreenRippleFromEvent}
+                  />
+                </div>
               </div>
             )}
 
@@ -377,9 +363,9 @@ function ClassesTab({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2 pl-1">
+                  <div className="flex items-center gap-2">
                     <ListChecks className="w-4 h-4 text-sky-500" />
-                    <span className="text-sm font-medium text-gray-300">
+                    <span className="text-base font-semibold text-gray-200">
                       Compétences de classe et sous-classe
                     </span>
                   </div>
@@ -408,10 +394,9 @@ function ClassesTab({
         )}
       </div>
 
-      {/* Ripple overlay */}
       {screenRipple && (
         <ScreenRipple
-            key={screenRipple.key}
+          key={screenRipple.key}
           x={screenRipple.x}
           y={screenRipple.y}
           onDone={() => setScreenRipple(null)}
@@ -420,7 +405,6 @@ function ClassesTab({
     </>
   );
 
-  /* ================================ Handlers ================================ */
   async function updateClassResource(
     resource: keyof ClassResources,
     value: ClassResources[keyof ClassResources]
