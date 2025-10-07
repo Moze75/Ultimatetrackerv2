@@ -1,27 +1,31 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ListChecks, Sparkles, ChevronDown, ChevronRight } from 'lucide-react';
+import {
+  ListChecks,
+  Sparkles,
+  ChevronDown,
+  ChevronRight,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
-import type { ClassResources, Player } from '../types/dnd';
-import { loadFeatureChecks, upsertFeatureCheck } from '../services/featureChecks';
-import type { MarkdownCtx } from '../lib/markdownLite';
 
-import { 
-  AbilitySection, 
-  PlayerLike, 
-  canonicalClass, 
-  sentenceCase, 
+import type { ClassResources, Player } from '../types/dnd';
+import {
+  AbilitySection,
+  PlayerLike,
+  canonicalClass,
+  sentenceCase,
   getSubclassFromPlayerLike,
-  getChaModFromPlayerLike 
+  getChaModFromPlayerLike,
 } from './ClassesTab/modals/ClassUtilsModal';
 import { ScreenRipple, createScreenRippleHandler } from './ClassesTab/modals/ClassEffectsModal';
 import { AbilityCard } from './ClassesTab/modals/ClassAbilitiesModal';
-import { 
-  ClassResourcesCard, 
-  mirrorMonkKeys, 
-  buildDefaultsForClass 
+import {
+  ClassResourcesCard,
+  mirrorMonkKeys,
+  buildDefaultsForClass,
 } from './ClassesTab/modals/ClassResourcesModal';
 import { loadSectionsSmart } from './ClassesTab/modals/ClassDataModal';
+import { loadFeatureChecks, upsertFeatureCheck } from '../services/featureChecks';
 
 type Props = {
   player?: (PlayerLike & Partial<Player>) | null;
@@ -30,7 +34,7 @@ type Props = {
   subclassName?: string | null;
   characterLevel?: number;
   onUpdate?: (player: Player) => void;
-  sections?: AbilitySection[] | null;
+  sections?: AbilitySection[] | null; // préchargées éventuellement
 };
 
 const DEBUG = typeof window !== 'undefined' && (window as any).UT_DEBUG === true;
@@ -45,6 +49,7 @@ function ClassesTab({
   sections: preloadedSections,
 }: Props) {
 
+  /* -------------------------------- State -------------------------------- */
   const [sections, setSections] = useState<AbilitySection[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -53,8 +58,12 @@ function ClassesTab({
 
   const [classResources, setClassResources] = useState<ClassResources | null | undefined>(player?.class_resources);
 
+  // Ripple plein écran
   const [screenRipple, setScreenRipple] = useState<{ x: number; y: number; key: number } | null>(null);
   const triggerScreenRippleFromEvent = createScreenRippleHandler(setScreenRipple);
+
+  // Header repliable (classe / sous-classe / niveau)
+  const [classHeaderOpen, setClassHeaderOpen] = useState(true);
 
   const rawClass = (player?.class ?? playerClass ?? className ?? '').trim();
   const rawSubclass = (getSubclassFromPlayerLike(player) ?? subclassName) ?? null;
@@ -66,14 +75,12 @@ function ClassesTab({
   const finalLevel = Math.max(1, Number(finalLevelRaw) || 1);
   const characterId = player?.id ?? null;
 
-  // État repliable pour le bloc classe
-  const [classHeaderOpen, setClassHeaderOpen] = useState(true);
-
+  /* ----------------------------- Sync resources ----------------------------- */
   useEffect(() => {
     setClassResources(player?.class_resources);
   }, [player?.class_resources, player?.id]);
 
-  // Chargement des sections
+  /* ---------------------- Charger sections (aptitudes) ---------------------- */
   useEffect(() => {
     let mounted = true;
 
@@ -83,12 +90,14 @@ function ClassesTab({
       return () => { mounted = false; };
     }
 
+    // Sections préchargées
     if (preloadedSections) {
       setSections(preloadedSections);
       setLoading(false);
       return () => { mounted = false; };
     }
 
+    // Indique qu'on attend encore un préchargement externe
     if (preloadedSections === null) {
       setLoading(true);
       return () => { mounted = false; };
@@ -97,7 +106,11 @@ function ClassesTab({
     (async () => {
       setLoading(true);
       try {
-        const res = await loadSectionsSmart({ className: rawClass, subclassName: rawSubclass, level: finalLevel });
+        const res = await loadSectionsSmart({
+          className: rawClass,
+          subclassName: rawSubclass,
+          level: finalLevel,
+        });
         if (!mounted) return;
         setSections(res);
       } catch (e) {
@@ -112,10 +125,14 @@ function ClassesTab({
     return () => { mounted = false; };
   }, [preloadedSections, rawClass, rawSubclass, finalLevel]);
 
-  // Chargement des checks
+  /* ----------- Charger les états cochés (cases des aptitudes) --------------- */
   useEffect(() => {
     let mounted = true;
     (async () => {
+      if (!characterId) {
+        setCheckedMap(new Map());
+        return;
+      }
       setLoadingChecks(true);
       try {
         const map = await loadFeatureChecks(characterId);
@@ -132,11 +149,12 @@ function ClassesTab({
     return () => { mounted = false; };
   }, [characterId]);
 
-  // Auto-init ressources
+  /* ------- Auto-init silencieuse des ressources si manquantes --------------- */
   const initKeyRef = useRef<string | null>(null);
   useEffect(() => {
     (async () => {
       if (!player?.id || !displayClass) return;
+
       const cls = canonicalClass(displayClass);
       if (!cls) return;
 
@@ -145,6 +163,7 @@ function ClassesTab({
 
       const current: Record<string, any> = { ...(classResources || {}) };
       const defaults = buildDefaultsForClass(cls, finalLevel, player);
+
       let changed = false;
       for (const [k, v] of Object.entries(defaults)) {
         if (current[k] === undefined || current[k] === null) {
@@ -152,13 +171,16 @@ function ClassesTab({
           changed = true;
         }
       }
+
       if (!changed) return;
 
       initKeyRef.current = ensureKey;
       try {
         const { error } = await supabase.from('players').update({ class_resources: current }).eq('id', player.id);
         if (error) throw error;
+
         setClassResources(current as ClassResources);
+
         if (onUpdate && player) {
           onUpdate({ ...(player as any), class_resources: current } as Player);
         }
@@ -167,9 +189,10 @@ function ClassesTab({
         console.error('[ClassesTab] auto-init class_resources error:', e);
       }
     })();
-  }, [player?.id, displayClass, finalLevel, classResources, player, onUpdate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [player?.id, displayClass, finalLevel, classResources, player]);
 
-  // Barde: cap dynamique
+  /* ----------- Barde : cap dynamique sur inspiration bardique --------------- */
   const bardCapRef = useRef<string | null>(null);
   useEffect(() => {
     (async () => {
@@ -183,17 +206,22 @@ function ClassesTab({
       const key = `${player.id}:${cap}:${total ?? 'u'}:${used}`;
       if (bardCapRef.current === key) return;
 
+      if (typeof cap !== 'number') return;
+
       if (typeof total !== 'number' || total !== cap || used > cap) {
         const next = {
           ...(classResources || {}),
           bardic_inspiration: cap,
           used_bardic_inspiration: Math.min(used, cap),
         };
+
         try {
           const { error } = await supabase.from('players').update({ class_resources: next }).eq('id', player.id);
           if (error) throw error;
+
           setClassResources(next as ClassResources);
           bardCapRef.current = key;
+
           if (onUpdate && player) {
             onUpdate({ ...(player as any), class_resources: next } as Player);
           }
@@ -220,6 +248,7 @@ function ClassesTab({
     player,
   ]);
 
+  /* ---------------------------- Toggle aptitude ----------------------------- */
   async function handleToggle(featureKey: string, checked: boolean) {
     setCheckedMap(prev => {
       const next = new Map(prev);
@@ -239,15 +268,17 @@ function ClassesTab({
     }
   }
 
+  // Guard StrictMode initial render
   const firstMountRef = useRef(true);
   useEffect(() => {
     firstMountRef.current = false;
   }, []);
 
+  /* ----------------------- Sections visibles par niveau --------------------- */
   const visible = useMemo(
     () =>
       sections
-        .filter(s => (typeof s.level === 'number' ? s.level <= finalLevel : true))
+        .filter((s) => (typeof s.level === 'number' ? s.level <= finalLevel : true))
         .sort((a, b) => (Number(a.level) || 0) - (Number(b.level) || 0)),
     [sections, finalLevel]
   );
@@ -255,23 +286,24 @@ function ClassesTab({
   const hasClass = !!displayClass;
   const hasSubclass = !!displaySubclass;
 
+  /* ================================= Render ================================ */
   return (
     <>
       <div className="space-y-4">
 
-        {/* HEADER REPLIABLE - style aligné sur 'Ressources de classe' */}
+        {/* HEADER REPLIABLE (classe / sous-classe / niveau) */}
         <div
           role="button"
-            tabIndex={0}
+          tabIndex={0}
           aria-expanded={classHeaderOpen}
           onClick={() => setClassHeaderOpen(o => !o)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              setClassHeaderOpen(o => !o);
-            }
-          }}
-          className="stat-header flex items-center justify-between rounded-lg px-4 py-3 border border-white/10 bg-[#0b1322] hover:bg-[#101c31] cursor-pointer select-none transition-colors"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setClassHeaderOpen(o => !o);
+              }
+            }}
+          className="flex items-center justify-between rounded-lg px-4 py-3 cursor-pointer select-none transition-colors border border-white/10 bg-[#0b1322] hover:bg-[#101c31] focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
         >
           <div className="flex items-center gap-3">
             <Sparkles className="w-4 h-4 text-yellow-400" />
@@ -296,7 +328,7 @@ function ClassesTab({
 
         {/* CONTENU REPLIABLE */}
         {classHeaderOpen && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {!hasClass && (
               <div className="text-center text-white/70 py-6">
                 Sélectionne une classe pour afficher les aptitudes.
@@ -309,17 +341,27 @@ function ClassesTab({
               </div>
             )}
 
+            {/* RESSOURCES DE CLASSE (titre simplifié sans “étiquette”) */}
             {hasClass && (
-              <ClassResourcesCard
-                playerClass={displayClass}
-                resources={classResources || undefined}
-                onUpdateResource={updateClassResource}
-                player={player ?? undefined}
-                level={finalLevel}
-                onPulseScreen={triggerScreenRippleFromEvent}
-              />
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 pl-1">
+                  <Sparkles className="w-4 h-4 text-yellow-400" />
+                  <span className="text-xs font-medium text-gray-300">
+                    ressources de classe
+                  </span>
+                </div>
+                <ClassResourcesCard
+                  playerClass={displayClass}
+                  resources={classResources || undefined}
+                  onUpdateResource={updateClassResource}
+                  player={player ?? undefined}
+                  level={finalLevel}
+                  onPulseScreen={triggerScreenRippleFromEvent}
+                />
+              </div>
             )}
 
+            {/* APTITUDES */}
             {hasClass && (
               loading ? (
                 <div className="flex items-center justify-center py-12">
@@ -340,13 +382,14 @@ function ClassesTab({
                   )}
                 </div>
               ) : (
-                <>
-                  <div className="stat-header flex items-center gap-3 pt-1">
-                    <ListChecks className="w-5 h-5 text-sky-500" />
-                    <h3 className="text-lg font-semibold text-gray-100">
-                      Compétences de classe et sous-classe
-                    </h3>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 pl-1">
+                    <ListChecks className="w-4 h-4 text-sky-500" />
+                    <span className="text-xs font-medium text-gray-300">
+                      compétences de classe et sous-classe
+                    </span>
                   </div>
+
                   <div className="space-y-4">
                     {visible.map((s, i) => (
                       <AbilityCard
@@ -364,13 +407,14 @@ function ClassesTab({
                       />
                     ))}
                   </div>
-                </>
+                </div>
               )
             )}
           </div>
         )}
       </div>
 
+      {/* Ripple overlay */}
       {screenRipple && (
         <ScreenRipple
           key={screenRipple.key}
@@ -382,15 +426,14 @@ function ClassesTab({
     </>
   );
 
-  // ----------------------------------------------------------
-  // Mise à jour des ressources
-  // ----------------------------------------------------------
+  /* ================================ Handlers ================================ */
   async function updateClassResource(
     resource: keyof ClassResources,
     value: ClassResources[keyof ClassResources]
   ) {
     if (!player?.id) return;
 
+    // Cas pacte (Occultiste) : stocké dans spell_slots
     if ((resource as any) === 'pact_slots' && typeof value === 'object' && value !== null) {
       try {
         const { error } = await supabase.from('players').update({ spell_slots: value }).eq('id', player.id);
@@ -412,6 +455,7 @@ function ClassesTab({
       return;
     }
 
+    // Totaux calculés
     if (resource === 'bardic_inspiration') {
       toast.error("Le total d'Inspiration bardique est calculé automatiquement (modificateur de Charisme).");
       return;
@@ -446,6 +490,7 @@ function ClassesTab({
         onUpdate({ ...(player as any), class_resources: next } as Player);
       }
 
+      // Toast feedback
       if (typeof value === 'boolean') {
         toast.success(`Récupération arcanique ${value ? 'utilisée' : 'disponible'}`);
       } else {
