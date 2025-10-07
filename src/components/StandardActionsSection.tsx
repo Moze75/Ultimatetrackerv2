@@ -149,7 +149,7 @@ export function StandardActionsSection({ player, onUpdate }: StandardActionsSect
       >
         <div className="flex items-center gap-3">
           <Book className="text-orange-500" size={20} />
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-100">Actions standard</h2>
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-100">Actions standard (2024)</h2>
         </div>
         {isExpanded ? (
           <ChevronDown className="text-gray-400" size={20} />
@@ -190,15 +190,17 @@ export function StandardActionsSection({ player, onUpdate }: StandardActionsSect
               
               <p className="text-gray-300 mb-4">{selectedAction.description}</p>
               
-              <div className="space-y-2">
-                <h4 className="font-medium text-gray-200 mb-2">Règles :</h4>
-                {selectedAction.rules.map((rule, index) => (
-                  <div key={index} className="flex items-start gap-2 text-sm">
-                    <div className="w-2 h-2 mt-1.5 rounded-full bg-blue-500/50 flex-shrink-0" />
-                    <p className="text-gray-400 flex-1">{rule}</p>
-                  </div>
-                ))}
-              </div>
+              {selectedAction.rules.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-gray-200 mb-2">Règles :</h4>
+                  {selectedAction.rules.map((rule, index) => (
+                    <div key={index} className="flex items-start gap-2 text-sm">
+                      <div className="w-2 h-2 mt-1.5 rounded-full bg-blue-500/50 flex-shrink-0" />
+                      <p className="text-gray-400 flex-1">{rule}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
