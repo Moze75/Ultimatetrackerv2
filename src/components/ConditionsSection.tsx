@@ -10,8 +10,8 @@ export const CONDITIONS: Condition[] = [
     name: 'À terre',
     description: 'Tant que vous avez l\'état À terre, vous subissez les effets suivants.',
     effects: [
-      'Déplacement limité : Vos seules possibilités de déplacement sont ramper ou vous relever en dépensant la moitié de votre Vitesse (arrondie à l\'inférieur), ce qui met un terme à l\'état. Si votre Vitesse est de 0, vous ne pouvez pas vous relever',
-      'Effet sur les attaques : Vous subissez le Désavantage aux jets d\'attaque. Un jet d\'attaque contre vous reçoit l\'Avantage si l\'assaillant se trouve dans un rayon de 1,50 m de vous. Sans cela, ce jet d\'attaque subit le Désavantage'
+      'Déplacement limité. Vos seules possibilités de déplacement sont ramper ou vous relever en dépensant la moitié de votre Vitesse (arrondie à l\'inférieur), ce qui met un terme à l\'état. Si votre Vitesse est de 0, vous ne pouvez pas vous relever.',
+      'Effet sur les attaques. Vous subissez le Désavantage aux jets d\'attaque. Un jet d\'attaque contre vous reçoit l\'Avantage si l\'assaillant se trouve dans un rayon de 1,50 m de vous. Sans cela, ce jet d\'attaque subit le Désavantage.'
     ]
   },
   {
@@ -19,9 +19,9 @@ export const CONDITIONS: Condition[] = [
     name: 'Agrippé',
     description: 'Tant que vous avez l\'état Agrippé, vous subissez les effets suivants.',
     effects: [
-      'Vitesse 0 : Votre Vitesse est de 0 et ne peut pas augmenter',
-      'Effet sur les attaques : Vous subissez le Désavantage aux jets d\'attaque contre toute cible hormis l\'agrippeur',
-      'Déplaçable : L\'agrippeur peut vous tirer ou vous porter lorsqu\'il se déplace, mais ses coûts de déplacement sont doublés, sauf si vous êtes de taille TP ou que votre catégorie est inférieure d\'au moins deux crans à la sienne'
+      'Vitesse 0. Votre Vitesse est de 0 et ne peut pas augmenter.',
+      'Effet sur les attaques. Vous subissez le Désavantage aux jets d\'attaque contre toute cible hormis l\'agrippeur.',
+      'Déplaçable. L\'agrippeur peut vous tirer ou vous porter lorsqu\'il se déplace, mais ses coûts de déplacement sont doublés, sauf si vous êtes de taille TP ou que votre catégorie est inférieure d\'au moins deux crans à la sienne.'
     ]
   },
   {
@@ -29,7 +29,7 @@ export const CONDITIONS: Condition[] = [
     name: 'Assourdi',
     description: 'Tant que vous avez l\'état Assourdi, vous subissez les effets suivants.',
     effects: [
-      'Incapable d\'entendre : Vous n\'entendez rien, et ratez automatiquement tous les tests de caractéristique qui reposent sur l\'ouïe'
+      'Incapable d\'entendre. Vous n\'entendez rien, et ratez automatiquement tous les tests de caractéristique qui reposent sur l\'ouïe.'
     ]
   },
   {
@@ -37,8 +37,8 @@ export const CONDITIONS: Condition[] = [
     name: 'Aveuglé',
     description: 'Tant que vous avez l\'état Aveuglé, vous subissez les effets suivants.',
     effects: [
-      'Incapable de voir : Vous ne voyez rien et ratez automatiquement tout test de caractéristique reposant sur la vue',
-      'Effet sur les attaques : Les jets d\'attaque contre vous ont l\'Avantage, et vos jets d\'attaque subissent le Désavantage'
+      'Incapable de voir. Vous ne voyez rien et ratez automatiquement tout test de caractéristique reposant sur la vue.',
+      'Effet sur les attaques. Les jets d\'attaque contre vous ont l\'Avantage, et vos jets d\'attaque subissent le Désavantage.'
     ]
   },
   {
@@ -46,8 +46,8 @@ export const CONDITIONS: Condition[] = [
     name: 'Charmé',
     description: 'Tant que vous avez l\'état Charmé, vous subissez les effets suivants.',
     effects: [
-      'Ne pas nuire au charmeur : Vous ne pouvez pas attaquer votre « charmeur » ni le cibler avec des aptitudes ou effets magiques qui infligent des dégâts',
-      'Interaction avec Avantage : Le charmeur a l\'Avantage aux tests de caractéristique d\'interaction sociale avec vous'
+      'Ne pas nuire au charmeur. Vous ne pouvez pas attaquer votre « charmeur » ni le cibler avec des aptitudes ou effets magiques qui infligent des dégâts.',
+      'Interaction avec Avantage. Le charmeur a l\'Avantage aux tests de caractéristique d\'interaction sociale avec vous.'
     ]
   },
   {
@@ -55,8 +55,8 @@ export const CONDITIONS: Condition[] = [
     name: 'Effrayé',
     description: 'Tant que vous avez l\'état Effrayé, vous subissez les effets suivants.',
     effects: [
-      'Effet sur les attaques et les tests de caractéristique : Vous subissez le Désavantage aux tests de caractéristique et aux jets d\'attaque tant que la source de votre effroi est dans votre champ de vision',
-      'Impossible d\'approcher : Vous ne pouvez pas vous rapprocher volontairement de la source de votre effroi'
+      'Effet sur les attaques et les tests de caractéristique. Vous subissez le Désavantage aux tests de caractéristique et aux jets d\'attaque tant que la source de votre effroi est dans votre champ de vision.',
+      'Impossible d\'approcher. Vous ne pouvez pas vous rapprocher volontairement de la source de votre effroi.'
     ]
   },
   {
@@ -64,7 +64,7 @@ export const CONDITIONS: Condition[] = [
     name: 'Empoisonné',
     description: 'Tant que vous avez l\'état Empoisonné, vous subissez l\'effet suivant.',
     effects: [
-      'Effet sur les attaques et les tests de caractéristique : Vous subissez le Désavantage aux jets d\'attaque et aux tests de caractéristique'
+      'Effet sur les attaques et les tests de caractéristique. Vous subissez le Désavantage aux jets d\'attaque et aux tests de caractéristique.'
     ]
   },
   {
@@ -72,9 +72,9 @@ export const CONDITIONS: Condition[] = [
     name: 'Entravé',
     description: 'Tant que vous avez l\'état Entravé, vous subissez les effets suivants.',
     effects: [
-      'Vitesse 0 : Votre Vitesse est de 0 et ne peut pas augmenter',
-      'Effet sur les attaques : Les jets d\'attaque contre vous ont l\'Avantage, et vos jets d\'attaque subissent le Désavantage',
-      'Effet sur les jets de sauvegarde : Vous subissez le Désavantage aux jets de sauvegarde de Dextérité'
+      'Vitesse 0. Votre Vitesse est de 0 et ne peut pas augmenter.',
+      'Effet sur les attaques. Les jets d\'attaque contre vous ont l\'Avantage, et vos jets d\'attaque subissent le Désavantage.',
+      'Effet sur les jets de sauvegarde. Vous subissez le Désavantage aux jets de sauvegarde de Dextérité.'
     ]
   },
   {
@@ -82,10 +82,10 @@ export const CONDITIONS: Condition[] = [
     name: 'Épuisement',
     description: 'Tant que vous avez l\'état Épuisement, vous subissez les effets suivants.',
     effects: [
-      'Niveaux d\'Épuisement : Cet état est cumulatif. Chaque fois que vous le recevez, vous subissez 1 niveau d\'Épuisement. Vous mourez quand votre niveau d\'Épuisement atteint 6',
-      'Tests d20 affectés : Lorsque vous effectuez un Test d20, le résultat est réduit de 2 fois votre niveau actuel d\'Épuisement',
-      'Vitesse réduite : Votre Vitesse est réduite de 1,50 m x votre niveau actuel d\'Épuisement',
-      'Suppression des niveaux d\'Épuisement : Terminer un Repos long dissipe 1 niveau d\'Épuisement. Lorsque votre niveau d\'Épuisement atteint 0, l\'état prend fin pour vous'
+      'Niveaux d\'Épuisement. Cet état est cumulatif. Chaque fois que vous le recevez, vous subissez 1 niveau d\'Épuisement. Vous mourez quand votre niveau d\'Épuisement atteint 6.',
+      'Tests d20 affectés. Lorsque vous effectuez un Test d20, le résultat est réduit de 2 fois votre niveau actuel d\'Épuisement.',
+      'Vitesse réduite. Votre Vitesse est réduite de 1,50 m x votre niveau actuel d\'Épuisement.',
+      'Suppression des niveaux d\'Épuisement. Terminer un Repos long dissipe 1 niveau d\'Épuisement. Lorsque votre niveau d\'Épuisement atteint 0, l\'état prend fin pour vous.'
     ]
   },
   {
@@ -93,9 +93,9 @@ export const CONDITIONS: Condition[] = [
     name: 'Étourdi',
     description: 'Tant que vous avez l\'état Étourdi, vous subissez les effets suivants.',
     effects: [
-      'Neutralisé : Vous subissez l\'état Neutralisé',
-      'Effet sur les jets de sauvegarde : Vous ratez automatiquement vos jets de sauvegarde de Force et de Dextérité',
-      'Effet sur les attaques : Les jets d\'attaque contre vous ont l\'Avantage'
+      'Neutralisé. Vous subissez l\'état Neutralisé.',
+      'Effet sur les jets de sauvegarde. Vous ratez automatiquement vos jets de sauvegarde de Force et de Dextérité.',
+      'Effet sur les attaques. Les jets d\'attaque contre vous ont l\'Avantage.'
     ]
   },
   {
@@ -103,12 +103,12 @@ export const CONDITIONS: Condition[] = [
     name: 'Inconscient',
     description: 'Tant que vous avez l\'état Inconscient, vous subissez les effets suivants.',
     effects: [
-      'Inerte : Vous subissez les états À terre et Neutralisé, et laissez choir tout ce que vous teniez. Lorsque cet état prend fin, vous êtes toujours À terre',
-      'Vitesse 0 : Votre Vitesse est de 0 et ne peut pas augmenter',
-      'Effet sur les attaques : Les jets d\'attaque contre vous ont l\'Avantage',
-      'Effet sur les jets de sauvegarde : Vous ratez automatiquement vos jets de sauvegarde de Force et de Dextérité',
-      'Coups critiques automatiques : Tout jet d\'attaque qui vous touche est un Coup critique si l\'assaillant qui la porte se trouve dans un rayon de 1,50 m',
-      'Dénué de conscience : Vous n\'avez pas conscience de ce qui vous entoure'
+      'Inerte. Vous subissez les états À terre et Neutralisé, et laissez choir tout ce que vous teniez. Lorsque cet état prend fin, vous êtes toujours À terre.',
+      'Vitesse 0. Votre Vitesse est de 0 et ne peut pas augmenter.',
+      'Effet sur les attaques. Les jets d\'attaque contre vous ont l\'Avantage.',
+      'Effet sur les jets de sauvegarde. Vous ratez automatiquement vos jets de sauvegarde de Force et de Dextérité.',
+      'Coups critiques automatiques. Tout jet d\'attaque qui vous touche est un Coup critique si l\'assaillant qui la porte se trouve dans un rayon de 1,50 m.',
+      'Dénué de conscience. Vous n\'avez pas conscience de ce qui vous entoure.'
     ]
   },
   {
@@ -116,9 +116,9 @@ export const CONDITIONS: Condition[] = [
     name: 'Invisible',
     description: 'Tant que vous avez l\'état Invisible, vous subissez les effets suivants.',
     effects: [
-      'Surprise : Si vous êtes Invisible au moment de jouer l\'Initiative, vous avez l\'Avantage à ce jet',
-      'Dissimulé : Vous n\'êtes pas affecté par les effets qui exigent que la cible soit vue, sauf si le créateur de l\'effet vous « voit » par un biais ou un autre. Tout l\'équipement que vous portez est lui aussi dissimulé',
-      'Effet sur les attaques : Les jets d\'attaque contre vous subissent le Désavantage, et vos jets d\'attaque ont l\'Avantage. Si une créature vous voit par un biais ou un autre, vous ne recevez pas ce bénéfice contre elle'
+      'Surprise. Si vous êtes Invisible au moment de jouer l\'Initiative, vous avez l\'Avantage à ce jet.',
+      'Dissimulé. Vous n\'êtes pas affecté par les effets qui exigent que la cible soit vue, sauf si le créateur de l\'effet vous « voit » par un biais ou un autre. Tout l\'équipement que vous portez est lui aussi dissimulé.',
+      'Effet sur les attaques. Les jets d\'attaque contre vous subissent le Désavantage, et vos jets d\'attaque ont l\'Avantage. Si une créature vous voit par un biais ou un autre, vous ne recevez pas ce bénéfice contre elle.'
     ]
   },
   {
@@ -126,10 +126,10 @@ export const CONDITIONS: Condition[] = [
     name: 'Neutralisé',
     description: 'Tant que vous avez l\'état Neutralisé, vous subissez les effets suivants.',
     effects: [
-      'Inactif : Vous ne pouvez entreprendre ni action, ni action Bonus ni Réaction',
-      'Concentration brisée : Votre Concentration est brisée',
-      'Sans voix : Vous ne pouvez pas parler',
-      'Surpris : Si vous êtes Neutralisé au moment de jouer l\'Initiative, vous subissez le Désavantage à ce jet'
+      'Inactif. Vous ne pouvez entreprendre ni action, ni action Bonus ni Réaction.',
+      'Concentration brisée. Votre Concentration est brisée.',
+      'Sans voix. Vous ne pouvez pas parler.',
+      'Surpris. Si vous êtes Neutralisé au moment de jouer l\'Initiative, vous subissez le Désavantage à ce jet.'
     ]
   },
   {
@@ -137,11 +137,11 @@ export const CONDITIONS: Condition[] = [
     name: 'Paralysé',
     description: 'Tant que vous avez l\'état Paralysé, vous subissez les effets suivants.',
     effects: [
-      'Neutralisé : Vous subissez l\'état Neutralisé',
-      'Vitesse 0 : Votre Vitesse est de 0 et ne peut pas augmenter',
-      'Effet sur les jets de sauvegarde : Vous ratez automatiquement vos jets de sauvegarde de Force et de Dextérité',
-      'Effet sur les attaques : Les jets d\'attaque contre vous ont l\'Avantage',
-      'Coups critiques automatiques : Tout jet d\'attaque qui vous touche est un Coup critique si l\'assaillant qui la porte se trouve dans un rayon de 1,50 m'
+      'Neutralisé. Vous subissez l\'état Neutralisé.',
+      'Vitesse 0. Votre Vitesse est de 0 et ne peut pas augmenter.',
+      'Effet sur les jets de sauvegarde. Vous ratez automatiquement vos jets de sauvegarde de Force et de Dextérité.',
+      'Effet sur les attaques. Les jets d\'attaque contre vous ont l\'Avantage.',
+      'Coups critiques automatiques. Tout jet d\'attaque qui vous touche est un Coup critique si l\'assaillant qui la porte se trouve dans un rayon de 1,50 m.'
     ]
   },
   {
@@ -149,13 +149,13 @@ export const CONDITIONS: Condition[] = [
     name: 'Pétrifié',
     description: 'Tant que vous avez l\'état Pétrifié, vous subissez les effets suivants.',
     effects: [
-      'Transformé en substance inanimée : Vous êtes transformé, ainsi que les objets non magiques que vous portez, en une substance inanimée et dense (généralement de la pierre). Votre poids est décuplé et vous n\'êtes plus soumis au vieillissement',
-      'Neutralisé : Vous subissez l\'état Neutralisé',
-      'Vitesse 0 : Votre Vitesse est de 0 et ne peut pas augmenter',
-      'Effet sur les attaques : Les jets d\'attaque contre vous ont l\'Avantage',
-      'Effet sur les jets de sauvegarde : Vous ratez automatiquement vos jets de sauvegarde de Force et de Dextérité',
-      'Résistance aux dégâts : Vous avez la Résistance à tous les dégâts',
-      'Immunité contre le poison : Vous avez l\'Immunité contre l\'état Empoisonné'
+      'Transformé en substance inanimée. Vous êtes transformé, ainsi que les objets non magiques que vous portez, en une substance inanimée et dense (généralement de la pierre). Votre poids est décuplé et vous n\'êtes plus soumis au vieillissement.',
+      'Neutralisé. Vous subissez l\'état Neutralisé.',
+      'Vitesse 0. Votre Vitesse est de 0 et ne peut pas augmenter.',
+      'Effet sur les attaques. Les jets d\'attaque contre vous ont l\'Avantage.',
+      'Effet sur les jets de sauvegarde. Vous ratez automatiquement vos jets de sauvegarde de Force et de Dextérité.',
+      'Résistance aux dégâts. Vous avez la Résistance à tous les dégâts.',
+      'Immunité contre le poison. Vous avez l\'Immunité contre l\'état Empoisonné.'
     ]
   }
 ];
