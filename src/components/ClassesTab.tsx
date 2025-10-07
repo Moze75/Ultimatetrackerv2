@@ -54,7 +54,6 @@ function ClassesTab({
   const [checkedMap, setCheckedMap] = useState<Map<string, boolean>>(new Map());
   const [loadingChecks, setLoadingChecks] = useState(false);
   const [classResources, setClassResources] = useState<ClassResources | null | undefined>(player?.class_resources);
-
   const [screenRipple, setScreenRipple] = useState<{ x: number; y: number; key: number } | null>(null);
   const triggerScreenRippleFromEvent = createScreenRippleHandler(setScreenRipple);
 
@@ -70,12 +69,12 @@ function ClassesTab({
   const finalLevel = Math.max(1, Number(finalLevelRaw) || 1);
   const characterId = player?.id ?? null;
 
-  /* ================= Sync class resources ================= */
+  /* Sync class resources */
   useEffect(() => {
     setClassResources(player?.class_resources);
   }, [player?.class_resources, player?.id]);
 
-  /* ================= Load sections ================= */
+  /* Load sections */
   useEffect(() => {
     let mounted = true;
 
@@ -118,7 +117,7 @@ function ClassesTab({
     return () => { mounted = false; };
   }, [preloadedSections, rawClass, rawSubclass, finalLevel]);
 
-  /* ================= Load feature checks ================= */
+  /* Load feature checks */
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -142,7 +141,7 @@ function ClassesTab({
     return () => { mounted = false; };
   }, [characterId]);
 
-  /* ================= Auto init missing resources ================= */
+  /* Auto init missing resources */
   const initKeyRef = useRef<string | null>(null);
   useEffect(() => {
     (async () => {
@@ -183,7 +182,7 @@ function ClassesTab({
     })();
   }, [player?.id, displayClass, finalLevel, classResources, player, onUpdate]);
 
-  /* ================= Bardic inspiration dynamic cap ================= */
+  /* Bardic inspiration dynamic cap */
   const bardCapRef = useRef<string | null>(null);
   useEffect(() => {
     (async () => {
@@ -202,14 +201,11 @@ function ClassesTab({
           bardic_inspiration: cap,
           used_bardic_inspiration: Math.min(used, cap),
         };
-
         try {
           const { error } = await supabase.from('players').update({ class_resources: next }).eq('id', player.id);
           if (error) throw error;
-
           setClassResources(next as ClassResources);
           bardCapRef.current = key;
-
           if (onUpdate && player) {
             onUpdate({ ...(player as any), class_resources: next } as Player);
           }
@@ -236,7 +232,7 @@ function ClassesTab({
     player,
   ]);
 
-  /* ================= Toggle ability check ================= */
+  /* Toggle ability check */
   async function handleToggle(featureKey: string, checked: boolean) {
     setCheckedMap(prev => {
       const next = new Map(prev);
@@ -267,11 +263,9 @@ function ClassesTab({
   const hasClass = !!displayClass;
   const hasSubclass = !!displaySubclass;
 
-  /* ================= Render ================= */
   return (
-    <div className="space-y-6">
-
-      {/* Carte header (style identique StatsTab) */}
+    <div className="space-y-4">{/* --- spacing tweak (6->4) */}
+      {/* Header card identical style to StatsTab */}
       <div className="stats-card">
         <div
           className="stat-header flex items-center justify-between cursor-pointer select-none"
@@ -315,15 +309,20 @@ function ClassesTab({
         </div>
       </div>
 
-      {/* Carte contenu (seulement si ouvert) */}
       {classHeaderOpen && (
-        <div className="space-y-6">
+        <div className="space-y-4 mt-2">{/* --- spacing tweak (6->4 + mt-2) */}
+          {!hasClass && (
+            <div className="stats-card">
+              <div className="p-4 text-center text-gray-400">
+                Sélectionne une classe pour afficher les aptitudes.
+              </div>
+            </div>
+          )}
 
-          {/* Ressources de classe */}
           {hasClass && (
             <div className="stats-card">
-              <div className="p-4 space-y-4">
-                <div className="flex items-center gap-2">
+              <div className="p-3 space-y-3">{/* --- spacing tweak (p-4->p-3 & space-y-4->3) */}
+                <div className="flex items-center gap-2 mt-1">{/* --- spacing tweak (mt-1) */}
                   <Sparkles className="w-4 h-4 text-yellow-400" />
                   <span className="text-base font-semibold text-gray-200">
                     Ressources de classe
@@ -343,10 +342,9 @@ function ClassesTab({
             </div>
           )}
 
-          {/* Aptitudes */}
-          {hasClass && (
+            {hasClass && (
             <div className="stats-card">
-              <div className="p-4 space-y-4">
+              <div className="p-3 space-y-3">{/* --- spacing tweak */}
                 <div className="flex items-center gap-2">
                   <ListChecks className="w-4 h-4 text-sky-500" />
                   <span className="text-base font-semibold text-gray-200">
@@ -355,11 +353,11 @@ function ClassesTab({
                 </div>
 
                 {loading ? (
-                  <div className="flex items-center justify-center py-12">
+                  <div className="flex items-center justify-center py-10">{/* --- spacing tweak (py-12->10) */}
                     <img
                       src="/icons/wmremove-transformed.png"
                       alt="Chargement..."
-                      className="animate-spin h-10 w-10 object-contain"
+                      className="animate-spin h-8 w-8 object-contain" /* smaller spinner */
                       style={{ backgroundColor: 'transparent' }}
                     />
                   </div>
@@ -367,13 +365,13 @@ function ClassesTab({
                   <div className="text-center text-gray-400 py-6">
                     Aucune aptitude trouvée pour "{displayClass}{displaySubclass ? ` - ${displaySubclass}` : ''}".
                     {DEBUG && (
-                      <pre className="mt-3 text-xs text-white/60">
+                      <pre className="mt-2 text-xs text-white/60">{/* --- spacing tweak (mt-3->2) */}
                         Activez window.UT_DEBUG = true pour debug.
                       </pre>
                     )}
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-3">{/* --- spacing tweak (space-y-4->3) */}
                     {visible.map((s, i) => (
                       <AbilityCard
                         key={`${s.origin}-${s.level ?? 'x'}-${i}`}
@@ -394,14 +392,6 @@ function ClassesTab({
               </div>
             </div>
           )}
-
-          {!hasClass && (
-            <div className="stats-card">
-              <div className="p-6 text-center text-gray-400">
-                Sélectionne une classe pour afficher les aptitudes.
-              </div>
-            </div>
-          )}
         </div>
       )}
 
@@ -416,7 +406,6 @@ function ClassesTab({
     </div>
   );
 
-  /* ================= Handlers ================= */
   async function updateClassResource(
     resource: keyof ClassResources,
     value: ClassResources[keyof ClassResources]
@@ -484,7 +473,7 @@ function ClassesTab({
         const resourceNames: Record<string, string> = {
           rage: 'Rage',
           bardic_inspiration: 'Inspiration bardique',
-          channel_divinity: 'Conduit divin',
+            channel_divinity: 'Conduit divin',
           wild_shape: 'Forme sauvage',
           sorcery_points: 'Points de sorcellerie',
           action_surge: "Second souffle",
