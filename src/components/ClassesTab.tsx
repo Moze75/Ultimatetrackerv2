@@ -323,7 +323,7 @@ function ClassesTab({
             <div className="stats-card">
               <div className="p-1 space-y-1">{/* --- spacing tweak (p-4->p-3 & space-y-4->3) */}
                 <div className="flex items-center gap-1 mt-1">{/* --- spacing tweak (mt-1) */}
-                  <Sparkles className="w-4 h-4 text-yellow-400" />
+                  <Sparkles className="w-5 h-5 text-yellow-400" />
                   <span className="text-base font-semibold text-gray-200">
                     Ressources de classe
                   </span>
