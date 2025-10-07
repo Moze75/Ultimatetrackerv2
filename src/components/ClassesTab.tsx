@@ -54,6 +54,7 @@ function ClassesTab({
   const [checkedMap, setCheckedMap] = useState<Map<string, boolean>>(new Map());
   const [loadingChecks, setLoadingChecks] = useState(false);
   const [classResources, setClassResources] = useState<ClassResources | null | undefined>(player?.class_resources);
+
   const [screenRipple, setScreenRipple] = useState<{ x: number; y: number; key: number } | null>(null);
   const triggerScreenRippleFromEvent = createScreenRippleHandler(setScreenRipple);
 
@@ -69,12 +70,12 @@ function ClassesTab({
   const finalLevel = Math.max(1, Number(finalLevelRaw) || 1);
   const characterId = player?.id ?? null;
 
-  /* Sync class resources */
+  /* ================= Sync class resources ================= */
   useEffect(() => {
     setClassResources(player?.class_resources);
   }, [player?.class_resources, player?.id]);
 
-  /* Load sections */
+  /* ================= Load sections ================= */
   useEffect(() => {
     let mounted = true;
 
@@ -117,7 +118,7 @@ function ClassesTab({
     return () => { mounted = false; };
   }, [preloadedSections, rawClass, rawSubclass, finalLevel]);
 
-  /* Load feature checks */
+  /* ================= Load feature checks ================= */
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -141,7 +142,7 @@ function ClassesTab({
     return () => { mounted = false; };
   }, [characterId]);
 
-  /* Auto init missing resources */
+  /* ================= Auto init missing resources ================= */
   const initKeyRef = useRef<string | null>(null);
   useEffect(() => {
     (async () => {
@@ -159,7 +160,7 @@ function ClassesTab({
       let changed = false;
       for (const [k, v] of Object.entries(defaults)) {
         if (current[k] === undefined || current[k] === null) {
-            current[k] = v;
+          current[k] = v;
           changed = true;
         }
       }
@@ -171,6 +172,7 @@ function ClassesTab({
         if (error) throw error;
 
         setClassResources(current as ClassResources);
+
         if (onUpdate && player) {
           onUpdate({ ...(player as any), class_resources: current } as Player);
         }
@@ -181,7 +183,7 @@ function ClassesTab({
     })();
   }, [player?.id, displayClass, finalLevel, classResources, player, onUpdate]);
 
-  /* Bardic inspiration dynamic cap */
+  /* ================= Bardic inspiration dynamic cap ================= */
   const bardCapRef = useRef<string | null>(null);
   useEffect(() => {
     (async () => {
@@ -200,11 +202,14 @@ function ClassesTab({
           bardic_inspiration: cap,
           used_bardic_inspiration: Math.min(used, cap),
         };
+
         try {
           const { error } = await supabase.from('players').update({ class_resources: next }).eq('id', player.id);
           if (error) throw error;
+
           setClassResources(next as ClassResources);
           bardCapRef.current = key;
+
           if (onUpdate && player) {
             onUpdate({ ...(player as any), class_resources: next } as Player);
           }
@@ -231,7 +236,7 @@ function ClassesTab({
     player,
   ]);
 
-  /* Toggle ability check */
+  /* ================= Toggle ability check ================= */
   async function handleToggle(featureKey: string, checked: boolean) {
     setCheckedMap(prev => {
       const next = new Map(prev);
@@ -262,12 +267,14 @@ function ClassesTab({
   const hasClass = !!displayClass;
   const hasSubclass = !!displaySubclass;
 
+  /* ================= Render ================= */
   return (
-    <>
-      <div className="space-y-4">
+    <div className="space-y-6">
 
-        {/* BANDEAU PLEINE LARGEUR (edge-to-edge) */}
+      {/* Carte header (style identique StatsTab) */}
+      <div className="stats-card">
         <div
+          className="stat-header flex items-center justify-between cursor-pointer select-none"
           role="button"
           tabIndex={0}
           aria-expanded={classHeaderOpen}
@@ -278,54 +285,44 @@ function ClassesTab({
               setClassHeaderOpen(o => !o);
             }
           }}
-          className="-mx-4 px-4 py-2 bg-[#1f2730] hover:bg-[#24303b] transition-colors cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-indigo-500/40 border-y border-white/10"
-          /* 
-            Remarques :
-            - -mx-4 permet de s'aligner sur les bords si le parent a px-4.
-            - Pas de rounded.
-            - border-y seulement (pas de barres latérales).
-            - Ajuste -mx-4 si ton container parent a un autre padding horizontal.
-          */
         >
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              <span className="text-sm font-semibold text-white">
-                {hasClass ? displayClass : '—'}
-                {hasClass && hasSubclass && (
-                  <span className="ml-2 font-normal text-white/80">- {displaySubclass}</span>
-                )}
-                {hasClass && !hasSubclass && finalLevel >= 3 && (
-                  <span className="ml-2 font-normal text-red-400">
-                    Sélectionnez votre sous-classe dans les paramètres
-                  </span>
-                )}
-              </span>
-            </div>
-            <div className="flex items-center gap-3 shrink-0">
-              {hasClass && (
-                <span className="text-xs text-white/70 whitespace-nowrap">
-                  Niveau {finalLevel}
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-yellow-500" />
+            <h3 className="text-lg font-semibold text-gray-100">
+              {hasClass ? displayClass : '—'}
+              {hasClass && hasSubclass && (
+                <span className="ml-2 font-normal text-gray-300">- {displaySubclass}</span>
+              )}
+              {hasClass && !hasSubclass && finalLevel >= 3 && (
+                <span className="ml-2 font-normal text-red-400">
+                  (Sélectionnez votre sous-classe)
                 </span>
               )}
-              {classHeaderOpen ? (
-                <ChevronDown size={18} className="text-white/70" />
-              ) : (
-                <ChevronRight size={18} className="text-white/70" />
-              )}
-            </div>
+            </h3>
+          </div>
+          <div className="flex items-center gap-4">
+            {hasClass && (
+              <span className="text-sm text-gray-400">
+                Niveau {finalLevel}
+              </span>
+            )}
+            {classHeaderOpen ? (
+              <ChevronDown size={20} className="text-gray-400" />
+            ) : (
+              <ChevronRight size={20} className="text-gray-400" />
+            )}
           </div>
         </div>
+      </div>
 
-        {classHeaderOpen && (
-          <div className="space-y-6">
-            {!hasClass && (
-              <div className="text-center text-white/70 py-6">
-                Sélectionne une classe pour afficher les aptitudes.
-              </div>
-            )}
+      {/* Carte contenu (seulement si ouvert) */}
+      {classHeaderOpen && (
+        <div className="space-y-6">
 
-            {hasClass && (
-              <div className="space-y-3">
+          {/* Ressources de classe */}
+          {hasClass && (
+            <div className="stats-card">
+              <div className="p-4 space-y-4">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-yellow-400" />
                   <span className="text-base font-semibold text-gray-200">
@@ -343,35 +340,39 @@ function ClassesTab({
                   />
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            {hasClass && (
-              loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <img
-                    src="/icons/wmremove-transformed.png"
-                    alt="Chargement..."
-                    className="animate-spin h-10 w-10 object-contain"
-                    style={{ backgroundColor: 'transparent' }}
-                  />
+          {/* Aptitudes */}
+          {hasClass && (
+            <div className="stats-card">
+              <div className="p-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <ListChecks className="w-4 h-4 text-sky-500" />
+                  <span className="text-base font-semibold text-gray-200">
+                    Compétences de classe et sous-classe
+                  </span>
                 </div>
-              ) : visible.length === 0 ? (
-                <div className="text-center text-white/70 py-10">
-                  Aucune aptitude trouvée pour "{displayClass}{displaySubclass ? ` - ${displaySubclass}` : ''}".
-                  {DEBUG && (
-                    <pre className="mt-3 text-xs text-white/60">
-                      Activez window.UT_DEBUG = true pour voir les tentatives de chargement dans la console.
-                    </pre>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <ListChecks className="w-4 h-4 text-sky-500" />
-                    <span className="text-base font-semibold text-gray-200">
-                      Compétences de classe et sous-classe
-                    </span>
+
+                {loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <img
+                      src="/icons/wmremove-transformed.png"
+                      alt="Chargement..."
+                      className="animate-spin h-10 w-10 object-contain"
+                      style={{ backgroundColor: 'transparent' }}
+                    />
                   </div>
+                ) : visible.length === 0 ? (
+                  <div className="text-center text-gray-400 py-6">
+                    Aucune aptitude trouvée pour "{displayClass}{displaySubclass ? ` - ${displaySubclass}` : ''}".
+                    {DEBUG && (
+                      <pre className="mt-3 text-xs text-white/60">
+                        Activez window.UT_DEBUG = true pour debug.
+                      </pre>
+                    )}
+                  </div>
+                ) : (
                   <div className="space-y-4">
                     {visible.map((s, i) => (
                       <AbilityCard
@@ -389,12 +390,20 @@ function ClassesTab({
                       />
                     ))}
                   </div>
-                </div>
-              )
-            )}
-          </div>
-        )}
-      </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {!hasClass && (
+            <div className="stats-card">
+              <div className="p-6 text-center text-gray-400">
+                Sélectionne une classe pour afficher les aptitudes.
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {screenRipple && (
         <ScreenRipple
@@ -404,9 +413,10 @@ function ClassesTab({
           onDone={() => setScreenRipple(null)}
         />
       )}
-    </>
+    </div>
   );
 
+  /* ================= Handlers ================= */
   async function updateClassResource(
     resource: keyof ClassResources,
     value: ClassResources[keyof ClassResources]
@@ -417,9 +427,11 @@ function ClassesTab({
       try {
         const { error } = await supabase.from('players').update({ spell_slots: value }).eq('id', player.id);
         if (error) throw error;
+
         if (onUpdate && player) {
           onUpdate({ ...(player as any), spell_slots: value } as Player);
         }
+
         const prevUsed = (player.spell_slots?.used_pact_slots || 0);
         const newUsed = (value as any).used_pact_slots || 0;
         const action = newUsed > prevUsed ? 'utilisé' : 'récupéré';
