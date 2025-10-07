@@ -1,12 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ListChecks, Sparkles, ChevronDown } from 'lucide-react';
+import { ListChecks, Sparkles, ChevronDown, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import type { ClassResources, Player } from '../types/dnd';
 import { loadFeatureChecks, upsertFeatureCheck } from '../services/featureChecks';
 import type { MarkdownCtx } from '../lib/markdownLite';
 
-// Imports des modals
 import { 
   AbilitySection, 
   PlayerLike, 
@@ -45,7 +44,7 @@ function ClassesTab({
   onUpdate,
   sections: preloadedSections,
 }: Props) {
-  
+
   const [sections, setSections] = useState<AbilitySection[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -67,29 +66,34 @@ function ClassesTab({
   const finalLevel = Math.max(1, Number(finalLevelRaw) || 1);
   const characterId = player?.id ?? null;
 
-  // Nouvel état : header classe repliable
+  // État repliable pour le bloc classe
   const [classHeaderOpen, setClassHeaderOpen] = useState(true);
 
   useEffect(() => {
     setClassResources(player?.class_resources);
   }, [player?.class_resources, player?.id]);
 
+  // Chargement des sections
   useEffect(() => {
     let mounted = true;
+
     if (!rawClass) {
       setSections([]);
       setLoading(false);
       return () => { mounted = false; };
     }
+
     if (preloadedSections) {
       setSections(preloadedSections);
       setLoading(false);
       return () => { mounted = false; };
     }
+
     if (preloadedSections === null) {
       setLoading(true);
       return () => { mounted = false; };
     }
+
     (async () => {
       setLoading(true);
       try {
@@ -104,9 +108,11 @@ function ClassesTab({
         if (mounted) setLoading(false);
       }
     })();
+
     return () => { mounted = false; };
   }, [preloadedSections, rawClass, rawSubclass, finalLevel]);
 
+  // Chargement des checks
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -126,19 +132,19 @@ function ClassesTab({
     return () => { mounted = false; };
   }, [characterId]);
 
+  // Auto-init ressources
   const initKeyRef = useRef<string | null>(null);
-
   useEffect(() => {
     (async () => {
       if (!player?.id || !displayClass) return;
       const cls = canonicalClass(displayClass);
       if (!cls) return;
+
       const ensureKey = `${player.id}:${cls}:${finalLevel}`;
       if (initKeyRef.current === ensureKey) return;
 
       const current: Record<string, any> = { ...(classResources || {}) };
       const defaults = buildDefaultsForClass(cls, finalLevel, player);
-
       let changed = false;
       for (const [k, v] of Object.entries(defaults)) {
         if (current[k] === undefined || current[k] === null) {
@@ -163,23 +169,25 @@ function ClassesTab({
     })();
   }, [player?.id, displayClass, finalLevel, classResources, player, onUpdate]);
 
+  // Barde: cap dynamique
   const bardCapRef = useRef<string | null>(null);
   useEffect(() => {
     (async () => {
       if (!player?.id || !displayClass) return;
       if (canonicalClass(displayClass) !== 'Barde') return;
+
       const cap = Math.max(0, getChaModFromPlayerLike(player));
       const total = (classResources as any)?.bardic_inspiration;
       const used = (classResources as any)?.used_bardic_inspiration || 0;
+
       const key = `${player.id}:${cap}:${total ?? 'u'}:${used}`;
       if (bardCapRef.current === key) return;
-      if (typeof cap !== 'number') return;
 
       if (typeof total !== 'number' || total !== cap || used > cap) {
         const next = {
           ...(classResources || {}),
-            bardic_inspiration: cap,
-            used_bardic_inspiration: Math.min(used, cap),
+          bardic_inspiration: cap,
+          used_bardic_inspiration: Math.min(used, cap),
         };
         try {
           const { error } = await supabase.from('players').update({ class_resources: next }).eq('id', player.id);
@@ -235,11 +243,11 @@ function ClassesTab({
   useEffect(() => {
     firstMountRef.current = false;
   }, []);
-    
+
   const visible = useMemo(
     () =>
       sections
-        .filter((s) => (typeof s.level === 'number' ? s.level <= finalLevel : true))
+        .filter(s => (typeof s.level === 'number' ? s.level <= finalLevel : true))
         .sort((a, b) => (Number(a.level) || 0) - (Number(b.level) || 0)),
     [sections, finalLevel]
   );
@@ -250,11 +258,20 @@ function ClassesTab({
   return (
     <>
       <div className="space-y-4">
-        {/* Header repliable de la classe */}
-        <button
-          type="button"
+
+        {/* HEADER REPLIABLE - style aligné sur 'Ressources de classe' */}
+        <div
+          role="button"
+            tabIndex={0}
+          aria-expanded={classHeaderOpen}
           onClick={() => setClassHeaderOpen(o => !o)}
-          className="w-full text-left bg-[#0b1322] hover:bg-[#101c31] border border-white/10 rounded-lg px-4 py-3 flex items-center justify-between transition-colors"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setClassHeaderOpen(o => !o);
+            }
+          }}
+          className="stat-header flex items-center justify-between rounded-lg px-4 py-3 border border-white/10 bg-[#0b1322] hover:bg-[#101c31] cursor-pointer select-none transition-colors"
         >
           <div className="flex items-center gap-3">
             <Sparkles className="w-4 h-4 text-yellow-400" />
@@ -269,14 +286,15 @@ function ClassesTab({
             {hasClass && (
               <span className="text-xs text-white/70">Niveau {finalLevel}</span>
             )}
-            <ChevronDown
-              size={18}
-              className={`text-white/70 transition-transform duration-200 ${classHeaderOpen ? 'rotate-180' : ''}`}
-            />
+            {classHeaderOpen ? (
+              <ChevronDown size={18} className="text-white/70" />
+            ) : (
+              <ChevronRight size={18} className="text-white/70" />
+            )}
           </div>
-        </button>
+        </div>
 
-        {/* Contenu repliable */}
+        {/* CONTENU REPLIABLE */}
         {classHeaderOpen && (
           <div className="space-y-4">
             {!hasClass && (
@@ -305,9 +323,9 @@ function ClassesTab({
             {hasClass && (
               loading ? (
                 <div className="flex items-center justify-center py-12">
-                  <img 
-                    src="/icons/wmremove-transformed.png" 
-                    alt="Chargement..." 
+                  <img
+                    src="/icons/wmremove-transformed.png"
+                    alt="Chargement..."
                     className="animate-spin h-10 w-10 object-contain"
                     style={{ backgroundColor: 'transparent' }}
                   />
@@ -325,7 +343,9 @@ function ClassesTab({
                 <>
                   <div className="stat-header flex items-center gap-3 pt-1">
                     <ListChecks className="w-5 h-5 text-sky-500" />
-                    <h3 className="text-lg font-semibold text-gray-100">Compétences de classe et sous-classe</h3>
+                    <h3 className="text-lg font-semibold text-gray-100">
+                      Compétences de classe et sous-classe
+                    </h3>
                   </div>
                   <div className="space-y-4">
                     {visible.map((s, i) => (
@@ -362,6 +382,9 @@ function ClassesTab({
     </>
   );
 
+  // ----------------------------------------------------------
+  // Mise à jour des ressources
+  // ----------------------------------------------------------
   async function updateClassResource(
     resource: keyof ClassResources,
     value: ClassResources[keyof ClassResources]
@@ -372,9 +395,11 @@ function ClassesTab({
       try {
         const { error } = await supabase.from('players').update({ spell_slots: value }).eq('id', player.id);
         if (error) throw error;
+
         if (onUpdate && player) {
           onUpdate({ ...(player as any), spell_slots: value } as Player);
         }
+
         const prevUsed = (player.spell_slots?.used_pact_slots || 0);
         const newUsed = (value as any).used_pact_slots || 0;
         const action = newUsed > prevUsed ? 'utilisé' : 'récupéré';
@@ -401,8 +426,7 @@ function ClassesTab({
     if (resource === 'used_bardic_inspiration' && typeof value === 'number') {
       const cap = Math.max(0, getChaModFromPlayerLike(player));
       next.used_bardic_inspiration = Math.min(Math.max(0, value), cap);
-    }
-    else if (resource === 'used_lay_on_hands' && typeof value === 'number') {
+    } else if (resource === 'used_lay_on_hands' && typeof value === 'number') {
       const lvl = Number(player?.level || 0);
       const cap = Math.max(0, lvl * 5);
       next.used_lay_on_hands = Math.min(Math.max(0, value), cap);
@@ -456,7 +480,7 @@ function ClassesTab({
 
         if (isUsed && typeof previous === 'number' && typeof value === 'number') {
           const diff = Math.abs((value as number) - (previous as number));
-            toast.success(`${diff} ${resourceName} ${action}`);
+          toast.success(`${diff} ${resourceName} ${action}`);
         } else {
           toast.success(`${resourceName} ${action}`);
         }
