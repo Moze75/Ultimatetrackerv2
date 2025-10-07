@@ -282,7 +282,7 @@ function ClassesTab({
         >
           <div className="flex items-center gap-2">
          
-            <h3 className="text-lg font-semibold text-gray-100">
+            <h3 className="text-ml font-semibold text-gray-100">
               {hasClass ? displayClass : '—'}
               {hasClass && hasSubclass && (
                 <span className="ml-2 font-normal text-gray-300">- {displaySubclass}</span>
