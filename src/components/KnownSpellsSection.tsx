@@ -964,7 +964,7 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
             )}
             {arcaneRecoveryInfo && !arcaneRecoveryInfo.canRecover && player.class_resources?.used_arcane_recovery && (
               <div className="text-sm text-gray-500">
-                Récup. Arcanique utilisée (repos court)
+                Restauration magique utilisée (repos court)
               </div>
             )}
           </div>
