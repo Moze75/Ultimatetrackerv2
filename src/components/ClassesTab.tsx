@@ -319,28 +319,28 @@ function ClassesTab({
             </div>
           )}
 
-          {hasClass && (
-            <div className="stats-card">
-              <div className="p-1 space-y-1">{/* --- spacing tweak (p-4->p-3 & space-y-4->3) */}
-                <div className="flex items-center gap-1 mt-1">{/* --- spacing tweak (mt-1) */}
-                  <Sparkles className="w-5 h-5 text-yellow-400" />
-                  <span className="text-base font-semibold text-gray-200">
-                    Ressources de classe
-                  </span> 
-                </div>
-                <div className="[&_.stat-header]:hidden">
-                  <ClassResourcesCard
-                    playerClass={displayClass}
-                    resources={classResources || undefined}
-                    onUpdateResource={updateClassResource}
-                    player={player ?? undefined}
-                    level={finalLevel}
-                    onPulseScreen={triggerScreenRippleFromEvent}
-                  />
-                </div> 
-              </div>
-            </div>
-          )}
+{hasClass && (
+  <div className="stats-card">
+    <div className="p-1 space-y-1 pb-0">{/* Suppression du padding-bottom */}
+      <div className="flex items-center gap-1 mt-1">
+        <Sparkles className="w-5 h-5 text-yellow-400" />
+        <span className="text-base font-semibold text-gray-200">
+          Ressources de classe
+        </span> 
+      </div>
+      <div className="[&_.stat-header]:hidden">
+        <ClassResourcesCard
+          playerClass={displayClass}
+          resources={classResources || undefined}
+          onUpdateResource={updateClassResource}
+          player={player ?? undefined}
+          level={finalLevel}
+          onPulseScreen={triggerScreenRippleFromEvent}
+        />
+      </div> 
+    </div>
+  </div>
+)}
 
             {hasClass && (
             <div className="stats-card">
