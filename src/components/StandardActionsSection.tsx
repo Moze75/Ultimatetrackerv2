@@ -173,7 +173,7 @@ export function StandardActionsSection({ player, onUpdate }: StandardActionsSect
               
               {selectedAction.rules.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="font-medium text-gray-200 mb-2">Règles :</h4>
+                 
                   {selectedAction.rules.map((rule, index) => (
                     <div key={index} className="flex items-start gap-2 text-sm">
                       <div className="w-2 h-2 mt-1.5 rounded-full bg-blue-500/50 flex-shrink-0" />
