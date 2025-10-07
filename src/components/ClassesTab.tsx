@@ -344,7 +344,7 @@ function ClassesTab({
 
             {hasClass && (
             <div className="stats-card">
-              <div className="p-3 space-y-1">{/* --- spacing tweak */}
+              <div className="p-3 space-y-5">{/* --- spacing tweak */}
                 <div className="flex items-center gap-2">
                   <ListChecks className="w-4 h-4 text-sky-500" />
                   <span className="text-base font-semibold text-gray-200">
