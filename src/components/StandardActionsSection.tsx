@@ -130,7 +130,7 @@ export function StandardActionsSection({ player, onUpdate }: StandardActionsSect
       >
         <div className="flex items-center gap-3">
           <Book className="text-orange-500" size={20} />
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-100">Actions standard (2024)</h2>
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-100">Actions standard </h2>
         </div>
         {isExpanded ? (
           <ChevronDown className="text-gray-400" size={20} />
