@@ -48,7 +48,6 @@ function ClassesTab({
   onUpdate,
   sections: preloadedSections,
 }: Props) {
-
   const [sections, setSections] = useState<AbilitySection[]>([]);
   const [loading, setLoading] = useState(false);
   const [checkedMap, setCheckedMap] = useState<Map<string, boolean>>(new Map());
@@ -57,6 +56,7 @@ function ClassesTab({
   const [screenRipple, setScreenRipple] = useState<{ x: number; y: number; key: number } | null>(null);
   const triggerScreenRippleFromEvent = createScreenRippleHandler(setScreenRipple);
 
+  // État d’ouverture de la section (header conservant l’apparence neutre)
   const [classHeaderOpen, setClassHeaderOpen] = useState(true);
 
   const rawClass = (player?.class ?? playerClass ?? className ?? '').trim();
@@ -69,33 +69,39 @@ function ClassesTab({
   const finalLevel = Math.max(1, Number(finalLevelRaw) || 1);
   const characterId = player?.id ?? null;
 
+  /* ================== Sync class resources from player ================== */
   useEffect(() => {
     setClassResources(player?.class_resources);
   }, [player?.class_resources, player?.id]);
 
+  /* ================== Load ability sections ================== */
   useEffect(() => {
     let mounted = true;
+
     if (!rawClass) {
       setSections([]);
       setLoading(false);
       return () => { mounted = false; };
     }
+
     if (preloadedSections) {
       setSections(preloadedSections);
       setLoading(false);
       return () => { mounted = false; };
     }
+
     if (preloadedSections === null) {
       setLoading(true);
       return () => { mounted = false; };
     }
+
     (async () => {
       setLoading(true);
       try {
         const res = await loadSectionsSmart({
           className: rawClass,
           subclassName: rawSubclass,
-          level: finalLevel,
+            level: finalLevel,
         });
         if (!mounted) return;
         setSections(res);
@@ -107,9 +113,11 @@ function ClassesTab({
         if (mounted) setLoading(false);
       }
     })();
+
     return () => { mounted = false; };
   }, [preloadedSections, rawClass, rawSubclass, finalLevel]);
 
+  /* ================== Load feature checkmarks ================== */
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -133,17 +141,21 @@ function ClassesTab({
     return () => { mounted = false; };
   }, [characterId]);
 
+  /* ================== Auto init resources if missing ================== */
   const initKeyRef = useRef<string | null>(null);
   useEffect(() => {
     (async () => {
       if (!player?.id || !displayClass) return;
+
       const cls = canonicalClass(displayClass);
       if (!cls) return;
+
       const ensureKey = `${player.id}:${cls}:${finalLevel}`;
       if (initKeyRef.current === ensureKey) return;
 
       const current: Record<string, any> = { ...(classResources || {}) };
       const defaults = buildDefaultsForClass(cls, finalLevel, player);
+
       let changed = false;
       for (const [k, v] of Object.entries(defaults)) {
         if (current[k] === undefined || current[k] === null) {
@@ -157,6 +169,7 @@ function ClassesTab({
       try {
         const { error } = await supabase.from('players').update({ class_resources: current }).eq('id', player.id);
         if (error) throw error;
+
         setClassResources(current as ClassResources);
         if (onUpdate && player) {
           onUpdate({ ...(player as any), class_resources: current } as Player);
@@ -168,11 +181,13 @@ function ClassesTab({
     })();
   }, [player?.id, displayClass, finalLevel, classResources, player, onUpdate]);
 
+  /* ================== Bardic inspiration cap sync ================== */
   const bardCapRef = useRef<string | null>(null);
   useEffect(() => {
     (async () => {
       if (!player?.id || !displayClass) return;
       if (canonicalClass(displayClass) !== 'Barde') return;
+
       const cap = Math.max(0, getChaModFromPlayerLike(player));
       const total = (classResources as any)?.bardic_inspiration;
       const used = (classResources as any)?.used_bardic_inspiration || 0;
@@ -216,6 +231,7 @@ function ClassesTab({
     player,
   ]);
 
+  /* ================== Toggle ability checked ================== */
   async function handleToggle(featureKey: string, checked: boolean) {
     setCheckedMap(prev => {
       const next = new Map(prev);
@@ -235,15 +251,17 @@ function ClassesTab({
     }
   }
 
+  // StrictMode guard
   const firstMountRef = useRef(true);
   useEffect(() => {
     firstMountRef.current = false;
   }, []);
 
+  /* ================== Visible sections (level filtered) ================== */
   const visible = useMemo(
     () =>
       sections
-        .filter((s) => (typeof s.level === 'number' ? s.level <= finalLevel : true))
+        .filter(s => (typeof s.level === 'number' ? s.level <= finalLevel : true))
         .sort((a, b) => (Number(a.level) || 0) - (Number(b.level) || 0)),
     [sections, finalLevel]
   );
@@ -251,11 +269,12 @@ function ClassesTab({
   const hasClass = !!displayClass;
   const hasSubclass = !!displaySubclass;
 
+  /* ================== Render ================== */
   return (
     <>
       <div className="space-y-4">
 
-        {/* ÉTIQUETTE ORIGINALE + repli (sans changer l'apparence) */}
+        {/* HEADER CLASSIQUE (sans gradient flashy, moins arrondi) */}
         <div
           role="button"
           tabIndex={0}
@@ -267,32 +286,34 @@ function ClassesTab({
               setClassHeaderOpen(o => !o);
             }
           }}
-          className="relative bg-gradient-to-r from-violet-700/30 via-fuchsia-600/20 to-amber-600/20 border border-white/10 rounded-2xl px-4 py-3 ring-1 ring-black/5 shadow-md shadow-black/20 cursor-pointer select-none"
+          className="border border-white/10 bg-[#1d242c] hover:bg-[#232b34] transition-colors rounded-lg px-4 py-2 cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
         >
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-white">
-              {hasClass ? displayClass : '—'}
-              {hasClass && hasSubclass && (
-                <span className="ml-2 font-normal text-white/80">- {displaySubclass}</span>
-              )}
-              {hasClass && !hasSubclass && finalLevel >= 3 && (
-                <span className="ml-2 font-normal text-red-400">
-                  Sélectionnez votre sous-classe dans les paramètres
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-semibold text-white">
+                {hasClass ? displayClass : '—'}
+                {hasClass && hasSubclass && (
+                  <span className="ml-2 font-normal text-white/80">- {displaySubclass}</span>
+                )}
+                {hasClass && !hasSubclass && finalLevel >= 3 && (
+                  <span className="ml-2 font-normal text-red-400">
+                    Sélectionnez votre sous-classe dans les paramètres
+                  </span>
+                )}
+              </span>
+            </div>
+            <div className="flex items-center gap-3 pl-4">
+              {hasClass && (
+                <span className="text-xs text-white/65 whitespace-nowrap">
+                  Niveau {finalLevel}
                 </span>
               )}
-            </span>
-            {hasClass && (
-              <span className="text-xs text-white/70">Niveau {finalLevel}</span>
-            )}
-          </div>
-
-          {/* Flèche ajoutée de façon non intrusive (absolue à droite) */}
-            <div className="absolute inset-y-0 right-2 flex items-center">
-            {classHeaderOpen ? (
-              <ChevronDown size={18} className="text-white/80" />
-            ) : (
-              <ChevronRight size={18} className="text-white/80" />
-            )}
+              {classHeaderOpen ? (
+                <ChevronDown size={18} className="text-white/70 shrink-0" />
+              ) : (
+                <ChevronRight size={18} className="text-white/70 shrink-0" />
+              )}
+            </div>
           </div>
         </div>
 
@@ -304,6 +325,7 @@ function ClassesTab({
               </div>
             )}
 
+            {/* Ressources de classe */}
             {hasClass && (
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
@@ -312,6 +334,7 @@ function ClassesTab({
                     Ressources de classe
                   </span>
                 </div>
+                {/* Masque tout header interne résiduel éventuel */}
                 <div className="[&_.stat-header]:hidden">
                   <ClassResourcesCard
                     playerClass={displayClass}
@@ -325,6 +348,7 @@ function ClassesTab({
               </div>
             )}
 
+            {/* Aptitudes */}
             {hasClass && (
               loading ? (
                 <div className="flex items-center justify-center py-12">
@@ -387,6 +411,7 @@ function ClassesTab({
     </>
   );
 
+  /* ================== Resource update handler ================== */
   async function updateClassResource(
     resource: keyof ClassResources,
     value: ClassResources[keyof ClassResources]
@@ -422,6 +447,7 @@ function ClassesTab({
     }
 
     const next: any = { ...(classResources || {}) };
+
     if (resource === 'used_bardic_inspiration' && typeof value === 'number') {
       const cap = Math.max(0, getChaModFromPlayerLike(player));
       next.used_bardic_inspiration = Math.min(Math.max(0, value), cap);
