@@ -429,7 +429,7 @@ export function ClassResourcesCard({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <BookOpen size={20} className="text-blue-500" />
-                <span className="text-sm font-medium text-gray-300">Récupération arcanique</span>
+                <span className="text-sm font-medium text-gray-300">Restauration magique</span>
               </div>
               <button
                 onClick={() => onUpdateResource('used_arcane_recovery', !resources.used_arcane_recovery)}
