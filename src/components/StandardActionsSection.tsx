@@ -15,12 +15,10 @@ const STANDARD_ACTIONS: StandardAction[] = [
     id: 'attack',
     name: 'Attaque',
     icon: <Swords className="w-5 h-5 text-red-500" />,
-    description: 'Effectuer un jet d\'Attaque avec une arme ou une attaque à mains nues.',
+    description: 'Lorsque vous entreprenez l\'action Attaque, vous effectuez un jet d\'Attaque avec une arme ou une attaque à mains nues.',
     rules: [
-      'S\'équiper et se déséquiper : Vous pouvez vous équiper ou vous déséquiper d\'une arme avant ou après l\'attaque',
-      'S\'équiper comprend le fait de sortir l\'arme du fourreau ou de la ramasser',
-      'Se déséquiper consiste à la rengainer, la ranger ou la laisser choir',
-      'Se déplacer entre les attaques : Si vous avez plusieurs attaques (Attaque supplémentaire), vous pouvez vous déplacer entre elles'
+      'S\'équiper et se déséquiper : Vous pouvez vous équiper ou vous déséquiper d\'une arme lorsque vous effectuez une attaque dans le cadre de cette action. Vous pouvez le faire avant ou après l\'attaque. Si vous vous équipez d\'une arme avant une attaque, vous n\'êtes pas tenu de l\'utiliser lors de cette attaque. S\'équiper d\'une arme comprend le fait de la sortir du fourreau ou de la ramasser. Se déséquiper d\'une arme consiste à la rengainer, la ranger ou la laisser choir.',
+      'Se déplacer entre les attaques : Si vous vous déplacez pendant votre tour et disposez d\'une aptitude, telle qu\'Attaque supplémentaire, qui vous octroie plusieurs attaques dans le cadre de l\'action Attaque, vous pouvez consacrer tout ou partie de ce déplacement à vous mouvoir entre ces attaques.'
     ],
     actionType: 'Action'
   },
@@ -28,49 +26,34 @@ const STANDARD_ACTIONS: StandardAction[] = [
     id: 'dash',
     name: 'Pointe',
     icon: <Move className="w-5 h-5 text-blue-500" />,
-    description: 'Recevoir du déplacement supplémentaire pour ce tour.',
-    rules: [
-      'Cette augmentation est égale à votre Vitesse, après application d\'éventuels modificateurs',
-      'Exemple : avec une Vitesse de 9 m, vous pouvez vous déplacer de 18 m à votre tour',
-      'Exemple : avec une Vitesse de 9 m réduite à 4,50 m, vous pouvez vous déplacer de 9 m au total'
-    ],
+    description: 'Lorsque vous entreprenez l\'action Pointe, vous recevez du déplacement supplémentaire pour ce tour. Cette augmentation est égale à votre Vitesse, après application d\'éventuels modificateurs. Si vous disposez par exemple d\'une Vitesse de 9 m, vous pouvez vous déplacer de 18 m à votre tour en entreprenenant l\'action Pointe. Si vous disposez d\'une Vitesse de 9 m réduite à 4,50 m, vous pouvez vous déplacer de 9 m à votre tour avec l\'action Pointe.',
+    rules: [],
     actionType: 'Action'
   },
   {
     id: 'disengage',
     name: 'Désengagement',
     icon: <Shield className="w-5 h-5 text-green-500" />,
-    description: 'Éviter les attaques d\'Opportunité en se déplaçant.',
-    rules: [
-      'Votre déplacement ne provoque pas d\'attaque d\'Opportunité jusqu\'à la fin du tour',
-      'Permet de s\'éloigner d\'ennemis adjacents sans risque',
-      'Utile pour repositionner un personnage sans subir d\'attaques'
-    ],
+    description: 'Si vous entreprenez l\'action Désengagement, votre déplacement ne provoque pas d\'attaque d\'Opportunité jusqu\'à la fin du tour.',
+    rules: [],
     actionType: 'Action'
   },
   {
     id: 'dodge',
     name: 'Esquive',
     icon: <Target className="w-5 h-5 text-purple-500" />,
-    description: 'Se concentrer entièrement sur l\'évitement des attaques.',
-    rules: [
-      'Tout jet d\'attaque contre vous par un assaillant que vous voyez subit le Désavantage',
-      'Vos jets de sauvegarde de Dextérité ont l\'Avantage',
-      'L\'effet dure jusqu\'au début de votre tour suivant',
-      'Vous perdez ces bénéfices si vous subissez l\'état Neutralisé ou si votre Vitesse tombe à 0'
-    ],
+    description: 'Si vous entreprenez l\'action Esquive, vous recevez les bénéfices suivants : jusqu\'au début de votre tour suivant, tout jet d\'attaque effectué contre vous par un assaillant que vous voyez subit le Désavantage, et vos jets de sauvegarde de Dextérité ont l\'Avantage. Vous perdez ces bénéfices si vous subissez l\'état Neutralisé ou si votre Vitesse tombe à 0.',
+    rules: [],
     actionType: 'Action'
   },
   {
     id: 'help',
     name: 'Soutien',
     icon: <Heart className="w-5 h-5 text-pink-500" />,
-    description: 'Aider un allié dans une tâche ou une attaque.',
+    description: 'Lorsque vous entreprenez l\'action Soutien, vous faites l\'une ou l\'autre des deux choses ci-après.',
     rules: [
-      'Assister un test : Choisissez une de vos maîtrises de compétence ou d\'outil. Un allié proche a l\'Avantage au prochain test avec cette compétence/outil',
-      'Ce bénéfice expire si l\'allié n\'y recourt pas avant le début de votre tour suivant',
-      'Assister une attaque : Vous distrayez un ennemi dans un rayon de 1,50 m',
-      'Cela octroie l\'Avantage au jet d\'attaque suivant d\'un allié contre cet ennemi (expire au début de votre tour suivant)'
+      'Assister un test de caractéristique : Choisissez l\'une de vos maîtrises de compétence ou d\'outil, ainsi qu\'un allié suffisamment proche pour que vous puissiez l\'assister verbalement ou physiquement lorsqu\'il entreprend un test de caractéristique. Cet allié a l\'Avantage au prochain test de caractéristique qu\'il entreprend avec la compétence ou l\'outil choisi. Ce bénéfice expire si l\'allié n\'y recourt pas avant le début de votre tour suivant. C\'est le MD qui décide si votre assistance est possible ou non.',
+      'Assister un jet d\'attaque : Vous distrayez momentanément un ennemi dans un rayon de 1,50 m, ce qui octroie l\'Avantage au jet d\'attaque suivant de l\'un de vos alliés contre cet ennemi. Ce bénéfice expire au début de votre tour suivant.'
     ],
     actionType: 'Action'
   },
@@ -78,13 +61,10 @@ const STANDARD_ACTIONS: StandardAction[] = [
     id: 'hide',
     name: 'Furtivité',
     icon: <Eye className="w-5 h-5 text-gray-500" />,
-    description: 'Tenter de se cacher.',
+    description: 'L\'action Furtivité vous permet d\'essayer de vous cacher. Pour ce faire, vous effectuez un test de Dextérité (Discrétion) DD 15 à condition d\'être dans une zone où la Visibilité est nulle, derrière un Abri supérieur ou un Abri total, et de ne pas être dans le champ de vision d\'un ennemi ; si vous voyez une créature, vous savez si celle-ci vous voit ou non.',
     rules: [
-      'Test de Dextérité (Discrétion) DD 15',
-      'Conditions : Visibilité nulle, derrière un Abri supérieur ou total, et ne pas être dans le champ de vision d\'un ennemi',
-      'En cas de réussite : vous bénéficiez de l\'état Invisible tant que vous êtes caché',
-      'Notez le résultat : c\'est le DD pour qu\'une créature vous localise (test de Sagesse Perception)',
-      'Vous cessez d\'être caché si : vous émettez un son plus fort qu\'un murmure, un ennemi vous détecte, vous attaquez ou lancez un sort à composante verbale'
+      'En cas de réussite, vous bénéficiez de l\'état Invisible tant que vous êtes caché. Prenez note du résultat de ce test, qui est le DD à atteindre pour qu\'une créature vous localise au moyen d\'un test de Sagesse (Perception).',
+      'Vous cessez d\'être caché aussitôt après l\'un des événements suivants : vous émettez un son plus fort qu\'un murmure, un ennemi vous détecte, vous effectuez un jet d\'attaque ou lancez un sort à composante verbale.'
     ],
     actionType: 'Action'
   },
@@ -92,14 +72,11 @@ const STANDARD_ACTIONS: StandardAction[] = [
     id: 'influence',
     name: 'Influence',
     icon: <MessageCircle className="w-5 h-5 text-indigo-500" />,
-    description: 'Inciter un monstre à faire quelque chose.',
+    description: 'Par l\'action Influence, vous incitez un monstre à faire quelque chose. Décrivez ou incarnez la façon dont vous communiquez avec le monstre. Essayez-vous de tromper, d\'intimider, d\'amuser, de persuader en douceur ? Le MD détermine alors si le monstre se sent disposé, réticent ou hésitant suite à votre interaction ; ce jugement détermine si un test de caractéristique est nécessaire, comme expliqué ci-dessous.',
     rules: [
-      'Décrivez ou incarnez la façon dont vous communiquez avec le monstre',
-      'Disposé : Si la requête est en accord avec ses désirs, aucun test nécessaire, il accède',
-      'Réticent : Si la requête répugne au monstre ou est contraire à son alignement, il refuse',
-      'Hésitant : Test de caractéristique selon l\'interaction (Intimidation, Persuasion, Représentation, Tromperie, Dressage)',
-      'DD par défaut : 15 ou Intelligence du monstre (le plus élevé)',
-      'En cas d\'échec, attendez 24 heures avant de réessayer de la même manière'
+      'Disposé : Si votre requête est en accord avec les désirs du monstre, aucun test de caractéristique n\'est nécessaire ; il accède à votre demande par la méthode qu\'il préfère.',
+      'Réticent : Si votre requête répugne au monstre ou est contraire à son alignement, aucun test de caractéristique n\'est nécessaire ; il vous oppose un refus.',
+      'Hésitant : Si vous incitez le monstre à faire quelque chose et qu\'il se montre hésitant, vous devez en passer par un test de caractéristique, lequel est affecté par l\'attitude du monstre : Indifférent, Amical ou Hostile, chacun de ces termes étant défini dans le présent glossaire. La table Tests d\'Influence suggère quel test de caractéristique entreprendre en fonction de la façon dont vous interagissez avec le monstre. Le MD choisit le test, dont le DD par défaut est égal à 15 ou à la valeur d\'Intelligence du monstre, selon ce qui est le plus élevé. En cas de réussite, le monstre accomplit ce qui lui est demandé. En cas d\'échec, vous devez attendre 24 heures (ou une autre durée définie par le MD) avant de l\'exhorter à nouveau de la même manière.'
     ],
     actionType: 'Action'
   },
@@ -107,14 +84,11 @@ const STANDARD_ACTIONS: StandardAction[] = [
     id: 'ready',
     name: 'Intention',
     icon: <Clock className="w-5 h-5 text-cyan-500" />,
-    description: 'Attendre une circonstance particulière avant d\'agir.',
+    description: 'L\'action Intention consiste à attendre une circonstance particulière avant d\'agir. Pour ce faire, vous entreprenez cette action à votre tour, ce qui vous permet de jouer votre Réaction avant le début de votre tour suivant.',
     rules: [
-      'Entreprenez cette action à votre tour pour jouer votre Réaction avant le début de votre tour suivant',
-      'Décidez quelles circonstances perceptibles déclencheront votre Réaction',
-      'Choisissez l\'action que vous entreprendrez ou un déplacement (max votre Vitesse)',
-      'Quand le déclencheur intervient, vous pouvez jouer votre Réaction juste après ou ne pas en tenir compte',
-      'Pour un sort : lancez-le normalement mais retenez les énergies (requiert Concentration jusqu\'au début de votre tour suivant)',
-      'Le sort doit avoir un temps d\'incantation d\'une action'
+      'Commencez par décider quelles circonstances perceptibles déclencheront votre Réaction. Puis choisissez l\'action que vous entreprendrez en réponse à ce déclencheur (ou optez pour un déplacement n\'excédant pas votre Vitesse). Ce pourrait être par exemple : « Si le fanatique pose le pied sur la trappe, j\'active le levier qui l\'ouvre », ou « Si le zombi s\'approche de moi, je m\'en éloigne. »',
+      'Lorsque le déclencheur intervient, vous avez le choix entre jouer votre Réaction juste après la fin du déclencheur et ne pas tenir compte de celui-ci.',
+      'Lorsque votre Intention concerne l\'incantation d\'un sort, vous le lancez normalement (ce qui requiert de dépenser les éventuelles ressources nécessaires) mais retenez les énergies magiques, que vous ne libérerez qu\'à l\'intervention du déclencheur en jouant votre Réaction. Pour pouvoir anticiper ainsi, le sort doit avoir un temps d\'incantation d\'une action, sachant que retenir ses énergies vous demande de maintenir votre Concentration, ce que vous ne pouvez faire que jusqu\'au début de votre tour suivant. Si votre Concentration est rompue, le sort se dissipe sans prendre effet.'
     ],
     actionType: 'Action'
   },
@@ -122,37 +96,25 @@ const STANDARD_ACTIONS: StandardAction[] = [
     id: 'search',
     name: 'Observation',
     icon: <Search className="w-5 h-5 text-teal-500" />,
-    description: 'Discerner ce qui n\'est pas évident.',
-    rules: [
-      'Test de Sagesse visant à discerner ce qui n\'est pas évident',
-      'La compétence dépend de ce que vous essayez de détecter',
-      'Permet de trouver des objets cachés, des passages secrets, des créatures dissimulées',
-      'Plus efficace que la Perception passive'
-    ],
+    description: 'Lorsque vous entreprenez l\'action Observation, vous effectuez un test de Sagesse visant à discerner ce qui n\'est pas évident. La table « Observation » suggère quelle compétence entre en jeu lorsque vous effectuez cette action, en fonction de ce que vous essayez de détecter.',
+    rules: [],
     actionType: 'Action'
   },
   {
     id: 'study',
     name: 'Étude',
     icon: <Book className="w-5 h-5 text-amber-500" />,
-    description: 'Rechercher une information importante.',
-    rules: [
-      'Test d\'Intelligence en consultant votre mémoire, un livre, un indice ou une autre source de savoir',
-      'À la recherche d\'une information importante sur un sujet donné',
-      'Le MD détermine le DD et ce que vous découvrez'
-    ],
+    description: 'Lorsque vous entreprenez l\'action Étude, vous effectuez un test d\'Intelligence en consultant votre mémoire, un livre, un indice ou une autre source de savoir, à la recherche d\'une information importante sur un sujet donné.',
+    rules: [],
     actionType: 'Action'
   },
   {
     id: 'cast_spell',
     name: 'Magie',
     icon: <Wand2 className="w-5 h-5 text-purple-400" />,
-    description: 'Lancer un sort ou utiliser une aptitude magique.',
+    description: 'Lorsque vous entreprenez l\'action Magie, vous lancez un sort dont le temps d\'incantation est de une action ou recourez à une aptitude ou à un objet magique dont l\'activation se fait au prix de l\'action Magie.',
     rules: [
-      'Lancez un sort dont le temps d\'incantation est de une action',
-      'Ou recourez à une aptitude ou un objet magique dont l\'activation se fait au prix de l\'action Magie',
-      'Pour un sort de 1 minute ou plus : entreprenez l\'action Magie à chaque tour et maintenez votre Concentration',
-      'Si la Concentration est rompue, le sort échoue mais vous ne dépensez aucun emplacement de sort'
+      'Si vous lancez un sort dont le temps d\'incantation est de 1 minute ou plus, vous devez entreprendre l\'action Magie à chaque tour de l\'incantation, et devez maintenir votre Concentration tout du long. Si cette Concentration est rompue, le sort échoue, mais vous ne dépensez aucun emplacement de sort.'
     ],
     actionType: 'Action'
   },
@@ -160,12 +122,8 @@ const STANDARD_ACTIONS: StandardAction[] = [
     id: 'use_object',
     name: 'Utilisation',
     icon: <Lightbulb className="w-5 h-5 text-yellow-500" />,
-    description: 'Interagir avec un objet.',
-    rules: [
-      'Vous interagissez souvent avec un objet en faisant autre chose (ex: dégainer une épée lors d\'une Attaque)',
-      'Lorsqu\'un objet requiert spécifiquement votre action, vous entreprenez l\'action Utilisation',
-      'Exemples : activer un levier, ouvrir une porte coincée, boire une potion'
-    ],
+    description: 'Vous interagissez souvent avec un objet tout en faisant autre chose, comme lorsque vous dégainez votre épée dans le cadre de l\'action Attaque. Lorsqu\'un objet requiert spécifiquement votre action, vous entreprenez l\'action Utilisation.',
+    rules: [],
     actionType: 'Action'
   }
 ];
@@ -191,7 +149,7 @@ export function StandardActionsSection({ player, onUpdate }: StandardActionsSect
       >
         <div className="flex items-center gap-3">
           <Book className="text-orange-500" size={20} />
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-100">Actions standard</h2>
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-100">Actions standard (2024)</h2>
         </div>
         {isExpanded ? (
           <ChevronDown className="text-gray-400" size={20} />
