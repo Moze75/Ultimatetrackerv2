@@ -337,8 +337,9 @@ function ClassesTab({
                     level={finalLevel}
                     onPulseScreen={triggerScreenRippleFromEvent}
                   />
-                </div>
-                      </div>
+                </div> 
+              </div>
+            </div>
           )}
 
             {hasClass && (
