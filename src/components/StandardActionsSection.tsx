@@ -169,11 +169,27 @@ export function StandardActionsSection({ player, onUpdate }: StandardActionsSect
                 </div>
               </div>
               
-              <p className="text-gray-300 mb-4">{selectedAction.description}</p>
+              <div className="text-gray-300 mb-4 whitespace-pre-wrap">
+                {selectedAction.description.split('\n\n').map((paragraph, idx) => (
+                  <div key={idx} className="mb-3">
+                    {paragraph.includes(':') && !paragraph.startsWith('•') ? (
+                      <div>
+                        {paragraph.split('\n').map((line, lineIdx) => (
+                          <div key={lineIdx} className="flex items-start gap-2 mb-1">
+                            <div className="w-2 h-2 mt-2 rounded-full bg-blue-500/50 flex-shrink-0" />
+                            <p className="text-gray-300 flex-1">{line}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p>{paragraph}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
               
               {selectedAction.rules.length > 0 && (
                 <div className="space-y-2">
-                 
                   {selectedAction.rules.map((rule, index) => (
                     <div key={index} className="flex items-start gap-2 text-sm">
                       <div className="w-2 h-2 mt-1.5 rounded-full bg-blue-500/50 flex-shrink-0" />
