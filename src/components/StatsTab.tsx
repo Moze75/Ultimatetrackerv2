@@ -1,471 +1,528 @@
-import React, { useState } from 'react';
-import { Dices, Settings, Save, Dumbbell, Wind, Heart, Brain, Eye, Crown, Star } from 'lucide-react';
-import { Player, Ability } from '../types/dnd';
-import { supabase } from '../lib/supabase';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ListChecks,
+  Sparkles,
+  ChevronDown,
+  ChevronRight,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../lib/supabase';
 
-interface StatsTabProps {
-  player: Player;
-  onUpdate: (player: Player) => void;
-}
+import type { ClassResources, Player } from '../types/dnd';
+import {
+  AbilitySection,
+  PlayerLike,
+  canonicalClass,
+  sentenceCase,
+  getSubclassFromPlayerLike,
+  getChaModFromPlayerLike,
+} from './ClassesTab/modals/ClassUtilsModal';
+import { ScreenRipple, createScreenRippleHandler } from './ClassesTab/modals/ClassEffectsModal';
+import { AbilityCard } from './ClassesTab/modals/ClassAbilitiesModal';
+import {
+  ClassResourcesCard,
+  mirrorMonkKeys,
+  buildDefaultsForClass,
+} from './ClassesTab/modals/ClassResourcesModal';
+import { loadSectionsSmart } from './ClassesTab/modals/ClassDataModal';
+import { loadFeatureChecks, upsertFeatureCheck } from '../services/featureChecks';
 
-const DEFAULT_ABILITIES: Ability[] = [
-  {
-    name: 'Force',
-    score: 10,
-    modifier: 0,
-    savingThrow: 0,
-    skills: [
-      { name: 'Athlétisme', bonus: 0, isProficient: false, hasExpertise: false }
-    ]
-  },
-  {
-    name: 'Dextérité',
-    score: 10,
-    modifier: 0,
-    savingThrow: 0,
-    skills: [
-      { name: 'Acrobaties', bonus: 0, isProficient: false, hasExpertise: false },
-      { name: 'Discrétion', bonus: 0, isProficient: false, hasExpertise: false },
-      { name: 'Escamotage', bonus: 0, isProficient: false, hasExpertise: false }
-    ]
-  },
-  {
-    name: 'Constitution',
-    score: 10,
-    modifier: 0,
-    savingThrow: 0,
-    skills: []
-  },
-  {
-    name: 'Intelligence',
-    score: 10,
-    modifier: 0,
-    savingThrow: 0,
-    skills: [
-      { name: 'Arcanes', bonus: 0, isProficient: false, hasExpertise: false },
-      { name: 'Histoire', bonus: 0, isProficient: false, hasExpertise: false },
-      { name: 'Investigation', bonus: 0, isProficient: false, hasExpertise: false },
-      { name: 'Nature', bonus: 0, isProficient: false, hasExpertise: false },
-      { name: 'Religion', bonus: 0, isProficient: false, hasExpertise: false }
-    ]
-  },
-  {
-    name: 'Sagesse',
-    score: 10,
-    modifier: 0,
-    savingThrow: 0,
-    skills: [
-      { name: 'Dressage', bonus: 0, isProficient: false, hasExpertise: false },
-      { name: 'Médecine', bonus: 0, isProficient: false, hasExpertise: false },
-      { name: 'Perception', bonus: 0, isProficient: false, hasExpertise: false },
-      { name: 'Perspicacité', bonus: 0, isProficient: false, hasExpertise: false },
-      { name: 'Survie', bonus: 0, isProficient: false, hasExpertise: false }
-    ]
-  },
-  {
-    name: 'Charisme',
-    score: 10,
-    modifier: 0,
-    savingThrow: 0,
-    skills: [
-      { name: 'Intimidation', bonus: 0, isProficient: false, hasExpertise: false },
-      { name: 'Persuasion', bonus: 0, isProficient: false, hasExpertise: false },
-      { name: 'Représentation', bonus: 0, isProficient: false, hasExpertise: false },
-      { name: 'Tromperie', bonus: 0, isProficient: false, hasExpertise: false }
-    ]
-  }
-];
-
-const getModifier = (score: number): number => Math.floor((score - 10) / 2);
-
-// Bonus de maîtrise par niveau (PHB)
-const getProficiencyBonusForLevel = (level: number): number => {
-  if (level >= 17) return 6;
-  if (level >= 13) return 5;
-  if (level >= 9) return 4;
-  if (level >= 5) return 3;
-  return 2;
+type Props = {
+  player?: (PlayerLike & Partial<Player>) | null;
+  playerClass?: string;
+  className?: string;
+  subclassName?: string | null;
+  characterLevel?: number;
+  onUpdate?: (player: Player) => void;
+  sections?: AbilitySection[] | null;
 };
 
-const getExpertiseLimit = (playerClass: string | null | undefined, level: number): number => {
-  if (!playerClass) return 0;
-  
-  switch (playerClass) {
-    case 'Roublard':
-      if (level >= 6) return 4;
-      if (level >= 1) return 2;
-      return 0;
-    case 'Barde':
-      if (level >= 10) return 4;
-      if (level >= 3) return 2;
-      return 0;
-    case 'Rôdeur':
-      if (level >= 6) return 1;
-      return 0;
-    default:
-      return 0;
-  }
-};
+const DEBUG = typeof window !== 'undefined' && (window as any).UT_DEBUG === true;
 
-const hasJackOfAllTrades = (playerClass: string | null | undefined, level: number): boolean => {
-  return playerClass === 'Barde' && level >= 2;
-};
+function ClassesTab({
+  player,
+  playerClass,
+  className,
+  subclassName,
+  characterLevel,
+  onUpdate,
+  sections: preloadedSections,
+}: Props) {
 
-const getJackOfAllTradesBonus = (proficiencyBonus: number): number => {
-  return Math.floor(proficiencyBonus / 2);
-};
+  const [sections, setSections] = useState<AbilitySection[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [checkedMap, setCheckedMap] = useState<Map<string, boolean>>(new Map());
+  const [loadingChecks, setLoadingChecks] = useState(false);
+  const [classResources, setClassResources] = useState<ClassResources | null | undefined>(player?.class_resources);
 
-export function StatsTab({ player, onUpdate }: StatsTabProps) {
-  const [editing, setEditing] = useState(false);
+  const [screenRipple, setScreenRipple] = useState<{ x: number; y: number; key: number } | null>(null);
+  const triggerScreenRippleFromEvent = createScreenRippleHandler(setScreenRipple);
 
-  // Bonus de maîtrise effectif basé sur le niveau (et non édité manuellement)
-  const effectiveProficiency = getProficiencyBonusForLevel(player.level);
+  const [classHeaderOpen, setClassHeaderOpen] = useState(true);
 
-  const [stats, setStats] = useState(() => ({
-    // On garde une copie locale pour l'état (ex: touche-à-tout),
-    // mais on utilisera toujours effectiveProficiency pour les calculs
-    proficiency_bonus: effectiveProficiency,
-    jack_of_all_trades: player.stats.jack_of_all_trades || false
-  }));
+  const rawClass = (player?.class ?? playerClass ?? className ?? '').trim();
+  const rawSubclass = (getSubclassFromPlayerLike(player) ?? subclassName) ?? null;
 
-  const [abilities, setAbilities] = useState<Ability[]>(() => {
-    if (Array.isArray(player.abilities) && player.abilities.length > 0) {
-      // Migrer les anciennes données sans hasExpertise
-      return player.abilities.map(ability => ({
-        ...ability,
-        skills: ability.skills.map(skill => ({
-          ...skill,
-          hasExpertise: skill.hasExpertise || false
-        }))
-      }));
+  const displayClass = rawClass ? sentenceCase(rawClass) : '';
+  const displaySubclass = rawSubclass ? sentenceCase(rawSubclass) : null;
+
+  const finalLevelRaw = player?.level ?? characterLevel ?? 1;
+  const finalLevel = Math.max(1, Number(finalLevelRaw) || 1);
+  const characterId = player?.id ?? null;
+
+  /* ================= Sync class resources ================= */
+  useEffect(() => {
+    setClassResources(player?.class_resources);
+  }, [player?.class_resources, player?.id]);
+
+  /* ================= Load sections ================= */
+  useEffect(() => {
+    let mounted = true;
+
+    if (!rawClass) {
+      setSections([]);
+      setLoading(false);
+      return () => { mounted = false; };
     }
-    return DEFAULT_ABILITIES;
-  });
 
-  const expertiseLimit = getExpertiseLimit(player.class, player.level);
-  const currentExpertiseCount = abilities.reduce((count, ability) => 
-    count + ability.skills.filter(skill => skill.hasExpertise).length, 0
+    if (preloadedSections) {
+      setSections(preloadedSections);
+      setLoading(false);
+      return () => { mounted = false; };
+    }
+
+    if (preloadedSections === null) {
+      setLoading(true);
+      return () => { mounted = false; };
+    }
+
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await loadSectionsSmart({
+          className: rawClass,
+          subclassName: rawSubclass,
+          level: finalLevel,
+        });
+        if (!mounted) return;
+        setSections(res);
+      } catch (e) {
+        if (DEBUG) console.debug('[ClassesTab] loadSectionsSmart error:', e);
+        if (!mounted) return;
+        setSections([]);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+
+    return () => { mounted = false; };
+  }, [preloadedSections, rawClass, rawSubclass, finalLevel]);
+
+  /* ================= Load feature checks ================= */
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      if (!characterId) {
+        setCheckedMap(new Map());
+        return;
+      }
+      setLoadingChecks(true);
+      try {
+        const map = await loadFeatureChecks(characterId);
+        if (!mounted) return;
+        setCheckedMap(map);
+      } catch (e) {
+        if (DEBUG) console.debug('[ClassesTab] loadFeatureChecks error:', e);
+        if (!mounted) return;
+        setCheckedMap(new Map());
+      } finally {
+        if (mounted) setLoadingChecks(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [characterId]);
+
+  /* ================= Auto init missing resources ================= */
+  const initKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    (async () => {
+      if (!player?.id || !displayClass) return;
+
+      const cls = canonicalClass(displayClass);
+      if (!cls) return;
+
+      const ensureKey = `${player.id}:${cls}:${finalLevel}`;
+      if (initKeyRef.current === ensureKey) return;
+
+      const current: Record<string, any> = { ...(classResources || {}) };
+      const defaults = buildDefaultsForClass(cls, finalLevel, player);
+
+      let changed = false;
+      for (const [k, v] of Object.entries(defaults)) {
+        if (current[k] === undefined || current[k] === null) {
+          current[k] = v;
+          changed = true;
+        }
+      }
+      if (!changed) return;
+
+      initKeyRef.current = ensureKey;
+      try {
+        const { error } = await supabase.from('players').update({ class_resources: current }).eq('id', player.id);
+        if (error) throw error;
+
+        setClassResources(current as ClassResources);
+
+        if (onUpdate && player) {
+          onUpdate({ ...(player as any), class_resources: current } as Player);
+        }
+      } catch (e) {
+        initKeyRef.current = null;
+        console.error('[ClassesTab] auto-init class_resources error:', e);
+      }
+    })();
+  }, [player?.id, displayClass, finalLevel, classResources, player, onUpdate]);
+
+  /* ================= Bardic inspiration dynamic cap ================= */
+  const bardCapRef = useRef<string | null>(null);
+  useEffect(() => {
+    (async () => {
+      if (!player?.id || !displayClass) return;
+      if (canonicalClass(displayClass) !== 'Barde') return;
+
+      const cap = Math.max(0, getChaModFromPlayerLike(player));
+      const total = (classResources as any)?.bardic_inspiration;
+      const used = (classResources as any)?.used_bardic_inspiration || 0;
+      const key = `${player.id}:${cap}:${total ?? 'u'}:${used}`;
+      if (bardCapRef.current === key) return;
+
+      if (typeof total !== 'number' || total !== cap || used > cap) {
+        const next = {
+          ...(classResources || {}),
+          bardic_inspiration: cap,
+          used_bardic_inspiration: Math.min(used, cap),
+        };
+
+        try {
+          const { error } = await supabase.from('players').update({ class_resources: next }).eq('id', player.id);
+          if (error) throw error;
+
+          setClassResources(next as ClassResources);
+          bardCapRef.current = key;
+
+          if (onUpdate && player) {
+            onUpdate({ ...(player as any), class_resources: next } as Player);
+          }
+        } catch (e) {
+          console.error('[ClassesTab] bard cap update error:', e);
+          bardCapRef.current = null;
+        }
+      } else {
+        bardCapRef.current = key;
+      }
+    })();
+  }, [
+    player?.id,
+    displayClass,
+    player?.stats?.charisma,
+    player?.stats?.CHA,
+    player?.charisma,
+    player?.CHA,
+    player?.ability_scores?.cha,
+    player?.abilities,
+    classResources?.bardic_inspiration,
+    classResources?.used_bardic_inspiration,
+    onUpdate,
+    player,
+  ]);
+
+  /* ================= Toggle ability check ================= */
+  async function handleToggle(featureKey: string, checked: boolean) {
+    setCheckedMap(prev => {
+      const next = new Map(prev);
+      next.set(featureKey, checked);
+      return next;
+    });
+    try {
+      await upsertFeatureCheck({
+        characterId,
+        className: displayClass,
+        subclassName: displaySubclass ?? null,
+        featureKey,
+        checked,
+      });
+    } catch (e) {
+      if (DEBUG) console.debug('[ClassesTab] upsertFeatureCheck error:', e);
+    }
+  }
+
+  const visible = useMemo(
+    () =>
+      sections
+        .filter(s => (typeof s.level === 'number' ? s.level <= finalLevel : true))
+        .sort((a, b) => (Number(a.level) || 0) - (Number(b.level) || 0)),
+    [sections, finalLevel]
   );
 
-  const updateAbilityModifiers = (
-    newAbilities: Ability[],
-    currentStats = stats,
-    proficiencyBonus = effectiveProficiency
-  ) => {
-    return newAbilities.map(ability => {
-      const modifier = getModifier(ability.score);
-      const jackOfAllTradesBonus = currentStats.jack_of_all_trades ? getJackOfAllTradesBonus(proficiencyBonus) : 0;
+  const hasClass = !!displayClass;
+  const hasSubclass = !!displaySubclass;
 
-      // Déterminer si la sauvegarde est maîtrisée (sauvegarde != modif)
-      const isSavingThrowProficient = ability.savingThrow !== ability.modifier;
-
-      return {
-        ...ability,
-        modifier,
-        savingThrow: modifier + (isSavingThrowProficient ? proficiencyBonus : 0),
-        skills: ability.skills.map(skill => ({
-          ...skill,
-          bonus: modifier + (skill.isProficient ? 
-            (skill.hasExpertise ? proficiencyBonus * 2 : proficiencyBonus) :
-            (currentStats.jack_of_all_trades ? jackOfAllTradesBonus : 0)
-          )
-        }))
-      };
-    });
-  };
-
-  const handleScoreChange = (index: number, score: number) => {
-    const newAbilities = [...abilities];
-    newAbilities[index].score = Math.max(1, Math.min(20, score));
-    setAbilities(updateAbilityModifiers(newAbilities, stats, effectiveProficiency));
-  };
-
-  const handleSavingThrowChange = (index: number) => {
-    const newAbilities = [...abilities];
-    const ability = newAbilities[index];
-    const isCurrentlyProficient = ability.savingThrow !== ability.modifier;
-    ability.savingThrow = ability.modifier + (isCurrentlyProficient ? 0 : effectiveProficiency);
-    setAbilities(newAbilities);
-  };
-
-  const handleProficiencyChange = (abilityIndex: number, skillIndex: number) => {
-    const newAbilities = [...abilities];
-    const skill = newAbilities[abilityIndex].skills[skillIndex];
-    
-    // Si on retire la maîtrise, on retire aussi l'expertise
-    if (skill.isProficient && skill.hasExpertise) {
-      skill.hasExpertise = false;
-    }
-    
-    skill.isProficient = !skill.isProficient;
-    setAbilities(updateAbilityModifiers(newAbilities, stats, effectiveProficiency));
-  };
-
-  const handleExpertiseChange = (abilityIndex: number, skillIndex: number) => {
-    const newAbilities = [...abilities];
-    const skill = newAbilities[abilityIndex].skills[skillIndex];
-    
-    // Vérifier si on peut ajouter une expertise
-    if (!skill.hasExpertise && currentExpertiseCount >= expertiseLimit) {
-      toast.error(`Limite d'expertise atteinte (${expertiseLimit})`);
-      return;
-    }
-    
-    skill.hasExpertise = !skill.hasExpertise;
-    setAbilities(updateAbilityModifiers(newAbilities, stats, effectiveProficiency));
-  };
-
-  const handleSave = async () => {
-    try {
-      // Recalculer Dex mod pour l'initiative
-      const dexScore = abilities.find(a => a.name === 'Dextérité')?.score ?? 10;
-      const dexMod = getModifier(dexScore);
-
-      // S'assurer que jack_of_all_trades est cohérent (Barde niv >= 2)
-      const updatedStatsLocal = {
-        ...stats,
-        jack_of_all_trades: hasJackOfAllTrades(player.class, player.level)
-          ? (stats.jack_of_all_trades ?? false)
-          : false
-      };
-
-      // MERGE: on préserve tous les champs existants dans player.stats (CA, VIT, inspirations, etc.)
-      // et on met à jour seulement ce qui relève des règles D&D ici:
-      // - proficiency_bonus selon le niveau
-      // - initiative = mod DEX (si tu souhaites un offset, on pourra ajouter initiative_misc plus tard)
-      const mergedStats = {
-        ...player.stats,                       // préserve armor_class, speed, inspirations, etc.
-        ...updatedStatsLocal,                  // garde jack_of_all_trades (état local)
-        proficiency_bonus: effectiveProficiency,
-        initiative: dexMod
-      };
-
-      const { error } = await supabase
-        .from('players')
-        .update({ 
-          abilities,
-          stats: mergedStats
-        })
-        .eq('id', player.id);
-
-      if (error) throw error;
-
-      onUpdate({
-        ...player,
-        abilities,
-        stats: mergedStats
-      });
-
-      setEditing(false);
-      toast.success('Caractéristiques mises à jour');
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour des caractéristiques:', error);
-      toast.error('Erreur lors de la mise à jour');
-    }
-  };
-
+  /* ================= Render ================= */
   return (
     <div className="space-y-6">
+
+      {/* Carte header (style identique StatsTab) */}
       <div className="stats-card">
-        <div className="stat-header flex items-center justify-between">
+        <div
+          className="stat-header flex items-center justify-between cursor-pointer select-none"
+          role="button"
+          tabIndex={0}
+          aria-expanded={classHeaderOpen}
+          onClick={() => setClassHeaderOpen(o => !o)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setClassHeaderOpen(o => !o);
+            }
+          }}
+        >
           <div className="flex items-center gap-2">
-            <Dices className="w-5 h-5 text-yellow-500" />
+            <Sparkles className="w-5 h-5 text-yellow-500" />
             <h3 className="text-lg font-semibold text-gray-100">
-              Caractéristiques
+              {hasClass ? displayClass : '—'}
+              {hasClass && hasSubclass && (
+                <span className="ml-2 font-normal text-gray-300">- {displaySubclass}</span>
+              )}
+              {hasClass && !hasSubclass && finalLevel >= 3 && (
+                <span className="ml-2 font-normal text-red-400">
+                  (Sélectionnez votre sous-classe)
+                </span>
+              )}
             </h3>
           </div>
           <div className="flex items-center gap-4">
-            {editing && expertiseLimit > 0 && (
-              <div className="text-sm text-gray-400">
-                Expertise: {currentExpertiseCount}/{expertiseLimit}
-              </div>
+            {hasClass && (
+              <span className="text-sm text-gray-400">
+                Niveau {finalLevel}
+              </span>
             )}
-            <button
-              onClick={() => editing ? handleSave() : setEditing(true)}
-              className="p-2 text-gray-400 hover:bg-gray-700/50 rounded-lg transition-colors flex items-center justify-center"
-            >
-              {editing ? <Save size={20} /> : <Settings size={20} />}
-            </button>
+            {classHeaderOpen ? (
+              <ChevronDown size={20} className="text-gray-400" />
+            ) : (
+              <ChevronRight size={20} className="text-gray-400" />
+            )}
           </div>
         </div>
-        <div className="p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {abilities.map((ability, abilityIndex) => (
-              <div key={ability.name} className="stat-block p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    {ability.name === 'Force' && <Dumbbell className="w-5 h-5 text-red-500" />}
-                    {ability.name === 'Dextérité' && <Wind className="w-5 h-5 text-green-500" />}
-                    {ability.name === 'Constitution' && <Heart className="w-5 h-5 text-orange-500" />}
-                    {ability.name === 'Intelligence' && <Brain className="w-5 h-5 text-blue-500" />}
-                    {ability.name === 'Sagesse' && <Eye className="w-5 h-5 text-purple-500" />}
-                    {ability.name === 'Charisme' && <Crown className="w-5 h-5 text-yellow-500" />}
-                    <h4 className="text-lg font-medium text-gray-200">
-                      {ability.name}
-                    </h4>
-                  </div>
-                  {editing ? (
-                    <input
-                      type="number"
-                      value={ability.score}
-                      onChange={(e) => handleScoreChange(abilityIndex, parseInt(e.target.value) || 0)}
-                      className="input-dark w-16 px-2 py-1 text-center rounded-md"
-                      min="1"
-                      max="20"
+      </div>
+
+      {/* Carte contenu (seulement si ouvert) */}
+      {classHeaderOpen && (
+        <div className="space-y-6">
+
+          {/* Ressources de classe */}
+          {hasClass && (
+            <div className="stats-card">
+              <div className="p-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-yellow-400" />
+                  <span className="text-base font-semibold text-gray-200">
+                    Ressources de classe
+                  </span>
+                </div>
+                <div className="[&_.stat-header]:hidden">
+                  <ClassResourcesCard
+                    playerClass={displayClass}
+                    resources={classResources || undefined}
+                    onUpdateResource={updateClassResource}
+                    player={player ?? undefined}
+                    level={finalLevel}
+                    onPulseScreen={triggerScreenRippleFromEvent}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Aptitudes */}
+          {hasClass && (
+            <div className="stats-card">
+              <div className="p-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <ListChecks className="w-4 h-4 text-sky-500" />
+                  <span className="text-base font-semibold text-gray-200">
+                    Compétences de classe et sous-classe
+                  </span>
+                </div>
+
+                {loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <img
+                      src="/icons/wmremove-transformed.png"
+                      alt="Chargement..."
+                      className="animate-spin h-10 w-10 object-contain"
+                      style={{ backgroundColor: 'transparent' }}
                     />
-                  ) : (
-                    <div className="text-lg font-bold text-gray-100">
-                      {ability.score}
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center justify-between mb-3 px-3 py-1 bg-gray-800/50 rounded-md">
-                  <span className="text-sm text-gray-400">Modificateur</span>
-                  <span className="font-medium text-gray-200">
-                    {ability.modifier >= 0 ? '+' : ''}{ability.modifier}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between mb-3 px-3 py-1 bg-gray-800/50 rounded-md">
-                  <div className="flex items-center gap-2">
-                    {editing ? (
-                      <button
-                        onClick={() => handleSavingThrowChange(abilityIndex)}
-                        className={`w-4 h-4 rounded border ${
-                          ability.savingThrow !== ability.modifier
-                            ? 'bg-red-500 border-red-600'
-                            : 'border-gray-600 hover:border-gray-500'
-                        }`}
-                      />
-                    ) : (
-                      <div
-                        className={`w-4 h-4 rounded border ${
-                          ability.savingThrow !== ability.modifier
-                            ? 'bg-red-500 border-red-600'
-                            : 'border-gray-600'
-                        }`}
-                      />
-                    )}
-                    <span className="text-sm text-gray-400">Sauvegarde</span>
                   </div>
-                  <span className="font-medium text-gray-200">
-                    {ability.savingThrow >= 0 ? '+' : ''}{ability.savingThrow}
-                  </span>
-                </div>
-                {ability.skills.length > 0 && (
-                  <div className="space-y-2 mt-4">
-                    {ability.skills.map((skill, skillIndex) => (
-                      <div
-                        key={skill.name}
-                        className="flex items-center justify-between px-3 py-1"
-                      >
-                        <div className="flex items-center gap-2">
-                          {editing ? (
-                            <button
-                              onClick={() => handleProficiencyChange(abilityIndex, skillIndex)}
-                              className={`w-4 h-4 rounded border ${
-                                skill.isProficient
-                                  ? 'bg-red-500 border-red-600'
-                                  : 'border-gray-600 hover:border-gray-500'
-                              }`}
-                            />
-                          ) : (
-                            <div
-                              className={`w-4 h-4 rounded border ${
-                                skill.isProficient
-                                  ? 'bg-red-500 border-red-600'
-                                  : 'border-gray-600'
-                              }`}
-                            />
-                          )}
-                          {editing && skill.isProficient && expertiseLimit > 0 ? (
-                            <button
-                              onClick={() => handleExpertiseChange(abilityIndex, skillIndex)}
-                              className={`w-4 h-4 flex items-center justify-center rounded ${
-                                skill.hasExpertise
-                                  ? 'text-yellow-500 hover:text-yellow-400'
-                                  : 'text-gray-600 hover:text-yellow-500'
-                              }`}
-                              title={skill.hasExpertise ? 'Retirer l\'expertise' : 'Ajouter l\'expertise'}
-                            >
-                              <Star size={12} />
-                            </button>
-                          ) : skill.hasExpertise ? (
-                            <Star size={12} className="text-yellow-500" />
-                          ) : (
-                            <div className="w-4" />
-                          )}
-                          <span className="text-sm text-gray-300">
-                            {skill.name}
-                            {!skill.isProficient && stats.jack_of_all_trades && (
-                              <span className="text-xs text-blue-400 ml-1" title="Touche-à-tout">
-                                (T)
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                        <span className="text-sm font-medium text-gray-300">
-                          {skill.bonus >= 0 ? '+' : ''}{skill.bonus}
-                        </span>
-                      </div>
+                ) : visible.length === 0 ? (
+                  <div className="text-center text-gray-400 py-6">
+                    Aucune aptitude trouvée pour "{displayClass}{displaySubclass ? ` - ${displaySubclass}` : ''}".
+                    {DEBUG && (
+                      <pre className="mt-3 text-xs text-white/60">
+                        Activez window.UT_DEBUG = true pour debug.
+                      </pre>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {visible.map((s, i) => (
+                      <AbilityCard
+                        key={`${s.origin}-${s.level ?? 'x'}-${i}`}
+                        section={s}
+                        defaultOpen={false}
+                        ctx={{
+                          characterId,
+                          className: displayClass,
+                          subclassName: displaySubclass,
+                          checkedMap,
+                          onToggle: handleToggle,
+                        }}
+                        disableContentWhileLoading={loadingChecks}
+                      />
                     ))}
                   </div>
                 )}
               </div>
-            ))}
-          </div>
-          
-          {/* Section Touche-à-tout pour les bardes */}
-          {editing && hasJackOfAllTrades(player.class, player.level) && (
-            <div className="mt-6 p-4 bg-blue-900/20 border border-blue-700/50 rounded-lg">
-              <div className="flex items-start gap-4">
-                <button
-                  onClick={() => {
-                    const newStats = { ...stats, jack_of_all_trades: !stats.jack_of_all_trades };
-                    setStats(newStats);
-                    setAbilities(updateAbilityModifiers(abilities, newStats, effectiveProficiency));
-                  }}
-                  className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
-                    stats.jack_of_all_trades
-                      ? 'bg-blue-500 border-blue-500 text-white'
-                      : 'border-gray-600 hover:border-blue-500'
-                  }`}
-                >
-                  {stats.jack_of_all_trades && (
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                </button>
-                <div>
-                  <h4 className="text-lg font-medium text-blue-300 mb-2">
-                    Touche-à-tout
-                  </h4>
-                  <p className="text-sm text-gray-400 mb-2">
-                    Ajoute +{getJackOfAllTradesBonus(effectiveProficiency)} aux tests de caractéristique sans maîtrise
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    Cette capacité s'applique automatiquement aux compétences non maîtrisées quand elle est activée.
-                  </p>
-                </div>
-              </div>
             </div>
           )}
-          
-          {/* Affichage de l'état de Touche-à-tout en mode lecture */}
-          {!editing && stats.jack_of_all_trades && (
-            <div className="mt-6 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
-              <div className="flex items-center gap-2">
-                <Star className="w-5 h-5 text-blue-400" />
-                <span className="text-blue-300 font-medium">Touche-à-tout actif</span>
-                <span className="text-sm text-gray-400">
-                  (+{getJackOfAllTradesBonus(effectiveProficiency)} aux tests sans maîtrise)
-                </span>
+
+          {!hasClass && (
+            <div className="stats-card">
+              <div className="p-6 text-center text-gray-400">
+                Sélectionne une classe pour afficher les aptitudes.
               </div>
             </div>
           )}
         </div>
-      </div>
+      )}
+
+      {screenRipple && (
+        <ScreenRipple
+          key={screenRipple.key}
+          x={screenRipple.x}
+          y={screenRipple.y}
+          onDone={() => setScreenRipple(null)}
+        />
+      )}
     </div>
   );
+
+  /* ================= Handlers ================= */
+  async function updateClassResource(
+    resource: keyof ClassResources,
+    value: ClassResources[keyof ClassResources]
+  ) {
+    if (!player?.id) return;
+
+    if ((resource as any) === 'pact_slots' && typeof value === 'object' && value !== null) {
+      try {
+        const { error } = await supabase.from('players').update({ spell_slots: value }).eq('id', player.id);
+        if (error) throw error;
+
+        if (onUpdate && player) {
+          onUpdate({ ...(player as any), spell_slots: value } as Player);
+        }
+
+        const prevUsed = (player.spell_slots?.used_pact_slots || 0);
+        const newUsed = (value as any).used_pact_slots || 0;
+        const action = newUsed > prevUsed ? 'utilisé' : 'récupéré';
+        const diff = Math.abs(newUsed - prevUsed);
+        toast.success(`${diff} emplacement${diff > 1 ? 's' : ''} de pacte ${action}`);
+      } catch (err) {
+        console.error('Erreur lors de la mise à jour des emplacements de pacte:', err);
+        toast.error('Erreur lors de la mise à jour');
+      }
+      return;
+    }
+
+    if (resource === 'bardic_inspiration') {
+      toast.error("Le total d'Inspiration bardique est calculé automatiquement (modificateur de Charisme).");
+      return;
+    }
+    if (resource === 'lay_on_hands') {
+      toast.error("Le total d'Imposition des mains est calculé automatiquement (5 × niveau de Paladin).");
+      return;
+    }
+
+    const next: any = { ...(classResources || {}) };
+
+    if (resource === 'used_bardic_inspiration' && typeof value === 'number') {
+      const cap = Math.max(0, getChaModFromPlayerLike(player));
+      next.used_bardic_inspiration = Math.min(Math.max(0, value), cap);
+    } else if (resource === 'used_lay_on_hands' && typeof value === 'number') {
+      const lvl = Number(player?.level || 0);
+      const cap = Math.max(0, lvl * 5);
+      next.used_lay_on_hands = Math.min(Math.max(0, value), cap);
+    } else {
+      next[resource] = value;
+    }
+
+    mirrorMonkKeys(resource, value, next);
+
+    try {
+      const { error } = await supabase.from('players').update({ class_resources: next }).eq('id', player.id);
+      if (error) throw error;
+
+      setClassResources(next as ClassResources);
+
+      if (onUpdate && player) {
+        onUpdate({ ...(player as any), class_resources: next } as Player);
+      }
+
+      if (typeof value === 'boolean') {
+        toast.success(`Récupération arcanique ${value ? 'utilisée' : 'disponible'}`);
+      } else {
+        const resourceNames: Record<string, string> = {
+          rage: 'Rage',
+          bardic_inspiration: 'Inspiration bardique',
+          channel_divinity: 'Conduit divin',
+          wild_shape: 'Forme sauvage',
+          sorcery_points: 'Points de sorcellerie',
+          action_surge: "Second souffle",
+          credo_points: 'Points de crédo',
+          ki_points: 'Points de crédo',
+          lay_on_hands: 'Imposition des mains',
+          favored_foe: 'Ennemi juré',
+          sneak_attack: 'Attaque sournoise',
+          pact_magic: 'Magie de pacte',
+          supernatural_metabolism: 'Métabolisme surnaturel',
+          innate_sorcery: 'Sorcellerie innée',
+        };
+
+        const key = String(resource);
+        const displayKey = key.replace('used_', '');
+        const resourceName = resourceNames[displayKey] || displayKey;
+        const isUsed = key.startsWith('used_');
+        const previous = (classResources as any)?.[resource];
+        const action =
+          isUsed && typeof previous === 'number' && typeof value === 'number'
+            ? value > previous
+              ? 'utilisé'
+              : 'récupéré'
+            : 'mis à jour';
+
+        if (isUsed && typeof previous === 'number' && typeof value === 'number') {
+          const diff = Math.abs((value as number) - (previous as number));
+          toast.success(`${diff} ${resourceName} ${action}`);
+        } else {
+          toast.success(`${resourceName} ${action}`);
+        }
+      }
+    } catch (err) {
+      console.error('Erreur lors de la mise à jour des ressources:', err);
+      toast.error('Erreur lors de la mise à jour');
+    }
+  }
 }
+
+export default ClassesTab;
+export { ClassesTab };
