@@ -959,7 +959,7 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
             {arcaneRecoveryInfo && arcaneRecoveryInfo.canRecover && (
               <div className="text-sm text-blue-400 flex items-center gap-1">
                 <Plus size={12} />
-                Récup. Arcanique : {arcaneRecoveryInfo.remaining} niveau{arcaneRecoveryInfo.remaining > 1 ? 'x' : ''} disponible{arcaneRecoveryInfo.remaining > 1 ? 's' : ''}
+                Restauration magique : {arcaneRecoveryInfo.remaining} niveau{arcaneRecoveryInfo.remaining > 1 ? 'x' : ''} disponible{arcaneRecoveryInfo.remaining > 1 ? 's' : ''}
               </div>
             )}
             {arcaneRecoveryInfo && !arcaneRecoveryInfo.canRecover && player.class_resources?.used_arcane_recovery && (
