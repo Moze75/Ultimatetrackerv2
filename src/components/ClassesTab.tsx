@@ -48,6 +48,7 @@ function ClassesTab({
   onUpdate,
   sections: preloadedSections,
 }: Props) {
+
   const [sections, setSections] = useState<AbilitySection[]>([]);
   const [loading, setLoading] = useState(false);
   const [checkedMap, setCheckedMap] = useState<Map<string, boolean>>(new Map());
@@ -56,7 +57,6 @@ function ClassesTab({
   const [screenRipple, setScreenRipple] = useState<{ x: number; y: number; key: number } | null>(null);
   const triggerScreenRippleFromEvent = createScreenRippleHandler(setScreenRipple);
 
-  // État d’ouverture de la section (header conservant l’apparence neutre)
   const [classHeaderOpen, setClassHeaderOpen] = useState(true);
 
   const rawClass = (player?.class ?? playerClass ?? className ?? '').trim();
@@ -69,12 +69,12 @@ function ClassesTab({
   const finalLevel = Math.max(1, Number(finalLevelRaw) || 1);
   const characterId = player?.id ?? null;
 
-  /* ================== Sync class resources from player ================== */
+  /* Sync resources with player */
   useEffect(() => {
     setClassResources(player?.class_resources);
   }, [player?.class_resources, player?.id]);
 
-  /* ================== Load ability sections ================== */
+  /* Load sections */
   useEffect(() => {
     let mounted = true;
 
@@ -101,7 +101,7 @@ function ClassesTab({
         const res = await loadSectionsSmart({
           className: rawClass,
           subclassName: rawSubclass,
-            level: finalLevel,
+          level: finalLevel,
         });
         if (!mounted) return;
         setSections(res);
@@ -117,7 +117,7 @@ function ClassesTab({
     return () => { mounted = false; };
   }, [preloadedSections, rawClass, rawSubclass, finalLevel]);
 
-  /* ================== Load feature checkmarks ================== */
+  /* Load feature checks */
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -141,12 +141,11 @@ function ClassesTab({
     return () => { mounted = false; };
   }, [characterId]);
 
-  /* ================== Auto init resources if missing ================== */
+  /* Auto init missing resources */
   const initKeyRef = useRef<string | null>(null);
   useEffect(() => {
     (async () => {
       if (!player?.id || !displayClass) return;
-
       const cls = canonicalClass(displayClass);
       if (!cls) return;
 
@@ -155,7 +154,6 @@ function ClassesTab({
 
       const current: Record<string, any> = { ...(classResources || {}) };
       const defaults = buildDefaultsForClass(cls, finalLevel, player);
-
       let changed = false;
       for (const [k, v] of Object.entries(defaults)) {
         if (current[k] === undefined || current[k] === null) {
@@ -169,7 +167,6 @@ function ClassesTab({
       try {
         const { error } = await supabase.from('players').update({ class_resources: current }).eq('id', player.id);
         if (error) throw error;
-
         setClassResources(current as ClassResources);
         if (onUpdate && player) {
           onUpdate({ ...(player as any), class_resources: current } as Player);
@@ -181,7 +178,7 @@ function ClassesTab({
     })();
   }, [player?.id, displayClass, finalLevel, classResources, player, onUpdate]);
 
-  /* ================== Bardic inspiration cap sync ================== */
+  /* Bardic Inspiration dynamic cap */
   const bardCapRef = useRef<string | null>(null);
   useEffect(() => {
     (async () => {
@@ -231,7 +228,7 @@ function ClassesTab({
     player,
   ]);
 
-  /* ================== Toggle ability checked ================== */
+  /* Toggle ability check */
   async function handleToggle(featureKey: string, checked: boolean) {
     setCheckedMap(prev => {
       const next = new Map(prev);
@@ -251,13 +248,11 @@ function ClassesTab({
     }
   }
 
-  // StrictMode guard
   const firstMountRef = useRef(true);
   useEffect(() => {
     firstMountRef.current = false;
   }, []);
 
-  /* ================== Visible sections (level filtered) ================== */
   const visible = useMemo(
     () =>
       sections
@@ -269,12 +264,11 @@ function ClassesTab({
   const hasClass = !!displayClass;
   const hasSubclass = !!displaySubclass;
 
-  /* ================== Render ================== */
   return (
     <>
       <div className="space-y-4">
 
-        {/* HEADER CLASSIQUE (sans gradient flashy, moins arrondi) */}
+        {/* HEADER (même couleur que ressources, pas d'arrondi) */}
         <div
           role="button"
           tabIndex={0}
@@ -286,9 +280,9 @@ function ClassesTab({
               setClassHeaderOpen(o => !o);
             }
           }}
-          className="border border-white/10 bg-[#1d242c] hover:bg-[#232b34] transition-colors rounded-lg px-4 py-2 cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+          className="border border-white/10 bg-[#0b1322] hover:bg-[#0d1628] transition-colors px-4 py-2 cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
         >
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div className="flex-1 min-w-0">
               <span className="text-sm font-semibold text-white">
                 {hasClass ? displayClass : '—'}
@@ -302,16 +296,16 @@ function ClassesTab({
                 )}
               </span>
             </div>
-            <div className="flex items-center gap-3 pl-4">
+            <div className="flex items-center gap-3 shrink-0">
               {hasClass && (
-                <span className="text-xs text-white/65 whitespace-nowrap">
+                <span className="text-xs text-white/70 whitespace-nowrap">
                   Niveau {finalLevel}
                 </span>
               )}
               {classHeaderOpen ? (
-                <ChevronDown size={18} className="text-white/70 shrink-0" />
+                <ChevronDown size={18} className="text-white/70" />
               ) : (
-                <ChevronRight size={18} className="text-white/70 shrink-0" />
+                <ChevronRight size={18} className="text-white/70" />
               )}
             </div>
           </div>
@@ -334,7 +328,6 @@ function ClassesTab({
                     Ressources de classe
                   </span>
                 </div>
-                {/* Masque tout header interne résiduel éventuel */}
                 <div className="[&_.stat-header]:hidden">
                   <ClassResourcesCard
                     playerClass={displayClass}
@@ -411,7 +404,6 @@ function ClassesTab({
     </>
   );
 
-  /* ================== Resource update handler ================== */
   async function updateClassResource(
     resource: keyof ClassResources,
     value: ClassResources[keyof ClassResources]
@@ -464,7 +456,9 @@ function ClassesTab({
     try {
       const { error } = await supabase.from('players').update({ class_resources: next }).eq('id', player.id);
       if (error) throw error;
+
       setClassResources(next as ClassResources);
+
       if (onUpdate && player) {
         onUpdate({ ...(player as any), class_resources: next } as Player);
       }
@@ -488,6 +482,7 @@ function ClassesTab({
           supernatural_metabolism: 'Métabolisme surnaturel',
           innate_sorcery: 'Sorcellerie innée',
         };
+
         const key = String(resource);
         const displayKey = key.replace('used_', '');
         const resourceName = resourceNames[displayKey] || displayKey;
@@ -499,6 +494,7 @@ function ClassesTab({
               ? 'utilisé'
               : 'récupéré'
             : 'mis à jour';
+
         if (isUsed && typeof previous === 'number' && typeof value === 'number') {
           const diff = Math.abs((value as number) - (previous as number));
           toast.success(`${diff} ${resourceName} ${action}`);
