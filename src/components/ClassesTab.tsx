@@ -69,7 +69,7 @@ function ClassesTab({
   const finalLevel = Math.max(1, Number(finalLevelRaw) || 1);
   const characterId = player?.id ?? null;
 
-  /* Sync resources with player */
+  /* Sync class resources */
   useEffect(() => {
     setClassResources(player?.class_resources);
   }, [player?.class_resources, player?.id]);
@@ -146,6 +146,7 @@ function ClassesTab({
   useEffect(() => {
     (async () => {
       if (!player?.id || !displayClass) return;
+
       const cls = canonicalClass(displayClass);
       if (!cls) return;
 
@@ -154,10 +155,11 @@ function ClassesTab({
 
       const current: Record<string, any> = { ...(classResources || {}) };
       const defaults = buildDefaultsForClass(cls, finalLevel, player);
+
       let changed = false;
       for (const [k, v] of Object.entries(defaults)) {
         if (current[k] === undefined || current[k] === null) {
-          current[k] = v;
+            current[k] = v;
           changed = true;
         }
       }
@@ -167,6 +169,7 @@ function ClassesTab({
       try {
         const { error } = await supabase.from('players').update({ class_resources: current }).eq('id', player.id);
         if (error) throw error;
+
         setClassResources(current as ClassResources);
         if (onUpdate && player) {
           onUpdate({ ...(player as any), class_resources: current } as Player);
@@ -178,7 +181,7 @@ function ClassesTab({
     })();
   }, [player?.id, displayClass, finalLevel, classResources, player, onUpdate]);
 
-  /* Bardic Inspiration dynamic cap */
+  /* Bardic inspiration dynamic cap */
   const bardCapRef = useRef<string | null>(null);
   useEffect(() => {
     (async () => {
@@ -248,11 +251,6 @@ function ClassesTab({
     }
   }
 
-  const firstMountRef = useRef(true);
-  useEffect(() => {
-    firstMountRef.current = false;
-  }, []);
-
   const visible = useMemo(
     () =>
       sections
@@ -268,7 +266,7 @@ function ClassesTab({
     <>
       <div className="space-y-4">
 
-        {/* HEADER (même couleur que ressources, pas d'arrondi) */}
+        {/* BANDEAU PLEINE LARGEUR (edge-to-edge) */}
         <div
           role="button"
           tabIndex={0}
@@ -280,7 +278,14 @@ function ClassesTab({
               setClassHeaderOpen(o => !o);
             }
           }}
-          className="border border-white/10 bg-[#0b1322] hover:bg-[#0d1628] transition-colors px-4 py-2 cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+          className="-mx-4 px-4 py-2 bg-[#1f2730] hover:bg-[#24303b] transition-colors cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-indigo-500/40 border-y border-white/10"
+          /* 
+            Remarques :
+            - -mx-4 permet de s'aligner sur les bords si le parent a px-4.
+            - Pas de rounded.
+            - border-y seulement (pas de barres latérales).
+            - Ajuste -mx-4 si ton container parent a un autre padding horizontal.
+          */
         >
           <div className="flex items-center justify-between gap-4">
             <div className="flex-1 min-w-0">
@@ -319,7 +324,6 @@ function ClassesTab({
               </div>
             )}
 
-            {/* Ressources de classe */}
             {hasClass && (
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
@@ -341,7 +345,6 @@ function ClassesTab({
               </div>
             )}
 
-            {/* Aptitudes */}
             {hasClass && (
               loading ? (
                 <div className="flex items-center justify-center py-12">
