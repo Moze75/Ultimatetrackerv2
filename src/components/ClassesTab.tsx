@@ -34,7 +34,7 @@ type Props = {
   subclassName?: string | null;
   characterLevel?: number;
   onUpdate?: (player: Player) => void;
-  sections?: AbilitySection[] | null; // préchargées éventuellement
+  sections?: AbilitySection[] | null;
 };
 
 const DEBUG = typeof window !== 'undefined' && (window as any).UT_DEBUG === true;
@@ -62,7 +62,7 @@ function ClassesTab({
   const [screenRipple, setScreenRipple] = useState<{ x: number; y: number; key: number } | null>(null);
   const triggerScreenRippleFromEvent = createScreenRippleHandler(setScreenRipple);
 
-  // Header repliable (classe / sous-classe / niveau)
+  // Header repliable
   const [classHeaderOpen, setClassHeaderOpen] = useState(true);
 
   const rawClass = (player?.class ?? playerClass ?? className ?? '').trim();
@@ -90,14 +90,12 @@ function ClassesTab({
       return () => { mounted = false; };
     }
 
-    // Sections préchargées
     if (preloadedSections) {
       setSections(preloadedSections);
       setLoading(false);
       return () => { mounted = false; };
     }
 
-    // Indique qu'on attend encore un préchargement externe
     if (preloadedSections === null) {
       setLoading(true);
       return () => { mounted = false; };
@@ -268,7 +266,6 @@ function ClassesTab({
     }
   }
 
-  // Guard StrictMode initial render
   const firstMountRef = useRef(true);
   useEffect(() => {
     firstMountRef.current = false;
@@ -291,37 +288,39 @@ function ClassesTab({
     <>
       <div className="space-y-4">
 
-        {/* HEADER REPLIABLE (classe / sous-classe / niveau) */}
+        {/* HEADER REPLIABLE AVEC STYLE GRADIENT D'ORIGINE */}
         <div
           role="button"
           tabIndex={0}
           aria-expanded={classHeaderOpen}
           onClick={() => setClassHeaderOpen(o => !o)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                setClassHeaderOpen(o => !o);
-              }
-            }}
-          className="flex items-center justify-between rounded-lg px-4 py-3 cursor-pointer select-none transition-colors border border-white/10 bg-[#0b1322] hover:bg-[#101c31] focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setClassHeaderOpen(o => !o);
+            }
+          }}
+          className="bg-gradient-to-r from-violet-700/30 via-fuchsia-600/20 to-amber-600/20 border border-white/10 rounded-2xl px-4 py-3 ring-1 ring-black/5 shadow-md shadow-black/20 cursor-pointer select-none flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
         >
-          <div className="flex items-center gap-3">
-            <Sparkles className="w-4 h-4 text-yellow-400" />
-            <span className="text-sm font-semibold text-white">
-              {hasClass ? displayClass : '—'}
-              {hasClass && hasSubclass && (
-                <span className="ml-2 font-normal text-white/80">- {displaySubclass}</span>
-              )}
-            </span>
-          </div>
+          <span className="text-sm font-semibold text-white">
+            {hasClass ? displayClass : '—'}
+            {hasClass && hasSubclass && (
+              <span className="ml-2 font-normal text-white/80">- {displaySubclass}</span>
+            )}
+            {hasClass && !hasSubclass && finalLevel >= 3 && (
+              <span className="ml-2 font-normal text-red-400">
+                Sélectionnez votre sous-classe dans les paramètres
+              </span>
+            )}
+          </span>
           <div className="flex items-center gap-4">
             {hasClass && (
               <span className="text-xs text-white/70">Niveau {finalLevel}</span>
             )}
             {classHeaderOpen ? (
-              <ChevronDown size={18} className="text-white/70" />
+              <ChevronDown size={18} className="text-white/80" />
             ) : (
-              <ChevronRight size={18} className="text-white/70" />
+              <ChevronRight size={18} className="text-white/80" />
             )}
           </div>
         </div>
@@ -329,25 +328,20 @@ function ClassesTab({
         {/* CONTENU REPLIABLE */}
         {classHeaderOpen && (
           <div className="space-y-6">
+
             {!hasClass && (
               <div className="text-center text-white/70 py-6">
                 Sélectionne une classe pour afficher les aptitudes.
               </div>
             )}
 
-            {hasClass && !hasSubclass && finalLevel >= 3 && (
-              <div className="text-xs text-red-400 px-1">
-                Sélectionnez votre sous-classe dans les paramètres.
-              </div>
-            )}
-
-            {/* RESSOURCES DE CLASSE (titre simplifié sans “étiquette”) */}
+            {/* RESSOURCES DE CLASSE */}
             {hasClass && (
               <div className="space-y-3">
                 <div className="flex items-center gap-2 pl-1">
                   <Sparkles className="w-4 h-4 text-yellow-400" />
-                  <span className="text-xs font-medium text-gray-300">
-                    ressources de classe
+                  <span className="text-sm font-medium text-gray-300">
+                    Ressources de classe
                   </span>
                 </div>
                 <ClassResourcesCard
@@ -385,8 +379,8 @@ function ClassesTab({
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 pl-1">
                     <ListChecks className="w-4 h-4 text-sky-500" />
-                    <span className="text-xs font-medium text-gray-300">
-                      compétences de classe et sous-classe
+                    <span className="text-sm font-medium text-gray-300">
+                      Compétences de classe et sous-classe
                     </span>
                   </div>
 
@@ -417,7 +411,7 @@ function ClassesTab({
       {/* Ripple overlay */}
       {screenRipple && (
         <ScreenRipple
-          key={screenRipple.key}
+            key={screenRipple.key}
           x={screenRipple.x}
           y={screenRipple.y}
           onDone={() => setScreenRipple(null)}
@@ -433,7 +427,6 @@ function ClassesTab({
   ) {
     if (!player?.id) return;
 
-    // Cas pacte (Occultiste) : stocké dans spell_slots
     if ((resource as any) === 'pact_slots' && typeof value === 'object' && value !== null) {
       try {
         const { error } = await supabase.from('players').update({ spell_slots: value }).eq('id', player.id);
@@ -455,7 +448,6 @@ function ClassesTab({
       return;
     }
 
-    // Totaux calculés
     if (resource === 'bardic_inspiration') {
       toast.error("Le total d'Inspiration bardique est calculé automatiquement (modificateur de Charisme).");
       return;
@@ -490,7 +482,6 @@ function ClassesTab({
         onUpdate({ ...(player as any), class_resources: next } as Player);
       }
 
-      // Toast feedback
       if (typeof value === 'boolean') {
         toast.success(`Récupération arcanique ${value ? 'utilisée' : 'disponible'}`);
       } else {
