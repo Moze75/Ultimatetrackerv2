@@ -603,7 +603,7 @@ useEffect(() => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <BookOpen size={20} className="text-blue-500" />
-                  <span className="text-sm font-medium text-gray-300">Récupération arcanique</span>
+                  <span className="text-sm font-medium text-gray-300">Restauration magique</span>
                 </div>
                 <button
                   onClick={() => updateClassResource('used_arcane_recovery', !player.class_resources?.used_arcane_recovery)}
