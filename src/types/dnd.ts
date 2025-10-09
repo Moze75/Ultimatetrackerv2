@@ -210,7 +210,7 @@ export interface Player {
   is_concentrating?: boolean;
   concentration_spell?: string;
   active_conditions?: string[];
-}
+} 
 
 export interface Condition {
   id: string;
