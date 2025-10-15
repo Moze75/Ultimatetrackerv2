@@ -1,6 +1,6 @@
 // Types D&D centralisés
 
-// IMPORTANT – Compatibilité classes
+// IMPORTANT — Compatibilité classes
 // - Ajout de "Occultiste" (Warlock) conformément aux règles 2024.
 //   Idéalement, migrez vos données vers "Occultiste" puis retirez "Sorcier".
 export type DndClass =
@@ -53,6 +53,9 @@ export interface SpellSlots {
   used7?: number;
   used8?: number;
   used9?: number;
+  pact_slots?: number;
+  pact_level?: number;
+  used_pact_slots?: number;
 }
 
 export interface ClassResources {
@@ -76,7 +79,7 @@ export interface ClassResources {
   sorcery_points?: number;
   used_sorcery_points?: number;
 
-    // Ensorceleur – Sorcellerie innée (2 charges)
+    // Ensorceleur — Sorcellerie innée (2 charges)
   innate_sorcery?: number;
   used_innate_sorcery?: number;
 
@@ -87,6 +90,7 @@ export interface ClassResources {
   // Magicien
   arcane_recovery?: boolean;
   used_arcane_recovery?: boolean;
+  arcane_recovery_slots_used?: number;
 
   // Moine (double clé pour compat : credo/ki)
   credo_points?: number;
@@ -134,7 +138,7 @@ export interface Ability {
   }[];
 }
 
-// Attaque – unifiée (inclut munitions facultatives)
+// Attaque — unifiée (inclut munitions facultatives)
 export interface Attack {
   id: string;
   player_id: string;
@@ -158,6 +162,7 @@ export interface Attack {
 export interface Player {
   id: string;
   user_id?: string | null;
+
   equipment?: {
     armor?: { name: string; description: string } | null;
     weapon?: { name: string; description: string } | null;
@@ -165,9 +170,11 @@ export interface Player {
     potion?: { name: string; description: string } | null;
     jewelry?: { name: string; description: string } | null;
   };
+
   name: string;
   adventurer_name?: string | null;
   avatar_url?: string | null;
+
   race?: string | null;
   subclass?: string | null;
   background?: PlayerBackground | null;
@@ -176,41 +183,41 @@ export interface Player {
   age?: string | null;
   gender?: string | null;
   character_history?: string | null;
+
   avatar_position?: { x: number; y: number } | null;
   avatar_zoom?: number | null;
+
   class?: DndClass | null;
   level: number;
-  // AJOUT: Support du multiclassage
-  secondary_class?: DndClass | null;
-  secondary_level?: number | null;
-  secondary_class_resources?: ClassResources | null;
-  secondary_spell_slots?: SpellSlots | null;
+
   max_hp: number;
   current_hp: number;
   temporary_hp: number;
+
   spell_slots?: SpellSlots | null;
   class_resources?: ClassResources | null;
+
   gold: number;
   silver: number;
   copper: number;
+
   created_at: string;
+
   stats: PlayerStats;
   abilities?: Ability[];
+
   is_gm?: boolean;
-  // Ancien format (conservé pour compatibilité)
+
   hit_dice?: {
     total: number;
     used: number;
   };
-  // AJOUT: Nouveau format pour le multiclassage
-  hit_dice_by_type?: Record<string, {
-    total: number;
-    used: number;
-  }> | null;
+
   is_concentrating?: boolean;
   concentration_spell?: string;
+
   active_conditions?: string[];
-} 
+}
 
 export interface Condition {
   id: string;

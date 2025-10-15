@@ -231,60 +231,7 @@ function ClassesTab({
     onUpdate,
     player,
   ]);
- /* Monk credo points dynamic sync */
-  const monkCredoRef = useRef<string | null>(null);
-  useEffect(() => {
-    (async () => {
-      if (!player?.id || !displayClass) return;
-      if (canonicalClass(displayClass) !== 'Moine') return;
 
-      const expectedTotal = finalLevel;
-      const currentTotal = (classResources as any)?.credo_points ?? (classResources as any)?.ki_points;
-      const used = (classResources as any)?.used_credo_points ?? (classResources as any)?.used_ki_points ?? 0;
-      
-      const key = `${player.id}:${finalLevel}:${currentTotal ?? 'u'}:${used}`;
-      if (monkCredoRef.current === key) return;
-
-      // Si le total ne correspond pas au niveau, on corrige
-      if (typeof currentTotal !== 'number' || currentTotal !== expectedTotal) {
-        const next = {
-          ...(classResources || {}),
-          credo_points: expectedTotal,
-          ki_points: expectedTotal,
-          used_credo_points: Math.min(used, expectedTotal),
-          used_ki_points: Math.min(used, expectedTotal),
-        };
-        
-        try {
-          const { error } = await supabase
-            .from('players')
-            .update({ class_resources: next })
-            .eq('id', player.id);
-          
-          if (error) throw error;
-          
-          setClassResources(next as ClassResources);
-          monkCredoRef.current = key;
-          
-          if (onUpdate && player) {
-            onUpdate({ ...(player as any), class_resources: next } as Player);
-          }
-        } catch (e) {
-          console.error('[ClassesTab] monk credo sync error:', e);
-          monkCredoRef.current = null;
-        }
-      } else {
-        monkCredoRef.current = key;
-      }
-    })();
-  }, [
-    player?.id,
-    displayClass,
-    finalLevel,
-    classResources,
-    onUpdate,
-    player,
-  ]);
   /* Toggle ability check */
   async function handleToggle(featureKey: string, checked: boolean) {
     setCheckedMap(prev => {
