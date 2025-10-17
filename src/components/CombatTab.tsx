@@ -12,7 +12,7 @@ import './combat-tab.css';
 interface CombatTabProps {
   player: Player;
   onUpdate: (player: Player) => void;
-}
+} 
 
 interface AttackEditModalProps {
   attack: Attack | null;
@@ -95,18 +95,17 @@ const AttackEditModal = ({ attack, onClose, onSave, onDelete }: AttackEditModalP
       toast.error("Le nom de l'attaque est obligatoire");
       return;
     }
-onSave({
-  name: formData.name,
-  damage_dice: formData.damage_dice,
-  damage_type: formData.damage_type,
-  range: formData.range,
-  properties: formData.properties,
-  manual_attack_bonus: formData.manual_attack_bonus,
-  manual_damage_bonus: formData.manual_damage_bonus,
-  expertise: formData.expertise,
-  ammo_type: formData.ammo_type.trim() || null,
-  ability_override: formData.ability_override ?? null // ← AJOUT ICI !
-});
+    onSave({
+      name: formData.name,
+      damage_dice: formData.damage_dice,
+      damage_type: formData.damage_type,
+      range: formData.range,
+      properties: formData.properties,
+      manual_attack_bonus: formData.manual_attack_bonus,
+      manual_damage_bonus: formData.manual_damage_bonus,
+      expertise: formData.expertise,
+      ammo_type: formData.ammo_type.trim() || null
+    });
   };
 
   return (
@@ -190,76 +189,7 @@ onSave({
               className="input-dark w-full px-3 py-2 rounded-md border border-gray-600 focus:border-red-500"
               placeholder="Ex: Finesse, Polyvalente"
             />
-            <div>
-  <label className="block text-sm font-medium text-gray-300 mb-2">
-    Caractéristique utilisée
-  </label>
-  <select
-    value={formData.ability_override || 'auto'}
-    onChange={(e) => setFormData({
-      ...formData,
-      ability_override: e.target.value === 'auto' ? null : e.target.value
-    })}
-    className="input-dark w-full px-3 py-2 rounded-md"
-  >
-    <option value="auto">
-      Automatique (recommandé)
-    </option>
-    <option value="Force">
-      Force
-    </option>
-    <option value="Dextérité">
-      Dextérité
-    </option>
-  </select>
-  
-  {/* Indication de ce qui serait auto-détecté */}
-  <p className="text-xs text-gray-500 mt-1">
-    Détection auto : {
-      formData.properties?.toLowerCase().includes('finesse')
-        ? 'Force ou Dextérité (au choix)'
-        : formData.range?.toLowerCase().includes('distance')
-        ? 'Dextérité'
-        : 'Force'
-    }
-  </p>
-</div>
           </div>
-
-          <div>
-  <label className="block text-sm font-medium text-gray-300 mb-2">
-    Caractéristique utilisée
-  </label>
-  <select
-    value={formData.ability_override || 'auto'}
-    onChange={(e) => setFormData({
-      ...formData,
-      ability_override: e.target.value === 'auto' ? null : e.target.value
-    })}
-    className="input-dark w-full px-3 py-2 rounded-md"
-  >
-    <option value="auto">
-      Automatique (recommandé)
-    </option>
-    <option value="Force">
-      Force
-    </option>
-    <option value="Dextérité">
-      Dextérité
-    </option>
-  </select>
-  
-  {/* Indication de ce qui serait auto-détecté */}
-  <p className="text-xs text-gray-500 mt-1">
-    Détection auto : {
-      formData.properties?.toLowerCase().includes('finesse')
-        ? 'Force ou Dextérité (au choix)'
-        : formData.range?.toLowerCase().includes('distance')
-        ? 'Dextérité'
-        : 'Force'
-    }
-  </p>
-</div>
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -455,65 +385,62 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
     }
   };
 
-const getAttackBonus = (attack: Attack): number => {
-  if (attack.manual_attack_bonus !== null && attack.manual_attack_bonus !== undefined) {
-    return attack.manual_attack_bonus;
-  }
-
-  const proficiencyBonus = player.stats?.proficiency_bonus || 2;
-
-  let abilityModifier = 0;
-  if (player.abilities) {
-    // Pour les attaques physiques, on utilise Force ou Dextérité selon la portée
-    // Le Charisme/Intelligence/Sagesse n'est utilisé QUE pour les attaques magiques (sorts)
-    
-    // Vérifier si l'arme a la propriété "Finesse" (utilise DEX au choix)
-    const hasFinesse = attack.properties?.toLowerCase().includes('finesse');
-    
-    if (attack.range?.toLowerCase().includes('distance') || 
-        attack.range?.toLowerCase().includes('portée') ||
-        hasFinesse) {
-      // Attaque à distance ou Finesse -> Dextérité
-      const dexAbility = player.abilities.find((a) => a.name === 'Dextérité');
-      abilityModifier = dexAbility?.modifier || 0;
-    } else {
-      // Attaque au corps à corps standard -> Force
-      const strAbility = player.abilities.find((a) => a.name === 'Force');
-      abilityModifier = strAbility?.modifier || 0;
+  const getAttackBonus = (attack: Attack): number => {
+    if (attack.manual_attack_bonus !== null && attack.manual_attack_bonus !== undefined) {
+      return attack.manual_attack_bonus;
     }
-  }
 
-  const masteryBonus = attack.expertise ? proficiencyBonus : 0;
-  return abilityModifier + masteryBonus;
-};
+    const proficiencyBonus = player.stats?.proficiency_bonus || 2;
 
-const getDamageBonus = (attack: Attack): number => {
-  if (attack.manual_damage_bonus !== null && attack.manual_damage_bonus !== undefined) {
-    return attack.manual_damage_bonus;
-  }
-
-  let abilityModifier = 0;
-  if (player.abilities) {
-    // Pour les dégâts physiques, même logique que pour l'attaque
-    // Force ou Dextérité selon la portée/propriété
-    
-    const hasFinesse = attack.properties?.toLowerCase().includes('finesse');
-    
-    if (attack.range?.toLowerCase().includes('distance') || 
-        attack.range?.toLowerCase().includes('portée') ||
-        hasFinesse) {
-      // Attaque à distance ou Finesse -> Dextérité
-      const dexAbility = player.abilities.find((a) => a.name === 'Dextérité');
-      abilityModifier = dexAbility?.modifier || 0;
-    } else {
-      // Attaque au corps à corps standard -> Force
-      const strAbility = player.abilities.find((a) => a.name === 'Force');
-      abilityModifier = strAbility?.modifier || 0;
+    let abilityModifier = 0;
+    if (player.abilities) {
+      if (player.class === 'Ensorceleur' || player.class === 'Barde' || player.class === 'Paladin') {
+        const chaAbility = player.abilities.find((a) => a.name === 'Charisme');
+        abilityModifier = chaAbility?.modifier || 0;
+      } else if (player.class === 'Moine' || player.class === 'Roublard') {
+        const dexAbility = player.abilities.find((a) => a.name === 'Dextérité');
+        abilityModifier = dexAbility?.modifier || 0;
+      } else {
+        if (attack.range?.toLowerCase().includes('distance') || attack.range?.toLowerCase().includes('portée')) {
+          const dexAbility = player.abilities.find((a) => a.name === 'Dextérité');
+          abilityModifier = dexAbility?.modifier || 0;
+        } else {
+          const strAbility = player.abilities.find((a) => a.name === 'Force');
+          abilityModifier = strAbility?.modifier || 0;
+        }
+      }
     }
-  }
 
-  return abilityModifier;
-};
+    const masteryBonus = attack.expertise ? proficiencyBonus : 0;
+    return abilityModifier + masteryBonus;
+  };
+
+  const getDamageBonus = (attack: Attack): number => {
+    if (attack.manual_damage_bonus !== null && attack.manual_damage_bonus !== undefined) {
+      return attack.manual_damage_bonus;
+    }
+
+    let abilityModifier = 0;
+    if (player.abilities) {
+      if (player.class === 'Ensorceleur' || player.class === 'Barde' || player.class === 'Paladin') {
+        const chaAbility = player.abilities.find((a) => a.name === 'Charisme');
+        abilityModifier = chaAbility?.modifier || 0;
+      } else if (player.class === 'Moine' || player.class === 'Roublard') {
+        const dexAbility = player.abilities.find((a) => a.name === 'Dextérité');
+        abilityModifier = dexAbility?.modifier || 0;
+      } else {
+        if (attack.range?.toLowerCase().includes('distance') || attack.range?.toLowerCase().includes('portée')) {
+          const dexAbility = player.abilities.find((a) => a.name === 'Dextérité');
+          abilityModifier = dexAbility?.modifier || 0;
+        } else {
+          const strAbility = player.abilities.find((a) => a.name === 'Force');
+          abilityModifier = strAbility?.modifier || 0;
+        }
+      }
+    }
+
+    return abilityModifier;
+  };
 
   const rollAttack = (attack: Attack) => {
     const attackBonus = getAttackBonus(attack);
