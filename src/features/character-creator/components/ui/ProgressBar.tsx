@@ -7,7 +7,8 @@ interface ProgressBarProps {
 }
 
 export default function ProgressBar({ currentStep, totalSteps, steps }: ProgressBarProps) {
-  const total = Math.max(1, totalSteps); // évite la division par 0 si jamais
+  // ✅ Utiliser la longueur réelle du tableau steps au lieu de totalSteps
+  const total = Math.max(1, steps.length - 1); // -1 car les étapes commencent à 0
   const percent = Math.max(0, Math.min(100, (currentStep / total) * 100));
 
   // === Lecture musicale (Skyrim 8-bit) ===
@@ -78,19 +79,19 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
     }
   };
 
-return (
-  <div className="w-full mb-8">
-    {/* Bandeau pleine largeur avec image de fond - tout en haut */}
-    <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] -mt-1 h-64"> {/* ← ICI */}
-      {/* Image de fond */}
-      <div
-        className="absolute inset-0"
-        style={{
-          backgroundImage: "url('/background/ddbground.png')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center 100%',
-          backgroundRepeat: 'no-repeat'
-        }}
+  return (
+    <div className="w-full mb-8">
+      {/* Bandeau pleine largeur avec image de fond - tout en haut */}
+      <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] -mt-1 h-64">
+        {/* Image de fond */}
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: "url('/background/ddbground.png')",
+            backgroundSize: 'cover',
+            backgroundPosition: 'center 100%',
+            backgroundRepeat: 'no-repeat'
+          }}
         >
           {/* Overlay blanc transparent (20% d'opacité pour plus de transparence) */}
           <div className="absolute inset-0 bg-white/20"></div>
