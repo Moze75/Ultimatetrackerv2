@@ -189,6 +189,40 @@ const AttackEditModal = ({ attack, onClose, onSave, onDelete }: AttackEditModalP
               className="input-dark w-full px-3 py-2 rounded-md border border-gray-600 focus:border-red-500"
               placeholder="Ex: Finesse, Polyvalente"
             />
+            <div>
+  <label className="block text-sm font-medium text-gray-300 mb-2">
+    Caractéristique utilisée
+  </label>
+  <select
+    value={formData.ability_override || 'auto'}
+    onChange={(e) => setFormData({
+      ...formData,
+      ability_override: e.target.value === 'auto' ? null : e.target.value
+    })}
+    className="input-dark w-full px-3 py-2 rounded-md"
+  >
+    <option value="auto">
+      Automatique (recommandé)
+    </option>
+    <option value="Force">
+      Force
+    </option>
+    <option value="Dextérité">
+      Dextérité
+    </option>
+  </select>
+  
+  {/* Indication de ce qui serait auto-détecté */}
+  <p className="text-xs text-gray-500 mt-1">
+    Détection auto : {
+      formData.properties?.toLowerCase().includes('finesse')
+        ? 'Force ou Dextérité (au choix)'
+        : formData.range?.toLowerCase().includes('distance')
+        ? 'Dextérité'
+        : 'Force'
+    }
+  </p>
+</div>
           </div>
 
           <div>
