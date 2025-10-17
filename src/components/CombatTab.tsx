@@ -385,35 +385,37 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
     }
   };
 
-  const getAttackBonus = (attack: Attack): number => {
-    if (attack.manual_attack_bonus !== null && attack.manual_attack_bonus !== undefined) {
-      return attack.manual_attack_bonus;
+const getAttackBonus = (attack: Attack): number => {
+  if (attack.manual_attack_bonus !== null && attack.manual_attack_bonus !== undefined) {
+    return attack.manual_attack_bonus;
+  }
+
+  const proficiencyBonus = player.stats?.proficiency_bonus || 2;
+
+  let abilityModifier = 0;
+  if (player.abilities) {
+    // Pour les attaques physiques, on utilise Force ou Dextérité selon la portée
+    // Le Charisme/Intelligence/Sagesse n'est utilisé QUE pour les attaques magiques (sorts)
+    
+    // Vérifier si l'arme a la propriété "Finesse" (utilise DEX au choix)
+    const hasFinesse = attack.properties?.toLowerCase().includes('finesse');
+    
+    if (attack.range?.toLowerCase().includes('distance') || 
+        attack.range?.toLowerCase().includes('portée') ||
+        hasFinesse) {
+      // Attaque à distance ou Finesse -> Dextérité
+      const dexAbility = player.abilities.find((a) => a.name === 'Dextérité');
+      abilityModifier = dexAbility?.modifier || 0;
+    } else {
+      // Attaque au corps à corps standard -> Force
+      const strAbility = player.abilities.find((a) => a.name === 'Force');
+      abilityModifier = strAbility?.modifier || 0;
     }
+  }
 
-    const proficiencyBonus = player.stats?.proficiency_bonus || 2;
-
-    let abilityModifier = 0;
-    if (player.abilities) {
-      if (player.class === 'Ensorceleur' || player.class === 'Barde' || player.class === 'Paladin') {
-        const chaAbility = player.abilities.find((a) => a.name === 'Charisme');
-        abilityModifier = chaAbility?.modifier || 0;
-      } else if (player.class === 'Moine' || player.class === 'Roublard') {
-        const dexAbility = player.abilities.find((a) => a.name === 'Dextérité');
-        abilityModifier = dexAbility?.modifier || 0;
-      } else {
-        if (attack.range?.toLowerCase().includes('distance') || attack.range?.toLowerCase().includes('portée')) {
-          const dexAbility = player.abilities.find((a) => a.name === 'Dextérité');
-          abilityModifier = dexAbility?.modifier || 0;
-        } else {
-          const strAbility = player.abilities.find((a) => a.name === 'Force');
-          abilityModifier = strAbility?.modifier || 0;
-        }
-      }
-    }
-
-    const masteryBonus = attack.expertise ? proficiencyBonus : 0;
-    return abilityModifier + masteryBonus;
-  };
+  const masteryBonus = attack.expertise ? proficiencyBonus : 0;
+  return abilityModifier + masteryBonus;
+};
 
   const getDamageBonus = (attack: Attack): number => {
     if (attack.manual_damage_bonus !== null && attack.manual_damage_bonus !== undefined) {
