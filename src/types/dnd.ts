@@ -157,6 +157,9 @@ export interface Attack {
   // Munitions (optionnelles)
   ammo_type?: string | null;
   ammo_count?: number | null;
+
+  // Caractéristique utilisée (Force/Dextérité, null = automatique)
+  ability_override?: 'Force' | 'Dextérité' | null;  // ← AJOUTER CETTE LIGNE
 }
 
 export interface Player {

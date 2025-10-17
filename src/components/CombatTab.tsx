@@ -12,7 +12,7 @@ import './combat-tab.css';
 interface CombatTabProps {
   player: Player;
   onUpdate: (player: Player) => void;
-}
+} 
 
 interface AttackEditModalProps {
   attack: Attack | null;

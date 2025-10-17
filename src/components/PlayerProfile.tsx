@@ -22,6 +22,14 @@ import { SwipeNavigator } from './SwipeNavigator';
 
 /* ============================ Helpers ============================ */
 
+const getProficiencyBonusForLevel = (level: number): number => {
+  if (level >= 17) return 6;
+  if (level >= 13) return 5;
+  if (level >= 9) return 4;
+  if (level >= 5) return 3;
+  return 2;
+};
+
 export interface PlayerProfileProps {
   player: Player;
   onUpdate: (player: Player) => void;
@@ -52,13 +60,14 @@ export function PlayerProfile({ player, onUpdate }: PlayerProfileProps) {
   const [editing, setEditing] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<'ac' | 'speed' | 'initiative' | 'proficiency' | null>(null);
 
-  const stats: PlayerStats = player.stats || {
-    armor_class: 10,
-    initiative: 0,
-    speed: 30,
-    proficiency_bonus: 2,
-    inspirations: player.stats?.inspirations || 0,
-  };
+const calculatedProficiencyBonus = getProficiencyBonusForLevel(player.level);
+const stats: PlayerStats = player.stats || {
+  armor_class: 10,
+  initiative: 0,
+  speed: 30,
+  proficiency_bonus: calculatedProficiencyBonus,
+  inspirations: player.stats?.inspirations || 0,
+};
 
   const toNumber = (v: unknown): number => {
     if (typeof v === 'number') return v;
@@ -541,7 +550,7 @@ export function PlayerProfile({ player, onUpdate }: PlayerProfileProps) {
               onClick={() => setActiveTooltip(activeTooltip === 'proficiency' ? null : 'proficiency')}
             >
               <div className="text-lg font-bold text-gray-100">
-                +{stats.proficiency_bonus}
+              +{calculatedProficiencyBonus}
               </div>
             </div>
             <div className="text-xs uppercase tracking-wide text-gray-500 -mt-1 text-center -ml-6">MAÎT</div>
