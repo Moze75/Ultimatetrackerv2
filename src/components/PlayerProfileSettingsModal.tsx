@@ -1221,7 +1221,10 @@ export function PlayerProfileSettingsModal({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Bonus de maîtrise</label>
+<label className="block text-sm font-medium text-gray-300 mb-1">
+  Bonus de maîtrise
+  <span className="text-xs text-gray-500 ml-2">(mis à jour automatiquement)</span>
+</label>
                   <input
                     type="number"
                     value={profField}
