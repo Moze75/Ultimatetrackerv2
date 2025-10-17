@@ -176,7 +176,7 @@ const getHighestAllowedSlotLevel = (casterType: CasterType, level: number): numb
     // Niveau 9-12 : Niveau 3
     // Niveau 13-16 : Niveau 4
     // Niveau 17-20 : Niveau 5
-    if (level < 3) return 0;
+    if (level < 2) return 0;
     if (level <= 4) return 1;
     if (level <= 8) return 2;
     if (level <= 12) return 3;
