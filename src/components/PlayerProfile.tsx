@@ -22,6 +22,14 @@ import { SwipeNavigator } from './SwipeNavigator';
 
 /* ============================ Helpers ============================ */
 
+const getProficiencyBonusForLevel = (level: number): number => {
+  if (level >= 17) return 6;
+  if (level >= 13) return 5;
+  if (level >= 9) return 4;
+  if (level >= 5) return 3;
+  return 2;
+};
+
 export interface PlayerProfileProps {
   player: Player;
   onUpdate: (player: Player) => void;
