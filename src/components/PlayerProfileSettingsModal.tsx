@@ -541,7 +541,7 @@ export function PlayerProfileSettingsModal({
         armor_class: Number.isFinite(acVal) && acVal > 0 ? acVal : 10 + dexMod,
         initiative: Number.isFinite(initVal) ? initVal : dexMod,
         speed: Number.isFinite(speedVal) && speedVal > 0 ? speedVal : 9,
-        proficiency_bonus: Number.isFinite(profVal) && profVal > 0 ? profVal : profAuto,
+        proficiency_bonus: profAuto,
         ac_bonus: acBonus,
         feats: featsData,
         creator_meta: {
