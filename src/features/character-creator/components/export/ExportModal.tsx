@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Button from '../ui/Button';
 import Card, { CardContent, CardHeader } from '../ui/Card';
 import { CharacterExportPayload } from '../../types/CharacterExport';
-import { User, Heart, Shield, Zap, Users, Package, Image as ImageIcon, Sword, Wrench, Star, ScrollText, Coins, Sparkles, BookOpen, ChevronDown } from 'lucide-react';
+import { User, Heart, Shield, Zap, Users, Package, Image as ImageIcon, Sword, Wrench, Star, ScrollText, Coins, Sparkles, BookOpen, ChevronDown, Globe, Calendar, UserCircle } from 'lucide-react';
 import { calculateModifier } from '../../utils/dndCalculations';
 
 interface ExportModalProps {
@@ -107,6 +107,68 @@ export function ExportModal({ open, payload, onClose, onConfirm }: ExportModalPr
             </CardContent>
           </Card>
 
+          {/* ✅ NOUVELLE SECTION: Profil du personnage */}
+          {(payload.age || payload.gender || payload.selectedAlignment || (payload.selectedLanguages && payload.selectedLanguages.length > 0)) && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center">
+                  <UserCircle className="w-5 h-5 text-cyan-400 mr-2" />
+                  <h4 className="text-white font-semibold">Profil</h4>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {payload.age && (
+                    <div className="flex justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-gray-400" />
+                        <span className="text-gray-400">Âge</span>
+                      </div>
+                      <span className="text-white font-medium">{payload.age}</span>
+                    </div>
+                  )}
+                  {payload.gender && (
+                    <div className="flex justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-gray-400" />
+                        <span className="text-gray-400">Genre</span>
+                      </div>
+                      <span className="text-white font-medium">{payload.gender}</span>
+                    </div>
+                  )}
+                  {payload.selectedAlignment && (
+                    <div className="flex justify-between text-sm col-span-full">
+                      <div className="flex items-center gap-2">
+                        <Globe className="w-4 h-4 text-gray-400" />
+                        <span className="text-gray-400">Alignement</span>
+                      </div>
+                      <span className="text-white font-medium">{payload.selectedAlignment}</span>
+                    </div>
+                  )}
+                </div>
+                
+                {payload.selectedLanguages && payload.selectedLanguages.length > 0 && (
+                  <div className="border-t border-gray-700/50 pt-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Globe className="w-4 h-4 text-cyan-400" />
+                      <span className="text-gray-400 text-sm font-medium">Langues maîtrisées</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {payload.selectedLanguages.map((lang, i) => (
+                        <span
+                          key={i}
+                          className="px-2 py-1 text-xs bg-cyan-500/20 text-cyan-200 rounded border border-cyan-500/30"
+                        >
+                          {lang}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Statistiques de combat */}
           <Card>
             <CardHeader>
@@ -159,7 +221,7 @@ export function ExportModal({ open, payload, onClose, onConfirm }: ExportModalPr
             </CardContent>
           </Card>
 
-          {/* ✅ NOUVEAU : Maîtrises d'armes et d'armures */}
+          {/* ✅ Maîtrises d'armes et d'armures */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Maîtrises d'armes */}
             <Card>
@@ -204,7 +266,7 @@ export function ExportModal({ open, payload, onClose, onConfirm }: ExportModalPr
             </Card>
           </div>
 
-          {/* ✅ NOUVEAU : Maîtrises d'outils (si applicable) */}
+          {/* ✅ Maîtrises d'outils (si applicable) */}
           {payload.toolProficiencies && payload.toolProficiencies.length > 0 && (
             <Card>
               <CardHeader>
@@ -223,7 +285,7 @@ export function ExportModal({ open, payload, onClose, onConfirm }: ExportModalPr
             </Card>
           )}
 
-          {/* ✅ NOUVEAU : Jets de sauvegarde */}
+          {/* ✅ Jets de sauvegarde */}
           {payload.savingThrows && payload.savingThrows.length > 0 && (
             <Card>
               <CardHeader>
@@ -412,7 +474,7 @@ export function ExportModal({ open, payload, onClose, onConfirm }: ExportModalPr
             </div>
           ) : null}
 
-          {/* ✅ NOUVEAU : Traits raciaux et capacités de classe */}
+          {/* ✅ Traits raciaux et capacités de classe */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Traits raciaux */}
             {payload.racialTraits && payload.racialTraits.length > 0 && (
@@ -453,7 +515,7 @@ export function ExportModal({ open, payload, onClose, onConfirm }: ExportModalPr
             )}
           </div>
 
-          {/* ✅ NOUVEAU : Don et capacité d'historique */}
+          {/* ✅ Don et capacité d'historique */}
           {(payload.backgroundFeat || payload.backgroundFeature) && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Don d'historique */}
@@ -488,29 +550,7 @@ export function ExportModal({ open, payload, onClose, onConfirm }: ExportModalPr
             </div>
           )}
 
-          {/* ✅ NOUVEAU : Langues */}
-          {payload.languages && payload.languages.length > 0 && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center">
-                  <ScrollText className="w-5 h-5 text-blue-400 mr-2" />
-                  <h4 className="text-white font-semibold">Langues</h4>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {payload.languages.map((lang, i) => (
-                    <span
-                      key={i}
-                      className="px-2 py-1 text-xs bg-blue-500/20 text-blue-200 rounded border border-blue-500/30"
-                    >
-                      {lang}
-                    </span>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {/* Note: Les langues sont maintenant affichées dans la section Profil ci-dessus */}
 
           {/* Équipement */}
           <Card>
@@ -522,7 +562,7 @@ export function ExportModal({ open, payload, onClose, onConfirm }: ExportModalPr
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {/* ✅ NOUVEAU : Affichage des options sélectionnées */}
+                {/* ✅ Affichage des options sélectionnées */}
                 <div className="text-xs text-gray-400 space-y-1">
                   {payload.selectedEquipmentOption && (
                     <div>Équipement de classe : Option {payload.selectedEquipmentOption}</div>
@@ -545,7 +585,7 @@ export function ExportModal({ open, payload, onClose, onConfirm }: ExportModalPr
             </CardContent>
           </Card>
 
-          {/* ✅ NOUVEAU : Dés de vie */}
+          {/* ✅ Dés de vie */}
           {payload.hitDice && (
             <Card>
               <CardHeader>
