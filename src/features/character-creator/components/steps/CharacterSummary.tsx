@@ -7,7 +7,7 @@ import { races } from '../../data/races';
 import { classes } from '../../data/classes';
 import { backgrounds } from '../../data/backgrounds';
 import { DndClass } from '../../types/character';
-import { User, Heart, Shield, Zap, Users, BookOpen, Package, Scroll, Star, AlertCircle, X, Sword, Wrench, Sparkles } from 'lucide-react';
+import { User, Heart, Shield, Zap, Users, BookOpen, Package, Scroll, Star, AlertCircle, X, Sword, Wrench, Sparkles, Globe, Calendar, UserCircle } from 'lucide-react';
 
 interface Spell {
   id: string;
@@ -43,12 +43,18 @@ interface CharacterSummaryProps {
   // Équipement choisi dans ClassSelection
   selectedEquipmentOption?: string;
 
-  // Équipement d'historique (si vous avez ajouté cette fonctionnalité)
+  // Équipement d'historique
   selectedBackgroundEquipmentOption?: 'A' | 'B' | '';
 
   // Sorts sélectionnés
   selectedCantrips?: Spell[];
   selectedLevel1Spells?: Spell[];
+
+  // ✅ Nouveaux props de profil
+  selectedAlignment?: string;
+  selectedLanguages?: string[];
+  age?: string;
+  gender?: string;
 }
 
 // Liste canonique des compétences (FR)
@@ -133,6 +139,10 @@ export default function CharacterSummary({
   selectedBackgroundEquipmentOption = '',
   selectedCantrips = [],
   selectedLevel1Spells = [],
+  selectedAlignment = '',
+  selectedLanguages = [],
+  age = '',
+  gender = '',
 }: CharacterSummaryProps) {
   const [nameError, setNameError] = useState('');
   const [showToast, setShowToast] = useState(false);
@@ -189,7 +199,7 @@ export default function CharacterSummary({
     return option ? option.items : [];
   }, [classData, selectedEquipmentOption]);
 
-  // Équipement historique (si vous avez défini equipmentOptions dans backgrounds)
+  // Équipement historique
   const bgEquip =
     selectedBackgroundEquipmentOption === 'A'
       ? backgroundData?.equipmentOptions?.optionA ?? []
@@ -222,6 +232,12 @@ export default function CharacterSummary({
     const proficient = proficientSet.has(skillLabel);
     return mod + (proficient ? proficiencyBonus : 0);
   };
+
+  // ✅ Combiner les langues raciales et sélectionnées
+  const allLanguages = useMemo(() => {
+    const racialLanguages = raceData?.languages || [];
+    return Array.from(new Set([...racialLanguages, ...selectedLanguages]));
+  }, [raceData, selectedLanguages]);
 
   return (
     <div className="wizard-step space-y-6 relative">
@@ -313,6 +329,65 @@ export default function CharacterSummary({
           </CardContent>
         </Card>
       </div>
+
+      {/* ✅ NOUVELLE SECTION: Profil du personnage */}
+      {(age || gender || selectedAlignment || allLanguages.length > 0) && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center">
+              <UserCircle className="w-5 h-5 text-cyan-400 mr-2" />
+              <h3 className="text-lg font-semibold text-white">Profil</h3>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {age && (
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-gray-400" />
+                  <span className="text-gray-400">Âge:</span>
+                </div>
+                <span className="text-white font-medium">{age}</span>
+              </div>
+            )}
+            {gender && (
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-gray-400" />
+                  <span className="text-gray-400">Genre:</span>
+                </div>
+                <span className="text-white font-medium">{gender}</span>
+              </div>
+            )}
+            {selectedAlignment && (
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-gray-400" />
+                  <span className="text-gray-400">Alignement:</span>
+                </div>
+                <span className="text-white font-medium">{selectedAlignment}</span>
+              </div>
+            )}
+            {allLanguages.length > 0 && (
+              <div className="border-t border-gray-700/50 pt-3 mt-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Globe className="w-4 h-4 text-cyan-400" />
+                  <span className="text-gray-400 text-sm">Langues maîtrisées:</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {allLanguages.map((lang, i) => (
+                    <span
+                      key={i}
+                      className="px-2 py-1 text-xs bg-cyan-500/20 text-cyan-200 rounded border border-cyan-500/30"
+                    >
+                      {lang}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -435,7 +510,7 @@ export default function CharacterSummary({
         </div>
       )}
 
-      {/* Nouvelles sections : Maîtrises d'armes et d'armures */}
+      {/* Maîtrises d'armes et d'armures */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Maîtrises d'armes */}
         <Card>
