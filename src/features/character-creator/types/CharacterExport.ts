@@ -91,7 +91,10 @@ export interface CharacterExportPayload {
   // Équipements enrichis avec métadonnées complètes
   equipmentDetails?: EnrichedEquipment[];
 
-  // Sorts sélectionnés lors de la création
-  selectedCantrips?: any[];
-  selectedLevel1Spells?: any[];
+  // ✅ NOUVEAUX CHAMPS DE PROFIL
+  selectedAlignment?: string;        // Ex: "Loyal Bon", "Chaotique Neutre", etc.
+  selectedLanguages?: string[];      // Langues supplémentaires (en plus des langues raciales)
+  age?: string;                      // Âge du personnage
+  gender?: string;                   // Genre du personnage
+  characterHistory?: string;         // Histoire/background narrative du personnage
 }
