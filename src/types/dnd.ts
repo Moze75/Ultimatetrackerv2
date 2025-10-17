@@ -193,6 +193,12 @@ export interface Player {
   class?: DndClass | null;
   level: number;
 
+  // AJOUT: Support du multiclassage
+  secondary_class?: DndClass | null;
+  secondary_level?: number | null;
+  secondary_class_resources?: ClassResources | null;
+  secondary_spell_slots?: SpellSlots | null;
+  
   max_hp: number;
   current_hp: number;
   temporary_hp: number;
@@ -216,6 +222,12 @@ export interface Player {
     used: number;
   };
 
+  // AJOUT: Nouveau format pour le multiclassage
+  hit_dice_by_type?: Record<string, {
+    total: number;
+    used: number;
+  }> | null;
+  
   is_concentrating?: boolean;
   concentration_spell?: string;
 
