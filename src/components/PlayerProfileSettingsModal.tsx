@@ -436,6 +436,19 @@ export function PlayerProfileSettingsModal({
     });
   }, [level]);
 
+    useEffect(() => {
+    setHitDice((prev) => {
+      const used = Math.max(0, Math.min(prev?.used ?? 0, level));
+      return { total: level, used };
+    });
+  }, [level]);
+
+  // Recalculer automatiquement le bonus de maîtrise quand le niveau change
+  useEffect(() => {
+    const newProfBonus = getProficiencyBonusForLevel(level);
+    setProfField(String(newProfBonus));
+  }, [level]);
+
   const buildOptions = (all: string[], selected: string[], idx: number) => {
     const current = selected[idx] || '';
     const used = new Set(selected.filter(Boolean));
