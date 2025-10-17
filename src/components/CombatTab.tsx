@@ -95,17 +95,18 @@ const AttackEditModal = ({ attack, onClose, onSave, onDelete }: AttackEditModalP
       toast.error("Le nom de l'attaque est obligatoire");
       return;
     }
-    onSave({
-      name: formData.name,
-      damage_dice: formData.damage_dice,
-      damage_type: formData.damage_type,
-      range: formData.range,
-      properties: formData.properties,
-      manual_attack_bonus: formData.manual_attack_bonus,
-      manual_damage_bonus: formData.manual_damage_bonus,
-      expertise: formData.expertise,
-      ammo_type: formData.ammo_type.trim() || null
-    });
+onSave({
+  name: formData.name,
+  damage_dice: formData.damage_dice,
+  damage_type: formData.damage_type,
+  range: formData.range,
+  properties: formData.properties,
+  manual_attack_bonus: formData.manual_attack_bonus,
+  manual_damage_bonus: formData.manual_damage_bonus,
+  expertise: formData.expertise,
+  ammo_type: formData.ammo_type.trim() || null,
+  ability_override: formData.ability_override ?? null // ← AJOUT ICI !
+});
   };
 
   return (
