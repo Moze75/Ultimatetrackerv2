@@ -417,32 +417,33 @@ const getAttackBonus = (attack: Attack): number => {
   return abilityModifier + masteryBonus;
 };
 
-  const getDamageBonus = (attack: Attack): number => {
-    if (attack.manual_damage_bonus !== null && attack.manual_damage_bonus !== undefined) {
-      return attack.manual_damage_bonus;
-    }
+const getDamageBonus = (attack: Attack): number => {
+  if (attack.manual_damage_bonus !== null && attack.manual_damage_bonus !== undefined) {
+    return attack.manual_damage_bonus;
+  }
 
-    let abilityModifier = 0;
-    if (player.abilities) {
-      if (player.class === 'Ensorceleur' || player.class === 'Barde' || player.class === 'Paladin') {
-        const chaAbility = player.abilities.find((a) => a.name === 'Charisme');
-        abilityModifier = chaAbility?.modifier || 0;
-      } else if (player.class === 'Moine' || player.class === 'Roublard') {
-        const dexAbility = player.abilities.find((a) => a.name === 'Dextérité');
-        abilityModifier = dexAbility?.modifier || 0;
-      } else {
-        if (attack.range?.toLowerCase().includes('distance') || attack.range?.toLowerCase().includes('portée')) {
-          const dexAbility = player.abilities.find((a) => a.name === 'Dextérité');
-          abilityModifier = dexAbility?.modifier || 0;
-        } else {
-          const strAbility = player.abilities.find((a) => a.name === 'Force');
-          abilityModifier = strAbility?.modifier || 0;
-        }
-      }
+  let abilityModifier = 0;
+  if (player.abilities) {
+    // Pour les dégâts physiques, même logique que pour l'attaque
+    // Force ou Dextérité selon la portée/propriété
+    
+    const hasFinesse = attack.properties?.toLowerCase().includes('finesse');
+    
+    if (attack.range?.toLowerCase().includes('distance') || 
+        attack.range?.toLowerCase().includes('portée') ||
+        hasFinesse) {
+      // Attaque à distance ou Finesse -> Dextérité
+      const dexAbility = player.abilities.find((a) => a.name === 'Dextérité');
+      abilityModifier = dexAbility?.modifier || 0;
+    } else {
+      // Attaque au corps à corps standard -> Force
+      const strAbility = player.abilities.find((a) => a.name === 'Force');
+      abilityModifier = strAbility?.modifier || 0;
     }
+  }
 
-    return abilityModifier;
-  };
+  return abilityModifier;
+};
 
   const rollAttack = (attack: Attack) => {
     const attackBonus = getAttackBonus(attack);
