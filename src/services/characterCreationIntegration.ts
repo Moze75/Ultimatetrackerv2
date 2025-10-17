@@ -492,7 +492,15 @@ export async function createCharacterFromCreatorPayload(
       gold: initialGold,
       silver: 0,
       copper: 0,
+
+      // ✅ AJOUT: Champs de profil
+      alignment: payload.selectedAlignment || null,
+      languages: payload.selectedLanguages || [],
+      age: payload.age || null,
+      gender: payload.gender || null,
+      character_history: payload.characterHistory || null,
     })
+      
     .eq('id', playerId);
   if (updError) throw updError;
 
