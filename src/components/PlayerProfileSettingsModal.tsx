@@ -725,16 +725,16 @@ export function PlayerProfileSettingsModal({
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Nom d'aventurier</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                    Bonus de maîtrise
+                    <span className="text-xs text-gray-500 ml-2">(calculé automatiquement selon le niveau)</span>
+                  </label>
                   <input
-                    type="text"
-                    value={adventurerName}
-                    onChange={(e) => {
-                      setAdventurerName(e.target.value);
-                      setDirty(true);
-                    }}
-                    className="input-dark w-full px-3 py-2 rounded-md"
-                    placeholder="Nom d'aventurier"
+                    type="number"
+                    value={profField}
+                    readOnly
+                    className="input-dark w-full px-3 py-2 rounded-md bg-gray-800/50 cursor-not-allowed"
+                    placeholder="Auto si vide: selon niveau"
                   />
                 </div>
               </div>
