@@ -60,13 +60,14 @@ export function PlayerProfile({ player, onUpdate }: PlayerProfileProps) {
   const [editing, setEditing] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<'ac' | 'speed' | 'initiative' | 'proficiency' | null>(null);
 
-  const stats: PlayerStats = player.stats || {
-    armor_class: 10,
-    initiative: 0,
-    speed: 30,
-    proficiency_bonus: 2,
-    inspirations: player.stats?.inspirations || 0,
-  };
+const calculatedProficiencyBonus = getProficiencyBonusForLevel(player.level);
+const stats: PlayerStats = player.stats || {
+  armor_class: 10,
+  initiative: 0,
+  speed: 30,
+  proficiency_bonus: calculatedProficiencyBonus,
+  inspirations: player.stats?.inspirations || 0,
+};
 
   const toNumber = (v: unknown): number => {
     if (typeof v === 'number') return v;
