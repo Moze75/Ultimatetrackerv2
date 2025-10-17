@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { Avatar } from './Avatar';
 import { LevelUpModal } from './LevelUpModal';
+import { MulticlassSelectionModal } from './MulticlassSelectionModal';
 import type { DndClass, Player, PlayerBackground, PlayerStats } from '../types/dnd';
 import MarkdownLite from './MarkdownLite';
 
@@ -261,6 +262,8 @@ export function PlayerProfileSettingsModal({
   slideFrom = 'left',
 }: PlayerProfileSettingsModalProps) {
   const [showLevelUp, setShowLevelUp] = useState(false);
+  const [showSecondaryLevelUp, setShowSecondaryLevelUp] = useState(false);
+  const [showMulticlassModal, setShowMulticlassModal] = useState(false);
   const [isDirty, setDirty] = useState(false);
 
   const [adventurerName, setAdventurerName] = useState(player.adventurer_name || '');
@@ -436,19 +439,6 @@ export function PlayerProfileSettingsModal({
     });
   }, [level]);
 
-    useEffect(() => {
-    setHitDice((prev) => {
-      const used = Math.max(0, Math.min(prev?.used ?? 0, level));
-      return { total: level, used };
-    });
-  }, [level]);
-
-  // Recalculer automatiquement le bonus de maîtrise quand le niveau change
-  useEffect(() => {
-    const newProfBonus = getProficiencyBonusForLevel(level);
-    setProfField(String(newProfBonus));
-  }, [level]);
-
   const buildOptions = (all: string[], selected: string[], idx: number) => {
     const current = selected[idx] || '';
     const used = new Set(selected.filter(Boolean));
@@ -554,7 +544,7 @@ export function PlayerProfileSettingsModal({
         armor_class: Number.isFinite(acVal) && acVal > 0 ? acVal : 10 + dexMod,
         initiative: Number.isFinite(initVal) ? initVal : dexMod,
         speed: Number.isFinite(speedVal) && speedVal > 0 ? speedVal : 9,
-        proficiency_bonus: profAuto,
+        proficiency_bonus: Number.isFinite(profVal) && profVal > 0 ? profVal : profAuto,
         ac_bonus: acBonus,
         feats: featsData,
         creator_meta: {
@@ -725,16 +715,16 @@ export function PlayerProfileSettingsModal({
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
-                    Bonus de maîtrise
-                    <span className="text-xs text-gray-500 ml-2">(calculé automatiquement selon le niveau)</span>
-                  </label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Nom d'aventurier</label>
                   <input
-                    type="number"
-                    value={profField}
-                    readOnly
-                    className="input-dark w-full px-3 py-2 rounded-md bg-gray-800/50 cursor-not-allowed"
-                    placeholder="Auto si vide: selon niveau"
+                    type="text"
+                    value={adventurerName}
+                    onChange={(e) => {
+                      setAdventurerName(e.target.value);
+                      setDirty(true);
+                    }}
+                    className="input-dark w-full px-3 py-2 rounded-md"
+                    placeholder="Nom d'aventurier"
                   />
                 </div>
               </div>
@@ -774,8 +764,52 @@ export function PlayerProfileSettingsModal({
                 <TrendingUp size={20} />
                 Passer au niveau {level + 1}
               </button>
+
+              {!player.secondary_class && level >= 2 && (
+                <button
+                  onClick={() => setShowMulticlassModal(true)}
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg flex items-center justify-center gap-2"
+                >
+                  <Plus size={20} />
+                  Ajouter une classe (multiclassage)
+                </button>
+              )}
             </div>
           </div>
+
+          {/* Niveau de la classe secondaire */}
+          {player.secondary_class && (
+            <div className="stat-card">
+              <div className="stat-header">
+                <h3 className="text-lg font-semibold text-gray-100">
+                  Niveau de {player.secondary_class}
+                </h3>
+              </div>
+              <div className="p-4 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Niveau</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={player.secondary_level || 1}
+                    readOnly
+                    className="input-dark w-full px-3 py-2 rounded-md bg-gray-800"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                  />
+                </div>
+
+                <button
+                  onClick={() => setShowSecondaryLevelUp(true)}
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg flex items-center justify-center gap-2"
+                >
+                  <TrendingUp size={20} />
+                  Passer au niveau {(player.secondary_level || 1) + 1} de {player.secondary_class}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* PV max et Dés de vie */}
           <CollapsibleCard title="PV max et Dés de vie" defaultCollapsed>
@@ -1221,10 +1255,7 @@ export function PlayerProfileSettingsModal({
                 </div>
 
                 <div>
-<label className="block text-sm font-medium text-gray-300 mb-1">
-  Bonus de maîtrise
-  <span className="text-xs text-gray-500 ml-2">(mis à jour automatiquement)</span>
-</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Bonus de maîtrise</label>
                   <input
                     type="number"
                     value={profField}
@@ -1401,10 +1432,30 @@ export function PlayerProfileSettingsModal({
             </div>
           </div>
 
-          {/* Modal passage de niveau */}
+          {/* Modal passage de niveau - Classe principale */}
           <LevelUpModal
             isOpen={showLevelUp}
             onClose={() => setShowLevelUp(false)}
+            player={player}
+            onUpdate={onUpdate}
+            classType="primary"
+          />
+
+          {/* Modal passage de niveau - Classe secondaire */}
+          {player.secondary_class && (
+            <LevelUpModal
+              isOpen={showSecondaryLevelUp}
+              onClose={() => setShowSecondaryLevelUp(false)}
+              player={player}
+              onUpdate={onUpdate}
+              classType="secondary"
+            />
+          )}
+
+          {/* Modal sélection de multiclassage */}
+          <MulticlassSelectionModal
+            isOpen={showMulticlassModal}
+            onClose={() => setShowMulticlassModal(false)}
             player={player}
             onUpdate={onUpdate}
           />
