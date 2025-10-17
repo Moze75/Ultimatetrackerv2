@@ -550,7 +550,7 @@ const stats: PlayerStats = player.stats || {
               onClick={() => setActiveTooltip(activeTooltip === 'proficiency' ? null : 'proficiency')}
             >
               <div className="text-lg font-bold text-gray-100">
-                +{stats.proficiency_bonus}
+              +{calculatedProficiencyBonus}
               </div>
             </div>
             <div className="text-xs uppercase tracking-wide text-gray-500 -mt-1 text-center -ml-6">MAÎT</div>
