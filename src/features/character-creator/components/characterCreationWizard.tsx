@@ -6,6 +6,7 @@ import RaceSelection from './steps/RaceSelection';
 import ClassSelection from './steps/ClassSelection';
 import SpellSelection from './steps/SpellSelection';
 import BackgroundSelection from './steps/BackgroundSelection';
+import ProfileSelection from './steps/ProfileSelection'; // ✅ AJOUT
 import AbilityScores from './steps/AbilityScores';
 import CharacterSummary from './steps/CharacterSummary';
 
@@ -120,10 +121,10 @@ const notifyParentCreated = (playerId: string, player?: any) => {
 };
 
 /* ===========================================================
-   Étapes
+   Étapes - ✅ AJOUT DE 'Profil'
    =========================================================== */
 
-const steps = ['Race', 'Classe', 'Sorts', 'Historique', 'Caractéristiques', 'Résumé'];
+const steps = ['Race', 'Classe', 'Sorts', 'Historique', 'Profil', 'Caractéristiques', 'Résumé'];
 
 interface WizardProps {
   onFinish?: (payload: CharacterExportPayload) => void;
@@ -153,6 +154,13 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
   // Sorts sélectionnés
   const [selectedCantrips, setSelectedCantrips] = useState<any[]>([]);
   const [selectedLevel1Spells, setSelectedLevel1Spells] = useState<any[]>([]);
+
+  // ✅ AJOUT: États pour le profil
+  const [selectedAlignment, setSelectedAlignment] = useState('');
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+  const [age, setAge] = useState('');
+  const [gender, setGender] = useState('');
+  const [characterHistory, setCharacterHistory] = useState('');
 
   // Caractéristiques
   const [abilities, setAbilities] = useState<Record<string, number>>({
@@ -269,6 +277,10 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
       // Image de classe
       const avatarImageUrl = getClassImageUrlLocal(selectedClass) ?? undefined;
 
+      // ✅ Combiner les langues raciales et sélectionnées
+      const racialLanguages = raceData?.languages || [];
+      const allLanguages = Array.from(new Set([...racialLanguages, ...selectedLanguages]));
+
       // MODE INTÉGRÉ
       if (typeof onFinish === 'function') {
         setLoadingEquipment(true);
@@ -288,7 +300,7 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
         const payload: CharacterExportPayload = {
           characterName: characterName.trim() || 'Héros sans nom',
           selectedRace: selectedRace || '',
-          selectedClass: (selectedClass as DndClass) || '',
+          selectedClass: (selectedClass as string) || '',
           selectedBackground: selectedBackground || '',
           level: 1,
           finalAbilities,
@@ -310,7 +322,7 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
           classFeatures: classData?.features || [],
           backgroundFeature: selectedBackgroundObj?.feature || '',
           savingThrows: classData?.savingThrows || [],
-          languages: raceData?.languages || [],
+          languages: allLanguages,
           hitDice: {
             die: (selectedClass === 'Magicien' || selectedClass === 'Ensorceleur') ? 'd6'
                : (selectedClass === 'Barde' || selectedClass === 'Clerc' || selectedClass === 'Druide' || selectedClass === 'Moine' || selectedClass === 'Rôdeur' || selectedClass === 'Roublard' || selectedClass === 'Occultiste') ? 'd8'
@@ -322,6 +334,12 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
           avatarImageUrl,
           selectedCantrips,
           selectedLevel1Spells,
+          // ✅ AJOUT: Nouveaux champs de profil
+          selectedAlignment: selectedAlignment || undefined,
+          selectedLanguages: allLanguages,
+          age: age.trim() || undefined,
+          gender: gender.trim() || undefined,
+          characterHistory: characterHistory.trim() || undefined,
         };
 
         onFinish(payload);
@@ -356,6 +374,11 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
         subclass: null,
         race: selectedRace || null,
         background: selectedBackground || null,
+        alignment: selectedAlignment || null, // ✅
+        languages: allLanguages, // ✅
+        age: age.trim() || null, // ✅
+        gender: gender.trim() || null, // ✅
+        character_history: characterHistory.trim() || null, // ✅
         stats: {
           armor_class: armorClass,
           initiative: initiative,
@@ -472,7 +495,7 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
         return;
       }
 
-      // Reset
+      // ✅ Reset incluant les nouveaux champs
       setCurrentStep(0);
       setCharacterName('');
       setSelectedRace('');
@@ -483,6 +506,11 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
       setSelectedEquipmentOption('');
       setSelectedCantrips([]);
       setSelectedLevel1Spells([]);
+      setSelectedAlignment('');
+      setSelectedLanguages([]);
+      setAge('');
+      setGender('');
+      setCharacterHistory('');
       setAbilities({
         'Force': 8,
         'Dextérité': 8,
@@ -505,7 +533,7 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
     }
   };
 
-  // Rendu des étapes
+  // ✅ Rendu des étapes avec ProfileSelection ajouté
   const renderStep = () => {
     switch (currentStep) {
       case 0:
@@ -556,7 +584,26 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
           />
         );
 
+      // ✅ NOUVEAU: Étape Profil (case 4)
       case 4:
+        return (
+          <ProfileSelection
+            selectedLanguages={selectedLanguages}
+            onLanguagesChange={setSelectedLanguages}
+            selectedAlignment={selectedAlignment}
+            onAlignmentChange={setSelectedAlignment}
+            characterHistory={characterHistory}
+            onCharacterHistoryChange={setCharacterHistory}
+            age={age}
+            onAgeChange={setAge}
+            gender={gender}
+            onGenderChange={setGender}
+            onNext={nextStep}
+            onPrevious={previousStep}
+          />
+        );
+
+      case 5:
         return (
           <AbilityScores
             abilities={abilities}
@@ -568,7 +615,7 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
           />
         );
 
-      case 5:
+      case 6:
         return (
           <CharacterSummary
             characterName={characterName}
@@ -582,6 +629,11 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
             selectedEquipmentOption={selectedEquipmentOption}
             selectedCantrips={selectedCantrips}
             selectedLevel1Spells={selectedLevel1Spells}
+            // ✅ AJOUT: Passer les données de profil
+            selectedAlignment={selectedAlignment}
+            selectedLanguages={selectedLanguages}
+            age={age}
+            gender={gender}
             onFinish={handleFinish}
             onPrevious={previousStep}
           />
@@ -602,19 +654,19 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
         }}
       />
 
-{loadingEquipment && (
-  <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center">
-    <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 text-center">
-      <img 
-        src="/icons/wmremove-transformed.png" 
-        alt="Chargement..." 
-        className="animate-spin h-12 w-12 mx-auto mb-4 object-contain"
-        style={{ backgroundColor: 'transparent' }}
-      />
-      <p className="text-gray-200">Préparation de l'équipement...</p>
-    </div>
-  </div>
-)}
+      {loadingEquipment && (
+        <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center">
+          <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 text-center">
+            <img 
+              src="/icons/wmremove-transformed.png" 
+              alt="Chargement..." 
+              className="animate-spin h-12 w-12 mx-auto mb-4 object-contain"
+              style={{ backgroundColor: 'transparent' }}
+            />
+            <p className="text-gray-200">Préparation de l'équipement...</p>
+          </div>
+        </div>
+      )}
 
       <div className="container mx-auto px-4 pt-0 pb-8">
         <div className="max-w-6xl mx-auto">
