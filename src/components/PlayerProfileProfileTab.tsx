@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Shield, ScrollText, Sparkles, Loader2, ChevronDown, Check, Sword, Wrench } from 'lucide-react';
+import { Shield, ScrollText, Sparkles, Loader2, ChevronDown, Check, Sword, Wrench, UserCircle, User, Calendar, Globe, Compass } from 'lucide-react';
 import type { Player } from '../types/dnd';
 import { supabase } from '../lib/supabase';
 import MarkdownLite from './MarkdownLite';
@@ -202,11 +202,12 @@ function LoadingInline() {
   return (
     <div className="flex items-center gap-2 text-gray-400 text-sm">
       <img 
-  src="/icons/wmremove-transformed.png" 
-  alt="Chargement..." 
-  className="animate-spin rounded-full object-cover"
-  style={{ width: '16px', height: '16px' }}
-/> Chargement…
+        src="/icons/wmremove-transformed.png" 
+        alt="Chargement..." 
+        className="animate-spin rounded-full object-cover"
+        style={{ width: '16px', height: '16px' }}
+      />
+      Chargement…
     </div>
   );
 }
@@ -236,12 +237,12 @@ export default function PlayerProfileProfileTab({ player, onUpdate }: PlayerProf
   const historique = (player.background as string) || '';
   const characterHistoryProp = (player as any)?.character_history || '';
 
-  // Extraire les informations personnelles
+  // ✅ Extraction sécurisée des informations personnelles
   const age = (player as any)?.age || '';
   const gender = (player as any)?.gender || '';
   const alignment = (player as any)?.alignment || '';
-  const languages = (player as any)?.languages || [];
-  
+  const languages = Array.isArray((player as any)?.languages) ? (player as any).languages : [];
+
   // Dons (adapter si nécessaire selon ton type Player)
   const feats: any = (player.stats as any)?.feats || {};
   const originFeats: string[] = Array.isArray(feats.origins)
@@ -458,10 +459,75 @@ export default function PlayerProfileProfileTab({ player, onUpdate }: PlayerProf
   }, [historyDraft]);
 
   return (
-    <div className="space-y-6"> 
+    <div className="space-y-6">
+      {/* ✅ NOUVELLE SECTION: Informations personnelles */}
+      {(age || gender || alignment || languages.length > 0) && (
+        <SectionContainer
+          icon={<UserCircle size={18} className="text-cyan-400" />}
+          title="Informations personnelles"
+          defaultOpen={true}
+        >
+          <div className="space-y-4">
+            {/* Grille pour âge, genre, alignement */}
+            {(age || gender || alignment) && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {age && (
+                  <div className="bg-gray-800/30 rounded-lg p-3 border border-gray-700/30">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Calendar className="w-4 h-4 text-blue-400" />
+                      <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Âge</span>
+                    </div>
+                    <div className="text-base text-gray-200 font-medium">{age}</div>
+                  </div>
+                )}
 
-        
-      
+                {gender && (
+                  <div className="bg-gray-800/30 rounded-lg p-3 border border-gray-700/30">
+                    <div className="flex items-center gap-2 mb-2">
+                      <User className="w-4 h-4 text-purple-400" />
+                      <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Genre</span>
+                    </div>
+                    <div className="text-base text-gray-200 font-medium">{gender}</div>
+                  </div>
+                )}
+
+                {alignment && (
+                  <div className="bg-gray-800/30 rounded-lg p-3 border border-gray-700/30">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Compass className="w-4 h-4 text-amber-400" />
+                      <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Alignement</span>
+                    </div>
+                    <div className="text-base text-gray-200 font-medium">{alignment}</div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Langues */}
+            {languages.length > 0 && (
+              <div className="bg-gray-800/30 rounded-lg p-3 border border-gray-700/30">
+                <div className="flex items-center gap-2 mb-3">
+                  <Globe className="w-4 h-4 text-cyan-400" />
+                  <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+                    Langues maîtrisées ({languages.length})
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {languages.map((lang: string, i: number) => (
+                    <span
+                      key={i}
+                      className="px-3 py-1.5 text-sm bg-cyan-500/20 text-cyan-200 rounded-lg border border-cyan-500/30 font-medium"
+                    >
+                      {lang}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </SectionContainer>
+      )}
+
       {/* Espèce */}
       <SectionContainer
         icon={<Shield size={18} className="text-emerald-400" />}
@@ -505,8 +571,7 @@ export default function PlayerProfileProfileTab({ player, onUpdate }: PlayerProf
       </SectionContainer>
 
       {/* Dons */}
-      <SectionContainer icon={<Sparkles size={18} className="text-amber-400" />} title="Dons" defaultOpen={false}  // ✅ Changez de true à false
->  
+      <SectionContainer icon={<Sparkles size={18} className="text-amber-400" />} title="Dons" defaultOpen={false}>  
         {(donsOrigIdx.loading || donsGenIdx.loading || stylesIdx.loading) && <LoadingInline />}
         {(donsOrigIdx.error || donsGenIdx.error || stylesIdx.error) && (
           <div className="text-sm text-red-400 space-y-1">
