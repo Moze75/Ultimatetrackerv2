@@ -161,6 +161,15 @@ export default function CharacterCreationWizard({ onFinish, onCancel, initialSna
   });
   const [effectiveAbilities, setEffectiveAbilities] = useState<Record<string, number>>(initialSnapshot?.effectiveAbilities ?? abilities);
 
+  // ✅ Message de restauration si snapshot présent
+  useEffect(() => {
+    if (initialSnapshot) {
+      toast('Reprise de votre création...', { 
+        icon: '✨',
+        duration: 3000 
+      });
+    }
+  }, [initialSnapshot]);
 
   // Objet d'historique sélectionné
   const selectedBackgroundObj = useMemo(
@@ -180,31 +189,32 @@ export default function CharacterCreationWizard({ onFinish, onCancel, initialSna
     setBackgroundEquipmentOption('');
   }, [selectedBackground]);
 
-  // ✅ MODIFIER: Sauvegarder uniquement lors du changement de step (au lieu de toutes les 5 secondes)
+  // ✅ Sauvegarder automatiquement l'état toutes les 5 secondes
   useEffect(() => {
-    const snapshot = {
-      currentStep,
-      characterName,
-      selectedRace,
-      selectedClass,
-      selectedBackground,
-      selectedAlignment,
-      selectedLanguages,
-      age,
-      gender,
-      characterHistory,
-      backgroundEquipmentOption,
-      selectedClassSkills,
-      selectedEquipmentOption,
-      selectedCantrips,
-      selectedLevel1Spells,
-      abilities,
-      effectiveAbilities,
-    };
-    
-appContextService.saveWizardSnapshot(snapshot);
-    console.log('[Wizard] Snapshot sauvegardé au step', currentStep);
-  }, [currentStep]); // ✅ Dépendance = currentStep uniquement
+    const interval = setInterval(() => {
+      const snapshot = {
+        currentStep,
+        characterName,
+        selectedRace,
+        selectedClass,
+        selectedBackground,
+        selectedAlignment,
+        selectedLanguages,
+        age,
+        gender,
+        characterHistory,
+        backgroundEquipmentOption,
+        selectedClassSkills,
+        selectedEquipmentOption,
+        selectedCantrips,
+        selectedLevel1Spells,
+        abilities,
+        effectiveAbilities,
+      };
+      
+      appContextService.saveWizardSnapshot(snapshot);
+      console.log('[Wizard] Snapshot auto-sauvegardé');
+    }, 5000); // Toutes les 5 secondes
 
     return () => clearInterval(interval);
   }, [
@@ -691,6 +701,11 @@ appContextService.saveWizardSnapshot(snapshot);
         }}
       />
 
+      {/* ✅ Badge de sauvegarde automatique */}
+      <div className="fixed bottom-4 left-4 z-50 text-xs text-gray-400 bg-gray-900/80 backdrop-blur-sm px-3 py-2 rounded-lg border border-gray-700/50 flex items-center gap-2">
+        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+        Sauvegarde auto
+      </div>
 
       {loadingEquipment && (
         <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center">
