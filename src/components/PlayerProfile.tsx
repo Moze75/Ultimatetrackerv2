@@ -43,6 +43,17 @@ const getDexModFromPlayer = (player: Player): number => {
   return 0;
 };
 
+// ✅ AJOUTER CETTE FONCTION ICI
+const getWisModFromPlayer = (player: Player): number => {
+  const abilities: any = (player as any).abilities;
+  const fromArray = Array.isArray(abilities) 
+    ? abilities.find((a: any) => a?.name === 'Sagesse') 
+    : undefined;
+  if (fromArray?.modifier != null) return fromArray.modifier;
+  if (fromArray?.score != null) return Math.floor((fromArray.score - 10) / 2);
+  return 0;
+};
+
 function computeArmorAC(armor_formula: {
   base: number;
   addDex: boolean;
@@ -89,15 +100,37 @@ const stats: PlayerStats = player.stats || {
 
   const speedNum = toNumber(stats.speed);
 
-  // Calcul CA:
-  const dexMod = getDexModFromPlayer(player);
-  const armorFormula = (player as any)?.equipment?.armor?.armor_formula || null;
-  const shieldBonus = Number((player as any)?.equipment?.shield?.shield_bonus ?? 0) || 0;
+// ✅ NOUVELLE FONCTION : Récupérer le modificateur de Sagesse
+const getWisModFromPlayer = (player: Player): number => {
+  const abilities: any = (player as any).abilities;
+  const fromArray = Array.isArray(abilities) 
+    ? abilities.find((a: any) => a?.name === 'Sagesse') 
+    : undefined;
+  if (fromArray?.modifier != null) return fromArray.modifier;
+  if (fromArray?.score != null) return Math.floor((fromArray.score - 10) / 2);
+  return 0;
+};
+  
+// Calcul CA:
+const dexMod = getDexModFromPlayer(player);
+const wisMod = getWisModFromPlayer(player);
+const armorFormula = (player as any)?.equipment?.armor?.armor_formula || null;
+const shieldBonus = Number((player as any)?.equipment?.shield?.shield_bonus ?? 0) || 0;
 
-  const baseACFromStats = Number(stats.armor_class || 0);
-  const armorAC = armorFormula ? computeArmorAC(armorFormula, dexMod) : baseACFromStats;
-  const acBonus = Number((stats as any).ac_bonus || 0);
-  const totalAC = armorAC + shieldBonus + acBonus;
+const baseACFromStats = Number(stats.armor_class || 0);
+
+// Défense sans armure du Moine
+const monkUnarmoredDefense = player.class === 'Moine' && !armorFormula 
+  ? 10 + dexMod + wisMod 
+  : 0;
+
+// Prendre le meilleur entre CA de base, Défense sans armure, ou armure équipée
+const armorAC = armorFormula 
+  ? computeArmorAC(armorFormula, dexMod) 
+  : Math.max(baseACFromStats, monkUnarmoredDefense);
+
+const acBonus = Number((stats as any).ac_bonus || 0);
+const totalAC = armorAC + shieldBonus + acBonus;
 
   /* ============================ Repos court / long (inchangé) ============================ */
 
