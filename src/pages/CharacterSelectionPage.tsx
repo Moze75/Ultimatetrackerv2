@@ -43,10 +43,11 @@ type CreatorModalProps = {
   open: boolean;
   onClose: () => void;
   onComplete: (payload: CharacterExportPayload) => void;
+  initialSnapshot?: any; // ✅ Nouveau prop
 };
 
 // Modal plein écran qui charge le wizard (scroll corrigé)
-function CreatorModal({ open, onClose, onComplete }: CreatorModalProps) {
+function CreatorModal({ open, onClose, onComplete, initialSnapshot }: CreatorModalProps) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm">
@@ -71,8 +72,12 @@ function CreatorModal({ open, onClose, onComplete }: CreatorModalProps) {
                 </div>
               }
             >
-              {/* Adapte les props à celles du wizard: onFinish(payload) + onCancel */}
-              <CharacterCreationWizard onFinish={onComplete} onCancel={onClose} />
+              {/* ✅ Passer le snapshot initial au wizard */}
+              <CharacterCreationWizard 
+                onFinish={onComplete} 
+                onCancel={onClose}
+                initialSnapshot={initialSnapshot} // ✅ Nouveau prop
+              />
             </Suspense>
           </div>
         </div>
@@ -121,7 +126,7 @@ function WelcomeModal({ open, characterName, onContinue }: WelcomeModalProps) {
           {/* Bouton Continuer */}
           <button
             onClick={onContinue}
-            className="w-full bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg"
+            className="w-full bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105"
           >
             Continuer
           </button>
@@ -148,6 +153,20 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
     runDiagnostic();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
+
+  // ✅ NOUVEAU : Vérifier si on doit restaurer le wizard au montage
+  useEffect(() => {
+    const wizardSnapshot = appContextService.getWizardSnapshot();
+    if (wizardSnapshot) {
+      console.log('[CharacterSelection] Snapshot wizard détecté, restauration automatique:', wizardSnapshot);
+      toast('Reprise de la création de personnage...', { 
+        icon: '✨',
+        duration: 3000 
+      });
+      // Ouvrir automatiquement le wizard avec les données
+      setShowCreator(true);
+    }
+  }, []); // ⚠️ Dépendances vides = s'exécute UNE SEULE fois au montage
 
   const runDiagnostic = async () => {
     try {
@@ -212,6 +231,10 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
       const newPlayer = await createCharacterFromCreatorPayload(session, payload);
       setPlayers((prev) => [...prev, newPlayer]);
       toast.success('Nouveau personnage créé !');
+
+      // ✅ Nettoyer le snapshot wizard après création réussie
+      appContextService.clearWizardSnapshot();
+      appContextService.setContext('game');
 
       setNewCharacter(newPlayer);
       setShowWelcome(true);
@@ -326,18 +349,18 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
           backgroundAttachment: 'fixed',
         }}
       >
-<div className="text-center space-y-4">
-  <img 
-    src="/icons/wmremove-transformed.png" 
-    alt="Chargement..." 
-    className="animate-spin h-12 w-12 mx-auto object-contain"
-    style={{ backgroundColor: 'transparent' }}
-  />
-  <p className="text-gray-200">Chargement des personnages...</p>
-</div>
-</div>
-);
-}
+        <div className="text-center space-y-4">
+          <img 
+            src="/icons/wmremove-transformed.png" 
+            alt="Chargement..." 
+            className="animate-spin h-12 w-12 mx-auto object-contain"
+            style={{ backgroundColor: 'transparent' }}
+          />
+          <p className="text-gray-200">Chargement des personnages...</p>
+        </div>
+      </div>
+    );
+  }
  
   return (
     <div
@@ -508,7 +531,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
                         e.stopPropagation();
                         setDeletingCharacter(player);
                       }}
-                      className="absolute top-3 right-3 w-8 h-8 bg-red-600/80 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition z-20 pointer-events-auto"
+                      className="absolute top-3 right-3 w-8 h-8 bg-red-600/80 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition z-20"
                       title="Supprimer le personnage"
                       aria-label="Supprimer le personnage"
                     >
@@ -571,7 +594,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
               {/* Create New Character Card -> Ouvre le wizard */}
               <div
                 onClick={() => setShowCreator(true)}
-                className="w-full max-w-sm cursor-pointer hover:scale-[1.02] transition-all duration-200 bg-slate-800/40 backdrop-blur-sm border-dashed border-2 border-slate-600/50 hover:border-green-500/60 rounded-xl"
+                className="w-full max-w-sm cursor-pointer hover:scale-[1.02] transition-all duration-200 bg-slate-800/40 backdrop-blur-sm border-dashed border-2 border-slate-600/50 hover:border-green-500/50 rounded-xl shadow-lg overflow-hidden"
               >
                 <div className="p-6 flex items-center justify-center gap-6 min-h-[140px]">
                   <div className="w-16 h-16 bg-green-400/20 rounded-full flex items-center justify-center">
@@ -603,27 +626,33 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
         </div>
       </div>
 
-      {/* Modal du wizard du Character Creator */}
+      {/* ✅ Modal du wizard du Character Creator avec snapshot */}
       <CreatorModal
         open={showCreator}
-        onClose={() => setShowCreator(false)}
+        onClose={() => {
+          setShowCreator(false);
+          // ✅ Nettoyer le snapshot à l'annulation
+          appContextService.clearWizardSnapshot();
+          appContextService.setContext('selection');
+        }}
         onComplete={handleCreatorComplete}
+        initialSnapshot={appContextService.getWizardSnapshot()} // ✅ Passer le snapshot
       />
 
-{creating && (
-  <div className="fixed inset-0 z-[150] bg-black/90 flex items-center justify-center">
-    <div className="bg-gray-900 border border-gray-700 rounded-lg p-8 text-center max-w-md">
-      <img 
-        src="/icons/wmremove-transformed.png" 
-        alt="Chargement..." 
-        className="animate-spin h-16 w-16 mx-auto mb-6 object-contain"
-        style={{ backgroundColor: 'transparent' }}
-      />
-      <p className="text-xl text-gray-200 mb-2">Création du personnage...</p>
-      <p className="text-sm text-gray-400">Veuillez patienter</p>
-    </div>
-  </div>
-)}
+      {creating && (
+        <div className="fixed inset-0 z-[150] bg-black/90 flex items-center justify-center">
+          <div className="bg-gray-900 border border-gray-700 rounded-lg p-8 text-center max-w-md">
+            <img 
+              src="/icons/wmremove-transformed.png" 
+              alt="Chargement..." 
+              className="animate-spin h-16 w-16 mx-auto mb-6 object-contain"
+              style={{ backgroundColor: 'transparent' }}
+            />
+            <p className="text-xl text-gray-200 mb-2">Création du personnage...</p>
+            <p className="text-sm text-gray-400">Veuillez patienter</p>
+          </div>
+        </div>
+      )}
 
       {/* Modal de bienvenue */}
       <WelcomeModal
