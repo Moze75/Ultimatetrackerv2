@@ -887,6 +887,151 @@ export function PlayerProfileSettingsModal({
             </div>
           </CollapsibleCard>
 
+
+          {/* Statistiques */}
+          <CollapsibleCard title="CA, VIT, INIT, MAÎT" defaultCollapsed>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Classe d'armure (CA)</label>
+                  <input
+                    type="number"
+                    value={acField}
+                    onChange={(e) => {
+                      setAcField(e.target.value);
+                      setDirty(true);
+                    }}
+                    onBlur={() => {
+                      if (acField === '' || parseInt(acField, 10) <= 0) {
+                        const dm = getDexModFromPlayer(player);
+                        const next = String(10 + dm);
+                        if (next !== acField) {
+                          setAcField(next);
+                          setDirty(true);
+                        }
+                      }
+                    }}
+                    className="input-dark w-full px-3 py-2 rounded-md"
+                    placeholder="Auto si vide: 10 + mod DEX"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Initiative</label>
+                  <input
+                    type="number"
+                    value={initField}
+                    onChange={(e) => {
+                      setInitField(e.target.value);
+                      setDirty(true);
+                    }}
+                    onBlur={() => {
+                      if (initField === '') {
+                        const dm = getDexModFromPlayer(player);
+                        const next = String(dm);
+                        if (next !== initField) {
+                          setInitField(next);
+                          setDirty(true);
+                        }
+                      }
+                    }}
+                    className="input-dark w-full px-3 py-2 rounded-md"
+                    placeholder="Auto si vide: mod DEX"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Vitesse (m)</label>
+                  <input
+                    type="text"
+                    value={speedField}
+                    onChange={(e) => {
+                      setSpeedField(e.target.value);
+                      setDirty(true);
+                    }}
+                    onBlur={() => {
+                      if (speedField.trim() === '') {
+                        if (speedField !== '9') {
+                          setSpeedField('9');
+                          setDirty(true);
+                        }
+                        return;
+                      }
+                      const n = parseDecimal(speedField);
+                      if (!Number.isFinite(n) || n <= 0) {
+                        if (speedField !== '9') {
+                          setSpeedField('9');
+                          setDirty(true);
+                        }
+                      } else {
+                        const display = String(n).replace('.', ',');
+                        if (display !== speedField) {
+                          setSpeedField(display);
+                          setDirty(true);
+                        }
+                      }
+                    }}
+                    className="input-dark w-full px-3 py-2 rounded-md"
+                    placeholder="Ex: 9, 10,5, 12"
+                    inputMode="decimal"
+                    pattern="^[0-9]+([\.,][0-9]+)?$"
+                    aria-describedby="speed-help"
+                  />
+                  <p id="speed-help" className="text-xs text-gray-500 mt-1">Décimales autorisées: utilisez une virgule (ex: 10,5)</p>
+                </div>
+
+                <div>
+<label className="block text-sm font-medium text-gray-300 mb-1">
+  Bonus de maîtrise
+  <span className="text-xs text-gray-500 ml-2">(mis à jour automatiquement)</span>
+</label>
+                  <input
+                    type="number"
+                    value={profField}
+                    onChange={(e) => {
+                      setProfField(e.target.value);
+                      setDirty(true);
+                    }}
+                    onBlur={() => {
+                      if (profField === '' || parseInt(profField, 10) <= 0) {
+                        const next = String(getProficiencyBonusForLevel(level));
+                        if (next !== profField) {
+                          setProfField(next);
+                          setDirty(true);
+                        }
+                      }
+                    }}
+                    className="input-dark w-full px-3 py-2 rounded-md"
+                    placeholder="Auto si vide: selon niveau"
+                  />
+                </div>
+              </div>
+
+              <div className="border-t border-gray-700/50 pt-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Bonus de CA
+                    <span className="text-xs text-gray-500 ml-2">(dons, objets magiques, etc.)</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={acBonus}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      setAcBonus(isNaN(val) ? 0 : val);
+                      setDirty(true);
+                    }}
+                    className="input-dark w-full px-3 py-2 rounded-md"
+                    placeholder="Bonus additionnel de CA (ex: +1 pour le style Défense)"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Ce bonus s'ajoute à votre CA calculée (armure + bouclier + DEX)
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CollapsibleCard>
+          
           {/* Classe et Espèce */}
           <CollapsibleCard title="Classe et Espèce" defaultCollapsed>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1176,149 +1321,6 @@ export function PlayerProfileSettingsModal({
             </div>
           </CollapsibleCard>
 
-          {/* Statistiques */}
-          <CollapsibleCard title="Statistiques" defaultCollapsed>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Classe d'armure (CA)</label>
-                  <input
-                    type="number"
-                    value={acField}
-                    onChange={(e) => {
-                      setAcField(e.target.value);
-                      setDirty(true);
-                    }}
-                    onBlur={() => {
-                      if (acField === '' || parseInt(acField, 10) <= 0) {
-                        const dm = getDexModFromPlayer(player);
-                        const next = String(10 + dm);
-                        if (next !== acField) {
-                          setAcField(next);
-                          setDirty(true);
-                        }
-                      }
-                    }}
-                    className="input-dark w-full px-3 py-2 rounded-md"
-                    placeholder="Auto si vide: 10 + mod DEX"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Initiative</label>
-                  <input
-                    type="number"
-                    value={initField}
-                    onChange={(e) => {
-                      setInitField(e.target.value);
-                      setDirty(true);
-                    }}
-                    onBlur={() => {
-                      if (initField === '') {
-                        const dm = getDexModFromPlayer(player);
-                        const next = String(dm);
-                        if (next !== initField) {
-                          setInitField(next);
-                          setDirty(true);
-                        }
-                      }
-                    }}
-                    className="input-dark w-full px-3 py-2 rounded-md"
-                    placeholder="Auto si vide: mod DEX"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Vitesse (m)</label>
-                  <input
-                    type="text"
-                    value={speedField}
-                    onChange={(e) => {
-                      setSpeedField(e.target.value);
-                      setDirty(true);
-                    }}
-                    onBlur={() => {
-                      if (speedField.trim() === '') {
-                        if (speedField !== '9') {
-                          setSpeedField('9');
-                          setDirty(true);
-                        }
-                        return;
-                      }
-                      const n = parseDecimal(speedField);
-                      if (!Number.isFinite(n) || n <= 0) {
-                        if (speedField !== '9') {
-                          setSpeedField('9');
-                          setDirty(true);
-                        }
-                      } else {
-                        const display = String(n).replace('.', ',');
-                        if (display !== speedField) {
-                          setSpeedField(display);
-                          setDirty(true);
-                        }
-                      }
-                    }}
-                    className="input-dark w-full px-3 py-2 rounded-md"
-                    placeholder="Ex: 9, 10,5, 12"
-                    inputMode="decimal"
-                    pattern="^[0-9]+([\.,][0-9]+)?$"
-                    aria-describedby="speed-help"
-                  />
-                  <p id="speed-help" className="text-xs text-gray-500 mt-1">Décimales autorisées: utilisez une virgule (ex: 10,5)</p>
-                </div>
-
-                <div>
-<label className="block text-sm font-medium text-gray-300 mb-1">
-  Bonus de maîtrise
-  <span className="text-xs text-gray-500 ml-2">(mis à jour automatiquement)</span>
-</label>
-                  <input
-                    type="number"
-                    value={profField}
-                    onChange={(e) => {
-                      setProfField(e.target.value);
-                      setDirty(true);
-                    }}
-                    onBlur={() => {
-                      if (profField === '' || parseInt(profField, 10) <= 0) {
-                        const next = String(getProficiencyBonusForLevel(level));
-                        if (next !== profField) {
-                          setProfField(next);
-                          setDirty(true);
-                        }
-                      }
-                    }}
-                    className="input-dark w-full px-3 py-2 rounded-md"
-                    placeholder="Auto si vide: selon niveau"
-                  />
-                </div>
-              </div>
-
-              <div className="border-t border-gray-700/50 pt-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Bonus de CA
-                    <span className="text-xs text-gray-500 ml-2">(dons, objets magiques, etc.)</span>
-                  </label>
-                  <input
-                    type="number"
-                    value={acBonus}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value, 10);
-                      setAcBonus(isNaN(val) ? 0 : val);
-                      setDirty(true);
-                    }}
-                    className="input-dark w-full px-3 py-2 rounded-md"
-                    placeholder="Bonus additionnel de CA (ex: +1 pour le style Défense)"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Ce bonus s'ajoute à votre CA calculée (armure + bouclier + DEX)
-                  </p>
-                </div>
-              </div>
-            </div>
-          </CollapsibleCard>
 
           {/* Historique */}
           <CollapsibleCard title="Historique" defaultCollapsed>
