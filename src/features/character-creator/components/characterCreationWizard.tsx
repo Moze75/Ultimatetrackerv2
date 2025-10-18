@@ -189,31 +189,31 @@ export default function CharacterCreationWizard({ onFinish, onCancel, initialSna
     setBackgroundEquipmentOption('');
   }, [selectedBackground]);
 
-  // ✅ MODIFIER: Sauvegarder uniquement lors du changement de step (au lieu de toutes les 5 secondes)
-  useEffect(() => {
-    const snapshot = {
-      currentStep,
-      characterName,
-      selectedRace,
-      selectedClass,
-      selectedBackground,
-      selectedAlignment,
-      selectedLanguages,
-      age,
-      gender,
-      characterHistory,
-      backgroundEquipmentOption,
-      selectedClassSkills,
-      selectedEquipmentOption,
-      selectedCantrips,
-      selectedLevel1Spells,
-      abilities,
-      effectiveAbilities,
-    }; 
-      
-      appContextService.saveWizardSnapshot(snapshot);
-      console.log('[Wizard] Snapshot auto-sauvegardé');
-    }, 5000); // Toutes les 5 secondes
+// ✅ CORRECT: Sauvegarder uniquement lors du changement de step
+useEffect(() => {
+  const snapshot = {
+    currentStep,
+    characterName,
+    selectedRace,
+    selectedClass,
+    selectedBackground,
+    selectedAlignment,
+    selectedLanguages,
+    age,
+    gender,
+    characterHistory,
+    backgroundEquipmentOption,
+    selectedClassSkills,
+    selectedEquipmentOption,
+    selectedCantrips,
+    selectedLevel1Spells,
+    abilities,
+    effectiveAbilities,
+  };
+  
+  appContextService.saveWizardSnapshot(snapshot);
+  console.log('[Wizard] Snapshot sauvegardé au step', currentStep);
+}, [currentStep]); // ✅ Dépendance = currentStep uniquement
 
     return () => clearInterval(interval);
   }, [
