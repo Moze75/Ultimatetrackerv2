@@ -241,7 +241,11 @@ export default function PlayerProfileProfileTab({ player, onUpdate }: PlayerProf
   const age = (player as any)?.age || '';
   const gender = (player as any)?.gender || '';
   const alignment = (player as any)?.alignment || '';
-  const languages = Array.isArray((player as any)?.languages) ? (player as any).languages : [];
+  const languages = Array.isArray((player as any)?.languages) 
+  ? (player as any).languages.filter((lang: string) => 
+      lang && !lang.toLowerCase().includes('au choix')
+    )
+  : [];
 
   // Dons (adapter si nécessaire selon ton type Player)
   const feats: any = (player.stats as any)?.feats || {};
