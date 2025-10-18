@@ -161,15 +161,7 @@ export default function CharacterCreationWizard({ onFinish, onCancel, initialSna
   });
   const [effectiveAbilities, setEffectiveAbilities] = useState<Record<string, number>>(initialSnapshot?.effectiveAbilities ?? abilities);
 
-  // ✅ Message de restauration si snapshot présent
-  useEffect(() => {
-    if (initialSnapshot) {
-      toast('Reprise de votre création...', { 
-        icon: '✨',
-        duration: 3000 
-      });
-    }
-  }, [initialSnapshot]);
+
 
   // Objet d'historique sélectionné
   const selectedBackgroundObj = useMemo(
