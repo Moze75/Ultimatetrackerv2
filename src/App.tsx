@@ -5,14 +5,18 @@ import type { Player } from './types/dnd';
 import { InstallPrompt } from './components/InstallPrompt';
 import { appContextService } from './services/appContextService';
 
-const LAST_SELECTED_CHARACTER_SNAPSHOT = 'selectedCharacter'; // même clé qu'avant
+const LAST_SELECTED_CHARACTER_SNAPSHOT = 'selectedCharacter';
 const SKIP_AUTO_RESUME_ONCE = 'ut:skipAutoResumeOnce';
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1500; // 1.5 secondes
 
 function App() {
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<any>(null);
   const [selectedCharacter, setSelectedCharacter] = useState<Player | null>(null);
   const [refreshingSession, setRefreshingSession] = useState(false);
+  const [componentLoadError, setComponentLoadError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   const [LoginPage, setLoginPage] = useState<React.ComponentType<any> | null>(null);
   const [CharacterSelectionPage, setCharacterSelectionPage] = useState<React.ComponentType<any> | null>(null);
@@ -31,48 +35,74 @@ function App() {
     selectedCharacterRef.current = selectedCharacter;
   }, [selectedCharacter]);
 
-  // Charger dynamiquement les pages (exports nommés)
+  // ✅ MODIFIÉ : Charger dynamiquement les pages avec retry
   useEffect(() => {
+    let currentRetry = 0;
+    let isCancelled = false;
+
     const loadComponents = async () => {
+      if (isCancelled) return;
+
       try {
-        const loginModule = await import('./pages/LoginPage');
-        const characterSelectionModule = await import('./pages/CharacterSelectionPage');
-        const gamePageModule = await import('./pages/GamePage');
+        console.log(`[App] 🔄 Tentative de chargement des composants (${currentRetry + 1}/${MAX_RETRIES})...`);
+        
+        const [loginModule, characterSelectionModule, gamePageModule] = await Promise.all([
+          import('./pages/LoginPage'),
+          import('./pages/CharacterSelectionPage'),
+          import('./pages/GamePage')
+        ]);
+
+        if (isCancelled) return;
 
         setLoginPage(() => (loginModule as any).LoginPage ?? (loginModule as any).default);
         setCharacterSelectionPage(
           () => (characterSelectionModule as any).CharacterSelectionPage ?? (characterSelectionModule as any).default
         );
         setGamePage(() => (gamePageModule as any).GamePage ?? (gamePageModule as any).default);
+        
+        console.log('[App] ✅ Composants chargés avec succès');
+        setComponentLoadError(false);
+        setRetryCount(0);
       } catch (error) {
-        console.error('Erreur lors du chargement des composants:', error);
+        console.error(`[App] ❌ Erreur chargement composants (tentative ${currentRetry + 1}/${MAX_RETRIES}):`, error);
+        
+        if (currentRetry < MAX_RETRIES - 1 && !isCancelled) {
+          currentRetry++;
+          setRetryCount(currentRetry);
+          console.log(`[App] ⏱️ Nouvelle tentative dans ${RETRY_DELAY}ms...`);
+          setTimeout(loadComponents, RETRY_DELAY);
+        } else if (!isCancelled) {
+          console.error('[App] 💥 Échec définitif après', MAX_RETRIES, 'tentatives');
+          setComponentLoadError(true);
+        }
       }
     };
 
     loadComponents();
+
+    return () => {
+      isCancelled = true;
+    };
   }, []);
 
   // Initialisation session + restauration du personnage si session présente
   useEffect(() => {
     const initSession = async () => {
       try {
+        console.log('[App] 🔑 Initialisation de la session...');
         const { data } = await supabase.auth.getSession();
         const current = data?.session ?? null;
         setSession(current);
 
         if (current) {
-          // ✅ NOUVEAU : Vérifier le contexte d'application
           const context = appContextService.getContext();
-          
-          console.log('[App] Contexte détecté:', context);
+          console.log('[App] 📍 Contexte détecté:', context);
 
           if (context === 'wizard') {
-            // L'utilisateur était dans le wizard, ne PAS restaurer le personnage
-            // Le wizard sera restauré par CharacterSelectionPage
-            console.log('[App] Contexte wizard détecté, pas de restauration de personnage');
+            console.log('[App] 🧙 Contexte wizard - pas de restauration de personnage');
           } else {
-            // Comportement normal : restaurer le personnage si pas de skip
             if (sessionStorage.getItem(SKIP_AUTO_RESUME_ONCE) === '1') {
+              console.log('[App] ⏭️ Skip auto-resume activé');
               sessionStorage.removeItem(SKIP_AUTO_RESUME_ONCE);
             } else {
               const savedChar = localStorage.getItem(LAST_SELECTED_CHARACTER_SNAPSHOT);
@@ -80,20 +110,22 @@ function App() {
                 try {
                   const parsed = JSON.parse(savedChar);
                   setSelectedCharacter(parsed);
-                  appContextService.setContext('game'); // ✅ Marquer le contexte "game"
-                  console.log('[App] Personnage restauré depuis snapshot');
+                  appContextService.setContext('game');
+                  console.log('[App] 🎮 Personnage restauré:', parsed.name);
                 } catch (e) {
-                  console.error('Erreur parsing selectedCharacter:', e);
+                  console.error('[App] ❌ Erreur parsing personnage:', e);
                 }
               }
             }
           }
         } else {
-          // Pas de session -> purge mémoire
+          console.log('[App] 🔓 Pas de session - purge mémoire');
           setSelectedCharacter(null);
-          appContextService.clearContext(); // ✅ Nettoyer le contexte
-          appContextService.clearWizardSnapshot(); // ✅ Nettoyer le snapshot wizard
+          appContextService.clearContext();
+          appContextService.clearWizardSnapshot();
         }
+      } catch (error) {
+        console.error('[App] ❌ Erreur initialisation session:', error);
       } finally {
         setLoading(false);
       }
@@ -105,22 +137,21 @@ function App() {
   // Écoute des changements d'état d'authentification
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event, newSession) => {
+      console.log('[App] 🔄 Auth state change:', event);
       setSession(newSession);
 
       if (!newSession) {
-        // Déconnexion -> purger la sélection et le stockage local
+        console.log('[App] 🔓 Déconnexion - purge');
         setSelectedCharacter(null);
         localStorage.removeItem(LAST_SELECTED_CHARACTER_SNAPSHOT);
-        appContextService.clearContext(); // ✅ Nettoyer le contexte
-        appContextService.clearWizardSnapshot(); // ✅ Nettoyer le snapshot wizard
+        appContextService.clearContext();
+        appContextService.clearWizardSnapshot();
       } else {
-        // À la connexion (ou refresh), si aucun personnage sélectionné, tenter une restauration
         if (!selectedCharacter) {
           const context = appContextService.getContext();
           
           if (context === 'wizard') {
-            // Laisser le wizard gérer la restauration
-            console.log('[App] Auth change: contexte wizard, pas de restauration');
+            console.log('[App] 🧙 Auth change: wizard actif');
           } else {
             if (sessionStorage.getItem(SKIP_AUTO_RESUME_ONCE) === '1') {
               sessionStorage.removeItem(SKIP_AUTO_RESUME_ONCE);
@@ -131,8 +162,9 @@ function App() {
                   const parsed = JSON.parse(savedChar);
                   setSelectedCharacter(parsed);
                   appContextService.setContext('game');
+                  console.log('[App] 🎮 Personnage restauré (auth change):', parsed.name);
                 } catch (e) {
-                  console.error('Erreur parsing selectedCharacter (auth change):', e);
+                  console.error('[App] ❌ Erreur parsing (auth change):', e);
                 }
               }
             }
@@ -140,8 +172,8 @@ function App() {
         }
       }
 
-      // Feedback visuel léger lors d'un refresh de token
       if (event === 'TOKEN_REFRESHED') {
+        console.log('[App] 🔄 Token rafraîchi');
         setRefreshingSession(true);
         setTimeout(() => setRefreshingSession(false), 1200);
       }
@@ -156,20 +188,20 @@ function App() {
     };
   }, [selectedCharacter]);
 
-  // Sauvegarder le personnage sélectionné dans localStorage (snapshot complet)
+  // Sauvegarder le personnage sélectionné
   useEffect(() => {
     if (selectedCharacter) {
       try {
         localStorage.setItem(LAST_SELECTED_CHARACTER_SNAPSHOT, JSON.stringify(selectedCharacter));
-        appContextService.setContext('game'); // ✅ Marquer le contexte "game"
-        console.log('[App] Personnage sauvegardé, contexte = game');
-      } catch {
-        // no-op
+        appContextService.setContext('game');
+        console.log('[App] 💾 Personnage sauvegardé:', selectedCharacter.name);
+      } catch (e) {
+        console.error('[App] ❌ Erreur sauvegarde personnage:', e);
       }
     }
   }, [selectedCharacter]);
 
-  // Gestion du bouton "retour" Android / navigateur:
+  // Gestion du bouton "retour"
   useEffect(() => {
     try {
       window.history.pushState({ ut: 'keepalive' }, '');
@@ -178,16 +210,15 @@ function App() {
     }
 
     const onPopState = (_ev: PopStateEvent) => {
-      // 1) En jeu -> retour interne à la sélection
       if (sessionRef.current && selectedCharacterRef.current) {
+        console.log('[App] ⬅️ Retour: jeu → sélection');
         try {
           sessionStorage.setItem(SKIP_AUTO_RESUME_ONCE, '1');
-          appContextService.setContext('selection'); // ✅ Marquer le contexte "selection"
+          appContextService.setContext('selection');
         } catch {
           // no-op
         }
         setSelectedCharacter(null);
-        // Ré-armer l'entrée d'historique pour capturer le prochain "retour"
         try {
           window.history.pushState({ ut: 'keepalive' }, '');
         } catch {
@@ -196,10 +227,9 @@ function App() {
         return;
       }
 
-      // 2) À la racine (login ou sélection) -> double appui pour quitter
       const now = Date.now();
       if (now - (backPressRef.current ?? 0) < 1500) {
-        // Laisser quitter: enlever l'écouteur et effectuer un back supplémentaire
+        console.log('[App] ⬅️ Double appui: quitter');
         window.removeEventListener('popstate', onPopState);
         window.history.back();
       } else {
@@ -219,10 +249,67 @@ function App() {
     };
   }, []);
 
-  // Écran de chargement des composants dynamiques
+  // ✅ MODIFIÉ : Écran d'erreur de chargement
+  if (componentLoadError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gray-900">
+        <div className="text-center space-y-6 max-w-md">
+          <div className="text-red-400 text-7xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-bold text-white">Erreur de chargement</h2>
+          <p className="text-gray-400 text-lg">
+            Impossible de charger l'application après {MAX_RETRIES} tentatives.
+          </p>
+          <div className="space-y-2 text-sm text-gray-500">
+            <p>Causes possibles :</p>
+            <ul className="list-disc list-inside text-left">
+              <li>Cache du Service Worker corrompu</li>
+              <li>Problème de connexion internet</li>
+              <li>Fichiers manquants sur le serveur</li>
+            </ul>
+          </div>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => {
+                console.log('[App] 🔄 Rechargement forcé');
+                window.location.reload();
+              }}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+            >
+              🔄 Recharger l'application
+            </button>
+            <button
+              onClick={() => {
+                console.log('[App] 🗑️ Nettoyage cache + rechargement');
+                if ('serviceWorker' in navigator) {
+                  navigator.serviceWorker.getRegistrations().then(registrations => {
+                    for (const registration of registrations) {
+                      registration.unregister();
+                    }
+                    caches.keys().then(names => {
+                      for (const name of names) {
+                        caches.delete(name);
+                      }
+                      window.location.reload();
+                    });
+                  });
+                } else {
+                  window.location.reload();
+                }
+              }}
+              className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+            >
+              🗑️ Vider le cache et recharger
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ MODIFIÉ : Écran de chargement des composants avec indicateur de retry
   if (!LoginPage || !CharacterSelectionPage || !GamePage) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
         <div className="text-center space-y-4">
           <img 
             src="/icons/wmremove-transformed.png" 
@@ -230,6 +317,11 @@ function App() {
             className="animate-spin rounded-full h-12 w-12 mx-auto object-cover" 
           />
           <p className="text-gray-400">Chargement des composants...</p>
+          {retryCount > 0 && (
+            <p className="text-yellow-400 text-sm">
+              Tentative {retryCount + 1}/{MAX_RETRIES}
+            </p>
+          )}
         </div>
       </div>
     );
@@ -241,24 +333,21 @@ function App() {
       <>
         <Toaster position="top-right" />
         <InstallPrompt />
-        <div className="min-h-screen flex items-center justify-center">
+        <div className="min-h-screen flex items-center justify-center bg-gray-900">
           <div className="text-center space-y-4">
             <img 
               src="/icons/wmremove-transformed.png" 
               alt="Chargement..." 
               className="animate-spin rounded-full h-12 w-12 mx-auto object-cover" 
             />
-            <p className="text-gray-400">Chargement en cours...</p>
+            <p className="text-gray-400">Initialisation...</p>
           </div>
         </div>
       </>
     );
   }
 
-  // Rendu avec ordre correct:
-  // 1) Pas de session -> Login
-  // 2) Session sans personnage -> Sélection
-  // 3) Session + personnage -> Jeu
+  // Rendu principal
   return (
     <>
       <Toaster position="top-right" />
@@ -266,7 +355,7 @@ function App() {
 
       {refreshingSession && (
         <div className="fixed top-0 left-0 right-0 bg-yellow-500 text-black text-center py-2 z-50">
-          Tentative de reconnexion...
+          🔄 Reconnexion en cours...
         </div>
       )}
 
@@ -291,7 +380,7 @@ function App() {
           onBackToSelection={() => {
             try {
               sessionStorage.setItem(SKIP_AUTO_RESUME_ONCE, '1');
-              appContextService.setContext('selection'); // ✅ Marquer le contexte "selection"
+              appContextService.setContext('selection');
             } catch {
               // no-op
             }
@@ -299,10 +388,9 @@ function App() {
           }}
           onUpdateCharacter={(p: Player) => {
             setSelectedCharacter(p);
-            // App écrit aussi le snapshot pour sécuriser
             try {
               localStorage.setItem(LAST_SELECTED_CHARACTER_SNAPSHOT, JSON.stringify(p));
-              appContextService.setContext('game'); // ✅ Maintenir le contexte "game"
+              appContextService.setContext('game');
             } catch {
               // no-op
             }
