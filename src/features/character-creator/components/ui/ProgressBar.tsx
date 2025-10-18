@@ -6,82 +6,88 @@ interface ProgressBarProps {
   steps: string[];
 }
 
+// ✅ SOLUTION: Audio global en dehors du composant React
+const MUSIC_SRC = '/Music/Skyrim8bits.mp3';
+let globalAudio: HTMLAudioElement | null = null;
+let globalIsPlaying = false;
+
 export default function ProgressBar({ currentStep, totalSteps, steps }: ProgressBarProps) {
-  // ✅ Utiliser la longueur réelle du tableau steps au lieu de totalSteps
-  const total = Math.max(1, steps.length - 1); // -1 car les étapes commencent à 0
+  const total = Math.max(1, steps.length - 1);
   const percent = Math.max(0, Math.min(100, (currentStep / total) * 100));
 
-  // === Lecture musicale (Skyrim 8-bit) ===
-  const MUSIC_SRC = '/Music/Skyrim8bits.mp3';
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(globalIsPlaying);
   const [autoPlayBlocked, setAutoPlayBlocked] = useState(false);
-  const [hasTriedAutoStart, setHasTriedAutoStart] = useState(false);
+  const hasTriedAutoStartRef = useRef(false);
 
-  // Détecte l'étape "Race" (français/variantes courantes)
+  // Détecte l'étape "Race"
   const raceStepIndex = steps.findIndex((s) => {
     const t = (s || '').toLowerCase();
-    return (
-      t.includes('race') || // ex: "Race", "Choix de la race"
-      t.includes('peuple') || // parfois utilisé
-      t.includes('ancestr') // "Ancestry/Ancestral" si jamais
-    );
+    return t.includes('race') || t.includes('peuple') || t.includes('ancestr');
   });
 
-  // On tente de démarrer la musique automatiquement dès l'étape "Race"
   const shouldAutoStart = raceStepIndex !== -1 && currentStep === raceStepIndex;
 
+  // ✅ Initialiser l'audio global une seule fois
   useEffect(() => {
-    if (!shouldAutoStart || hasTriedAutoStart) return;
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    setHasTriedAutoStart(true);
-    audio.loop = true;
-    audio.volume = 0.35; // volume modéré par défaut
-    audio.play()
-      .then(() => {
-        setIsPlaying(true);
-        setAutoPlayBlocked(false);
-      })
-      .catch(() => {
-        // La politique d'autoplay du navigateur a probablement bloqué
-        setIsPlaying(false);
-        setAutoPlayBlocked(true);
-      });
-  }, [shouldAutoStart, hasTriedAutoStart]);
-
-  // Nettoyage à l'unmount
-  useEffect(() => {
-    return () => {
-      const a = audioRef.current;
-      if (a) {
-        a.pause();
-        a.currentTime = 0;
-      }
-    };
+    if (!globalAudio) {
+      globalAudio = new Audio(MUSIC_SRC);
+      globalAudio.loop = true;
+      globalAudio.volume = 0.35;
+      console.log('[ProgressBar] Audio global initialisé');
+    }
   }, []);
 
-  const togglePlayback = async () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (isPlaying) {
-      audio.pause();
-      setIsPlaying(false);
-    } else {
-      try {
-        await audio.play();
+  // ✅ Tenter l'autoplay uniquement au step "Race"
+  useEffect(() => {
+    if (!shouldAutoStart || hasTriedAutoStartRef.current || !globalAudio) return;
+
+    hasTriedAutoStartRef.current = true;
+    
+    globalAudio.play()
+      .then(() => {
+        globalIsPlaying = true;
         setIsPlaying(true);
         setAutoPlayBlocked(false);
+        console.log('[ProgressBar] Musique démarrée automatiquement');
+      })
+      .catch(() => {
+        globalIsPlaying = false;
+        setIsPlaying(false);
+        setAutoPlayBlocked(true);
+        console.log('[ProgressBar] Autoplay bloqué par le navigateur');
+      });
+  }, [shouldAutoStart]);
+
+  // ✅ Synchroniser l'état local avec l'état global
+  useEffect(() => {
+    setIsPlaying(globalIsPlaying);
+  }, [currentStep]);
+
+  const togglePlayback = async () => {
+    if (!globalAudio) return;
+
+    if (globalIsPlaying) {
+      globalAudio.pause();
+      globalIsPlaying = false;
+      setIsPlaying(false);
+      console.log('[ProgressBar] Musique mise en pause');
+    } else {
+      try {
+        await globalAudio.play();
+        globalIsPlaying = true;
+        setIsPlaying(true);
+        setAutoPlayBlocked(false);
+        console.log('[ProgressBar] Musique reprise');
       } catch {
         setAutoPlayBlocked(true);
+        console.log('[ProgressBar] Impossible de lire la musique');
       }
     }
   };
 
   return (
     <div className="w-full mb-8">
-      {/* Bandeau pleine largeur avec image de fond - tout en haut */}
+      {/* Bandeau pleine largeur avec image de fond */}
       <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] -mt-1 h-64">
         {/* Image de fond */}
         <div
@@ -93,10 +99,10 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
             backgroundRepeat: 'no-repeat'
           }}
         >
-          {/* Overlay blanc transparent (20% d'opacité pour plus de transparence) */}
+          {/* Overlay blanc transparent */}
           <div className="absolute inset-0 bg-white/20"></div>
 
-          {/* Dégradé progressif vers le bas pour fusionner avec le background */}
+          {/* Dégradé progressif vers le bas */}
           <div
             className="absolute inset-x-0 bottom-0 h-24"
             style={{
@@ -107,7 +113,6 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
 
         {/* Contenu par-dessus le fond */}
         <div className="relative z-10 px-4 py-12 max-w-6xl mx-auto">
-          {/* Titre principal avec plus d'espace au dessus */}
           <div className="text-center">
             <h1 className="text-4xl font-bold text-black mb-2"
                 style={{
@@ -125,7 +130,7 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
         </div>
       </div>
 
-      {/* Barre de progression en dessous du bandeau */}
+      {/* Barre de progression */}
       <div className="max-w-6xl mx-auto px-4 mt-6">
         <div className="w-full bg-gray-800 rounded-full h-2 mb-3" aria-hidden="true">
           <div
@@ -138,7 +143,7 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
           />
         </div>
 
-        {/* Libellés d'étapes avec les anciennes couleurs */}
+        {/* Libellés d'étapes */}
         <div className="text-xs sm:text-sm text-gray-400 overflow-x-auto">
           <ol className="flex flex-wrap sm:flex-nowrap items-center gap-x-4 sm:gap-x-6 gap-y-2 whitespace-nowrap">
             {steps.map((step, index) => {
@@ -172,7 +177,7 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
         </div>
       </div>
 
-      {/* Contrôles musique remontés légèrement */}
+      {/* Contrôles musique */}
       <div className="mt-2 flex items-center justify-end max-w-6xl mx-auto px-4">
         <button
           type="button"
@@ -184,11 +189,9 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
         >
           {isPlaying ? '⏸ Arrêter la musique' : '▶️ Lire la musique'}
         </button>
-        {/* Elément audio caché */}
-        <audio ref={audioRef} src={MUSIC_SRC} preload="auto" loop />
       </div>
 
-      {/* Alerte discrète si l'autoplay a été bloqué */}
+      {/* Alerte autoplay bloqué */}
       {autoPlayBlocked && !isPlaying && (
         <div className="mt-2 text-[11px] sm:text-xs text-gray-500 max-w-6xl mx-auto px-4">
           Astuce: l'autoplay a été bloqué par votre navigateur. Cliquez sur "Lire la musique" pour l'activer.
