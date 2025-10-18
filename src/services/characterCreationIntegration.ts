@@ -391,11 +391,11 @@ async function insertSpellsForCharacter(
       throw spellsError;
     }
 
-      const playerSpellsLinks = allSpells.map(spell => ({
-        player_id: playerId,
-        spell_id: spell.id,
-        is_prepared: true,  // ✅ SOLUTION : marquer comme préparé par défaut
-      }));
+    const playerSpellsLinks = allSpells.map(spell => ({
+      player_id: playerId,
+      spell_id: spell.id,
+      is_prepared: false,
+    })); 
 
     const { error: linksError } = await supabase
       .from('player_spells')
