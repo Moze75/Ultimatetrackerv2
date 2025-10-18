@@ -189,7 +189,7 @@ export default function CharacterCreationWizard({ onFinish, onCancel, initialSna
     setBackgroundEquipmentOption('');
   }, [selectedBackground]);
 
-// ✅ CORRECT: Sauvegarder uniquement lors du changement de step
+// ✅ NOUVEAU: Sauvegarder uniquement lors du changement de step
 useEffect(() => {
   const snapshot = {
     currentStep,
@@ -213,28 +213,7 @@ useEffect(() => {
   
   appContextService.saveWizardSnapshot(snapshot);
   console.log('[Wizard] Snapshot sauvegardé au step', currentStep);
-}, [currentStep]); // ✅ Dépendance = currentStep uniquement
-
-    return () => clearInterval(interval);
-  }, [
-    currentStep,
-    characterName,
-    selectedRace,
-    selectedClass,
-    selectedBackground,
-    selectedAlignment,
-    selectedLanguages,
-    age,
-    gender,
-    characterHistory,
-    backgroundEquipmentOption,
-    selectedClassSkills,
-    selectedEquipmentOption,
-    selectedCantrips,
-    selectedLevel1Spells,
-    abilities,
-    effectiveAbilities,
-  ]);
+}, [currentStep]); // ✅ UNIQUEMENT currentStep comme dépendance
 
   // Classes qui ne lancent pas de sorts au niveau 1
   const nonCasterClasses: DndClass[] = ['Guerrier', 'Roublard', 'Barbare', 'Moine'];
