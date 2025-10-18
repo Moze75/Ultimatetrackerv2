@@ -21,10 +21,7 @@ import { authService } from '../services/authService';
 // Intégration Character Creator (wizard)
 import { CharacterExportPayload } from '../types/characterCreator';
 import { createCharacterFromCreatorPayload } from '../services/characterCreationIntegration';
-
-// Import direct du wizard (pas de lazy loading)
 import CharacterCreationWizard from '../features/character-creator/components/characterCreationWizard';
-}
 
 interface CharacterSelectionPageProps {
   session: any;
