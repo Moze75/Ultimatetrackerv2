@@ -391,11 +391,11 @@ async function insertSpellsForCharacter(
       throw spellsError;
     }
 
-    const playerSpellsLinks = allSpells.map(spell => ({
-      player_id: playerId,
-      spell_id: spell.id,
-      is_prepared: false,
-    })); 
+const playerSpellsLinks = allSpells.map(spell => ({
+  player_id: playerId,
+  spell_id: spell.id,
+  is_prepared: true,  // ✅ SOLUTION : marquer comme préparé par défaut
+}));
 
     const { error: linksError } = await supabase
       .from('player_spells')
@@ -492,15 +492,7 @@ export async function createCharacterFromCreatorPayload(
       gold: initialGold,
       silver: 0,
       copper: 0,
-
-      // ✅ AJOUT: Champs de profil
-      alignment: payload.selectedAlignment || null,
-      languages: payload.selectedLanguages || [],
-      age: payload.age || null,
-      gender: payload.gender || null,
-      character_history: payload.characterHistory || null,
     })
-      
     .eq('id', playerId);
   if (updError) throw updError;
 
