@@ -144,10 +144,21 @@ const getDefaultClassResources = (player: Player): ClassResources => {
       }
       break;
 
-    case 'Rôdeur':
-      resources.favored_foe = Math.max(1, Math.floor((level + 3) / 4));
-      resources.used_favored_foe = 0;
-      break;
+case 'Rôdeur':
+  // Tableau officiel 2024 : 2 utilisations au niveau 1-4, puis +1 tous les 4 niveaux
+  if (level <= 4) {
+    resources.favored_foe = 2;
+  } else if (level <= 8) {
+    resources.favored_foe = 3;
+  } else if (level <= 12) {
+    resources.favored_foe = 4;
+  } else if (level <= 16) {
+    resources.favored_foe = 5;
+  } else {
+    resources.favored_foe = 6;
+  }
+  resources.used_favored_foe = 0;
+  break;
 
     case 'Roublard':
       resources.sneak_attack = `${Math.ceil(level / 2)}d6`;
