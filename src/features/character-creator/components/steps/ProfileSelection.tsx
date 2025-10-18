@@ -1,7 +1,7 @@
 import React from 'react';
 import Button from '../ui/Button';
 import Card, { CardContent, CardHeader } from '../ui/Card';
-import { User, Globe, BookOpen } from 'lucide-react';
+import { User, Globe, BookOpen, AlertCircle } from 'lucide-react';
 
 const DND_LANGUAGES: string[] = [
   'Commun',
@@ -19,7 +19,7 @@ const DND_LANGUAGES: string[] = [
   'Infernal',
   'Primordial',
   'Sylvestre',
-  'Autre',
+  // ✅ 'Autre' retiré
 ];
 
 const ALIGNMENTS = {
@@ -27,6 +27,9 @@ const ALIGNMENTS = {
   'Neutre': ['Loyal Neutre', 'Neutre', 'Chaotique Neutre'],
   'Mauvais': ['Loyal Mauvais', 'Neutre Mauvais', 'Chaotique Mauvais'],
 };
+
+// ✅ Constante pour la limite de langues
+const MAX_LANGUAGES = 3;
 
 interface ProfileSelectionProps {
   selectedLanguages: string[];
@@ -57,13 +60,32 @@ export default function ProfileSelection({
   onNext,
   onPrevious,
 }: ProfileSelectionProps) {
+  // ✅ Initialiser "Commun" si aucune langue n'est sélectionnée
+  React.useEffect(() => {
+    if (selectedLanguages.length === 0) {
+      onLanguagesChange(['Commun']);
+    }
+  }, []);
+
   const toggleLanguage = (language: string) => {
+    // ✅ Empêcher de désélectionner "Commun"
+    if (language === 'Commun' && selectedLanguages.includes(language)) {
+      return; // Ne rien faire si on essaie de désélectionner Commun
+    }
+
     if (selectedLanguages.includes(language)) {
       onLanguagesChange(selectedLanguages.filter(lang => lang !== language));
     } else {
+      // ✅ Vérifier la limite avant d'ajouter
+      if (selectedLanguages.length >= MAX_LANGUAGES) {
+        return; // Ne rien faire si on a atteint la limite
+      }
       onLanguagesChange([...selectedLanguages, language]);
     }
   };
+
+  // ✅ Calculer combien de langues peuvent encore être ajoutées
+  const remainingSlots = MAX_LANGUAGES - selectedLanguages.length;
 
   return (
     <div className="wizard-step space-y-6">
@@ -151,39 +173,82 @@ export default function ProfileSelection({
       {/* Langues */}
       <Card>
         <CardHeader>
-          <div className="flex items-center">
-            <Globe className="w-5 h-5 text-cyan-400 mr-2" />
-            <h3 className="text-lg font-semibold text-white">Langues</h3>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Globe className="w-5 h-5 text-cyan-400 mr-2" />
+              <h3 className="text-lg font-semibold text-white">Langues</h3>
+            </div>
+            {/* ✅ Indicateur de langues restantes */}
+            <div className="text-sm">
+              <span className={`font-medium ${remainingSlots === 0 ? 'text-red-400' : 'text-cyan-400'}`}>
+                {selectedLanguages.length}/{MAX_LANGUAGES}
+              </span>
+              <span className="text-gray-400 ml-1">sélectionnée{selectedLanguages.length > 1 ? 's' : ''}</span>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-gray-400 mb-4">
-            Sélectionnez les langues que votre personnage maîtrise
-            {selectedLanguages.length > 0 && (
-              <span className="ml-2 text-cyan-400 font-medium">
-                ({selectedLanguages.length} sélectionnée{selectedLanguages.length > 1 ? 's' : ''})
-              </span>
-            )}
-          </p>
+          {/* ✅ Message d'aide */}
+          <div className="mb-4 p-3 bg-cyan-900/20 border border-cyan-500/30 rounded-lg flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
+            <div className="text-sm text-cyan-200">
+              <p className="font-medium mb-1">Sélectionnez jusqu'à {MAX_LANGUAGES} langues</p>
+              <p className="text-cyan-300/80">
+                Le <strong>Commun</strong> est obligatoire et compte dans la limite.
+                {remainingSlots > 0 && ` Vous pouvez encore choisir ${remainingSlots} langue${remainingSlots > 1 ? 's' : ''}.`}
+                {remainingSlots === 0 && ' Vous avez atteint la limite.'}
+              </p>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
             {DND_LANGUAGES.map((language) => {
               const isSelected = selectedLanguages.includes(language);
+              const isCommun = language === 'Commun';
+              const isDisabled = !isSelected && selectedLanguages.length >= MAX_LANGUAGES;
+
               return (
                 <button
                   key={language}
                   type="button"
                   onClick={() => toggleLanguage(language)}
-                  className={`px-3 py-2 rounded-lg border transition-all duration-200 text-sm ${
+                  disabled={isDisabled}
+                  className={`px-3 py-2 rounded-lg border transition-all duration-200 text-sm relative ${
                     isSelected
-                      ? 'bg-cyan-600 border-cyan-500 text-white shadow-lg'
-                      : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50 hover:border-gray-600'
+                      ? isCommun
+                        ? 'bg-cyan-700 border-cyan-600 text-white shadow-lg cursor-not-allowed'
+                        : 'bg-cyan-600 border-cyan-500 text-white shadow-lg'
+                      : isDisabled
+                        ? 'bg-gray-800/30 border-gray-700/50 text-gray-500 cursor-not-allowed opacity-50'
+                        : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50 hover:border-gray-600'
                   }`}
+                  title={
+                    isCommun && isSelected
+                      ? 'Le Commun est obligatoire'
+                      : isDisabled
+                        ? `Limite de ${MAX_LANGUAGES} langues atteinte`
+                        : undefined
+                  }
                 >
                   {language}
+                  {/* ✅ Badge "Obligatoire" pour Commun */}
+                  {isCommun && (
+                    <span className="absolute -top-1 -right-1 bg-cyan-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                      !
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
+
+          {/* ✅ Message si limite atteinte */}
+          {remainingSlots === 0 && (
+            <div className="mt-3 text-xs text-amber-400 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4" />
+              <span>Limite de {MAX_LANGUAGES} langues atteinte. Désélectionnez une langue pour en choisir une autre.</span>
+            </div>
+          )}
         </CardContent>
       </Card>
 
