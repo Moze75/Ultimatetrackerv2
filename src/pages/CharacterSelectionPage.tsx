@@ -22,16 +22,8 @@ import { authService } from '../services/authService';
 import { CharacterExportPayload } from '../types/characterCreator';
 import { createCharacterFromCreatorPayload } from '../services/characterCreationIntegration';
 
-// ✅ Lazy load du wizard
-const CharacterCreationWizard = React.lazy(() =>
-  import('../features/character-creator/components/characterCreationWizard').then((m: any) => ({
-    default: m.default ?? m.CharacterCreationWizard,
-  }))
-);
-
-// ✅ Fonction de pré-chargement
-function preloadWizard() {
-  import('../features/character-creator/components/characterCreationWizard');
+// Import direct du wizard (pas de lazy loading)
+import CharacterCreationWizard from '../features/character-creator/components/characterCreationWizard';
 }
 
 interface CharacterSelectionPageProps {
