@@ -128,10 +128,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
   const [showWelcome, setShowWelcome] = useState(false);
   const [newCharacter, setNewCharacter] = useState<Player | null>(null);
 
-  // ✅ Pré-charger le wizard au montage
-  useEffect(() => {
-    preloadWizard();
-  }, []);
+
 
   useEffect(() => {
     fetchPlayers();
