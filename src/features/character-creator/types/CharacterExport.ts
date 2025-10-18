@@ -34,6 +34,25 @@ export interface EnrichedEquipment {
   autoEquip: boolean;
 }
 
+// ✅ AJOUT : Interface pour les sorts
+export interface SpellData {
+  id: string;
+  name: string;
+  level: number;
+  school: string;
+  casting_time: string;
+  range: string;
+  components: {
+    V: boolean;
+    S: boolean;
+    M: string | null;
+  };
+  duration: string;
+  description: string;
+  higher_levels?: string;
+  classes: string[];
+}
+
 // Type de données exportées vers l'app DND-Ultimate-Tracker
 export interface CharacterExportPayload {
   characterName: string;
@@ -42,17 +61,17 @@ export interface CharacterExportPayload {
   selectedBackground: string;
   level: number;
 
-  // Caractéristiques finales (bonus d’historique + raciaux déjà appliqués)
+  // Caractéristiques finales (bonus d'historique + raciaux déjà appliqués)
   finalAbilities: Record<string, number>; // ex: { Force: 16, Dextérité: 14, ... }
 
   // Compétences maîtrisées (noms FR normalisés)
   proficientSkills: string[]; // ex: ["Athlétisme", "Perception"]
 
-  // Équipement (classe + option d’historique si applicable)
+  // Équipement (classe + option d'historique si applicable)
   equipment: string[];
   selectedBackgroundEquipmentOption?: 'A' | 'B' | '';
 
-  // Valeurs dérivées prêtes à l’emploi
+  // Valeurs dérivées prêtes à l'emploi
   hitPoints: number;
   armorClass: number;
   initiative: number;
@@ -91,10 +110,14 @@ export interface CharacterExportPayload {
   // Équipements enrichis avec métadonnées complètes
   equipmentDetails?: EnrichedEquipment[];
 
-  // ✅ NOUVEAUX CHAMPS DE PROFIL
+  // ✅ CHAMPS DE PROFIL
   selectedAlignment?: string;        // Ex: "Loyal Bon", "Chaotique Neutre", etc.
   selectedLanguages?: string[];      // Langues supplémentaires (en plus des langues raciales)
   age?: string;                      // Âge du personnage
   gender?: string;                   // Genre du personnage
   characterHistory?: string;         // Histoire/background narrative du personnage
+
+  // ✅ AJOUT : Sorts sélectionnés
+  selectedCantrips?: SpellData[];      // Sorts mineurs (tours de magie)
+  selectedLevel1Spells?: SpellData[];  // Sorts de niveau 1
 }
