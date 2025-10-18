@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
 
-import ProgressBar from './ui/ProgressBar';
+import ProgressBar, { stopWizardMusic } from './ui/ProgressBar'; // ✅ Import de la fonction
 import RaceSelection from './steps/RaceSelection';
 import ClassSelection from './steps/ClassSelection';
 import SpellSelection from './steps/SpellSelection';
@@ -233,6 +233,8 @@ useEffect(() => {
   // Finalisation
   const handleFinish = async () => {
     try {
+       stopWizardMusic();
+
       const raceData = races.find((r) => r.name === selectedRace);
       const classData = classes.find((c) => c.name === selectedClass);
 
