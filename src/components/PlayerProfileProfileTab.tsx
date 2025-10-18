@@ -236,6 +236,12 @@ export default function PlayerProfileProfileTab({ player, onUpdate }: PlayerProf
   const historique = (player.background as string) || '';
   const characterHistoryProp = (player as any)?.character_history || '';
 
+  // Extraire les informations personnelles
+  const age = (player as any)?.age || '';
+  const gender = (player as any)?.gender || '';
+  const alignment = (player as any)?.alignment || '';
+  const languages = (player as any)?.languages || [];
+  
   // Dons (adapter si nécessaire selon ton type Player)
   const feats: any = (player.stats as any)?.feats || {};
   const originFeats: string[] = Array.isArray(feats.origins)
