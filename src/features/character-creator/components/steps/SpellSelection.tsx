@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ChevronDown, Check, Search, BookOpen, Sparkles, Info } from 'lucide-react';
+import { ChevronDown, Check, Search, BookOpen, Sparkles } from 'lucide-react';
 import Button from '../ui/Button';
 import { DndClass } from '../../types/character';
 import { getSpellKnowledgeInfo } from '../../../../utils/spellSlots2024';
@@ -74,8 +74,6 @@ const SpellSelection: React.FC<SpellSelectionProps> = ({
 
   const cantripsNeeded = spellInfo.kind === 'prepared' ? (spellInfo.cantrips || 0) : 0;
   const level1SpellsNeeded = spellInfo.kind === 'prepared' ? spellInfo.prepared : 0;
-
-  const isHalfCasterAtLevel1 = selectedClass === 'Paladin' || selectedClass === 'Rôdeur';
 
   useEffect(() => {
     const loadSpells = async () => {
@@ -342,36 +340,6 @@ const SpellSelection: React.FC<SpellSelectionProps> = ({
     selectedCantrips.length === cantripsNeeded &&
     selectedLevel1Spells.length === level1SpellsNeeded;
 
-  if (isHalfCasterAtLevel1) {
-    return (
-      <div className="wizard-step space-y-6">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-white mb-2">Sorts de {selectedClass}</h2>
-        </div>
-
-        <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-6 text-center">
-          <Info className="w-12 h-12 mx-auto mb-4 text-blue-400" />
-          <h3 className="text-lg font-semibold text-blue-100 mb-2">
-            Sorts disponibles au niveau 2
-          </h3>
-          <p className="text-blue-200">
-            Les {selectedClass}s commencent à lancer des sorts à partir du niveau 2.
-            Vous pourrez choisir vos sorts lors de votre première montée de niveau.
-          </p>
-        </div>
-
-        <div className="flex justify-between pt-6">
-          <Button onClick={onPrevious} variant="secondary" size="lg">
-            Précédent
-          </Button>
-          <Button onClick={onNext} size="lg" className="min-w-[200px]">
-            Continuer
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="wizard-step space-y-6">
       <div className="text-center">
@@ -381,19 +349,19 @@ const SpellSelection: React.FC<SpellSelectionProps> = ({
         </p>
       </div>
 
-{loading ? (
-  <div className="flex items-center justify-center py-12">
-    <div className="text-center space-y-4">
-      <img 
-        src="/icons/wmremove-transformed.png" 
-        alt="Chargement..." 
-        className="animate-spin h-8 w-8 mx-auto object-contain"
-        style={{ backgroundColor: 'transparent' }}
-      />
-      <p className="text-gray-400">Chargement des sorts...</p>
-    </div>
-  </div>
-) : (
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center space-y-4">
+            <img 
+              src="/icons/wmremove-transformed.png" 
+              alt="Chargement..." 
+              className="animate-spin h-8 w-8 mx-auto object-contain"
+              style={{ backgroundColor: 'transparent' }}
+            />
+            <p className="text-gray-400">Chargement des sorts...</p>
+          </div>
+        </div>
+      ) : (
         <>
           <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
