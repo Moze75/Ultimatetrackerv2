@@ -473,27 +473,34 @@ export async function createCharacterFromCreatorPayload(
   };
 
   // 3) Update robuste sur des colonnes existantes
-  const { error: updError } = await supabase
-    .from('players')
-    .update({
-      class: payload.selectedClass || null,
-      level,
-      race: payload.selectedRace || null,
-      background: payload.selectedBackground || null,
-      max_hp: payload.hitPoints,
-      current_hp: payload.hitPoints,
-      abilities: abilitiesArray,
-      stats,
-      hit_dice: payload.hitDice
-        ? { total: payload.hitDice.total, used: payload.hitDice.used, die: payload.hitDice.die }
-        : { total: level, used: 0 },
+const { error: updError } = await supabase
+  .from('players')
+  .update({
+    class: payload.selectedClass || null,
+    level,
+    race: payload.selectedRace || null,
+    background: payload.selectedBackground || null,
+    max_hp: payload.hitPoints,
+    current_hp: payload.hitPoints,
+    abilities: abilitiesArray,
+    stats,
+    hit_dice: payload.hitDice
+      ? { total: payload.hitDice.total, used: payload.hitDice.used, die: payload.hitDice.die }
+      : { total: level, used: 0 },
 
-      // Argent top-level (utilisé par EquipmentTab)
-      gold: initialGold,
-      silver: 0,
-      copper: 0,
-    })
-    .eq('id', playerId);
+    // Argent top-level (utilisé par EquipmentTab)
+    gold: initialGold,
+    silver: 0,
+    copper: 0,
+
+    // ✅ AJOUT : Champs de profil
+    alignment: payload.selectedAlignment || null,
+    languages: payload.selectedLanguages || [],
+    age: payload.age || null,
+    gender: payload.gender || null,
+    character_history: payload.characterHistory || null,
+  })
+  .eq('id', playerId);
   if (updError) throw updError;
 
   if (payload.avatarImageUrl) {
