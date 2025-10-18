@@ -495,7 +495,12 @@ const { error: updError } = await supabase
 
     // ✅ AJOUT : Champs de profil
     alignment: payload.selectedAlignment || null,
-    languages: payload.selectedLanguages || [],
+   languages: (payload.selectedLanguages || []).filter(lang => 
+      lang && 
+      lang.trim() !== '' && 
+      !lang.toLowerCase().includes('au choix') &&
+      !lang.toLowerCase().includes('choisir')
+    ),
     age: payload.age || null,
     gender: payload.gender || null,
     character_history: payload.characterHistory || null,
