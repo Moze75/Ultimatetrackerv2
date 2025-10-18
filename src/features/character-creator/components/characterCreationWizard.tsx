@@ -211,9 +211,9 @@ export default function CharacterCreationWizard({ onFinish, onCancel, initialSna
       effectiveAbilities,
     };
       
-      appContextService.saveWizardSnapshot(snapshot);
-      console.log('[Wizard] Snapshot auto-sauvegardé');
-    }, 5000); // Toutes les 5 secondes
+    appContextService.saveWizardSnapshot(snapshot);
+    console.log('[Wizard] Snapshot sauvegardé au step', currentStep);
+  }, [currentStep]); // ✅ Dépendance = currentStep uniquement
 
     return () => clearInterval(interval);
   }, [
