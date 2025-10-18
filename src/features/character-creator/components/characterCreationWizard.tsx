@@ -6,7 +6,7 @@ import RaceSelection from './steps/RaceSelection';
 import ClassSelection from './steps/ClassSelection';
 import SpellSelection from './steps/SpellSelection';
 import BackgroundSelection from './steps/BackgroundSelection';
-import ProfileSelection from './steps/ProfileSelection'; // ✅ AJOUT
+import ProfileSelection from './steps/ProfileSelection';
 import AbilityScores from './steps/AbilityScores';
 import CharacterSummary from './steps/CharacterSummary';
 
@@ -19,6 +19,7 @@ import { races } from '../data/races';
 import { classes } from '../data/classes';
 import { backgrounds } from '../data/backgrounds';
 import { enrichEquipmentList, determineAutoEquip } from '../../../services/equipmentLookupService';
+import { appContextService } from '../../../services/appContextService'; // ✅ IMPORT
 
 /* ===========================================================
    Utilitaires
@@ -27,7 +28,7 @@ import { enrichEquipmentList, determineAutoEquip } from '../../../services/equip
 // Convertit ft -> m en arrondissant au 0,5 m (30 ft → 9 m)
 const feetToMeters = (ft?: number) => {
   const n = Number(ft);
-  if (!Number.isFinite(n)) return 9; // fallback raisonnable
+  if (!Number.isFinite(n)) return 9;
   return Math.round(n * 0.3048 * 2) / 2;
 };
 
@@ -121,7 +122,7 @@ const notifyParentCreated = (playerId: string, player?: any) => {
 };
 
 /* ===========================================================
-   Étapes - ✅ AJOUT DE 'Profil'
+   Étapes
    =========================================================== */
 
 const steps = ['Race', 'Classe', 'Sorts', 'Historique', 'Profil', 'Caractéristiques', 'Résumé'];
@@ -129,41 +130,28 @@ const steps = ['Race', 'Classe', 'Sorts', 'Historique', 'Profil', 'Caractéristi
 interface WizardProps {
   onFinish?: (payload: CharacterExportPayload) => void;
   onCancel?: () => void;
+  initialSnapshot?: any; // ✅ NOUVEAU PROP
 }
 
-export default function CharacterCreationWizard({ onFinish, onCancel }: WizardProps) {
-  // Étape courante
-  const [currentStep, setCurrentStep] = useState(0);
-
-  // État de chargement des équipements
+export default function CharacterCreationWizard({ onFinish, onCancel, initialSnapshot }: WizardProps) {
+  // ✅ Initialiser depuis le snapshot si présent
+  const [currentStep, setCurrentStep] = useState(initialSnapshot?.currentStep ?? 0);
   const [loadingEquipment, setLoadingEquipment] = useState(false);
-
-  // Identité
-  const [characterName, setCharacterName] = useState('');
-
-  // Choix principaux
-  const [selectedRace, setSelectedRace] = useState('');
-  const [selectedClass, setSelectedClass] = useState<DndClass | ''>('');
-  const [selectedBackground, setSelectedBackground] = useState('');
-
-  // Choix dépendants
-  const [backgroundEquipmentOption, setBackgroundEquipmentOption] = useState<'A' | 'B' | ''>('');
-  const [selectedClassSkills, setSelectedClassSkills] = useState<string[]>([]);
-  const [selectedEquipmentOption, setSelectedEquipmentOption] = useState<string>('');
-
-  // Sorts sélectionnés
-  const [selectedCantrips, setSelectedCantrips] = useState<any[]>([]);
-  const [selectedLevel1Spells, setSelectedLevel1Spells] = useState<any[]>([]);
-
-  // ✅ AJOUT: États pour le profil
-  const [selectedAlignment, setSelectedAlignment] = useState('');
-  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
-  const [age, setAge] = useState('');
-  const [gender, setGender] = useState('');
-  const [characterHistory, setCharacterHistory] = useState('');
-
-  // Caractéristiques
-  const [abilities, setAbilities] = useState<Record<string, number>>({
+  const [characterName, setCharacterName] = useState(initialSnapshot?.characterName ?? '');
+  const [selectedRace, setSelectedRace] = useState(initialSnapshot?.selectedRace ?? '');
+  const [selectedClass, setSelectedClass] = useState<DndClass | ''>(initialSnapshot?.selectedClass ?? '');
+  const [selectedBackground, setSelectedBackground] = useState(initialSnapshot?.selectedBackground ?? '');
+  const [backgroundEquipmentOption, setBackgroundEquipmentOption] = useState<'A' | 'B' | ''>(initialSnapshot?.backgroundEquipmentOption ?? '');
+  const [selectedClassSkills, setSelectedClassSkills] = useState<string[]>(initialSnapshot?.selectedClassSkills ?? []);
+  const [selectedEquipmentOption, setSelectedEquipmentOption] = useState<string>(initialSnapshot?.selectedEquipmentOption ?? '');
+  const [selectedCantrips, setSelectedCantrips] = useState<any[]>(initialSnapshot?.selectedCantrips ?? []);
+  const [selectedLevel1Spells, setSelectedLevel1Spells] = useState<any[]>(initialSnapshot?.selectedLevel1Spells ?? []);
+  const [selectedAlignment, setSelectedAlignment] = useState(initialSnapshot?.selectedAlignment ?? '');
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(initialSnapshot?.selectedLanguages ?? []);
+  const [age, setAge] = useState(initialSnapshot?.age ?? '');
+  const [gender, setGender] = useState(initialSnapshot?.gender ?? '');
+  const [characterHistory, setCharacterHistory] = useState(initialSnapshot?.characterHistory ?? '');
+  const [abilities, setAbilities] = useState<Record<string, number>>(initialSnapshot?.abilities ?? {
     'Force': 8,
     'Dextérité': 8,
     'Constitution': 8,
@@ -171,7 +159,17 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
     'Sagesse': 8,
     'Charisme': 8,
   });
-  const [effectiveAbilities, setEffectiveAbilities] = useState<Record<string, number>>(abilities);
+  const [effectiveAbilities, setEffectiveAbilities] = useState<Record<string, number>>(initialSnapshot?.effectiveAbilities ?? abilities);
+
+  // ✅ Message de restauration si snapshot présent
+  useEffect(() => {
+    if (initialSnapshot) {
+      toast('Reprise de votre création...', { 
+        icon: '✨',
+        duration: 3000 
+      });
+    }
+  }, [initialSnapshot]);
 
   // Objet d'historique sélectionné
   const selectedBackgroundObj = useMemo(
@@ -191,6 +189,54 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
     setBackgroundEquipmentOption('');
   }, [selectedBackground]);
 
+  // ✅ Sauvegarder automatiquement l'état toutes les 5 secondes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const snapshot = {
+        currentStep,
+        characterName,
+        selectedRace,
+        selectedClass,
+        selectedBackground,
+        selectedAlignment,
+        selectedLanguages,
+        age,
+        gender,
+        characterHistory,
+        backgroundEquipmentOption,
+        selectedClassSkills,
+        selectedEquipmentOption,
+        selectedCantrips,
+        selectedLevel1Spells,
+        abilities,
+        effectiveAbilities,
+      };
+      
+      appContextService.saveWizardSnapshot(snapshot);
+      console.log('[Wizard] Snapshot auto-sauvegardé');
+    }, 5000); // Toutes les 5 secondes
+
+    return () => clearInterval(interval);
+  }, [
+    currentStep,
+    characterName,
+    selectedRace,
+    selectedClass,
+    selectedBackground,
+    selectedAlignment,
+    selectedLanguages,
+    age,
+    gender,
+    characterHistory,
+    backgroundEquipmentOption,
+    selectedClassSkills,
+    selectedEquipmentOption,
+    selectedCantrips,
+    selectedLevel1Spells,
+    abilities,
+    effectiveAbilities,
+  ]);
+
   // Classes qui ne lancent pas de sorts au niveau 1
   const nonCasterClasses: DndClass[] = ['Guerrier', 'Roublard', 'Barbare', 'Moine'];
   const isNonCaster = selectedClass && nonCasterClasses.includes(selectedClass as DndClass);
@@ -198,7 +244,6 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
   // Navigation
   const nextStep = () => {
     const next = currentStep + 1;
-    // Skip spell selection (step 2) for non-casters
     if (next === 2 && isNonCaster) {
       setCurrentStep(3);
     } else {
@@ -208,7 +253,6 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
 
   const previousStep = () => {
     const prev = currentStep - 1;
-    // Skip spell selection (step 2) for non-casters when going back
     if (prev === 2 && isNonCaster) {
       setCurrentStep(1);
     } else {
@@ -277,7 +321,7 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
       // Image de classe
       const avatarImageUrl = getClassImageUrlLocal(selectedClass) ?? undefined;
 
-      // ✅ Combiner les langues raciales et sélectionnées
+      // Combiner les langues raciales et sélectionnées
       const racialLanguages = raceData?.languages || [];
       const allLanguages = Array.from(new Set([...racialLanguages, ...selectedLanguages]));
 
@@ -334,13 +378,17 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
           avatarImageUrl,
           selectedCantrips,
           selectedLevel1Spells,
-          // ✅ AJOUT: Nouveaux champs de profil
           selectedAlignment: selectedAlignment || undefined,
           selectedLanguages: allLanguages,
           age: age.trim() || undefined,
           gender: gender.trim() || undefined,
           characterHistory: characterHistory.trim() || undefined,
         };
+
+        // ✅ Nettoyer le snapshot et marquer le contexte "game"
+        appContextService.clearWizardSnapshot();
+        appContextService.setContext('game');
+        console.log('[Wizard] Snapshot nettoyé, contexte = game');
 
         onFinish(payload);
         return;
@@ -374,11 +422,11 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
         subclass: null,
         race: selectedRace || null,
         background: selectedBackground || null,
-        alignment: selectedAlignment || null, // ✅
-        languages: allLanguages, // ✅
-        age: age.trim() || null, // ✅
-        gender: gender.trim() || null, // ✅
-        character_history: characterHistory.trim() || null, // ✅
+        alignment: selectedAlignment || null,
+        languages: allLanguages,
+        age: age.trim() || null,
+        gender: gender.trim() || null,
+        character_history: characterHistory.trim() || null,
         stats: {
           armor_class: armorClass,
           initiative: initiative,
@@ -424,7 +472,6 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
         try {
           const allSpells = [...selectedCantrips, ...selectedLevel1Spells];
 
-          // First, insert spells into the spells table (if they don't exist)
           const spellsToInsert = allSpells.map(spell => ({
             id: spell.id,
             name: spell.name,
@@ -443,11 +490,10 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
             ignoreDuplicates: true
           });
 
-          // Then create player_spells links
           const playerSpellsLinks = allSpells.map(spell => ({
             player_id: inserted.id,
             spell_id: spell.id,
-            is_prepared: true, // Mark as prepared since they're chosen during creation
+            is_prepared: true,
           }));
 
           await supabase.from('player_spells').upsert(playerSpellsLinks, {
@@ -458,7 +504,6 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
           console.log(`Saved ${allSpells.length} spells for new character`);
         } catch (spellErr) {
           console.error('Error saving spells:', spellErr);
-          // Don't fail character creation if spell saving fails
         }
       }
 
@@ -488,6 +533,10 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
         notifyParentCreated(inserted.id, finalPlayer);
       }
 
+      // ✅ Nettoyer le snapshot après création réussie
+      appContextService.clearWizardSnapshot();
+      appContextService.setContext('game');
+
       toast.success('Personnage créé avec succès !');
 
       if (typeof onCancel === 'function') {
@@ -495,7 +544,7 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
         return;
       }
 
-      // ✅ Reset incluant les nouveaux champs
+      // Reset
       setCurrentStep(0);
       setCharacterName('');
       setSelectedRace('');
@@ -533,7 +582,7 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
     }
   };
 
-  // ✅ Rendu des étapes avec ProfileSelection ajouté
+  // Rendu des étapes
   const renderStep = () => {
     switch (currentStep) {
       case 0:
@@ -584,7 +633,6 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
           />
         );
 
-      // ✅ NOUVEAU: Étape Profil (case 4)
       case 4:
         return (
           <ProfileSelection
@@ -629,7 +677,6 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
             selectedEquipmentOption={selectedEquipmentOption}
             selectedCantrips={selectedCantrips}
             selectedLevel1Spells={selectedLevel1Spells}
-            // ✅ AJOUT: Passer les données de profil
             selectedAlignment={selectedAlignment}
             selectedLanguages={selectedLanguages}
             age={age}
@@ -653,6 +700,12 @@ export default function CharacterCreationWizard({ onFinish, onCancel }: WizardPr
           duration: 4000,
         }}
       />
+
+      {/* ✅ Badge de sauvegarde automatique */}
+      <div className="fixed bottom-4 left-4 z-50 text-xs text-gray-400 bg-gray-900/80 backdrop-blur-sm px-3 py-2 rounded-lg border border-gray-700/50 flex items-center gap-2">
+        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+        Sauvegarde auto
+      </div>
 
       {loadingEquipment && (
         <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center">
