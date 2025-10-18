@@ -11,6 +11,16 @@ const MUSIC_SRC = '/Music/Skyrim8bits.mp3';
 let globalAudio: HTMLAudioElement | null = null;
 let globalIsPlaying = false;
 
+// ✅ AJOUTER : Fonction globale pour arrêter la musique
+export function stopWizardMusic() {
+  if (globalAudio && globalIsPlaying) {
+    globalAudio.pause();
+    globalAudio.currentTime = 0; // Remettre au début
+    globalIsPlaying = false;
+    console.log('[ProgressBar] Musique arrêtée');
+  }
+}
+
 export default function ProgressBar({ currentStep, totalSteps, steps }: ProgressBarProps) {
   const total = Math.max(1, steps.length - 1);
   const percent = Math.max(0, Math.min(100, (currentStep / total) * 100));
