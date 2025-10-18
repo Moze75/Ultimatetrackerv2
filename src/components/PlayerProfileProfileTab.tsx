@@ -460,12 +460,13 @@ export default function PlayerProfileProfileTab({ player, onUpdate }: PlayerProf
 
   return (
     <div className="space-y-6">
+      
       {/* ✅ NOUVELLE SECTION: Informations personnelles */}
       {(age || gender || alignment || languages.length > 0) && (
         <SectionContainer
           icon={<UserCircle size={18} className="text-cyan-400" />}
           title="Informations personnelles"
-          defaultOpen={true}
+          defaultOpen={false}
         >
           <div className="space-y-4">
             {/* Grille pour âge, genre, alignement */}
