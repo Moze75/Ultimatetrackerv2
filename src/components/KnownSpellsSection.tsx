@@ -169,14 +169,14 @@ const getHighestAllowedSlotLevel = (casterType: CasterType, level: number): numb
   if (casterType === 'warlock') return getWarlockPactSlotLevel(level);
   if (casterType === 'full') return Math.min(9, Math.ceil(level / 2));
   if (casterType === 'half') {
-    // Pour les semi-lanceurs (Paladin, Rôdeur) :
-    // Niveau 1-2 : Aucun sort
+    // ✅ CORRIGÉ : Pour les semi-lanceurs (Paladin, Rôdeur) en 2024
+    // Niveau 1-2 : Niveau 1
     // Niveau 3-4 : Niveau 1
     // Niveau 5-8 : Niveau 2
     // Niveau 9-12 : Niveau 3
     // Niveau 13-16 : Niveau 4
     // Niveau 17-20 : Niveau 5
-    if (level < 2) return 0;
+    if (level < 1) return 0;  // ✅ Changé de "level < 2" à "level < 1"
     if (level <= 4) return 1;
     if (level <= 8) return 2;
     if (level <= 12) return 3;
