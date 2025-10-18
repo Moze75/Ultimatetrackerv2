@@ -523,29 +523,41 @@ export async function createCharacterFromCreatorPayload(
     }
   }
 
-  // IMPORTANT: Initialiser les spell_slots pour toutes les classes de lanceurs de sorts
-  // Cela permet aux boutons Zap d'apparaître immédiatement après la création du personnage
-  const spellcasters = ['Magicien', 'Ensorceleur', 'Barde', 'Clerc', 'Druide', 'Paladin', 'Rôdeur', 'Occultiste'];
-  if (payload.selectedClass && spellcasters.includes(payload.selectedClass)) {
-    try {
-      // 1) Initialiser les spell_slots selon la classe et le niveau
-      const initialSpellSlots = getSpellSlotsByLevel(payload.selectedClass, level);
+// IMPORTANT: Initialiser les spell_slots pour toutes les classes de lanceurs de sorts
+// Cela permet aux boutons Zap d'apparaître immédiatement après la création du personnage
+const spellcasters = ['Magicien', 'Ensorceleur', 'Barde', 'Clerc', 'Druide', 'Paladin', 'Rôdeur', 'Occultiste'];
+if (payload.selectedClass && spellcasters.includes(payload.selectedClass)) {
+  try {
+    // 1) Initialiser les spell_slots selon la classe et le niveau
+    const initialSpellSlots = getSpellSlotsByLevel(payload.selectedClass, level);
 
-      console.log('[createCharacterFromCreatorPayload] Initialisation des spell_slots pour', payload.selectedClass, 'niveau', level, ':', initialSpellSlots);
+    console.log('🎯 [AVANT UPDATE] Initialisation des spell_slots pour', payload.selectedClass, 'niveau', level, ':', initialSpellSlots);
 
-      const { error: spellSlotsError } = await supabase
-        .from('players')
-        .update({ spell_slots: initialSpellSlots })
-        .eq('id', playerId);
+    const { error: spellSlotsError } = await supabase
+      .from('players')
+      .update({ spell_slots: initialSpellSlots })
+      .eq('id', playerId);
 
-      if (spellSlotsError) {
-        console.error('[createCharacterFromCreatorPayload] Erreur lors de l\'initialisation des spell_slots:', spellSlotsError);
-        throw spellSlotsError;
-      }
-    } catch (error) {
-      console.error('Erreur lors de l\'initialisation des spell_slots:', error);
+    if (spellSlotsError) {
+      console.error('❌ [ERREUR] Erreur lors de l\'initialisation des spell_slots:', spellSlotsError);
+      throw spellSlotsError;
     }
+
+    console.log('✅ [SUCCÈS] Spell slots initialisés avec succès !');
+
+    // ✅ AJOUTER : Vérifier que ça a bien été sauvegardé
+    const { data: verif } = await supabase
+      .from('players')
+      .select('spell_slots')
+      .eq('id', playerId)
+      .single();
+    
+    console.log('🔍 [VERIFICATION] Spell slots en base après update:', verif?.spell_slots);
+
+  } catch (error) {
+    console.error('💥 [CATCH] Erreur lors de l\'initialisation des spell_slots:', error);
   }
+}
 
   // 2) Insérer les sorts s'il y en a
   if (payload.selectedCantrips || payload.selectedLevel1Spells) {
