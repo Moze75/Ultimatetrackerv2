@@ -1,4 +1,4 @@
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { appContextService } from '../services/appContextService';
@@ -22,19 +22,24 @@ import { authService } from '../services/authService';
 import { CharacterExportPayload } from '../types/characterCreator';
 import { createCharacterFromCreatorPayload } from '../services/characterCreationIntegration';
 
-// IMPORTANT: adapte la casse au fichier réel (characterCreationWizard.tsx vs CharacterCreationWizard.tsx)
+// ✅ Lazy load du wizard
 const CharacterCreationWizard = React.lazy(() =>
   import('../features/character-creator/components/characterCreationWizard').then((m: any) => ({
     default: m.default ?? m.CharacterCreationWizard,
   }))
 );
 
+// ✅ Fonction de pré-chargement
+function preloadWizard() {
+  import('../features/character-creator/components/characterCreationWizard');
+}
+
 interface CharacterSelectionPageProps {
   session: any;
   onCharacterSelect: (player: Player) => void;
 }
 
-// URL du fond (modifiable via .env: VITE_SELECTION_BG_URL) ou mets un asset local dans public/
+// URL du fond
 const BG_URL =
   (import.meta as any)?.env?.VITE_SELECTION_BG_URL ||
   'https://yumzqyyogwzrmlcpvnky.supabase.co/storage/v1/object/public/static/tmpoofee5sh.png';
@@ -43,17 +48,15 @@ type CreatorModalProps = {
   open: boolean;
   onClose: () => void;
   onComplete: (payload: CharacterExportPayload) => void;
-  initialSnapshot?: any; // ✅ Nouveau prop
+  initialSnapshot?: any;
 };
 
-// Modal plein écran qui charge le wizard (scroll corrigé)
+// ✅ Modal sans Suspense pour affichage instantané
 function CreatorModal({ open, onClose, onComplete, initialSnapshot }: CreatorModalProps) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm">
-      {/* Conteneur plein écran */}
       <div className="w-screen h-screen relative">
-        {/* En-tête optionnel: bouton fermer en overlay */}
         <button
           onClick={onClose}
           className="absolute top-3 right-3 z-10 bg-gray-800/80 hover:bg-gray-700 text-white px-3 py-1 rounded"
@@ -62,23 +65,14 @@ function CreatorModal({ open, onClose, onComplete, initialSnapshot }: CreatorMod
           Fermer
         </button>
 
-        {/* Zone de contenu: prend toute la place, défile à l'intérieur */}
         <div className="w-full h-full bg-gray-900 flex flex-col">
           <div className="flex-1 min-h-0 overflow-y-auto">
-            <Suspense
-              fallback={
-                <div className="w-full h-full flex items-center justify-center text-gray-300 p-6">
-                  Chargement de l'assistant de création...
-                </div>
-              }
-            >
-              {/* ✅ Passer le snapshot initial au wizard */}
-              <CharacterCreationWizard 
-                onFinish={onComplete} 
-                onCancel={onClose}
-                initialSnapshot={initialSnapshot} // ✅ Nouveau prop
-              />
-            </Suspense>
+            {/* ✅ Pas de Suspense = affichage instantané */}
+            <CharacterCreationWizard 
+              onFinish={onComplete} 
+              onCancel={onClose}
+              initialSnapshot={initialSnapshot}
+            />
           </div>
         </div>
       </div>
@@ -100,12 +94,10 @@ function WelcomeModal({ open, characterName, onContinue }: WelcomeModalProps) {
     <div className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border border-purple-500/30 rounded-xl max-w-md w-full p-8 shadow-2xl">
         <div className="text-center space-y-6">
-          {/* Icône de dés (retirée car maintenant inline) */}
           <div className="w-16 h-16 mx-auto bg-purple-500/20 rounded-full flex items-center justify-center">
             <Dices className="w-8 h-8 text-purple-400" />
           </div>
           
-          {/* Message de bienvenue */}
           <div className="space-y-3">
             <h2 className="text-2xl font-bold text-red-400">
               Bienvenue {characterName}
@@ -123,7 +115,6 @@ function WelcomeModal({ open, characterName, onContinue }: WelcomeModalProps) {
             </div>
           </div>
           
-          {/* Bouton Continuer */}
           <button
             onClick={onContinue}
             className="w-full bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105"
@@ -148,25 +139,26 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
   const [showWelcome, setShowWelcome] = useState(false);
   const [newCharacter, setNewCharacter] = useState<Player | null>(null);
 
+  // ✅ Pré-charger le wizard au montage
+  useEffect(() => {
+    preloadWizard();
+  }, []);
+
   useEffect(() => {
     fetchPlayers();
     runDiagnostic();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
-  // ✅ NOUVEAU : Vérifier si on doit restaurer le wizard au montage
+  // ✅ Restaurer le wizard silencieusement (sans toast)
   useEffect(() => {
     const wizardSnapshot = appContextService.getWizardSnapshot();
     if (wizardSnapshot) {
       console.log('[CharacterSelection] Snapshot wizard détecté, restauration automatique:', wizardSnapshot);
-      toast('Reprise de la création de personnage...', { 
-        icon: '✨',
-        duration: 3000 
-      });
-      // Ouvrir automatiquement le wizard avec les données
+      // ✅ Pas de toast, ouverture silencieuse
       setShowCreator(true);
     }
-  }, []); // ⚠️ Dépendances vides = s'exécute UNE SEULE fois au montage
+  }, []);
 
   const runDiagnostic = async () => {
     try {
@@ -222,7 +214,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
     }
   };
 
-  // Création à partir du payload renvoyé par le wizard
   const handleCreatorComplete = async (payload: CharacterExportPayload) => {
     if (creating) return;
     try {
@@ -232,7 +223,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
       setPlayers((prev) => [...prev, newPlayer]);
       toast.success('Nouveau personnage créé !');
 
-      // ✅ Nettoyer le snapshot wizard après création réussie
       appContextService.clearWizardSnapshot();
       appContextService.setContext('game');
 
@@ -287,7 +277,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
     }
   };
 
-  
   const handleDeleteCharacter = async (character: Player) => {
     if (deleteConfirmation !== 'Supprime') {
       toast.error('Veuillez taper exactement "Supprime" pour confirmer');
@@ -520,7 +509,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
                     key={player.id}
                     className="w-full max-w-sm relative group bg-slate-800/60 backdrop-blur-sm border border-slate-600/40 rounded-xl shadow-lg overflow-hidden hover:bg-slate-700/70 transition-all duration-200"
                   >
-                    {/* Bouton de suppression: empêcher l'ouverture de la carte */}
                     <button
                       onMouseDown={(e) => {
                         e.preventDefault();
@@ -538,7 +526,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
                       <Trash2 size={16} />
                     </button>
 
-                    {/* Zone cliquable pour ouvrir le personnage */}
                     <div
                       className="p-6 cursor-pointer hover:scale-[1.02] transition-all duration-200 relative z-10"
                       onClick={() => onCharacterSelect(player)}
@@ -591,7 +578,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
                 );
               })}
 
-              {/* Create New Character Card -> Ouvre le wizard */}
+              {/* Create New Character Card */}
               <div
                 onClick={() => setShowCreator(true)}
                 className="w-full max-w-sm cursor-pointer hover:scale-[1.02] transition-all duration-200 bg-slate-800/40 backdrop-blur-sm border-dashed border-2 border-slate-600/50 hover:border-green-500/50 rounded-xl shadow-lg overflow-hidden"
@@ -613,7 +600,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
         </div>
       </div>
 
-      {/* Bandeau de déconnexion (gardé, n'occulte pas l'image) */}
+      {/* Bandeau de déconnexion */}
       <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
         <div className="w-full max-w-md mx-auto px-4">
           <button
@@ -626,17 +613,16 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
         </div>
       </div>
 
-      {/* ✅ Modal du wizard du Character Creator avec snapshot */}
+      {/* Modal du wizard */}
       <CreatorModal
         open={showCreator}
         onClose={() => {
           setShowCreator(false);
-          // ✅ Nettoyer le snapshot à l'annulation
           appContextService.clearWizardSnapshot();
           appContextService.setContext('selection');
         }}
         onComplete={handleCreatorComplete}
-        initialSnapshot={appContextService.getWizardSnapshot()} // ✅ Passer le snapshot
+        initialSnapshot={appContextService.getWizardSnapshot()}
       />
 
       {creating && (
