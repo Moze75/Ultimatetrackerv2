@@ -3,6 +3,7 @@ import { Toaster, toast } from 'react-hot-toast';
 import { supabase } from './lib/supabase';
 import type { Player } from './types/dnd';
 import { InstallPrompt } from './components/InstallPrompt';
+import { appContextService } from './services/appContextService';
 
 const LAST_SELECTED_CHARACTER_SNAPSHOT = 'selectedCharacter'; // même clé qu'avant
 const SKIP_AUTO_RESUME_ONCE = 'ut:skipAutoResumeOnce';
@@ -60,22 +61,38 @@ function App() {
         setSession(current);
 
         if (current) {
-          // Respecter le choix utilisateur: ne pas auto-reprendre juste après retour volontaire
-          if (sessionStorage.getItem(SKIP_AUTO_RESUME_ONCE) === '1') {
-            sessionStorage.removeItem(SKIP_AUTO_RESUME_ONCE);
+          // ✅ NOUVEAU : Vérifier le contexte d'application
+          const context = appContextService.getContext();
+          
+          console.log('[App] Contexte détecté:', context);
+
+          if (context === 'wizard') {
+            // L'utilisateur était dans le wizard, ne PAS restaurer le personnage
+            // Le wizard sera restauré par CharacterSelectionPage
+            console.log('[App] Contexte wizard détecté, pas de restauration de personnage');
           } else {
-            const savedChar = localStorage.getItem(LAST_SELECTED_CHARACTER_SNAPSHOT);
-            if (savedChar) {
-              try {
-                setSelectedCharacter(JSON.parse(savedChar));
-              } catch (e) {
-                console.error('Erreur parsing selectedCharacter:', e);
+            // Comportement normal : restaurer le personnage si pas de skip
+            if (sessionStorage.getItem(SKIP_AUTO_RESUME_ONCE) === '1') {
+              sessionStorage.removeItem(SKIP_AUTO_RESUME_ONCE);
+            } else {
+              const savedChar = localStorage.getItem(LAST_SELECTED_CHARACTER_SNAPSHOT);
+              if (savedChar) {
+                try {
+                  const parsed = JSON.parse(savedChar);
+                  setSelectedCharacter(parsed);
+                  appContextService.setContext('game'); // ✅ Marquer le contexte "game"
+                  console.log('[App] Personnage restauré depuis snapshot');
+                } catch (e) {
+                  console.error('Erreur parsing selectedCharacter:', e);
+                }
               }
             }
           }
         } else {
-          // Pas de session -> purge mémoire (le snapshot sera supprimé lors de onAuthStateChange logout)
+          // Pas de session -> purge mémoire
           setSelectedCharacter(null);
+          appContextService.clearContext(); // ✅ Nettoyer le contexte
+          appContextService.clearWizardSnapshot(); // ✅ Nettoyer le snapshot wizard
         }
       } finally {
         setLoading(false);
@@ -85,7 +102,7 @@ function App() {
     initSession();
   }, []);
 
-  // Écoute des changements d’état d’authentification
+  // Écoute des changements d'état d'authentification
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
@@ -94,25 +111,36 @@ function App() {
         // Déconnexion -> purger la sélection et le stockage local
         setSelectedCharacter(null);
         localStorage.removeItem(LAST_SELECTED_CHARACTER_SNAPSHOT);
+        appContextService.clearContext(); // ✅ Nettoyer le contexte
+        appContextService.clearWizardSnapshot(); // ✅ Nettoyer le snapshot wizard
       } else {
         // À la connexion (ou refresh), si aucun personnage sélectionné, tenter une restauration
         if (!selectedCharacter) {
-          if (sessionStorage.getItem(SKIP_AUTO_RESUME_ONCE) === '1') {
-            sessionStorage.removeItem(SKIP_AUTO_RESUME_ONCE);
+          const context = appContextService.getContext();
+          
+          if (context === 'wizard') {
+            // Laisser le wizard gérer la restauration
+            console.log('[App] Auth change: contexte wizard, pas de restauration');
           } else {
-            const savedChar = localStorage.getItem(LAST_SELECTED_CHARACTER_SNAPSHOT);
-            if (savedChar) {
-              try {
-                setSelectedCharacter(JSON.parse(savedChar));
-              } catch (e) {
-                console.error('Erreur parsing selectedCharacter (auth change):', e);
+            if (sessionStorage.getItem(SKIP_AUTO_RESUME_ONCE) === '1') {
+              sessionStorage.removeItem(SKIP_AUTO_RESUME_ONCE);
+            } else {
+              const savedChar = localStorage.getItem(LAST_SELECTED_CHARACTER_SNAPSHOT);
+              if (savedChar) {
+                try {
+                  const parsed = JSON.parse(savedChar);
+                  setSelectedCharacter(parsed);
+                  appContextService.setContext('game');
+                } catch (e) {
+                  console.error('Erreur parsing selectedCharacter (auth change):', e);
+                }
               }
             }
           }
         }
       }
 
-      // Feedback visuel léger lors d’un refresh de token
+      // Feedback visuel léger lors d'un refresh de token
       if (event === 'TOKEN_REFRESHED') {
         setRefreshingSession(true);
         setTimeout(() => setRefreshingSession(false), 1200);
@@ -129,12 +157,12 @@ function App() {
   }, [selectedCharacter]);
 
   // Sauvegarder le personnage sélectionné dans localStorage (snapshot complet)
-  // IMPORTANT: on ne supprime PAS le snapshot quand selectedCharacter redevient null
-  // (pour permettre la reprise auto après un simple retour à la sélection).
   useEffect(() => {
     if (selectedCharacter) {
       try {
         localStorage.setItem(LAST_SELECTED_CHARACTER_SNAPSHOT, JSON.stringify(selectedCharacter));
+        appContextService.setContext('game'); // ✅ Marquer le contexte "game"
+        console.log('[App] Personnage sauvegardé, contexte = game');
       } catch {
         // no-op
       }
@@ -142,8 +170,6 @@ function App() {
   }, [selectedCharacter]);
 
   // Gestion du bouton "retour" Android / navigateur:
-  // - Si on est en jeu, "retour" ramène à la sélection du personnage.
-  // - Sinon, activer "double appui pour quitter" (2e pression dans les 1.5s).
   useEffect(() => {
     try {
       window.history.pushState({ ut: 'keepalive' }, '');
@@ -156,6 +182,7 @@ function App() {
       if (sessionRef.current && selectedCharacterRef.current) {
         try {
           sessionStorage.setItem(SKIP_AUTO_RESUME_ONCE, '1');
+          appContextService.setContext('selection'); // ✅ Marquer le contexte "selection"
         } catch {
           // no-op
         }
@@ -193,27 +220,8 @@ function App() {
   }, []);
 
   // Écran de chargement des composants dynamiques
-if (!LoginPage || !CharacterSelectionPage || !GamePage) {
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center space-y-4">
-        <img 
-          src="/icons/wmremove-transformed.png" 
-          alt="Chargement..." 
-          className="animate-spin rounded-full h-12 w-12 mx-auto object-cover" 
-        />
-        <p className="text-gray-400">Chargement des composants...</p>
-      </div>
-    </div>
-  );
-}
-
-  // Écran de chargement initial (session)
-if (loading) {
-  return (
-    <>
-      <Toaster position="top-right" />
-      <InstallPrompt />
+  if (!LoginPage || !CharacterSelectionPage || !GamePage) {
+    return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
           <img 
@@ -221,12 +229,31 @@ if (loading) {
             alt="Chargement..." 
             className="animate-spin rounded-full h-12 w-12 mx-auto object-cover" 
           />
-          <p className="text-gray-400">Chargement en cours...</p>
+          <p className="text-gray-400">Chargement des composants...</p>
         </div>
       </div>
-    </>
-  );
-}
+    );
+  }
+
+  // Écran de chargement initial (session)
+  if (loading) {
+    return (
+      <>
+        <Toaster position="top-right" />
+        <InstallPrompt />
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <img 
+              src="/icons/wmremove-transformed.png" 
+              alt="Chargement..." 
+              className="animate-spin rounded-full h-12 w-12 mx-auto object-cover" 
+            />
+            <p className="text-gray-400">Chargement en cours...</p>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   // Rendu avec ordre correct:
   // 1) Pas de session -> Login
@@ -264,6 +291,7 @@ if (loading) {
           onBackToSelection={() => {
             try {
               sessionStorage.setItem(SKIP_AUTO_RESUME_ONCE, '1');
+              appContextService.setContext('selection'); // ✅ Marquer le contexte "selection"
             } catch {
               // no-op
             }
@@ -274,6 +302,7 @@ if (loading) {
             // App écrit aussi le snapshot pour sécuriser
             try {
               localStorage.setItem(LAST_SELECTED_CHARACTER_SNAPSHOT, JSON.stringify(p));
+              appContextService.setContext('game'); // ✅ Maintenir le contexte "game"
             } catch {
               // no-op
             }
