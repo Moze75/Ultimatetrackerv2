@@ -18,7 +18,7 @@ export const CLERIC_PREPARED = [0, 4,5,6,7,9,10,11,12,14,15,16,16,17,17,18,18,19
 export const DRUID_PREPARED = [0, 4,5,6,7,9,10,11,12,14,15,16,16,17,17,18,18,19,20,21,22];
 export const WIZARD_PREPARED = [0, 4,5,6,7,9,10,11,12,14,15,16,16,17,18,19,21,22,23,24,25];
 export const PALADIN_PREPARED = [0, 2,3,4,5,6,6,7,7,9,9,10,10,11,11,12,12,14,14,15,15];
-export const RANGER_PREPARED = [0, 2,3,4,5,6,6,7,7,9,9,10,10,11,11,12,12,14,14,15,15];
+export const RANGER_PREPARED = [0, 2,3,4,5,6,6,7,7,9,9,10,10,11,11,12,12,14,14,15,15]; // ✅ Correct
 
 // Tables d'emplacements de sorts (2024)
 // Full Casters (Barde, Ensorceleur, Clerc, Druide, Magicien)
@@ -46,29 +46,29 @@ export const FULL_CASTER_SLOTS = [
   { level1: 4, level2: 3, level3: 3, level4: 3, level5: 3, level6: 2, level7: 2, level8: 1, level9: 1 }
 ];
 
-// Half Casters (Paladin, Rôdeur)
+// ✅ CORRIGÉ : Half Casters (Paladin, Rôdeur) - Selon le tableau officiel 2024
 export const HALF_CASTER_SLOTS = [
   {},
-  {},
-  { level1: 2 },
-  { level1: 3 },
-  { level1: 3 },
-  { level1: 4, level2: 2 },
-  { level1: 4, level2: 2 },
-  { level1: 4, level2: 3 },
-  { level1: 4, level2: 3 },
-  { level1: 4, level2: 3, level3: 2 },
-  { level1: 4, level2: 3, level3: 2 },
-  { level1: 4, level2: 3, level3: 3 },
-  { level1: 4, level2: 3, level3: 3 },
-  { level1: 4, level2: 3, level3: 3, level4: 1 },
-  { level1: 4, level2: 3, level3: 3, level4: 1 },
-  { level1: 4, level2: 3, level3: 3, level4: 2 },
-  { level1: 4, level2: 3, level3: 3, level4: 2 },
-  { level1: 4, level2: 3, level3: 3, level4: 3, level5: 1 },
-  { level1: 4, level2: 3, level3: 3, level4: 3, level5: 1 },
-  { level1: 4, level2: 3, level3: 3, level4: 3, level5: 2 },
-  { level1: 4, level2: 3, level3: 3, level4: 3, level5: 2 }
+  { level1: 2 },  // ✅ Niveau 1 : 2 emplacements de niveau 1
+  { level1: 2 },  // ✅ Niveau 2 : 2 emplacements de niveau 1
+  { level1: 3 },  // Niveau 3
+  { level1: 3 },  // Niveau 4
+  { level1: 4, level2: 2 },  // Niveau 5
+  { level1: 4, level2: 2 },  // Niveau 6
+  { level1: 4, level2: 3 },  // Niveau 7
+  { level1: 4, level2: 3 },  // Niveau 8
+  { level1: 4, level2: 3, level3: 2 },  // Niveau 9
+  { level1: 4, level2: 3, level3: 2 },  // Niveau 10
+  { level1: 4, level2: 3, level3: 3 },  // Niveau 11
+  { level1: 4, level2: 3, level3: 3 },  // Niveau 12
+  { level1: 4, level2: 3, level3: 3, level4: 1 },  // Niveau 13
+  { level1: 4, level2: 3, level3: 3, level4: 1 },  // Niveau 14
+  { level1: 4, level2: 3, level3: 3, level4: 2 },  // Niveau 15
+  { level1: 4, level2: 3, level3: 3, level4: 2 },  // Niveau 16
+  { level1: 4, level2: 3, level3: 3, level4: 3, level5: 1 },  // Niveau 17
+  { level1: 4, level2: 3, level3: 3, level4: 3, level5: 1 },  // Niveau 18
+  { level1: 4, level2: 3, level3: 3, level4: 3, level5: 2 },  // Niveau 19
+  { level1: 4, level2: 3, level3: 3, level4: 3, level5: 2 }   // Niveau 20
 ];
 
 // Occultiste (Pact Magic - spécial)
@@ -145,7 +145,7 @@ export function getSpellSlotsByLevel(
     };
   }
 
-  // Half casters
+  // Half casters (Paladin, Rôdeur)
   const halfCasters = ['Paladin', 'Rôdeur'];
   if (halfCasters.includes(playerClass)) {
     const slots = HALF_CASTER_SLOTS[lvl];
