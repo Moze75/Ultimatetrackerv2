@@ -552,8 +552,8 @@ function SpellCard({
 
 return (
   <div
-    className={`spell-card bg-gray-800/50 border border-gray-700/50 rounded-lg overflow-hidden relative ${
-      isExpanded ? 'ring-2 ring-purple-500/30 shadow-lg shadow-purple-900/20 mt-3' : 'hover:bg-gray-700/50'
+    className={`spell-card bg-gray-800/50 border border-gray-700/50 rounded-lg overflow-hidden relative mt-2 ${
+      isExpanded ? 'ring-2 ring-purple-500/30 shadow-lg shadow-purple-900/20' : 'hover:bg-gray-700/50'
     } ${spell.is_prepared ? 'border-green-500/30 bg-green-900/10' : ''}`}
   >
       <button
