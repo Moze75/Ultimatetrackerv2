@@ -7,8 +7,8 @@ import { appContextService } from './services/appContextService';
 
 const LAST_SELECTED_CHARACTER_SNAPSHOT = 'selectedCharacter';
 const SKIP_AUTO_RESUME_ONCE = 'ut:skipAutoResumeOnce';
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1500; // 1.5 secondes
+const MAX_RETRIES = 1; // ✅ MODIFIÉ : 1 seul essai au lieu de 3
+const RETRY_DELAY = 1000; // ✅ 1 seconde au lieu de 1.5
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -35,55 +35,60 @@ function App() {
     selectedCharacterRef.current = selectedCharacter;
   }, [selectedCharacter]);
 
-  // ✅ MODIFIÉ : Charger dynamiquement les pages avec retry
-  useEffect(() => {
-    let currentRetry = 0;
-    let isCancelled = false;
+// ✅ MODIFIÉ : Charger dynamiquement les pages avec retry limité
+useEffect(() => {
+  let currentRetry = 0;
+  let isCancelled = false;
 
-    const loadComponents = async () => {
+  const loadComponents = async () => {
+    if (isCancelled) return;
+
+    try {
+      console.log(`[App] 🔄 Tentative de chargement des composants (${currentRetry + 1}/${MAX_RETRIES})...`);
+      
+      const [loginModule, characterSelectionModule, gamePageModule] = await Promise.all([
+        import('./pages/LoginPage'),
+        import('./pages/CharacterSelectionPage'),
+        import('./pages/GamePage')
+      ]);
+
       if (isCancelled) return;
 
-      try {
-        console.log(`[App] 🔄 Tentative de chargement des composants (${currentRetry + 1}/${MAX_RETRIES})...`);
+      setLoginPage(() => (loginModule as any).LoginPage ?? (loginModule as any).default);
+      setCharacterSelectionPage(
+        () => (characterSelectionModule as any).CharacterSelectionPage ?? (characterSelectionModule as any).default
+      );
+      setGamePage(() => (gamePageModule as any).GamePage ?? (gamePageModule as any).default);
+      
+      console.log('[App] ✅ Composants chargés avec succès');
+      setComponentLoadError(false);
+      setRetryCount(0);
+    } catch (error) {
+      console.error(`[App] ❌ Erreur chargement composants (tentative ${currentRetry + 1}/${MAX_RETRIES}):`, error);
+      
+      if (currentRetry < MAX_RETRIES - 1 && !isCancelled) {
+        currentRetry++;
+        setRetryCount(currentRetry);
+        console.log(`[App] ⏱️ Nouvelle tentative dans ${RETRY_DELAY}ms...`);
+        setTimeout(loadComponents, RETRY_DELAY);
+      } else if (!isCancelled) {
+        console.error('[App] 💥 Échec définitif après', MAX_RETRIES, 'tentatives');
+        console.error('[App] 🔄 Rechargement forcé de la page...');
         
-        const [loginModule, characterSelectionModule, gamePageModule] = await Promise.all([
-          import('./pages/LoginPage'),
-          import('./pages/CharacterSelectionPage'),
-          import('./pages/GamePage')
-        ]);
-
-        if (isCancelled) return;
-
-        setLoginPage(() => (loginModule as any).LoginPage ?? (loginModule as any).default);
-        setCharacterSelectionPage(
-          () => (characterSelectionModule as any).CharacterSelectionPage ?? (characterSelectionModule as any).default
-        );
-        setGamePage(() => (gamePageModule as any).GamePage ?? (gamePageModule as any).default);
-        
-        console.log('[App] ✅ Composants chargés avec succès');
-        setComponentLoadError(false);
-        setRetryCount(0);
-      } catch (error) {
-        console.error(`[App] ❌ Erreur chargement composants (tentative ${currentRetry + 1}/${MAX_RETRIES}):`, error);
-        
-        if (currentRetry < MAX_RETRIES - 1 && !isCancelled) {
-          currentRetry++;
-          setRetryCount(currentRetry);
-          console.log(`[App] ⏱️ Nouvelle tentative dans ${RETRY_DELAY}ms...`);
-          setTimeout(loadComponents, RETRY_DELAY);
-        } else if (!isCancelled) {
-          console.error('[App] 💥 Échec définitif après', MAX_RETRIES, 'tentatives');
-          setComponentLoadError(true);
-        }
+        // ✅ NOUVEAU : Au lieu d'afficher l'erreur, recharger la page
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
       }
-    };
+    }
+  };
 
-    loadComponents();
+  loadComponents();
 
-    return () => {
-      isCancelled = true;
-    };
-  }, []);
+  return () => {
+    isCancelled = true;
+  };
+}, []);
 
   // Initialisation session + restauration du personnage si session présente
   useEffect(() => {
