@@ -140,6 +140,49 @@ const magicalAnimationCSS = `
     50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.8; box-shadow: 0 0 20px #8b5cf6, 0 0 40px #3b82f6; }
     100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
   }
+
+  /* ✅ NOUVEAU : Animations smooth pour les déploiements */
+  .spell-level-content {
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .spell-level-content.collapsed {
+    max-height: 0 !important;
+    opacity: 0;
+    margin-top: 0 !important;
+  }
+
+  .spell-level-content.expanded {
+    opacity: 1;
+  }
+
+  .spell-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .spell-card-details {
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .spell-card-details.collapsed {
+    max-height: 0 !important;
+    opacity: 0;
+  }
+
+  .spell-card-details.expanded {
+    opacity: 1;
+  }
+
+  /* Animation du chevron */
+  .chevron-icon {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .chevron-icon.rotated {
+    transform: rotate(180deg);
+  }
 `;
 
 /* ===== Règles d’affichage des niveaux de slots D&D 5e (bornage par classe/niveau) ===== */
@@ -490,6 +533,16 @@ function SpellCard({
 }) {
   const isExpanded = expandedSpell === spell.id;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [contentHeight, setContentHeight] = useState<number>(0);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // ✅ NOUVEAU : Mesurer la hauteur du contenu pour l'animation smooth
+  useEffect(() => {
+    if (contentRef.current) {
+      const height = contentRef.current.scrollHeight;
+      setContentHeight(height);
+    }
+  }, [isExpanded]);
 
   const handleRemoveSpell = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -507,7 +560,7 @@ function SpellCard({
 
   return (
     <div
-      className={`bg-gray-800/50 border border-gray-700/50 rounded-lg overflow-hidden transition-all duration-300 relative ${
+      className={`spell-card bg-gray-800/50 border border-gray-700/50 rounded-lg overflow-hidden relative ${
         isExpanded ? 'ring-2 ring-purple-500/30 shadow-lg shadow-purple-900/20' : 'hover:bg-gray-700/50'
       } ${spell.is_prepared ? 'border-green-500/30 bg-green-900/10' : ''}`}
     >
@@ -536,7 +589,8 @@ function SpellCard({
                 Préparé
               </span>
             )}
-            <div className={`transform transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+            {/* ✅ MODIFIÉ : Ajout de classes pour l'animation */}
+            <div className={`chevron-icon ${isExpanded ? 'rotated' : ''}`}>
               <ChevronDown className="w-5 h-5 text-gray-400" />
             </div>
           </div>
@@ -558,7 +612,7 @@ function SpellCard({
             spell.is_prepared
               ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
               : 'bg-gray-700/50 text-gray-400 hover:bg-gray-600/50'
-          } flex items-center justify-center`}
+          } flex items-center justify-center transition-all duration-200`}
           title={spell.is_prepared ? 'Dépréparer' : 'Préparer'}
         >
           <Check size={16} />
@@ -566,7 +620,7 @@ function SpellCard({
 
         <button
           onClick={handleRemoveSpell}
-          className="w-6 h-6 text-gray-400 hover:text-red-400 hover:bg-red-900/30 rounded-lg flex items-center justify-center"
+          className="w-6 h-6 text-gray-400 hover:text-red-400 hover:bg-red-900/30 rounded-lg flex items-center justify-center transition-all duration-200"
           title="Supprimer"
         >
           <Trash2 size={16} />
@@ -574,7 +628,7 @@ function SpellCard({
       </div>
 
       {showDeleteConfirm && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-gray-900/80 backdrop-blur-sm rounded-lg">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-gray-900/80 backdrop-blur-sm rounded-lg transition-all duration-200">
           <div className="bg-gray-900 border border-red-500/50 rounded-lg p-4 shadow-xl min-w-[250px] mx-4">
             <div className="text-sm text-gray-200 mb-4 text-center">
               Supprimer <span className="font-medium text-red-400">"{spell.spell_name}"</span> ?
@@ -582,13 +636,13 @@ function SpellCard({
             <div className="flex gap-3 justify-center">
               <button
                 onClick={cancelDelete}
-                className="px-3 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 rounded"
+                className="px-3 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 rounded transition-colors duration-200"
               >
                 Annuler
               </button>
               <button
                 onClick={confirmDelete}
-                className="px-3 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded"
+                className="px-3 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded transition-colors duration-200"
               >
                 Supprimer
               </button>
@@ -597,56 +651,63 @@ function SpellCard({
         </div>
       )}
 
-      {isExpanded && (
-        <div className="border-t border-gray-700/50 bg-gray-900/50">
-          <div className="p-3 space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-gray-800/50 p-2 rounded-lg border border-gray-700/30">
-                <div className="text-xs font-medium text-gray-400 mb-1">Temps d'incantation</div>
-                <div className="text-sm text-gray-200 font-medium">{spell.spell_casting_time}</div>
-              </div>
-              <div className="bg-gray-800/50 p-2 rounded-lg border border-gray-700/30">
-                <div className="text-xs font-medium text-gray-400 mb-1">Portée</div>
-                <div className="text-sm text-gray-200 font-medium">{spell.spell_range}</div>
-              </div>
-              <div className="bg-gray-800/50 p-2 rounded-lg border border-gray-700/30">
-                <div className="text-xs font-medium text-gray-400 mb-1">Composantes</div>
-                <div className="text-sm text-gray-200 font-medium">{getComponentsText(spell.spell_components)}</div>
-              </div>
-              <div className="bg-gray-800/50 p-2 rounded-lg border border-gray-700/30">
-                <div className="text-xs font-medium text-gray-400 mb-1">Durée</div>
-                <div className="text-sm text-gray-200 font-medium">{spell.spell_duration}</div>
-              </div>
+      {/* ✅ MODIFIÉ : Animation smooth pour les détails */}
+      <div
+        ref={contentRef}
+        className={`spell-card-details border-t border-gray-700/50 bg-gray-900/50 ${
+          isExpanded ? 'expanded' : 'collapsed'
+        }`}
+        style={{
+          maxHeight: isExpanded ? `${contentHeight}px` : '0px',
+        }}
+      >
+        <div className="p-3 space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-gray-800/50 p-2 rounded-lg border border-gray-700/30">
+              <div className="text-xs font-medium text-gray-400 mb-1">Temps d'incantation</div>
+              <div className="text-sm text-gray-200 font-medium">{spell.spell_casting_time}</div>
             </div>
+            <div className="bg-gray-800/50 p-2 rounded-lg border border-gray-700/30">
+              <div className="text-xs font-medium text-gray-400 mb-1">Portée</div>
+              <div className="text-sm text-gray-200 font-medium">{spell.spell_range}</div>
+            </div>
+            <div className="bg-gray-800/50 p-2 rounded-lg border border-gray-700/30">
+              <div className="text-xs font-medium text-gray-400 mb-1">Composantes</div>
+              <div className="text-sm text-gray-200 font-medium">{getComponentsText(spell.spell_components)}</div>
+            </div>
+            <div className="bg-gray-800/50 p-2 rounded-lg border border-gray-700/30">
+              <div className="text-xs font-medium text-gray-400 mb-1">Durée</div>
+              <div className="text-sm text-gray-200 font-medium">{spell.spell_duration}</div>
+            </div>
+          </div>
 
-<div className="bg-gray-800/30 p-3 rounded-lg border border-gray-700/20">
-  <h5 className="font-semibold text-gray-200 mb-3 flex items-center gap-2">
-    <BookOpen size={16} className="text-blue-400" />
-    Description
-  </h5>
-  <div className="text-gray-300 space-y-2">
-    <MarkdownLite 
-      text={spell.spell_description || ''} 
-      ctx={{}}
-    />
-    
-    {spell.spell_higher_levels && (
-      <div className="mt-4">
-        <MarkdownLite 
-          text={
-            spell.spell_higher_levels.trim().startsWith('**') 
-              ? spell.spell_higher_levels 
-              : `**Aux niveaux supérieurs :** ${spell.spell_higher_levels}`
-          } 
-          ctx={{}}
-        />
-      </div>
-    )}
-  </div>
-</div>
+          <div className="bg-gray-800/30 p-3 rounded-lg border border-gray-700/20">
+            <h5 className="font-semibold text-gray-200 mb-3 flex items-center gap-2">
+              <BookOpen size={16} className="text-blue-400" />
+              Description
+            </h5>
+            <div className="text-gray-300 space-y-2">
+              <MarkdownLite 
+                text={spell.spell_description || ''} 
+                ctx={{}}
+              />
+              
+              {spell.spell_higher_levels && (
+                <div className="mt-4">
+                  <MarkdownLite 
+                    text={
+                      spell.spell_higher_levels.trim().startsWith('**') 
+                        ? spell.spell_higher_levels 
+                        : `**Aux niveaux supérieurs :** ${spell.spell_higher_levels}`
+                    } 
+                    ctx={{}}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -1112,8 +1173,18 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
                       </div>
                     </button>
 
-                    {!collapsedLevels.has(levelName) && (
-                      <div className="space-y-2 ml-2">
+                <div
+                    className={`spell-level-content ${
+                      collapsedLevels.has(levelName) ? 'collapsed' : 'expanded'
+                    }`}
+                    style={{
+                      maxHeight: collapsedLevels.has(levelName) 
+                        ? '0px' 
+                        : `${(groupedSpells[levelName]?.length || 0) * 200 + 100}px`, // Estimation de hauteur
+                      marginTop: collapsedLevels.has(levelName) ? '0' : '0.5rem',
+                    }}
+                  >
+                    <div className="space-y-2 ml-2">
                         {pactSpells.map((spell) => (
                           <SpellCard
                             key={spell.id}
