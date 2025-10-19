@@ -62,11 +62,13 @@ export function parseMarkdownLite(md: string, ctx: MarkdownCtx): React.ReactNode
       continue;
     }
 
-    // ✅ NOUVEAU : Sections spéciales **Label :** contenu
-    const specialSection = line.match(/^\s*\*\*([^*]+)\*\*\s*:\s*(.*)$/);
-    if (specialSection) {
-      const label = specialSection[1].trim();
-      const content = specialSection[2].trim();
+    // ✅ MODIFIÉ : Sections spéciales **Label :** ou **Label** suivi de texte
+    const specialSectionWithColon = line.match(/^\s*\*\*([^*]+)\*\*\s*:\s*(.*)$/);
+    const specialSectionWithoutColon = line.match(/^\s*\*\*(Amélioration de sort mineur|Aux niveaux supérieurs|Améliorations de sorts mineurs)\*\*\s+(.+)$/i);
+
+    if (specialSectionWithColon) {
+      const label = specialSectionWithColon[1].trim();
+      const content = specialSectionWithColon[2].trim();
       
       out.push(
         <div key={`special-${key++}`} className="mt-3 mb-2">
@@ -78,9 +80,22 @@ export function parseMarkdownLite(md: string, ctx: MarkdownCtx): React.ReactNode
       continue;
     }
 
+    if (specialSectionWithoutColon) {
+      const label = specialSectionWithoutColon[1].trim();
+      const content = specialSectionWithoutColon[2].trim();
+      
+      out.push(
+        <div key={`special-${key++}`} className="mt-3 mb-2">
+          <strong className="text-white font-semibold">{label}</strong>
+          <span className="ml-1 text-gray-300"> {formatInline(content)}</span>
+        </div>
+      );
+      i++;
+      continue;
+    }
+
     // #### / ##### -> case à cocher persistante
-    // (4 ou 5 dièses = checkbox, jamais titre)
-    const chk = line.match(/^\s*#####{0,1}\s+(.*)$/); // #### or #####
+    const chk = line.match(/^\s*#####{0,1}\s+(.*)$/);
     if (chk) {
       const rawLabel = chk[1];
       const label = sentenceCase(rawLabel);
@@ -108,7 +123,7 @@ export function parseMarkdownLite(md: string, ctx: MarkdownCtx): React.ReactNode
       continue;
     }
 
-    // ### / ## / # -> titres de contenu (n'affecte pas le découpage en cartes)
+    // ### / ## / # -> titres
     const h3 = line.match(/^\s*###\s+(.*)$/i);
     if (h3) {
       out.push(
@@ -140,7 +155,7 @@ export function parseMarkdownLite(md: string, ctx: MarkdownCtx): React.ReactNode
       continue;
     }
 
-    // Table Markdown simple
+    // Table Markdown
     if (line.includes('|')) {
       const block: string[] = [];
       while (i < lines.length && lines[i].includes('|')) {
@@ -210,7 +225,8 @@ export function parseMarkdownLite(md: string, ctx: MarkdownCtx): React.ReactNode
       !lines[i].includes('|') &&
       !/^\s*#{1,6}\s+/.test(lines[i]) &&
       !/^\s*---+\s*$/.test(lines[i]) &&
-      !/^\s*\*\*[^*]+\*\*\s*:/.test(lines[i]) // ✅ NOUVEAU : éviter de fusionner les sections spéciales
+      !/^\s*\*\*[^*]+\*\*\s*:/.test(lines[i]) &&
+      !/^\s*\*\*(Amélioration de sort mineur|Aux niveaux supérieurs|Améliorations de sorts mineurs)\*\*\s+/i.test(lines[i])
     ) {
       buff.push(lines[i]);
       i++;
@@ -265,56 +281,5 @@ function renderTable(block: string[], key: number): React.ReactNode | null {
 }
 
 function formatInline(text: string): React.ReactNode[] {
-  let parts: Array<string | React.ReactNode> = [text];
-  
-  // ✅ MODIFIÉ : **Label :** (gras suivi de deux-points) - traité en priorité
-  parts = splitAndMap(parts, /\*\*([^*:]+)\*\*\s*:/g, (m, i) => 
-    <strong key={`bl-${i}`} className="text-white font-semibold">{m[1]} :</strong>
-  );
-  
-  // **gras**
-  parts = splitAndMap(parts, /\*\*([^*]+)\*\*/g, (m, i) => 
-    <strong key={`b-${i}`} className="text-white">{m[1]}</strong>
-  );
-  
-  // *italique*
-  parts = splitAndMap(parts, /(^|[^*])\*([^*]+)\*(?!\*)/g, (m, i) => 
-    [m[1], <em key={`i-${i}`} className="italic">{m[2]}</em>]
-  );
-  
-  // _italique_
-  parts = splitAndMap(parts, /_([^_]+)_/g, (m, i) => 
-    <em key={`u-${i}`} className="italic">{m[1]}</em>
-  );
-  
-  return parts.map((p, i) => (typeof p === 'string' ? <React.Fragment key={`t-${i}`}>{p}</React.Fragment> : p));
-}
-
-function splitAndMap(
-  parts: Array<string | React.ReactNode>,
-  regex: RegExp,
-  toNode: (m: RegExpExecArray, idx: number) => React.ReactNode | React.ReactNode[]
-): Array<string | React.ReactNode> {
-  const out: Array<string | React.ReactNode> = [];
-
-  for (const part of parts) {
-    if (typeof part !== 'string') {
-      out.push(part);
-      continue;
-    }
-    let str = part;
-    let lastIndex = 0;
-    let m: RegExpExecArray | null;
-    const r = new RegExp(regex.source, regex.flags);
-
-    while ((m = r.exec(str)) !== null) {
-      out.push(str.slice(lastIndex, m.index));
-      const node = toNode(m, out.length);
-      if (Array.isArray(node)) out.push(...node);
-      else out.push(node);
-      lastIndex = m.index + m[0].length;
-    }
-    out.push(str.slice(lastIndex));
-  }
-  return out;
-}
+  let
+
