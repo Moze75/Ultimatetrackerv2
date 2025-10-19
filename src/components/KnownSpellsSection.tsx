@@ -133,54 +133,12 @@ const getAbilityModFromPlayer = (
   return 0;
 };
 
-const magicalAnimationCSS = `
+// Animations CSS (injectées dynamiquement)
+const magicalAnimationCSS = ` 
   @keyframes magical-explosion {
     0% { transform: translate(-50%, -50%) scale(0); opacity: 1; background: radial-gradient(circle, #8b5cf6 0%, #3b82f6 50%, transparent 70%); border-radius: 50%; }
     50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.8; box-shadow: 0 0 20px #8b5cf6, 0 0 40px #3b82f6; }
     100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
-  }
-
-  /* ✅ NOUVEAU : Animations smooth pour les déploiements */
-  .spell-level-content {
-    overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .spell-level-content.collapsed {
-    max-height: 0 !important;
-    opacity: 0;
-    margin-top: 0 !important;
-  }
-
-  .spell-level-content.expanded {
-    opacity: 1;
-  }
-
-  .spell-card {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .spell-card-details {
-    overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .spell-card-details.collapsed {
-    max-height: 0 !important;
-    opacity: 0;
-  }
-
-  .spell-card-details.expanded {
-    opacity: 1;
-  }
-
-  /* Animation du chevron */
-  .chevron-icon {
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .chevron-icon.rotated {
-    transform: rotate(180deg);
   }
 `;
 
@@ -532,14 +490,7 @@ function SpellCard({
 }) {
   const isExpanded = expandedSpell === spell.id;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [contentHeight, setContentHeight] = useState<number>(0);
-  const contentRef = useRef<HTMLDivElement>(null);
-    useEffect(() => {
-    if (contentRef.current) {
-      const height = contentRef.current.scrollHeight;
-      setContentHeight(height);
-    }
-  }, [isExpanded]);
+
   const handleRemoveSpell = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowDeleteConfirm(true);
@@ -585,8 +536,7 @@ function SpellCard({
                 Préparé
               </span>
             )}
-            {/* ✅ MODIFIÉ : Ajout de classes pour l'animation */}
-            <div className={`chevron-icon ${isExpanded ? 'rotated' : ''}`}>
+            <div className={`transform transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
               <ChevronDown className="w-5 h-5 text-gray-400" />
             </div>
           </div>
@@ -647,16 +597,9 @@ function SpellCard({
         </div>
       )}
 
-      <div
-        ref={contentRef}
-        className={`spell-card-details border-t border-gray-700/50 bg-gray-900/50 ${
-          isExpanded ? 'expanded' : 'collapsed'
-        }`}
-        style={{
-          maxHeight: isExpanded ? `${contentHeight}px` : '0px',
-        }}
-      >
-        <div className="p-3 space-y-4">
+      {isExpanded && (
+        <div className="border-t border-gray-700/50 bg-gray-900/50">
+          <div className="p-3 space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-gray-800/50 p-2 rounded-lg border border-gray-700/30">
                 <div className="text-xs font-medium text-gray-400 mb-1">Temps d'incantation</div>
