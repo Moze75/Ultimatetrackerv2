@@ -77,9 +77,10 @@ export function SpellbookModal({
         console.log('Tentative de chargement des sorts depuis Supabase Storage...');
         
         // Essayer de charger depuis le bucket public
-        const { data, error } = await supabase.storage
-          .from('sorts')
-          .download('Sorts 2024.md');
+const timestamp = Date.now();
+const { data, error } = await supabase.storage
+  .from('sorts')
+  .download(`Sorts 2024.md?v=${timestamp}`);
 
         if (error) {
           console.error('Erreur Supabase Storage:', error);
