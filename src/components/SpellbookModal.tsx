@@ -229,44 +229,62 @@ export function SpellbookModal({
           continue;
         }
         
-// Champs avec format "**Champ:** valeur"
+// Champs avec format "**Champ:** valeur" (SEULEMENT les champs structurés)
 if (trimmedLine.match(/^\*\*[^*]+\*\*\s*:/)) {
   const match = trimmedLine.match(/^\*\*([^*]+)\*\*\s*:\s*(.+)$/);
   if (match) {
     const fieldName = match[1].trim().toLowerCase();
     const valuePart = match[2].trim();
     
-    switch (fieldName) {
-      case 'temps d\'incantation':
-      case 'temps d incantation':
-      case 'incantation':
-        spell.casting_time = valuePart;
-        break;
-        
-      case 'portée':
-      case 'portee':
-        spell.range = valuePart;
-        break;
-        
-      case 'composantes':
-      case 'composants':
-        const components = { V: false, S: false, M: null as string | null };
-        if (valuePart.includes('V')) components.V = true;
-        if (valuePart.includes('S')) components.S = true;
-        const mMatch = valuePart.match(/M[:\s]*\(?([^)]+)\)?/i);
-        if (mMatch) components.M = mMatch[1];
-        spell.components = components;
-        break;
-        
-      case 'durée':
-      case 'duree':
-        spell.duration = valuePart;
-        break;
-      
-      default:
-        // ✅ NOUVEAU : Si ce n'est pas un champ structuré connu, ajouter à la description
-        descriptionLines.push(trimmedLine);
-        foundFirstDescription = true;
+    // ✅ Liste des champs structurés à extraire
+    const structuredFields = [
+      'temps d\'incantation',
+      'temps d incantation',
+      'incantation',
+      'portée',
+      'portee',
+      'composantes',
+      'composants',
+      'durée',
+      'duree',
+    ];
+    
+    const isStructuredField = structuredFields.includes(fieldName);
+    
+    if (isStructuredField) {
+      // Extraire dans les propriétés structurées
+      switch (fieldName) {
+        case 'temps d\'incantation':
+        case 'temps d incantation':
+        case 'incantation':
+          spell.casting_time = valuePart;
+          break;
+          
+        case 'portée':
+        case 'portee':
+          spell.range = valuePart;
+          break;
+          
+        case 'composantes':
+        case 'composants':
+          const components = { V: false, S: false, M: null as string | null };
+          if (valuePart.includes('V')) components.V = true;
+          if (valuePart.includes('S')) components.S = true;
+          const mMatch = valuePart.match(/M[:\s]*\(?([^)]+)\)?/i);
+          if (mMatch) components.M = mMatch[1];
+          spell.components = components;
+          break;
+          
+        case 'durée':
+        case 'duree':
+          spell.duration = valuePart;
+          break;
+      }
+      continue; // Skip seulement pour les champs structurés
+    } else {
+      // ✅ NOUVEAU : Les autres labels restent dans la description
+      descriptionLines.push(trimmedLine);
+      foundFirstDescription = true;
     }
   }
   continue;
