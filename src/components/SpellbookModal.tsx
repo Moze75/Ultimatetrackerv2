@@ -233,8 +233,8 @@ export function SpellbookModal({
 if (trimmedLine.match(/^\*\*[^*]+\*\*\s*:/)) {
   const match = trimmedLine.match(/^\*\*([^*]+)\*\*\s*:\s*(.+)$/);
   if (match) {
-    const fieldName = match[1].trim().toLowerCase();
-    console.log('[PARSER] Champ détecté:', fieldName, '→', match[2]); // ✅ LOG
+    const fieldName = match[1].trim().toLowerCase(); 
+    const valuePart = match[2].trim();
     
     // ✅ Liste des champs structurés à extraire
     const structuredFields = [
