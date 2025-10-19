@@ -647,9 +647,16 @@ function SpellCard({
         </div>
       )}
 
-      {isExpanded && (
-        <div className="border-t border-gray-700/50 bg-gray-900/50">
-          <div className="p-3 space-y-4">
+      <div
+        ref={contentRef}
+        className={`spell-card-details border-t border-gray-700/50 bg-gray-900/50 ${
+          isExpanded ? 'expanded' : 'collapsed'
+        }`}
+        style={{
+          maxHeight: isExpanded ? `${contentHeight}px` : '0px',
+        }}
+      >
+        <div className="p-3 space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-gray-800/50 p-2 rounded-lg border border-gray-700/30">
                 <div className="text-xs font-medium text-gray-400 mb-1">Temps d'incantation</div>
