@@ -281,5 +281,56 @@ function renderTable(block: string[], key: number): React.ReactNode | null {
 }
 
 function formatInline(text: string): React.ReactNode[] {
-  let
-
+  let parts: Array<string | React.ReactNode> = [text];
+  
+  // **Label :** (avec deux-points)
+  parts = splitAndMap(parts, /\*\*([^*:]+)\*\*\s*:/g, (m, i) => 
+    <strong key={`bl-${i}`} className="text-white font-semibold">{m[1]} :</strong>
+  );
+  
+  // **gras**
+  parts = splitAndMap(parts, /\*\*([^*]+)\*\*/g, (m, i) => 
+    <strong key={`b-${i}`} className="text-white">{m[1]}</strong>
+  );
+  
+  // *italique*
+  parts = splitAndMap(parts, /(^|[^*])\*([^*]+)\*(?!\*)/g, (m, i) => 
+    [m[1], <em key={`i-${i}`} className="italic">{m[2]}</em>]
+  );
+  
+  // _italique_
+  parts = splitAndMap(parts, /_([^_]+)_/g, (m, i) => 
+    <em key={`u-${i}`} className="italic">{m[1]}</em>
+  );
+  
+  return parts.map((p, i) => (typeof p === 'string' ? <React.Fragment key={`t-${i}`}>{p}</React.Fragment> : p));
+}
+
+function splitAndMap(
+  parts: Array<string | React.ReactNode>,
+  regex: RegExp,
+  toNode: (m: RegExpExecArray, idx: number) => React.ReactNode | React.ReactNode[]
+): Array<string | React.ReactNode> {
+  const out: Array<string | React.ReactNode> = [];
+
+  for (const part of parts) {
+    if (typeof part !== 'string') {
+      out.push(part);
+      continue;
+    }
+    let str = part;
+    let lastIndex = 0;
+    let m: RegExpExecArray | null;
+    const r = new RegExp(regex.source, regex.flags);
+
+    while ((m = r.exec(str)) !== null) {
+      out.push(str.slice(lastIndex, m.index));
+      const node = toNode(m, out.length);
+      if (Array.isArray(node)) out.push(...node);
+      else out.push(node);
+      lastIndex = m.index + m[0].length;
+    }
+    out.push(str.slice(lastIndex));
+  }
+  return out;
+}
