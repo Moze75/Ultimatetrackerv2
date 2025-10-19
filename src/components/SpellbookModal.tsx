@@ -234,7 +234,7 @@ if (trimmedLine.match(/^\*\*[^*]+\*\*\s*:/)) {
   const match = trimmedLine.match(/^\*\*([^*]+)\*\*\s*:\s*(.+)$/);
   if (match) {
     const fieldName = match[1].trim().toLowerCase();
-    const valuePart = match[2].trim();
+    console.log('[PARSER] Champ détecté:', fieldName, '→', match[2]); // ✅ LOG
     
     // ✅ Liste des champs structurés à extraire
     const structuredFields = [
