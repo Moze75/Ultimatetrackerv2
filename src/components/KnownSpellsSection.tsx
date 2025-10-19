@@ -642,18 +642,16 @@ function SpellCard({
         </div>
       )}
 
-<div
-  ref={contentRef}
-  className={`spell-card-details border-t border-gray-700/50 bg-gray-900/50 ${
-    isExpanded ? 'expanded' : 'collapsed'
-  }`}
-  style={{
-    maxHeight: isExpanded ? `${contentHeight + 8}px` : '0px', // ✅ +8px pour compenser le padding
-    paddingTop: isExpanded ? '4px' : '0px', // ✅ Padding en haut quand ouvert
-    paddingBottom: isExpanded ? '4px' : '0px', // ✅ Padding en bas quand ouvert
-  }}
->
-  <div className="px-3 pb-3 pt-0 space-y-4"> {/* ✅ MODIFIÉ : pt-0 car padding géré par le parent */}
+      <div
+        ref={contentRef}
+        className={`spell-card-details border-t border-gray-700/50 bg-gray-900/50 ${
+          isExpanded ? 'expanded' : 'collapsed'
+        }`}
+        style={{
+          maxHeight: isExpanded ? `${contentHeight}px` : '0px',
+        }}
+      > 
+        <div className="p-3 space-y-3"> 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="bg-gray-800/50 p-2 rounded-lg border border-gray-700/30">
               <div className="text-xs font-medium text-gray-400 mb-1">Temps d'incantation</div>
