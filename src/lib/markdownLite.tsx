@@ -40,7 +40,7 @@ export function parseMarkdownLite(md: string, ctx: MarkdownCtx): React.ReactNode
     const content = buff.join(' ').trim();
     if (!content) return;
     out.push(
-      <p key={`p-${key++}`} className="text-sm">
+      <p key={`p-${key++}`} className="text-sm text-gray-300">
         {formatInline(content)}
       </p>
     );
@@ -58,6 +58,22 @@ export function parseMarkdownLite(md: string, ctx: MarkdownCtx): React.ReactNode
     // Séparateur horizontal ---
     if (/^\s*---+\s*$/.test(line)) {
       out.push(<div key={`hr-${key++}`} className="my-3 border-t border-white/10" />);
+      i++;
+      continue;
+    }
+
+    // ✅ NOUVEAU : Sections spéciales **Label :** contenu
+    const specialSection = line.match(/^\s*\*\*([^*]+)\*\*\s*:\s*(.*)$/);
+    if (specialSection) {
+      const label = specialSection[1].trim();
+      const content = specialSection[2].trim();
+      
+      out.push(
+        <div key={`special-${key++}`} className="mt-3 mb-2">
+          <strong className="text-white font-semibold">{label} :</strong>
+          {content && <span className="ml-1 text-gray-300">{formatInline(content)}</span>}
+        </div>
+      );
       i++;
       continue;
     }
@@ -96,7 +112,7 @@ export function parseMarkdownLite(md: string, ctx: MarkdownCtx): React.ReactNode
     const h3 = line.match(/^\s*###\s+(.*)$/i);
     if (h3) {
       out.push(
-        <h4 key={`h3-${key++}`} className="text-white font-semibold text-sm sm:text-base">
+        <h4 key={`h3-${key++}`} className="text-white font-semibold text-sm sm:text-base mt-3 mb-2">
           {formatInline(sentenceCase(h3[1]))}
         </h4>
       );
@@ -106,7 +122,7 @@ export function parseMarkdownLite(md: string, ctx: MarkdownCtx): React.ReactNode
     const h2 = line.match(/^\s*##\s+(.*)$/i);
     if (h2) {
       out.push(
-        <h4 key={`h2-${key++}`} className="text-white font-semibold text-sm sm:text-base">
+        <h4 key={`h2-${key++}`} className="text-white font-semibold text-sm sm:text-base mt-3 mb-2">
           {formatInline(sentenceCase(h2[1]))}
         </h4>
       );
@@ -116,7 +132,7 @@ export function parseMarkdownLite(md: string, ctx: MarkdownCtx): React.ReactNode
     const h1 = line.match(/^\s*#\s+(.*)$/i);
     if (h1) {
       out.push(
-        <h4 key={`h1-${key++}`} className="text-white font-semibold text-sm sm:text-base">
+        <h4 key={`h1-${key++}`} className="text-white font-semibold text-sm sm:text-base mt-3 mb-2">
           {formatInline(sentenceCase(h1[1]))}
         </h4>
       );
@@ -138,7 +154,7 @@ export function parseMarkdownLite(md: string, ctx: MarkdownCtx): React.ReactNode
         continue;
       }
       out.push(
-        <p key={`pf-${key++}`} className="text-sm">
+        <p key={`pf-${key++}`} className="text-sm text-gray-300">
           {formatInline(block.join(' '))}
         </p>
       );
@@ -153,7 +169,7 @@ export function parseMarkdownLite(md: string, ctx: MarkdownCtx): React.ReactNode
         i++;
       }
       out.push(
-        <ul key={`ul-${key++}`} className="list-disc pl-5 space-y-1">
+        <ul key={`ul-${key++}`} className="list-disc pl-5 space-y-1 text-gray-300">
           {items.map((it, idx) => (
             <li key={`li-${idx}`} className="text-sm">
               {formatInline(it)}
@@ -172,7 +188,7 @@ export function parseMarkdownLite(md: string, ctx: MarkdownCtx): React.ReactNode
         i++;
       }
       out.push(
-        <ol key={`ol-${key++}`} className="list-decimal pl-5 space-y-1">
+        <ol key={`ol-${key++}`} className="list-decimal pl-5 space-y-1 text-gray-300">
           {items.map((it, idx) => (
             <li key={`oli-${idx}`} className="text-sm">
               {formatInline(it)}
@@ -193,7 +209,8 @@ export function parseMarkdownLite(md: string, ctx: MarkdownCtx): React.ReactNode
       !/^\s*\d+\.\s+/.test(lines[i]) &&
       !lines[i].includes('|') &&
       !/^\s*#{1,6}\s+/.test(lines[i]) &&
-      !/^\s*---+\s*$/.test(lines[i])
+      !/^\s*---+\s*$/.test(lines[i]) &&
+      !/^\s*\*\*[^*]+\*\*\s*:/.test(lines[i]) // ✅ NOUVEAU : éviter de fusionner les sections spéciales
     ) {
       buff.push(lines[i]);
       i++;
@@ -218,13 +235,13 @@ function renderTable(block: string[], key: number): React.ReactNode | null {
   const body = hasSep ? rows.slice(2) : rows;
 
   return (
-    <div key={`tbl-${key}`} className="overflow-x-auto">
-      <table className="min-w-[360px] w-full text-sm border-separate border-spacing-y-1">
+    <div key={`tbl-${key}`} className="overflow-x-auto my-4">
+      <table className="min-w-[360px] w-full text-sm border-collapse border border-gray-700/50 rounded-lg overflow-hidden">
         {header && (
           <thead>
-            <tr>
+            <tr className="bg-gray-800/50">
               {header.map((h, i) => (
-                <th key={`th-${i}`} className="text-left text-white font-semibold px-2 py-1 bg-white/5 rounded">
+                <th key={`th-${i}`} className="text-left text-gray-200 font-semibold px-3 py-2 border border-gray-700/50">
                   {formatInline(sentenceCase(h))}
                 </th>
               ))}
@@ -233,9 +250,9 @@ function renderTable(block: string[], key: number): React.ReactNode | null {
         )}
         <tbody>
           {body.map((cells, r) => (
-            <tr key={`tr-${r}`}>
+            <tr key={`tr-${r}`} className={r % 2 === 0 ? 'bg-gray-800/20' : 'bg-gray-800/30'}>
               {cells.map((c, ci) => (
-                <td key={`td-${ci}`} className="px-2 py-1 text-white/90 bg-white/0">
+                <td key={`td-${ci}`} className="px-3 py-2 text-gray-300 border border-gray-700/50">
                   {formatInline(c)}
                 </td>
               ))}
@@ -249,12 +266,27 @@ function renderTable(block: string[], key: number): React.ReactNode | null {
 
 function formatInline(text: string): React.ReactNode[] {
   let parts: Array<string | React.ReactNode> = [text];
+  
+  // ✅ MODIFIÉ : **Label :** (gras suivi de deux-points) - traité en priorité
+  parts = splitAndMap(parts, /\*\*([^*:]+)\*\*\s*:/g, (m, i) => 
+    <strong key={`bl-${i}`} className="text-white font-semibold">{m[1]} :</strong>
+  );
+  
   // **gras**
-  parts = splitAndMap(parts, /\*\*([^*]+)\*\*/g, (m, i) => <strong key={`b-${i}`} className="text-white">{m[1]}</strong>);
+  parts = splitAndMap(parts, /\*\*([^*]+)\*\*/g, (m, i) => 
+    <strong key={`b-${i}`} className="text-white">{m[1]}</strong>
+  );
+  
   // *italique*
-  parts = splitAndMap(parts, /(^|[^*])\*([^*]+)\*(?!\*)/g, (m, i) => [m[1], <em key={`i-${i}`} className="italic">{m[2]}</em>]);
+  parts = splitAndMap(parts, /(^|[^*])\*([^*]+)\*(?!\*)/g, (m, i) => 
+    [m[1], <em key={`i-${i}`} className="italic">{m[2]}</em>]
+  );
+  
   // _italique_
-  parts = splitAndMap(parts, /_([^_]+)_/g, (m, i) => <em key={`u-${i}`} className="italic">{m[1]}</em>);
+  parts = splitAndMap(parts, /_([^_]+)_/g, (m, i) => 
+    <em key={`u-${i}`} className="italic">{m[1]}</em>
+  );
+  
   return parts.map((p, i) => (typeof p === 'string' ? <React.Fragment key={`t-${i}`}>{p}</React.Fragment> : p));
 }
 
