@@ -294,6 +294,11 @@ function renderTable(block: string[], key: number): React.ReactNode | null {
 
 function formatInline(text: string): React.ReactNode[] {
   let parts: Array<string | React.ReactNode> = [text];
+
+    // ✅ NOUVEAU : *Mot.* suivi d'un point → Remplacer par *Mot.*\n
+  // Cela force un saut de ligne après les mots en italique suivis d'un point
+  const textWithBreaks = text.replace(/\*([^*]+)\*\.\s*/g, '*$1.*\n');
+  parts = [textWithBreaks];
   
   // **gras**
   parts = splitAndMap(parts, /\*\*([^*]+)\*\*/g, (m, i) => 
