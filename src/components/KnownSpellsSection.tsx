@@ -173,7 +173,7 @@ const magicalAnimationCSS = `
 
   .spell-card-details.expanded {
     opacity: 1;
-  } 
+  }
 
   /* Animation du chevron */
   .chevron-icon {
@@ -550,12 +550,12 @@ function SpellCard({
     setShowDeleteConfirm(false);
   };
 
-return (
-  <div
-    className={`spell-card bg-gray-800/50 border border-gray-700/50 rounded-lg overflow-hidden relative mt-2 ${
-      isExpanded ? 'ring-2 ring-purple-500/30 shadow-lg shadow-purple-900/20' : 'hover:bg-gray-700/50'
-    } ${spell.is_prepared ? 'border-green-500/30 bg-green-900/10' : ''}`}
-  >
+  return (
+    <div
+      className={`spell-card bg-gray-800/50 border border-gray-700/50 rounded-lg overflow-hidden relative ${
+        isExpanded ? 'ring-2 ring-purple-500/30 shadow-lg shadow-purple-900/20' : 'hover:bg-gray-700/50'
+      } ${spell.is_prepared ? 'border-green-500/30 bg-green-900/10' : ''}`}
+    >
       <button
         onClick={() => setExpandedSpell(isExpanded ? null : spell.id)}
         className="w-full text-left p-2 transition-all duration-200"
@@ -650,8 +650,8 @@ return (
         style={{
           maxHeight: isExpanded ? `${contentHeight}px` : '0px',
         }}
-      > 
-        <div className="p-3 space-y-3"> 
+      >
+        <div className="p-3 space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="bg-gray-800/50 p-2 rounded-lg border border-gray-700/30">
               <div className="text-xs font-medium text-gray-400 mb-1">Temps d'incantation</div>
@@ -1147,19 +1147,18 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
                       </div>
                     </button>
 
-<div
-  className={`spell-level-content ${
-    collapsedLevels.has(levelName) ? 'collapsed' : 'expanded'
-  }`}
-  style={{
-    maxHeight: collapsedLevels.has(levelName) 
-      ? '0px' 
-      : `${pactSpells.length * 200 + 100}px`,
-    marginTop: collapsedLevels.has(levelName) ? '0' : '0.5rem',
-    paddingTop: collapsedLevels.has(levelName) ? '0' : '0.75rem', // ✅ NOUVEAU : padding en haut quand déplié
-  }}
->
-  <div className="space-y-2 ml-2"> 
+                    <div
+                      className={`spell-level-content ${
+                        collapsedLevels.has(levelName) ? 'collapsed' : 'expanded'
+                      }`}
+                      style={{
+                        maxHeight: collapsedLevels.has(levelName) 
+                          ? '0px' 
+                          : `${pactSpells.length * 200 + 100}px`,
+                        marginTop: collapsedLevels.has(levelName) ? '0' : '0.5rem',
+                      }}
+                    >
+                      <div className="space-y-2 ml-2">
                         {pactSpells.map((spell) => (
                           <SpellCard
                             key={spell.id}
@@ -1186,14 +1185,14 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
               return (
                 <div
                   key={levelName}
-                  className="space-y-0"
+                  className="space-y-2"
                   data-spell-level={level}
                   id={`spell-level-${level}`}
                 >
-<button
-  onClick={() => toggleLevelCollapse(levelName)}
-  className="w-full flex items-center justify-between text-left hover:bg-gray-800/30 rounded-lg p-2 mb-2 transition-all duration-200 group"
->
+                  <button
+                    onClick={() => toggleLevelCollapse(levelName)}
+                    className="w-full flex items-center justify-between text-left hover:bg-gray-800/30 rounded-lg p-2 transition-all duration-200 group"
+                  >
                     <div className="flex items-center gap-3 flex-1 pr-2">
                       <h4 className="text-sm font-semibold text-white group-hover:text-white">
                         {levelName} ({spells.length})
