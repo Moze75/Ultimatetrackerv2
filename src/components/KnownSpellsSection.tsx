@@ -1227,7 +1227,7 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
                       marginTop: collapsedLevels.has(levelName) ? '0' : '0.5rem',
                     }}
                   >
-                    <div className="space-y-2 ml-0">
+                    <div className="space-y-2 ml-5">
                       {spells.map((spell) => (
                         <SpellCard
                           key={spell.id}
