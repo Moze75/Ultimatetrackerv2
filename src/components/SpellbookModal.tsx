@@ -711,14 +711,19 @@ export function SpellbookModal({
                             </div>
                           </div>
 
-              {/* Description + Higher Levels ensemble */}
-              <div className="bg-gray-800/30 p-3 rounded-lg">
-                <h5 className="font-semibold text-gray-200 mb-2">Description</h5>
-                <div className="text-gray-300 leading-relaxed whitespace-pre-line">
-                  {spell.description}
-                  {spell.higher_levels && `\n\n${spell.higher_levels}`} 
-                </div>
-              </div>
+{/* Description + Higher Levels ensemble */}
+<div className="bg-gray-800/30 p-3 rounded-lg">
+  <h5 className="font-semibold text-gray-200 mb-2">Description</h5>
+  <div className="text-gray-300 space-y-2">
+    <MarkdownLite 
+      text={
+        (spell.description || '') + 
+        (spell.higher_levels ? `\n\n${spell.higher_levels}` : '')
+      } 
+      ctx={{}}
+    />
+  </div>
+</div>
 
                           {/* All Classes */}
                           <div className="bg-gray-800/30 p-3 rounded-lg">
