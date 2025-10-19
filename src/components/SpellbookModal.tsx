@@ -291,13 +291,18 @@ if (trimmedLine.match(/^\*\*[^*]+\*\*\s*:/)) {
 }
         
         // Détecter "Aux niveaux supérieurs"
-          if (
-            trimmedLine.toLowerCase().includes('aux niveaux supérieurs') ||
-            trimmedLine.toLowerCase().includes('niveaux supérieurs') ||
-            trimmedLine.toLowerCase().includes('emplacement de niveau supérieur') ||
-            trimmedLine.toLowerCase().includes('emplacements de niveaux supérieurs') ||
-            trimmedLine.toLowerCase().includes('améliorations de sorts mineurs')
-          ) {
+if (
+  trimmedLine.toLowerCase().includes('aux niveaux supérieurs') ||
+  trimmedLine.toLowerCase().includes('à des niveaux supérieurs') ||
+  trimmedLine.toLowerCase().includes('niveaux supérieurs') ||
+  trimmedLine.toLowerCase().includes('niveau supérieur') || // ✅ AJOUT (sans "x")
+  trimmedLine.toLowerCase().includes('emplacement de niveau supérieur') ||
+  trimmedLine.toLowerCase().includes('emplacements de niveau supérieur') || // ✅ AJOUT (sans "x" à "niveaux")
+  trimmedLine.toLowerCase().includes('emplacements de niveaux supérieurs') ||
+  trimmedLine.toLowerCase().includes('amélioration de sort mineur') ||
+  trimmedLine.toLowerCase().includes('améliorations de sorts mineurs') ||
+  trimmedLine.toLowerCase().includes('incantation supérieure') // ✅ BONUS
+) {
             inHigherLevelsSection = true;
             higherLevelsLines.push(trimmedLine);
             continue;
