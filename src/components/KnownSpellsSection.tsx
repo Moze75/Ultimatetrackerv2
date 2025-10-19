@@ -1159,7 +1159,7 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
     paddingTop: collapsedLevels.has(levelName) ? '0' : '0.75rem', // ✅ NOUVEAU : padding en haut quand déplié
   }}
 >
-  <div className="space-y-2 ml-2">
+  <div className="space-y-2 ml-2"> 
                         {pactSpells.map((spell) => (
                           <SpellCard
                             key={spell.id}
@@ -1217,19 +1217,17 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
                     </div>
                   </button>
 
-<div
-  className={`spell-level-content ${
-    collapsedLevels.has(levelName) ? 'collapsed' : 'expanded'
-  }`}
-  style={{
-    maxHeight: collapsedLevels.has(levelName) 
-      ? '0px' 
-      : `${pactSpells.length * 200 + 100}px`,
-    marginTop: collapsedLevels.has(levelName) ? '0' : '0.5rem',
-    paddingTop: collapsedLevels.has(levelName) ? '0' : '0.75rem',
-    paddingBottom: collapsedLevels.has(levelName) ? '0' : '0.75rem', // ✅ NOUVEAU : padding en bas
-  }}
->
+                  <div
+                    className={`spell-level-content ${
+                      collapsedLevels.has(levelName) ? 'collapsed' : 'expanded'
+                    }`}
+                    style={{
+                      maxHeight: collapsedLevels.has(levelName) 
+                        ? '0px' 
+                        : `${spells.length * 200 + 100}px`,
+                      marginTop: collapsedLevels.has(levelName) ? '0' : '0.5rem',
+                    }}
+                  >
                     <div className="space-y-2 ml-2">
                       {spells.map((spell) => (
                         <SpellCard
