@@ -238,48 +238,72 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
       setNewCharacter(null);
     }
   };
-   
-const handleSignOut = async () => {
-  try {
-    console.log('[CharacterSelection] 🚪 Déconnexion en cours...');
-    
-    const { error } = await authService.signOut();
-    if (error) throw error;
 
-    toast.success('Déconnexion réussie');
-
-    // ✅ MODIFIÉ : Nettoyage complet et rechargement forcé
-    console.log('[CharacterSelection] 🗑️ Nettoyage des données...');
-    
-    // Nettoyer le contexte
-    appContextService.clearContext();
-    appContextService.clearWizardSnapshot();
-    
-    // Nettoyer le localStorage
+  // ✅ NOUVELLE FONCTION (25 lignes)
+  const clearServiceWorkerCache = async () => {
     try {
-      localStorage.removeItem(LAST_SELECTED_CHARACTER_SNAPSHOT);
-      localStorage.removeItem('selectedCharacter');
-    } catch {}
+      console.log('[CharacterSelection] 🧹 Nettoyage du Service Worker...');
+      
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const registration of registrations) {
+          await registration.update();
+        }
+      }
+      
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        console.log('[CharacterSelection] 🗑️ Caches trouvés:', cacheNames);
+        
+        for (const name of cacheNames) {
+          if (name.includes('js-cache') || name.includes('workbox')) {
+            await caches.delete(name);
+            console.log('[CharacterSelection] ✅ Cache supprimé:', name);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[CharacterSelection] ❌ Erreur nettoyage cache:', error);
+    }
+  };
 
-    // Nettoyer le sessionStorage
+  // ✅ FONCTION MODIFIÉE (ajoute l'appel à clearServiceWorkerCache)
+  const handleSignOut = async () => {
     try {
-      sessionStorage.clear();
-    } catch {}
+      console.log('[CharacterSelection] 🚪 Déconnexion en cours...');
+      
+      await clearServiceWorkerCache(); // <-- LIGNE AJOUTÉE
+      
+      const { error } = await authService.signOut();
+      if (error) throw error;
 
-    // ✅ NOUVEAU : Forcer le rechargement IMMÉDIAT pour éviter le cache
-    console.log('[CharacterSelection] 🔄 Rechargement forcé...');
-    window.location.href = window.location.origin;
-    
-  } catch (error: any) {
-    console.error('❌ Erreur de déconnexion:', error);
-    toast.error('Erreur lors de la déconnexion');
-    
-    // ✅ Même en cas d'erreur, recharger
-    setTimeout(() => {
+      toast.success('Déconnexion réussie');
+
+      console.log('[CharacterSelection] 🗑️ Nettoyage des données...');
+      appContextService.clearContext();
+      appContextService.clearWizardSnapshot();
+      
+      try {
+        localStorage.removeItem(LAST_SELECTED_CHARACTER_SNAPSHOT);
+        localStorage.removeItem('selectedCharacter');
+      } catch {}
+
+      try {
+        sessionStorage.clear();
+      } catch {}
+
+      console.log('[CharacterSelection] 🔄 Rechargement forcé...');
       window.location.href = window.location.origin;
-    }, 1000);
-  }
-};
+      
+    } catch (error: any) {
+      console.error('❌ Erreur de déconnexion:', error);
+      toast.error('Erreur lors de la déconnexion');
+      
+      setTimeout(() => {
+        window.location.href = window.location.origin;
+      }, 1000);
+    }
+  };
 
   const handleDeleteCharacter = async (character: Player) => {
     if (deleteConfirmation !== 'Supprime') {
