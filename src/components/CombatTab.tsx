@@ -893,7 +893,8 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
             <div className="text-center py-8 text-gray-400">
               <Sword className="w-12 h-12 mx-auto mb-3 opacity-50" />
               <p>Aucune attaque configurée</p>
-              <p className="text-sm">Cliquez sur + pour ajouter une attaque</p>
+              <p className="text-sm">Equippez une arme dans l'onglet Sac</p>
+              <p className="text-sm">ou bien cliquez sur + pour ajouter une attaque</p>
             </div>
           ) : (
             <div className="space-y-2">{physicalAttacks.map(renderAttackCard)}</div>
