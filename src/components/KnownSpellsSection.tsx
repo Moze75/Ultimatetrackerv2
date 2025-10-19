@@ -1155,7 +1155,7 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
                         maxHeight: collapsedLevels.has(levelName) 
                           ? '0px' 
                           : `${pactSpells.length * 200 + 100}px`,
-                        marginTop: collapsedLevels.has(levelName) ? '0' : '3rem',
+                        marginTop: collapsedLevels.has(levelName) ? '0' : '10rem',
                       }}
                     >
                       <div className="space-y-2 ml-2">
