@@ -246,7 +246,7 @@ if (trimmedLine.match(/^\*\*[^*]+\*\*\s*:/)) {
       'composantes',
       'composants',
       'durée',
-      'duree',
+      'duree', 
     ];
     
     const isStructuredField = structuredFields.includes(fieldName);
