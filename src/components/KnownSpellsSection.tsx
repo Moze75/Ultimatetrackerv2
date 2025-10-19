@@ -1006,7 +1006,7 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
           <h3 className="text-base font-semibold text-gray-100 truncate">
             Sorts connus ({knownSpells.length})
           </h3>
-          <div className="mt-1 space-y-10">
+          <div className="mt-1 space-y-1">
             {spellSaveDC !== null && (
               <div className="text-sm text-purple-300">DD des sorts: {spellSaveDC}</div>
             )}
