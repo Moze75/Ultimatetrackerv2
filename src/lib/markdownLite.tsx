@@ -36,9 +36,9 @@ export function parseMarkdownLite(md: string, ctx: MarkdownCtx): React.ReactNode
   let i = 0;
   let key = 0;
 
-  const pushPara = (buff: string[]) => {
-    const content = buff.join(' ').trim();
-    if (!content) return;
+const pushPara = (buff: string[]) => {
+  const content = buff.join(' ').trim();
+  if (!content) return;
     out.push(
       <p key={`p-${key++}`} className="text-sm text-gray-300">
         {formatInline(content)}
@@ -295,52 +295,41 @@ function renderTable(block: string[], key: number): React.ReactNode | null {
 function formatInline(text: string): React.ReactNode[] {
   let parts: Array<string | React.ReactNode> = [text];
   
-  // ✅ Remplacer tous les patterns avec point
-  let textWithBreaks = text
-    .replace(/\*([^*]+)\*\.\s*/g, '*$1.*\n')      // *italique.*
-    .replace(/_([^_]+)_\.\s*/g, '_$1._\n')        // _italique._
-    .replace(/\*\*([^*]+)\*\*\.\s*/g, '**$1.**\n'); // **gras.**
-  
-  parts = [textWithBreaks];
-  
-  // **gras.** (avec saut de ligne)
-  parts = splitAndMap(parts, /\*\*([^*]+)\*\*\.\n/g, (m, i) => 
-    <React.Fragment key={`b-br-${i}`}>
-      <strong className="text-white font-semibold">{m[1]}.</strong>
-      <br />
-    </React.Fragment>
-  );
-  
-  // **gras** (normal)
+  // **gras**
   parts = splitAndMap(parts, /\*\*([^*]+)\*\*/g, (m, i) => 
-    <strong key={`b-${i}`} className="text-white">{m[1]}</strong>
+    <strong key={`b-${i}`} className="text-white font-semibold">{m[1]}</strong>
   );
   
-  // *italique.* (avec saut de ligne)
-  parts = splitAndMap(parts, /\*([^*]+)\*\.\n/g, (m, i) => 
-    <React.Fragment key={`i-br-${i}`}>
-      <em className="italic font-semibold text-gray-200">{m[1]}.</em>
-      <br />
-    </React.Fragment>
-  );
+  // *italique* (avec style renforcé si suivi d'un point)
+  parts = splitAndMap(parts, /\*([^*]+)\*(\.)? /g, (m, i) => {
+    const hasDot = m[2] === '.';
+    return (
+      <em 
+        key={`i-${i}`} 
+        className={hasDot ? "italic font-semibold text-gray-100" : "italic"}
+      >
+        {m[1]}{hasDot ? '.' : ''}
+      </em>
+    );
+  });
   
-  // *italique* (normal)
+  // *italique* (sans espace après)
   parts = splitAndMap(parts, /(^|[^*])\*([^*]+)\*(?!\*)/g, (m, i) => 
     [m[1], <em key={`i-${i}`} className="italic">{m[2]}</em>]
   );
   
-  // _italique._ (avec saut de ligne)
-  parts = splitAndMap(parts, /_([^_]+)_\.\n/g, (m, i) => 
-    <React.Fragment key={`u-br-${i}`}>
-      <em className="italic font-semibold text-gray-200">{m[1]}.</em>
-      <br />
-    </React.Fragment>
-  );
-  
-  // _italique_ (normal)
-  parts = splitAndMap(parts, /_([^_]+)_/g, (m, i) => 
-    <em key={`u-${i}`} className="italic">{m[1]}</em>
-  );
+  // _italique_
+  parts = splitAndMap(parts, /_([^_]+)_(\.)? /g, (m, i) => {
+    const hasDot = m[2] === '.';
+    return (
+      <em 
+        key={`u-${i}`} 
+        className={hasDot ? "italic font-semibold text-gray-100" : "italic"}
+      >
+        {m[1]}{hasDot ? '.' : ''}
+      </em>
+    );
+  });
   
   return parts.map((p, i) => (typeof p === 'string' ? <React.Fragment key={`t-${i}`}>{p}</React.Fragment> : p));
 }
