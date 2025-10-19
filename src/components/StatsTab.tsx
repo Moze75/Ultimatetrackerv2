@@ -79,7 +79,6 @@ const DEFAULT_ABILITIES: Ability[] = [
 
 const getModifier = (score: number): number => Math.floor((score - 10) / 2);
 
-// Bonus de maîtrise par niveau (PHB)
 const getProficiencyBonusForLevel = (level: number): number => {
   if (level >= 17) return 6;
   if (level >= 13) return 5;
@@ -119,19 +118,15 @@ const getJackOfAllTradesBonus = (proficiencyBonus: number): number => {
 export function StatsTab({ player, onUpdate }: StatsTabProps) {
   const [editing, setEditing] = useState(false);
 
-  // Bonus de maîtrise effectif basé sur le niveau (et non édité manuellement)
   const effectiveProficiency = getProficiencyBonusForLevel(player.level);
 
   const [stats, setStats] = useState(() => ({
-    // On garde une copie locale pour l'état (ex: touche-à-tout),
-    // mais on utilisera toujours effectiveProficiency pour les calculs
     proficiency_bonus: effectiveProficiency,
     jack_of_all_trades: player.stats.jack_of_all_trades || false
   }));
 
   const [abilities, setAbilities] = useState<Ability[]>(() => {
     if (Array.isArray(player.abilities) && player.abilities.length > 0) {
-      // Migrer les anciennes données sans hasExpertise
       return player.abilities.map(ability => ({
         ...ability,
         skills: ability.skills.map(skill => ({
@@ -157,7 +152,6 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
       const modifier = getModifier(ability.score);
       const jackOfAllTradesBonus = currentStats.jack_of_all_trades ? getJackOfAllTradesBonus(proficiencyBonus) : 0;
 
-      // Déterminer si la sauvegarde est maîtrisée (sauvegarde != modif)
       const isSavingThrowProficient = ability.savingThrow !== ability.modifier;
 
       return {
@@ -193,7 +187,6 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
     const newAbilities = [...abilities];
     const skill = newAbilities[abilityIndex].skills[skillIndex];
     
-    // Si on retire la maîtrise, on retire aussi l'expertise
     if (skill.isProficient && skill.hasExpertise) {
       skill.hasExpertise = false;
     }
@@ -206,7 +199,6 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
     const newAbilities = [...abilities];
     const skill = newAbilities[abilityIndex].skills[skillIndex];
     
-    // Vérifier si on peut ajouter une expertise
     if (!skill.hasExpertise && currentExpertiseCount >= expertiseLimit) {
       toast.error(`Limite d'expertise atteinte (${expertiseLimit})`);
       return;
@@ -218,11 +210,9 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
 
   const handleSave = async () => {
     try {
-      // Recalculer Dex mod pour l'initiative
       const dexScore = abilities.find(a => a.name === 'Dextérité')?.score ?? 10;
       const dexMod = getModifier(dexScore);
 
-      // S'assurer que jack_of_all_trades est cohérent (Barde niv >= 2)
       const updatedStatsLocal = {
         ...stats,
         jack_of_all_trades: hasJackOfAllTrades(player.class, player.level)
@@ -230,13 +220,9 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
           : false
       };
 
-      // MERGE: on préserve tous les champs existants dans player.stats (CA, VIT, inspirations, etc.)
-      // et on met à jour seulement ce qui relève des règles D&D ici:
-      // - proficiency_bonus selon le niveau
-      // - initiative = mod DEX (si tu souhaites un offset, on pourra ajouter initiative_misc plus tard)
       const mergedStats = {
-        ...player.stats,                       // préserve armor_class, speed, inspirations, etc.
-        ...updatedStatsLocal,                  // garde jack_of_all_trades (état local)
+        ...player.stats,
+        ...updatedStatsLocal,
         proficiency_bonus: effectiveProficiency,
         initiative: dexMod
       };
@@ -284,6 +270,7 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
             <button
               onClick={() => editing ? handleSave() : setEditing(true)}
               className="p-2 text-gray-400 hover:bg-gray-700/50 rounded-lg transition-colors flex items-center justify-center"
+              title={editing ? 'Sauvegarder' : 'Modifier'}
             >
               {editing ? <Save size={20} /> : <Settings size={20} />}
             </button>
@@ -463,6 +450,19 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
                 </span>
               </div>
             </div> 
+          )}
+
+          {/* ✅ AJOUT : Bouton Sauvegarder en bas de section (visible seulement en mode édition) */}
+          {editing && (
+            <div className="mt-6 pt-4 border-t border-gray-700/50">
+              <button
+                onClick={handleSave}
+                className="w-full btn-primary px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-medium text-base"
+              >
+                <Save size={20} />
+                Sauvegarder les modifications
+              </button>
+            </div>
           )}
         </div>
       </div>
