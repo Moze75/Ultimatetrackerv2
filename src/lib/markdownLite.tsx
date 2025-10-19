@@ -39,12 +39,63 @@ export function parseMarkdownLite(md: string, ctx: MarkdownCtx): React.ReactNode
 const pushPara = (buff: string[]) => {
   const content = buff.join(' ').trim();
   if (!content) return;
+  
+  // ✅ NOUVEAU : Détecter les patterns *Mot.* et créer des blocs séparés
+  const segments: React.ReactNode[] = [];
+  let remaining = content;
+  let segmentKey = 0;
+  
+  // Regex pour détecter *Mot.* ou _Mot._ suivis d'un espace
+  const italicWithDotPattern = /(\*[^*]+\*\.|_[^_]+_\.)\s+/g;
+  let lastIndex = 0;
+  let match;
+  
+  while ((match = italicWithDotPattern.exec(remaining)) !== null) {
+    // Texte avant le match
+    if (match.index > lastIndex) {
+      const beforeText = remaining.slice(lastIndex, match.index);
+      segments.push(
+        <span key={`seg-${segmentKey++}`}>
+          {formatInline(beforeText)}
+        </span>
+      );
+    }
+    
+    // Le terme en italique avec point
+    const italicTerm = match[1];
+    segments.push(
+      <span key={`seg-${segmentKey++}`} className="block">
+        {formatInline(italicTerm)}
+      </span>
+    );
+    
+    lastIndex = match.index + match[0].length;
+  }
+  
+  // Texte restant après le dernier match
+  if (lastIndex < remaining.length) {
+    segments.push(
+      <span key={`seg-${segmentKey++}`}>
+        {formatInline(remaining.slice(lastIndex))}
+      </span>
+    );
+  }
+  
+  // Si aucun pattern détecté, rendu normal
+  if (segments.length === 0) {
     out.push(
       <p key={`p-${key++}`} className="text-sm text-gray-300">
         {formatInline(content)}
       </p>
     );
-  };
+  } else {
+    out.push(
+      <p key={`p-${key++}`} className="text-sm text-gray-300">
+        {segments}
+      </p>
+    );
+  }
+};
 
   while (i < lines.length) {
     const line = lines[i];
