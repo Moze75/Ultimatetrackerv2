@@ -1186,7 +1186,7 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
               return (
                 <div
                   key={levelName}
-                  className="space-y-2"
+                  className="space-y-0"
                   data-spell-level={level}
                   id={`spell-level-${level}`}
                 >
