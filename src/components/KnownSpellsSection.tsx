@@ -161,19 +161,29 @@ const magicalAnimationCSS = `
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  .spell-card-details {
-    overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
+.spell-card-details {
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
-  .spell-card-details.collapsed {
-    max-height: 0 !important;
-    opacity: 0;
-  }
+.spell-card-details.collapsed {
+  max-height: 0 !important;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
 
-  .spell-card-details.expanded {
-    opacity: 1;
-  }
+.spell-card-details.expanded {
+  opacity: 1;
+  /* ✅ NOUVEAU : Ajouter un léger padding pour éviter que la bordure soit coupée */
+  padding-top: 1px;
+  padding-bottom: 1px;
+}
+
+/* ✅ NOUVEAU : Style pour le contenu intérieur */
+.spell-card-details-inner {
+  padding: 0.75rem; /* 3 = 0.75rem */
+}
 
   /* Animation du chevron */
   .chevron-icon {
