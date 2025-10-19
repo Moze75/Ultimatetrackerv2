@@ -269,30 +269,31 @@ export function SpellbookModal({
           continue;
         }
         
-        // Détecter "Aux niveaux supérieurs"
-          if (
-            trimmedLine.toLowerCase().includes('aux niveaux supérieurs') ||
-            trimmedLine.toLowerCase().includes('niveaux supérieurs') ||
-            trimmedLine.toLowerCase().includes('emplacement de niveau supérieur') ||
-            trimmedLine.toLowerCase().includes('emplacements de niveaux supérieurs') ||
-            trimmedLine.toLowerCase().includes('améliorations de sorts mineurs')
-          ) {
-            inHigherLevelsSection = true;
-            higherLevelsLines.push(trimmedLine);
-            continue;
-          }
-        
-        // Si on est dans la section "niveaux supérieurs"
-        if (inHigherLevelsSection) {
-          // Vérifier si on sort de la section (nouveau champ ou nouveau sort)
-          if (trimmedLine.startsWith('**') || trimmedLine.startsWith('#')) {
-            inHigherLevelsSection = false;
-            // Traiter cette ligne normalement (ne pas faire continue)
-          } else {
-            higherLevelsLines.push(trimmedLine);
-            continue;
-          }
-        } 
+// ✅ MODIFIÉ : Ne plus séparer les sections "Amélioration" / "Aux niveaux supérieurs"
+// Tout reste dans la description principale pour être géré par MarkdownLite
+/*
+// Détecter "Aux niveaux supérieurs"
+if (
+  trimmedLine.toLowerCase().includes('aux niveaux supérieurs') ||
+  trimmedLine.toLowerCase().includes('niveaux supérieurs') ||
+  trimmedLine.toLowerCase().includes('emplacement de niveau supérieur') ||
+  trimmedLine.toLowerCase().includes('emplacements de niveaux supérieurs') ||
+  trimmedLine.toLowerCase().includes('améliorations de sorts mineurs')
+) {
+  inHigherLevelsSection = true;
+  higherLevelsLines.push(trimmedLine);
+  continue;
+}
+
+// Si on est dans la section "niveaux supérieurs"
+if (inHigherLevelsSection) {
+  if (trimmedLine.startsWith('**') || trimmedLine.startsWith('#')) {
+    inHigherLevelsSection = false;
+  } else {
+    higherLevelsLines.push(trimmedLine);
+    continue;
+  }
+}
               
         // Si ce n'est pas un champ spécial et qu'on a déjà le nom, c'est la description
         if (!trimmedLine.startsWith('**') && !trimmedLine.startsWith('#') && spell.name && !inHigherLevelsSection) {
@@ -315,8 +316,8 @@ export function SpellbookModal({
                  trimmed.length > 50; // Garder les longues lignes même avec parenthèses
         });
         
-        spell.description = descriptionParts.join('\n').trim();
-        spell.higher_levels = higherLevelsLines.join('\n').trim() || undefined;
+spell.description = descriptionParts.join('\n').trim();
+spell.higher_levels = undefined; // ✅ Ne plus utiliser higher_levels
         
         // Convertir les classes en tableau de chaînes pour la base de données
         spell.classes = spell.classes || [];
