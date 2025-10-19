@@ -619,21 +619,31 @@ function SpellCard({
               </div>
             </div>
 
-            <div className="bg-gray-800/30 p-3 rounded-lg border border-gray-700/20">
-              <h5 className="font-semibold text-gray-200 mb-3 flex items-center gap-2">
-                <BookOpen size={16} className="text-blue-400" />
-                Description
-              </h5>
-              <div className="text-gray-300 space-y-2">
-                <MarkdownLite 
-                  text={
-                    (spell.spell_description || '') + 
-                    (spell.spell_higher_levels ? `\n\n${spell.spell_higher_levels}` : '')
-                  } 
-                  ctx={{}}
-                />
-              </div>
-            </div>
+<div className="bg-gray-800/30 p-3 rounded-lg border border-gray-700/20">
+  <h5 className="font-semibold text-gray-200 mb-3 flex items-center gap-2">
+    <BookOpen size={16} className="text-blue-400" />
+    Description
+  </h5>
+  <div className="text-gray-300 space-y-2">
+    <MarkdownLite 
+      text={spell.spell_description || ''} 
+      ctx={{}}
+    />
+    
+    {spell.spell_higher_levels && (
+      <div className="mt-4">
+        <MarkdownLite 
+          text={
+            spell.spell_higher_levels.trim().startsWith('**') 
+              ? spell.spell_higher_levels 
+              : `**Aux niveaux supérieurs :** ${spell.spell_higher_levels}`
+          } 
+          ctx={{}}
+        />
+      </div>
+    )}
+  </div>
+</div>
           </div>
         </div>
       )}
