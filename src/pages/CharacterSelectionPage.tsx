@@ -239,29 +239,47 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
     }
   };
    
-  const handleSignOut = async () => {
+const handleSignOut = async () => {
+  try {
+    console.log('[CharacterSelection] 🚪 Déconnexion en cours...');
+    
+    const { error } = await authService.signOut();
+    if (error) throw error;
+
+    toast.success('Déconnexion réussie');
+
+    // ✅ MODIFIÉ : Nettoyage complet et rechargement forcé
+    console.log('[CharacterSelection] 🗑️ Nettoyage des données...');
+    
+    // Nettoyer le contexte
+    appContextService.clearContext();
+    appContextService.clearWizardSnapshot();
+    
+    // Nettoyer le localStorage
     try {
-      const { error } = await authService.signOut();
-      if (error) throw error;
+      localStorage.removeItem(LAST_SELECTED_CHARACTER_SNAPSHOT);
+      localStorage.removeItem('selectedCharacter');
+    } catch {}
 
-      toast.success('Déconnexion réussie');
+    // Nettoyer le sessionStorage
+    try {
+      sessionStorage.clear();
+    } catch {}
 
-      if (
-        navigator.userAgent.includes('Chrome') &&
-        /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-      ) {
-        localStorage.clear();
-        sessionStorage.clear();
-
-        setTimeout(() => {
-          window.location.reload();
-        }, 100);
-      }
-    } catch (error: any) {
-      console.error('Erreur de déconnexion:', error);
-      toast.error('Erreur lors de la déconnexion');
-    }
-  };
+    // ✅ NOUVEAU : Forcer le rechargement IMMÉDIAT pour éviter le cache
+    console.log('[CharacterSelection] 🔄 Rechargement forcé...');
+    window.location.href = window.location.origin;
+    
+  } catch (error: any) {
+    console.error('❌ Erreur de déconnexion:', error);
+    toast.error('Erreur lors de la déconnexion');
+    
+    // ✅ Même en cas d'erreur, recharger
+    setTimeout(() => {
+      window.location.href = window.location.origin;
+    }, 1000);
+  }
+};
 
   const handleDeleteCharacter = async (character: Player) => {
     if (deleteConfirmation !== 'Supprime') {
