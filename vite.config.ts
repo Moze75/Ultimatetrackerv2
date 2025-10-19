@@ -34,28 +34,35 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true
       },
-      manifest: {
-        name: 'Ultimate Tracker',
-        short_name: 'UT',
-        description: 'Gestionnaire de personnages D&D 2024',
-        theme_color: '#1f2937',
-        background_color: '#111827',
-        display: 'standalone',
-        start_url: '/',
-        scope: '/',
-        icons: [
-          {
-            src: '/icons/wmremove-transformed.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: '/icons/wmremove-transformed.png',
-            sizes: '512x512',
-            type: 'image/png'
-          }
-        ]
-      }
+    manifest: {
+      name: 'D&D Ultimate Tracker',
+      short_name: 'Ultimate Tracker',
+      description: 'Gestionnaire de personnages D&D 2024',
+      theme_color: '#1f2937',
+      background_color: '#111827',
+      display: 'standalone',
+      start_url: '/',
+      scope: '/',
+      icons: [
+        {
+          src: '/icon-192.png',
+          sizes: '192x192',
+          type: 'image/png',
+          purpose: 'any maskable'
+        },
+        {
+          src: '/icon-512.png',
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'any maskable'
+        },
+        {
+          src: '/apple-touch-icon.png',
+          sizes: '180x180',
+          type: 'image/png'
+        }
+      ]
+    }
     })
   ],
   resolve: {
