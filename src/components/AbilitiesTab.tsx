@@ -607,28 +607,70 @@ useEffect(() => {
         }
         break;
 
-      case 'Magicien':
-        if (player.class_resources.arcane_recovery !== undefined) {
-          items.push(
-            <div key="arcane_recovery" className="resource-block bg-gradient-to-br from-gray-800/50 to-gray-900/30 border border-gray-700/30 rounded-lg p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <BookOpen size={20} className="text-blue-500" />
-                  <span className="text-sm font-medium text-gray-300">Restauration magique</span>
-                </div>
-                <button
-                  onClick={() => updateClassResource('used_arcane_recovery', !player.class_resources?.used_arcane_recovery)}
-                  className={`h-8 px-3 flex items-center justify-center rounded-md transition-colors ${
-                    player.class_resources?.used_arcane_recovery ? 'bg-gray-800/50 text-gray-500' : 'text-blue-500 hover:bg-blue-900/30'
-                  }`}
-                >
-                  {player.class_resources?.used_arcane_recovery ? 'Utilisé' : 'Disponible'}
-                </button>
-              </div>
+case 'Magicien':
+  if (player.class_resources.arcane_recovery !== undefined) {
+    // ✅ Calculer le total et les niveaux restants
+    const level = Number(player.level || 1);
+    const recoveryTotal = Math.max(1, Math.ceil(level / 2));
+    const recoveryUsed = (player.class_resources as any).arcane_recovery_slots_used || 0;
+    const recoveryRemaining = Math.max(0, recoveryTotal - recoveryUsed);
+
+    items.push(
+      <div key="arcane_recovery" className="resource-block bg-gradient-to-br from-gray-800/50 to-gray-900/30 border border-gray-700/30 rounded-lg p-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <BookOpen size={20} className="text-blue-500" />
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-gray-300">Restauration magique</span>
+              {/* ✅ Afficher le compteur */}
+              <span className="text-xs text-gray-400">
+                {recoveryRemaining}/{recoveryTotal} niveau{recoveryTotal > 1 ? 'x' : ''} disponible{recoveryTotal > 1 ? 's' : ''}
+              </span>
             </div>
-          );
-        }
-        break;
+          </div>
+          <button
+            onClick={async () => {
+              const nextValue = !player.class_resources?.used_arcane_recovery;
+              
+              // ✅ Si on réactive, réinitialiser le compteur
+              if (!nextValue) {
+                // Réinitialiser arcane_recovery_slots_used à 0
+                const resetResources = {
+                  ...player.class_resources,
+                  used_arcane_recovery: nextValue,
+                  arcane_recovery_slots_used: 0
+                };
+                
+                try {
+                  const { error } = await supabase
+                    .from('players')
+                    .update({ class_resources: resetResources })
+                    .eq('id', player.id);
+                  
+                  if (error) throw error;
+                  
+                  onUpdate({ ...player, class_resources: resetResources });
+                  toast.success('Restauration magique disponible');
+                } catch (error) {
+                  console.error('Erreur:', error);
+                  toast.error('Erreur lors de la mise à jour');
+                }
+              } else {
+                // Juste marquer comme utilisé
+                updateClassResource('used_arcane_recovery', nextValue);
+              }
+            }}
+            className={`h-8 px-3 flex items-center justify-center rounded-md transition-colors ${
+              player.class_resources?.used_arcane_recovery ? 'bg-gray-800/50 text-gray-500' : 'text-blue-500 hover:bg-blue-900/30'
+            }`}
+          >
+            {player.class_resources?.used_arcane_recovery ? 'Utilisé' : 'Disponible'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+  break;
 
       case 'Moine': {
         const total = (classResources as any).ki_points;
