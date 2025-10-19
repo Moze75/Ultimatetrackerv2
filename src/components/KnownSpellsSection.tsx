@@ -550,8 +550,6 @@ function SpellCard({
     setShowDeleteConfirm(false);
   };
 
-  return (
-    <div
 return (
   <div
     className={`spell-card bg-gray-800/50 border border-gray-700/50 rounded-lg overflow-hidden relative ${
