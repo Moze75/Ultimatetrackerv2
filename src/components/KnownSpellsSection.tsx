@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { MarkdownLite } from '../lib/markdownLite';
 import {
   Plus,
   Trash2,
