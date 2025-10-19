@@ -1157,8 +1157,8 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
                           : `${pactSpells.length * 200 + 100}px`,
                         marginTop: collapsedLevels.has(levelName) ? '0' : '0.5rem',
                       }}
-                    >
-                      <div className="space-y-2 ml-5">
+                    > 
+                      <div className="space-y-2 ml-2">
                         {pactSpells.map((spell) => (
                           <SpellCard
                             key={spell.id}
