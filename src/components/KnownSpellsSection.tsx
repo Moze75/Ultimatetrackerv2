@@ -1192,8 +1192,8 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
                 >
 <button
   onClick={() => toggleLevelCollapse(levelName)}
-  className="w-full flex items-center justify-between text-left hover:bg-gray-800/30 rounded-lg p-2 mb-2 transition-all duration-200 group"  {/* ✅ AJOUT : mb-2 */}
-> 
+  className="w-full flex items-center justify-between text-left hover:bg-gray-800/30 rounded-lg p-2 mb-2 transition-all duration-200 group"
+>
                     <div className="flex items-center gap-3 flex-1 pr-2">
                       <h4 className="text-sm font-semibold text-white group-hover:text-white">
                         {levelName} ({spells.length})
