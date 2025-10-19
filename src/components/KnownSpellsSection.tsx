@@ -161,29 +161,19 @@ const magicalAnimationCSS = `
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-.spell-card-details {
-  overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
+  .spell-card-details {
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
 
-.spell-card-details.collapsed {
-  max-height: 0 !important;
-  opacity: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-}
+  .spell-card-details.collapsed {
+    max-height: 0 !important;
+    opacity: 0;
+  }
 
-.spell-card-details.expanded {
-  opacity: 1;
-  /* ✅ NOUVEAU : Ajouter un léger padding pour éviter que la bordure soit coupée */
-  padding-top: 1px;
-  padding-bottom: 1px;
-}
-
-/* ✅ NOUVEAU : Style pour le contenu intérieur */
-.spell-card-details-inner {
-  padding: 0.75rem; /* 3 = 0.75rem */
-}
+  .spell-card-details.expanded {
+    opacity: 1;
+  } 
 
   /* Animation du chevron */
   .chevron-icon {
@@ -652,16 +642,16 @@ function SpellCard({
         </div>
       )}
 
-<div
-  ref={contentRef}
-  className={`spell-card-details border-t border-gray-700/50 bg-gray-900/50 ${
-    isExpanded ? 'expanded' : 'collapsed'
-  }`}
-  style={{
-    maxHeight: isExpanded ? `${contentHeight + 4}px` : '0px', // ✅ +4px pour le padding
-  }}
->
-  <div className="spell-card-details-inner space-y-4">
+      <div
+        ref={contentRef}
+        className={`spell-card-details border-t border-gray-700/50 bg-gray-900/50 ${
+          isExpanded ? 'expanded' : 'collapsed'
+        }`}
+        style={{
+          maxHeight: isExpanded ? `${contentHeight}px` : '0px',
+        }}
+      >
+        <div className="p-3 space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="bg-gray-800/50 p-2 rounded-lg border border-gray-700/30">
               <div className="text-xs font-medium text-gray-400 mb-1">Temps d'incantation</div>
