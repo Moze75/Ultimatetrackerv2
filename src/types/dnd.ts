@@ -159,7 +159,7 @@ export interface Attack {
   ammo_count?: number | null;
 
   // Caractéristique utilisée (Force/Dextérité, null = automatique)
-  ability_override?: 'Force' | 'Dextérité' | null;  // ← AJOUTER CETTE LIGNE
+  override_ability?: 'Force' | 'Dextérité' | 'Constitution' | 'Intelligence' | 'Sagesse' | 'Charisme' | null;
 }
 
 export interface Player {
