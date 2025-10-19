@@ -125,6 +125,7 @@ const getDefaultClassResources = (player: Player): ClassResources => {
     case 'Magicien':
       resources.arcane_recovery = true;
       resources.used_arcane_recovery = false;
+      (resources as any).arcane_recovery_slots_used = 0; // ✅ AJOUT
       break;
 
     case 'Moine':
