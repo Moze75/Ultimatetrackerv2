@@ -532,7 +532,14 @@ function SpellCard({
 }) {
   const isExpanded = expandedSpell === spell.id;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
+  const [contentHeight, setContentHeight] = useState<number>(0);
+  const contentRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+    if (contentRef.current) {
+      const height = contentRef.current.scrollHeight;
+      setContentHeight(height);
+    }
+  }, [isExpanded]);
   const handleRemoveSpell = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowDeleteConfirm(true);
