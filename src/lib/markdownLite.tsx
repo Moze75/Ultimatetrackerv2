@@ -294,24 +294,50 @@ function renderTable(block: string[], key: number): React.ReactNode | null {
 
 function formatInline(text: string): React.ReactNode[] {
   let parts: Array<string | React.ReactNode> = [text];
-
+  
   // ✅ Remplacer tous les patterns avec point
   let textWithBreaks = text
     .replace(/\*([^*]+)\*\.\s*/g, '*$1.*\n')      // *italique.*
     .replace(/_([^_]+)_\.\s*/g, '_$1._\n')        // _italique._
     .replace(/\*\*([^*]+)\*\*\.\s*/g, '**$1.**\n'); // **gras.**
   
-  // **gras**
+  parts = [textWithBreaks];
+  
+  // **gras.** (avec saut de ligne)
+  parts = splitAndMap(parts, /\*\*([^*]+)\*\*\.\n/g, (m, i) => 
+    <React.Fragment key={`b-br-${i}`}>
+      <strong className="text-white font-semibold">{m[1]}.</strong>
+      <br />
+    </React.Fragment>
+  );
+  
+  // **gras** (normal)
   parts = splitAndMap(parts, /\*\*([^*]+)\*\*/g, (m, i) => 
     <strong key={`b-${i}`} className="text-white">{m[1]}</strong>
   );
   
-  // *italique*
+  // *italique.* (avec saut de ligne)
+  parts = splitAndMap(parts, /\*([^*]+)\*\.\n/g, (m, i) => 
+    <React.Fragment key={`i-br-${i}`}>
+      <em className="italic font-semibold text-gray-200">{m[1]}.</em>
+      <br />
+    </React.Fragment>
+  );
+  
+  // *italique* (normal)
   parts = splitAndMap(parts, /(^|[^*])\*([^*]+)\*(?!\*)/g, (m, i) => 
     [m[1], <em key={`i-${i}`} className="italic">{m[2]}</em>]
   );
   
-  // _italique_
+  // _italique._ (avec saut de ligne)
+  parts = splitAndMap(parts, /_([^_]+)_\.\n/g, (m, i) => 
+    <React.Fragment key={`u-br-${i}`}>
+      <em className="italic font-semibold text-gray-200">{m[1]}.</em>
+      <br />
+    </React.Fragment>
+  );
+  
+  // _italique_ (normal)
   parts = splitAndMap(parts, /_([^_]+)_/g, (m, i) => 
     <em key={`u-${i}`} className="italic">{m[1]}</em>
   );
