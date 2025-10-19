@@ -692,7 +692,7 @@ export function buildDefaultsForClass(cls: string, level: number, player?: Playe
     case 'Guerrier':
       return { action_surge: level >= 17 ? 2 : 1, used_action_surge: 0 };
     case 'Magicien':
-      return { arcane_recovery: true, used_arcane_recovery: false };
+      return { arcane_recovery: true, used_arcane_recovery: false, arcane_recovery_slots_used: 0, };
 
     case 'Moine': {
       const base: any = {
