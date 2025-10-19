@@ -14,12 +14,38 @@ const URLS = {
   stylesCombat: `${RAW_BASE}/DONS/STYLES_DE_COMBAT.md`,
 };
 
+// ✅ NOUVEAU : CSS pour les animations smooth
+const animationCSS = `
+  .profile-section-content {
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .profile-section-content.collapsed {
+    max-height: 0 !important;
+    opacity: 0;
+    margin-top: 0 !important;
+  }
+
+  .profile-section-content.expanded {
+    opacity: 1;
+  }
+
+  .profile-chevron {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .profile-chevron.rotated {
+    transform: rotate(-90deg);
+  }
+`;
+
 // Normalisation pour clé de lookup
 function normalizeKey(input: string): string {
   let s = (input || '').normalize('NFC').trim();
-  s = s.replace(/[\u2019\u2018\u2032]/g, "'"); // apostrophes typographiques -> '
-  s = s.replace(/[\u2010-\u2014\u2212]/g, '-'); // tirets variés -> -
-  s = s.replace(/\u00A0/g, ' ').replace(/\s+/g, ' '); // espaces
+  s = s.replace(/[\u2019\u2018\u2032]/g, "'");
+  s = s.replace(/[\u2010-\u2014\u2212]/g, '-');
+  s = s.replace(/\u00A0/g, ' ').replace(/\s+/g, ' ');
   s = s.toLowerCase();
   return s;
 }
@@ -102,17 +128,14 @@ function useMarkdownIndex(url: string) {
 
 /* ---------- Inline rendering (pour titres/labels courts) ---------- */
 
-// Nettoyage simple: retirer les crochets autour d'un segment [texte] -> texte
 function stripBrackets(s: string): string {
   return (s || '').replace(/\[([^\]]+)\]/g, '$1');
 }
 
-// Rendu gras+italique minimal pour titres
 function renderInline(text: string): React.ReactNode {
   if (!text) return null;
   const cleaned = stripBrackets(text);
 
-  // 1) Découpe par **...** (gras)
   const boldRe = /\*\*(.+?)\*\*/g;
   const parts: Array<{ type: 'text' | 'bold'; value: string }> = [];
   let last = 0;
@@ -125,7 +148,6 @@ function renderInline(text: string): React.ReactNode {
   }
   if (last < cleaned.length) parts.push({ type: 'text', value: cleaned.slice(last) });
 
-  // 2) Italique _..._ dans chaque segment
   const toItalicNodes = (str: string, keyPrefix: string) => {
     const nodes: React.ReactNode[] = [];
     const italicRe = /_(.+?)_/g;
@@ -173,12 +195,23 @@ type SectionContainerProps = {
 
 function SectionContainer({ icon, title, children, subtitle, defaultOpen = true }: SectionContainerProps) {
   const [open, setOpen] = useState(defaultOpen);
+  const [contentHeight, setContentHeight] = useState<number>(0);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // ✅ NOUVEAU : Mesurer la hauteur du contenu
+  useEffect(() => {
+    if (contentRef.current) {
+      const height = contentRef.current.scrollHeight;
+      setContentHeight(height);
+    }
+  }, [open, children]);
+
   return (
     <div className="stat-card">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="stat-header w-full flex items-center justify-between gap-3 cursor-pointer"
+        className="stat-header w-full flex items-center justify-between gap-3 cursor-pointer hover:bg-gray-800/30 rounded-lg transition-colors duration-200"
         aria-expanded={open}
       >
         <div className="flex items-center gap-2">
@@ -188,12 +221,22 @@ function SectionContainer({ icon, title, children, subtitle, defaultOpen = true 
             {!!subtitle && <span className="ml-2 font-normal text-gray-300">- {subtitle}</span>}
           </h3>
         </div>
-        <ChevronDown
-          size={18}
-          className={`transition-transform duration-200 ${open ? 'rotate-0' : '-rotate-90'} text-gray-300`}
-        />
+        {/* ✅ MODIFIÉ : Chevron avec animation */}
+        <div className={`profile-chevron ${!open ? 'rotated' : ''}`}>
+          <ChevronDown size={18} className="text-gray-300" />
+        </div>
       </button>
-      {open && <div className="p-4">{children}</div>}
+      
+      {/* ✅ MODIFIÉ : Contenu avec animation smooth */}
+      <div
+        ref={contentRef}
+        className={`profile-section-content ${open ? 'expanded' : 'collapsed'}`}
+        style={{
+          maxHeight: open ? `${contentHeight}px` : '0px',
+        }}
+      >
+        <div className="p-4">{children}</div>
+      </div>
     </div>
   );
 }
@@ -232,12 +275,23 @@ export interface PlayerProfileProfileTabProps {
 }
 
 export default function PlayerProfileProfileTab({ player, onUpdate }: PlayerProfileProfileTabProps) {
+  // ✅ NOUVEAU : Injecter les styles CSS
+  useEffect(() => {
+    const id = 'profile-animations';
+    if (!document.getElementById(id)) {
+      const style = document.createElement('style');
+      style.id = id;
+      style.textContent = animationCSS;
+      document.head.appendChild(style);
+    }
+  }, []);
+
   // Sélections
   const race = player.race || '';
   const historique = (player.background as string) || '';
   const characterHistoryProp = (player as any)?.character_history || '';
 
-  // ✅ Extraction sécurisée des informations personnelles
+  // Extraction sécurisée des informations personnelles
   const age = (player as any)?.age || '';
   const gender = (player as any)?.gender || '';
   const alignment = (player as any)?.alignment || '';
@@ -247,7 +301,7 @@ export default function PlayerProfileProfileTab({ player, onUpdate }: PlayerProf
     )
   : [];
 
-  // Dons (adapter si nécessaire selon ton type Player)
+  // Dons
   const feats: any = (player.stats as any)?.feats || {};
   const originFeats: string[] = Array.isArray(feats.origins)
     ? feats.origins
@@ -316,13 +370,11 @@ export default function PlayerProfileProfileTab({ player, onUpdate }: PlayerProf
   const [saveOk, setSaveOk] = useState(false);
   const [saveErr, setSaveErr] = useState<string | null>(null);
 
-  // Souviens-toi de la dernière valeur réellement enregistrée
   const lastSavedHistoryRef = useRef<string>(characterHistoryProp || '');
   const debounceRef = useRef<number | null>(null);
   const playerIdRef = useRef<string>(player.id);
 
   useEffect(() => {
-    // Ne réinitialiser que si le player.id a changé (changement de personnage)
     if (playerIdRef.current !== player.id) {
       playerIdRef.current = player.id;
       setHistoryDraft(characterHistoryProp || '');
@@ -332,7 +384,6 @@ export default function PlayerProfileProfileTab({ player, onUpdate }: PlayerProf
     }
   }, [player.id, characterHistoryProp]);
 
-  // Sauvegarde "comme dans la modale": update direct sans .single(), puis relecture pour confirmer
   async function updateHistoryOnServer(nextValue: string): Promise<boolean> {
     const id = (player as any)?.id;
     if (!id) {
@@ -341,7 +392,6 @@ export default function PlayerProfileProfileTab({ player, onUpdate }: PlayerProf
       throw new Error('Identifiant du joueur manquant');
     }
 
-    // Log session et user pour diagnostiquer RLS si besoin
     const { data: userData } = await supabase.auth.getUser();
     console.log('[ProfileTab] Sauvegarde character_history', {
       userId: userData?.user?.id,
@@ -350,7 +400,6 @@ export default function PlayerProfileProfileTab({ player, onUpdate }: PlayerProf
       valuePreview: nextValue ? nextValue.substring(0, 50) + '...' : '(vide)'
     });
 
-    // 1) Update direct
     const { error: upErr } = await supabase
       .from('players')
       .update({ character_history: nextValue })
@@ -361,10 +410,8 @@ export default function PlayerProfileProfileTab({ player, onUpdate }: PlayerProf
       throw new Error(`Erreur de sauvegarde: ${upErr.message}`);
     }
 
-    // 2) Attendre un court instant pour la propagation
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    // 3) Relecture pour confirmer la persistance
     const { data: row, error: readErr } = await supabase
       .from('players')
       .select('id, user_id, character_history')
@@ -398,7 +445,6 @@ export default function PlayerProfileProfileTab({ player, onUpdate }: PlayerProf
 
     console.log('[ProfileTab] ✅ Sauvegarde confirmée avec succès');
 
-    // Notifier le parent du changement si le callback est fourni
     if (onUpdate) {
       const updatedPlayer = { ...player, character_history: nextValue };
       onUpdate(updatedPlayer);
@@ -434,14 +480,12 @@ export default function PlayerProfileProfileTab({ player, onUpdate }: PlayerProf
       const msg = e?.message || String(e);
       console.error('[ProfileTab] ❌ Échec de la sauvegarde:', msg);
       setSaveErr(msg);
-      // Conserver l'erreur visible plus longtemps
       setTimeout(() => setSaveErr(null), 5000);
     } finally {
       setSavingHistory(false);
     }
   };
 
-  // Autosave debounced 1.5s après la dernière frappe
   useEffect(() => {
     const trimmedDraft = (historyDraft || '').trim();
     const trimmedSaved = (lastSavedHistoryRef.current || '').trim();
@@ -465,7 +509,7 @@ export default function PlayerProfileProfileTab({ player, onUpdate }: PlayerProf
   return (
     <div className="space-y-6">
       
-      {/* ✅ NOUVELLE SECTION: Informations personnelles */}
+      {/* Informations personnelles */}
       {(age || gender || alignment || languages.length > 0) && (
         <SectionContainer
           icon={<UserCircle size={18} className="text-cyan-400" />}
@@ -473,7 +517,6 @@ export default function PlayerProfileProfileTab({ player, onUpdate }: PlayerProf
           defaultOpen={false}
         >
           <div className="space-y-4">
-            {/* Grille pour âge, genre, alignement */}
             {(age || gender || alignment) && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {age && (
@@ -508,7 +551,6 @@ export default function PlayerProfileProfileTab({ player, onUpdate }: PlayerProf
               </div>
             )}
 
-            {/* Langues */}
             {languages.length > 0 && (
               <div className="bg-gray-800/30 rounded-lg p-3 border border-gray-700/30">
                 <div className="flex items-center gap-2 mb-3">
@@ -617,7 +659,6 @@ export default function PlayerProfileProfileTab({ player, onUpdate }: PlayerProf
       {/* Maîtrises */}
       <SectionContainer icon={<Shield size={18} className="text-indigo-400" />} title="Maîtrises" defaultOpen={false}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Maîtrises d'armes */}
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Sword className="w-4 h-4 text-red-400" />
@@ -639,7 +680,6 @@ export default function PlayerProfileProfileTab({ player, onUpdate }: PlayerProf
             )}
           </div>
 
-          {/* Formation aux armures */}
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Shield className="w-4 h-4 text-blue-400" />
@@ -661,7 +701,6 @@ export default function PlayerProfileProfileTab({ player, onUpdate }: PlayerProf
             )}
           </div>
 
-          {/* Maîtrises d'outils */}
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Wrench className="w-4 h-4 text-yellow-400" />
