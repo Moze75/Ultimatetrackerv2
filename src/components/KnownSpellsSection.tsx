@@ -1001,12 +1001,12 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
 
   return (
     <div className="stats-card">
-      <div className="stat-header flex items-center justify-between gap-5">
+      <div className="stat-header flex items-center justify-between gap-3">
         <div className="flex-1 min-w-0">
           <h3 className="text-base font-semibold text-gray-100 truncate">
             Sorts connus ({knownSpells.length})
           </h3>
-          <div className="mt-1 space-y-1">
+          <div className="mt-1 space-y-10">
             {spellSaveDC !== null && (
               <div className="text-sm text-purple-300">DD des sorts: {spellSaveDC}</div>
             )}
