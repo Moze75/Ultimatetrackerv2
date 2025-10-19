@@ -268,42 +268,41 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
   };
 
   // ✅ FONCTION MODIFIÉE (ajoute l'appel à clearServiceWorkerCache)
-  const handleSignOut = async () => {
+const handleSignOut = async () => {
+  try {
+    console.log('[CharacterSelection] 🚪 Déconnexion en cours...');
+    
+    // ✅ 1. Nettoyer le cache SW d'abord
+    await clearServiceWorkerCache();
+    
+    // 2. Déconnexion Supabase
+    const { error } = await authService.signOut();
+    if (error) throw error;
+
+    toast.success('Déconnexion réussie');
+
+    // 3. Nettoyage contexte
+    appContextService.clearContext();
+    appContextService.clearWizardSnapshot();
+    
     try {
-      console.log('[CharacterSelection] 🚪 Déconnexion en cours...');
-      
-      await clearServiceWorkerCache(); // <-- LIGNE AJOUTÉE
-      
-      const { error } = await authService.signOut();
-      if (error) throw error;
+      localStorage.removeItem(LAST_SELECTED_CHARACTER_SNAPSHOT);
+      sessionStorage.clear();
+    } catch {}
 
-      toast.success('Déconnexion réussie');
-
-      console.log('[CharacterSelection] 🗑️ Nettoyage des données...');
-      appContextService.clearContext();
-      appContextService.clearWizardSnapshot();
-      
-      try {
-        localStorage.removeItem(LAST_SELECTED_CHARACTER_SNAPSHOT);
-        localStorage.removeItem('selectedCharacter');
-      } catch {}
-
-      try {
-        sessionStorage.clear();
-      } catch {}
-
-      console.log('[CharacterSelection] 🔄 Rechargement forcé...');
+    // 4. Rechargement forcé
+    console.log('[CharacterSelection] 🔄 Rechargement...');
+    window.location.href = window.location.origin;
+    
+  } catch (error: any) {
+    console.error('❌ Erreur de déconnexion:', error);
+    toast.error('Erreur lors de la déconnexion');
+    
+    setTimeout(() => {
       window.location.href = window.location.origin;
-      
-    } catch (error: any) {
-      console.error('❌ Erreur de déconnexion:', error);
-      toast.error('Erreur lors de la déconnexion');
-      
-      setTimeout(() => {
-        window.location.href = window.location.origin;
-      }, 1000);
-    }
-  };
+    }, 1000);
+  }
+};
 
   const handleDeleteCharacter = async (character: Player) => {
     if (deleteConfirmation !== 'Supprime') {
