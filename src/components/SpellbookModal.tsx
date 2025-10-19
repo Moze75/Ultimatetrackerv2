@@ -66,7 +66,7 @@ export function SpellbookModal({
   const [loading, setLoading] = useState(true);
   const [showAllClasses, setShowAllClasses] = useState(false);
   const [totalSpellsCount, setTotalSpellsCount] = useState(0);
-
+ 
   // Charger les sorts depuis Supabase Storage
   useEffect(() => {
     const loadSpells = async () => {
@@ -77,10 +77,9 @@ export function SpellbookModal({
         console.log('Tentative de chargement des sorts depuis Supabase Storage...');
         
         // Essayer de charger depuis le bucket public
-const timestamp = Date.now();
-const { data, error } = await supabase.storage
-  .from('sorts')
-  .download(`Sorts 2024.md?v=${timestamp}`);
+        const { data, error } = await supabase.storage
+          .from('sorts')
+          .download('Sorts 2024.md');
 
         if (error) {
           console.error('Erreur Supabase Storage:', error);
