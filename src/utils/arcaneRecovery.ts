@@ -1,91 +1,91 @@
-import type { Player, SpellSlots } from '../types/dnd';
+import { Player } from '../types/dnd';
 
-export interface ArcaneRecoveryInfo {
-  maxRecoverable: number;
-  alreadyUsed: number;
+/**
+ * Calcule le total de niveaux de sorts récupérables via Restauration Arcanique
+ * Règle D&D 2024 : moitié du niveau de magicien (arrondi supérieur), minimum 1
+ */
+export function getArcaneRecoveryTotal(level: number): number {
+  return Math.max(1, Math.ceil(level / 2));
+}
+
+/**
+ * Récupère les informations actuelles sur la Restauration Arcanique
+ */
+export function getArcaneRecoveryInfo(player: Player): {
+  total: number;
+  used: number;
   remaining: number;
+  isAvailable: boolean;
   canRecover: boolean;
-}
-
-export function getArcaneRecoveryInfo(player: Player): ArcaneRecoveryInfo {
+} {
   const level = player.level || 1;
-  const maxRecoverable = Math.floor(level / 2);
-  const alreadyUsed = player.class_resources?.arcane_recovery_slots_used || 0;
-  const remaining = Math.max(0, maxRecoverable - alreadyUsed);
-  const hasUsedAbility = player.class_resources?.used_arcane_recovery || false;
+  const total = getArcaneRecoveryTotal(level);
+  
+  const used = (player.class_resources as any)?.arcane_recovery_slots_used || 0;
+  const remaining = Math.max(0, total - used);
+  
+  // Le bouton "Restauration magique" a-t-il été activé ?
+  const isAvailable = !(player.class_resources?.used_arcane_recovery || false);
+  
+  const canRecover = isAvailable && remaining > 0;
 
-  return {
-    maxRecoverable,
-    alreadyUsed,
-    remaining,
-    canRecover: !hasUsedAbility && remaining > 0,
-  };
+  return { total, used, remaining, isAvailable, canRecover };
 }
 
+/**
+ * Vérifie si un emplacement de sort peut être récupéré
+ */
 export function canRecoverSlot(
   player: Player,
   slotLevel: number,
-  currentUsed: number
+  currentUsedSlots: number
 ): { canRecover: boolean; reason?: string } {
-  if (player.class !== 'Magicien') {
-    return { canRecover: false, reason: 'Seuls les magiciens peuvent utiliser la Récupération Arcanique' };
-  }
-
   const info = getArcaneRecoveryInfo(player);
 
-  if (!info.canRecover) {
-    if (player.class_resources?.used_arcane_recovery) {
-      return { canRecover: false, reason: 'Récupération Arcanique déjà utilisée (repos court requis)' };
-    }
-    return { canRecover: false, reason: 'Limite de récupération atteinte' };
+  if (!info.isAvailable) {
+    return {
+      canRecover: false,
+      reason: 'Cliquez sur "Restauration magique" dans l\'onglet Classes pour activer cette capacité'
+    };
   }
 
-  if (currentUsed <= 0) {
-    return { canRecover: false, reason: 'Aucun emplacement utilisé à ce niveau' };
+  if (info.remaining <= 0) {
+    return { canRecover: false, reason: 'Tous les niveaux de Restauration Arcanique ont été utilisés' };
+  }
+
+  if (currentUsedSlots <= 0) {
+    return { canRecover: false, reason: 'Aucun emplacement utilisé à récupérer' };
   }
 
   if (slotLevel > info.remaining) {
-    return {
-      canRecover: false,
-      reason: `Niveau trop élevé (reste ${info.remaining} niveau${info.remaining > 1 ? 'x' : ''} récupérable${info.remaining > 1 ? 's' : ''})`
-    };
+    return { canRecover: false, reason: `Niveaux restants insuffisants (${info.remaining}/${info.total})` };
   }
 
   return { canRecover: true };
 }
 
-export function calculateNewSlots(
-  currentSlots: SpellSlots,
-  slotLevel: number
-): SpellSlots {
-  const usedKey = `used${slotLevel}` as keyof SpellSlots;
-  const currentUsed = (currentSlots[usedKey] as number) || 0;
-
-  return {
-    ...currentSlots,
-    [usedKey]: Math.max(0, currentUsed - 1),
-  };
-}
-
-export function updateArcaneRecoveryUsage(
-  player: Player,
-  slotLevel: number
-): {
-  class_resources: typeof player.class_resources;
-  spell_slots: typeof player.spell_slots;
+/**
+ * Met à jour les compteurs après avoir récupéré un emplacement
+ */
+export function updateArcaneRecoveryUsage(player: Player, slotLevel: number): {
+  spell_slots: any;
+  class_resources: any;
 } {
-  const currentUsed = player.class_resources?.arcane_recovery_slots_used || 0;
-  const newUsed = currentUsed + slotLevel;
   const info = getArcaneRecoveryInfo(player);
+  const newUsed = info.used + slotLevel;
 
-  const shouldMarkAsUsed = (newUsed >= info.maxRecoverable);
+  const usedKey = `used${slotLevel}` as keyof typeof player.spell_slots;
+  const currentUsedSlots = (player.spell_slots?.[usedKey] || 0) as number;
 
-  return {
-    class_resources: {
-      ...player.class_resources,
-      arcane_recovery_slots_used: newUsed,
-      used_arcane_recovery: shouldMarkAsUsed,
-    },
-    spell_slots: calculateNewSlots(player.spell_slots || {}, slotLevel),
+  const newSpellSlots = {
+    ...player.spell_slots,
+    [usedKey]: Math.max(0, currentUsedSlots - 1)
   };
+
+  const newClassResources = {
+    ...player.class_resources,
+    arcane_recovery_slots_used: newUsed
+  };
+
+  return { spell_slots: newSpellSlots, class_resources: newClassResources };
 }
