@@ -12,7 +12,7 @@ import './combat-tab.css';
 interface CombatTabProps {
   player: Player;
   onUpdate: (player: Player) => void;
-} 
+}
 
 interface AttackEditModalProps {
   attack: Attack | null;
@@ -33,11 +33,8 @@ const BowIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     aria-hidden="true"
     {...props}
   >
-    {/* Arc */}
     <path d="M4 20c6-4 6-12 0-16" />
-    {/* Corde */}
     <path d="M4 4l8 8L4 20" />
-    {/* Flèches */}
     <path d="M22 2l-8 8" />
     <path d="M22 2l-4 2" />
     <path d="M22 2l-2 4" />
@@ -65,6 +62,10 @@ const RANGES = [
   '90 m'
 ];
 
+// ✅ AJOUT : Liste des caractéristiques
+const ABILITIES = ['Force', 'Dextérité', 'Constitution', 'Intelligence', 'Sagesse', 'Charisme'] as const;
+type Ability = typeof ABILITIES[number];
+
 const AttackEditModal = ({ attack, onClose, onSave, onDelete }: AttackEditModalProps) => {
   const [formData, setFormData] = useState<{
     name: string;
@@ -76,6 +77,7 @@ const AttackEditModal = ({ attack, onClose, onSave, onDelete }: AttackEditModalP
     manual_damage_bonus: number | null;
     expertise: boolean;
     ammo_type: string;
+    override_ability: Ability | null; // ✅ AJOUT
   }>({
     name: attack?.name || '',
     damage_dice: attack?.damage_dice || '1d8',
@@ -87,7 +89,8 @@ const AttackEditModal = ({ attack, onClose, onSave, onDelete }: AttackEditModalP
     manual_attack_bonus: attack?.manual_attack_bonus ?? null,
     manual_damage_bonus: attack?.manual_damage_bonus ?? null,
     expertise: attack?.expertise || false,
-    ammo_type: (attack as any)?.ammo_type || ''
+    ammo_type: (attack as any)?.ammo_type || '',
+    override_ability: attack?.override_ability || null // ✅ AJOUT
   });
 
   const handleSave = () => {
@@ -104,7 +107,8 @@ const AttackEditModal = ({ attack, onClose, onSave, onDelete }: AttackEditModalP
       manual_attack_bonus: formData.manual_attack_bonus,
       manual_damage_bonus: formData.manual_damage_bonus,
       expertise: formData.expertise,
-      ammo_type: formData.ammo_type.trim() || null
+      ammo_type: formData.ammo_type.trim() || null,
+      override_ability: formData.override_ability // ✅ AJOUT
     });
   };
 
@@ -189,6 +193,29 @@ const AttackEditModal = ({ attack, onClose, onSave, onDelete }: AttackEditModalP
               className="input-dark w-full px-3 py-2 rounded-md border border-gray-600 focus:border-red-500"
               placeholder="Ex: Finesse, Polyvalente"
             />
+          </div>
+
+          {/* ✅ AJOUT : Sélecteur de caractéristique */}
+          <div className="border-t border-gray-700 pt-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Caractéristique pour les calculs
+              <span className="text-xs text-gray-500 ml-2">(optionnel - remplace le calcul auto)</span>
+            </label>
+            <select
+              value={formData.override_ability || ''}
+              onChange={(e) => setFormData({ ...formData, override_ability: e.target.value as Ability || null })}
+              className="input-dark w-full px-3 py-2 rounded-md border border-gray-600 focus:border-red-500"
+            >
+              <option value="">Calcul automatique (selon classe/portée)</option>
+              {ABILITIES.map((ability) => (
+                <option key={ability} value={ability}>
+                  {ability}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Ex: Choisir "Charisme" pour un Occultiste utilisant Coup au but
+            </p>
           </div>
 
           <div>
@@ -298,25 +325,23 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
     fetchAttacks();
   }, [player.id]);
 
-  // Rafraîchit les attaques (appelé après toute modif côté équipement via événement global)
- React.useEffect(() => {
-  const handler = (e: any) => {
-    try {
-      if (e?.detail?.playerId && e.detail.playerId !== player.id) return;
-    } catch {}
-    fetchAttacks();
-  };
-  window.addEventListener('attacks:changed', handler);
-  const visHandler = () => {
-    if (document.visibilityState === 'visible') fetchAttacks();
-  };
-  document.addEventListener('visibilitychange', visHandler);
-  return () => {
-    window.removeEventListener('attacks:changed', handler);
-    document.removeEventListener('visibilitychange', visHandler);
-  };
-}, [player.id]);
-
+  React.useEffect(() => {
+    const handler = (e: any) => {
+      try {
+        if (e?.detail?.playerId && e.detail.playerId !== player.id) return;
+      } catch {}
+      fetchAttacks();
+    };
+    window.addEventListener('attacks:changed', handler);
+    const visHandler = () => {
+      if (document.visibilityState === 'visible') fetchAttacks();
+    };
+    document.addEventListener('visibilitychange', visHandler);
+    return () => {
+      window.removeEventListener('attacks:changed', handler);
+      document.removeEventListener('visibilitychange', visHandler);
+    };
+  }, [player.id]);
 
   const fetchAttacks = async () => {
     try {
@@ -385,13 +410,24 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
     }
   };
 
+  // ✅ MODIFIÉ : Prise en compte de override_ability
   const getAttackBonus = (attack: Attack): number => {
+    // 1. Bonus manuel a la priorité absolue
     if (attack.manual_attack_bonus !== null && attack.manual_attack_bonus !== undefined) {
       return attack.manual_attack_bonus;
     }
 
     const proficiencyBonus = player.stats?.proficiency_bonus || 2;
 
+    // 2. Caractéristique forcée (override_ability)
+    if (attack.override_ability) {
+      const ability = player.abilities?.find((a) => a.name === attack.override_ability);
+      const abilityMod = ability?.modifier || 0;
+      const masteryBonus = attack.expertise ? proficiencyBonus : 0;
+      return abilityMod + masteryBonus;
+    }
+
+    // 3. Calcul automatique selon la classe
     let abilityModifier = 0;
     if (player.abilities) {
       if (player.class === 'Ensorceleur' || player.class === 'Barde' || player.class === 'Paladin') {
@@ -415,11 +451,20 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
     return abilityModifier + masteryBonus;
   };
 
+  // ✅ MODIFIÉ : Prise en compte de override_ability
   const getDamageBonus = (attack: Attack): number => {
+    // 1. Bonus manuel a la priorité absolue
     if (attack.manual_damage_bonus !== null && attack.manual_damage_bonus !== undefined) {
       return attack.manual_damage_bonus;
     }
 
+    // 2. Caractéristique forcée (override_ability)
+    if (attack.override_ability) {
+      const ability = player.abilities?.find((a) => a.name === attack.override_ability);
+      return ability?.modifier || 0;
+    }
+
+    // 3. Calcul automatique selon la classe
     let abilityModifier = 0;
     if (player.abilities) {
       if (player.class === 'Ensorceleur' || player.class === 'Barde' || player.class === 'Paladin') {
@@ -464,7 +509,6 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
     setDiceRollerOpen(true);
   };
 
-  // Mise à jour en base des munitions
   const setAmmoCount = async (attack: Attack, next: number) => {
     const clamped = Math.max(0, Math.floor(next || 0));
     try {
@@ -488,6 +532,9 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
     const ammoType = (attack as any).ammo_type || '';
     const ammoCount = (attack as any).ammo_count ?? 0;
 
+    // ✅ AJOUT : Afficher la caractéristique override si définie
+    const overrideLabel = attack.override_ability ? ` (${attack.override_ability})` : '';
+
     return (
       <div key={attack.id} className="bg-gray-800/50 rounded-lg p-3 border border-gray-700/50">
         <div className="flex items-start justify-between mb-1">
@@ -495,6 +542,7 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
             <h4 className="font-medium text-gray-100 text-base">{attack.name}</h4>
             <p className="text-sm text-gray-400">
               {attack.damage_type} • {attack.range}
+              {overrideLabel && <span className="text-purple-400">{overrideLabel}</span>}
             </p>
           </div>
           <div className="flex items-center gap-1">
@@ -519,7 +567,6 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
         </div>
 
         <div className="flex gap-2 text-sm items-stretch">
-          {/* Colonne Attaque + indication munitions (même gabarit que bouton, mais fond transparent) */}
           <div className="flex-1 flex flex-col">
             <button
               onClick={() => rollAttack(attack)}
@@ -541,7 +588,6 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
             )}
           </div>
 
-          {/* Colonne Dégâts + contrôles munitions */}
           <div className="flex-1 flex flex-col">
             <button
               onClick={() => rollDamage(attack)}
@@ -583,7 +629,8 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
     );
   };
 
-  // Calculs PV
+  // ... (reste du code HP, soins, etc. inchangé)
+
   const totalHP = player.current_hp + player.temporary_hp;
   const isCriticalHealth = totalHP <= Math.floor(player.max_hp * 0.20);
 
@@ -627,7 +674,6 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
     let newCurrentHP = player.current_hp;
     let newTempHP = player.temporary_hp;
 
-    // Les dégâts touchent d'abord les PV temporaires
     if (newTempHP > 0) {
       if (damage >= newTempHP) {
         const remainingDamage = damage - newTempHP;
@@ -698,7 +744,6 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
     }
   };
 
-  // Filtrage des attaques physiques
   const physicalAttacks = attacks.filter((a) => (a.attack_type || 'physical') === 'physical');
 
   return (
@@ -716,7 +761,6 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
         </div>
         <div className="p-4">
           <div className="space-y-4">
-            {/* Barre de vie */}
             <div className="relative">
               <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none select-none">
                 <span className="text-white font-bold text-sm drop-shadow-lg">
@@ -746,9 +790,7 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
               </div>
             </div>
 
-            {/* Contrôles PV */}
             <div className="grid grid-cols-3 gap-4">
-              {/* Dégâts */}
               <div className="flex flex-col items-center space-y-2">
                 <div className="flex items-center">
                   <input
@@ -774,7 +816,6 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
                 </div>
               </div>
 
-              {/* Soins */}
               <div className="flex flex-col items-center space-y-2">
                 <div className="flex items-center">
                   <input
@@ -800,7 +841,6 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
                 </div>
               </div>
 
-              {/* PV Temporaires */}
               <div className="flex flex-col items-center space-y-2">
                 <div className="flex items-center">
                   <input
@@ -861,7 +901,6 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
         </div>
       </div>
 
-      {/* Modal d'édition d'attaque */}
       {showAttackModal && (
         <AttackEditModal
           attack={editingAttack}
