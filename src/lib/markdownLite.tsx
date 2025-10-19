@@ -62,36 +62,49 @@ export function parseMarkdownLite(md: string, ctx: MarkdownCtx): React.ReactNode
       continue;
     }
 
-    // ✅ MODIFIÉ : Sections spéciales **Label :** ou **Label** suivi de texte
-    const specialSectionWithColon = line.match(/^\s*\*\*([^*]+)\*\*\s*:\s*(.*)$/);
-    const specialSectionWithoutColon = line.match(/^\s*\*\*(Amélioration de sort mineur|Aux niveaux supérieurs|Améliorations de sorts mineurs)\*\*\s+(.+)$/i);
-
-    if (specialSectionWithColon) {
-      const label = specialSectionWithColon[1].trim();
-      const content = specialSectionWithColon[2].trim();
+    // ✅ NOUVEAU : Détection ultra-permissive des sections spéciales
+    // Supporte :
+    // - **Label :** texte
+    // - **Label** texte (sans deux-points)
+    // - **Label** seul sur une ligne
+    const boldLabelMatch = line.match(/^\s*\*\*([^*]+)\*\*(.*)$/);
+    
+    if (boldLabelMatch) {
+      const labelRaw = boldLabelMatch[1].trim();
+      const afterLabel = boldLabelMatch[2].trim();
       
-      out.push(
-        <div key={`special-${key++}`} className="mt-3 mb-2">
-          <strong className="text-white font-semibold">{label} :</strong>
-          {content && <span className="ml-1 text-gray-300">{formatInline(content)}</span>}
-        </div>
-      );
-      i++;
-      continue;
-    }
-
-    if (specialSectionWithoutColon) {
-      const label = specialSectionWithoutColon[1].trim();
-      const content = specialSectionWithoutColon[2].trim();
+      // Liste des labels reconnus comme "sections spéciales"
+      const specialLabels = [
+        'amélioration de sort mineur',
+        'améliorations de sorts mineurs',
+        'aux niveaux supérieurs',
+        'à des niveaux supérieurs',
+        'niveaux supérieurs',
+        'temps d\'incantation',
+        'portée',
+        'composantes',
+        'durée',
+      ];
       
-      out.push(
-        <div key={`special-${key++}`} className="mt-3 mb-2">
-          <strong className="text-white font-semibold">{label}</strong>
-          <span className="ml-1 text-gray-300"> {formatInline(content)}</span>
-        </div>
+      const isSpecialLabel = specialLabels.some(sl => 
+        labelRaw.toLowerCase().includes(sl)
       );
-      i++;
-      continue;
+      
+      if (isSpecialLabel) {
+        // C'est une section spéciale
+        const hasColon = afterLabel.startsWith(':');
+        const content = hasColon ? afterLabel.substring(1).trim() : afterLabel;
+        
+        out.push(
+          <div key={`special-${key++}`} className="mt-3 mb-2">
+            <strong className="text-white font-semibold">{labelRaw}</strong>
+            {hasColon && <span className="text-white font-semibold"> :</span>}
+            {content && <span className="ml-1 text-gray-300">{formatInline(content)}</span>}
+          </div>
+        );
+        i++;
+        continue;
+      }
     }
 
     // #### / ##### -> case à cocher persistante
@@ -225,8 +238,7 @@ export function parseMarkdownLite(md: string, ctx: MarkdownCtx): React.ReactNode
       !lines[i].includes('|') &&
       !/^\s*#{1,6}\s+/.test(lines[i]) &&
       !/^\s*---+\s*$/.test(lines[i]) &&
-      !/^\s*\*\*[^*]+\*\*\s*:/.test(lines[i]) &&
-      !/^\s*\*\*(Amélioration de sort mineur|Aux niveaux supérieurs|Améliorations de sorts mineurs)\*\*\s+/i.test(lines[i])
+      !/^\s*\*\*[^*]+\*\*/.test(lines[i]) // ✅ Éviter de fusionner les lignes avec **texte**
     ) {
       buff.push(lines[i]);
       i++;
@@ -282,11 +294,6 @@ function renderTable(block: string[], key: number): React.ReactNode | null {
 
 function formatInline(text: string): React.ReactNode[] {
   let parts: Array<string | React.ReactNode> = [text];
-  
-  // **Label :** (avec deux-points)
-  parts = splitAndMap(parts, /\*\*([^*:]+)\*\*\s*:/g, (m, i) => 
-    <strong key={`bl-${i}`} className="text-white font-semibold">{m[1]} :</strong>
-  );
   
   // **gras**
   parts = splitAndMap(parts, /\*\*([^*]+)\*\*/g, (m, i) => 
