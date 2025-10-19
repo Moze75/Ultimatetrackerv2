@@ -624,9 +624,14 @@ function SpellCard({
                 <BookOpen size={16} className="text-blue-400" />
                 Description
               </h5>
-              <div className="text-gray-300 leading-relaxed whitespace-pre-line">
-                {spell.spell_description}
-                {spell.spell_higher_levels && `\n\n${spell.spell_higher_levels}`}
+              <div className="text-gray-300 space-y-2">
+                <MarkdownLite 
+                  text={
+                    (spell.spell_description || '') + 
+                    (spell.spell_higher_levels ? `\n\n${spell.spell_higher_levels}` : '')
+                  } 
+                  ctx={{}}
+                />
               </div>
             </div>
           </div>
