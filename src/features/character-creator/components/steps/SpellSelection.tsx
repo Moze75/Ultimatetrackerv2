@@ -4,6 +4,7 @@ import Button from '../ui/Button';
 import { DndClass } from '../../types/character';
 import { getSpellKnowledgeInfo } from '../../../../utils/spellSlots2024';
 import { supabase } from '../../../../lib/supabase';
+import { MarkdownLite } from '../../../../lib/markdownLite';
 
 interface Spell {
   id: string;
