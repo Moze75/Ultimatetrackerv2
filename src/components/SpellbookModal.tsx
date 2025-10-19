@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Book, Search, Filter, Sparkles, Clock, Target, Zap, Wand2, Skull, Check } from 'lucide-react';
 import { DndClass } from '../types/dnd';
 import { supabase } from '../lib/supabase';
+import { MarkdownLite } from '../lib/markdownLite';
 
 interface Spell {
   id: string;
@@ -711,13 +712,18 @@ export function SpellbookModal({
                           </div>
 
               {/* Description + Higher Levels ensemble */}
-              <div className="bg-gray-800/30 p-3 rounded-lg">
-                <h5 className="font-semibold text-gray-200 mb-2">Description</h5>
-                <div className="text-gray-300 leading-relaxed whitespace-pre-line">
-                  {spell.description}
-                  {spell.higher_levels && `\n\n${spell.higher_levels}`}
-                </div>
+            <div className="bg-gray-800/30 p-3 rounded-lg border border-gray-700/20">
+              <h5 className="font-semibold text-gray-200 mb-3 flex items-center gap-2">
+                <BookOpen size={16} className="text-blue-400" />
+                Description
+              </h5>
+              <div className="text-gray-300 space-y-2">
+                <MarkdownLite 
+                  text={spell.description + (spell.higher_levels ? `\n\n${spell.higher_levels}` : '')} 
+                  ctx={{}}
+                />
               </div>
+            </div>
 
                           {/* All Classes */}
                           <div className="bg-gray-800/30 p-3 rounded-lg">
