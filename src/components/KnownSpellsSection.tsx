@@ -183,17 +183,6 @@ const smoothAnimationCSS = `
     overflow: hidden;
   }
   
-  /* Animation pour les sections de niveau avec height contrôlée */
-  .spell-level-content {
-    overflow: hidden;
-    transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  
-  /* Désactiver la transition au chargement initial */
-  .spell-level-content.no-transition {
-    transition: none !important;
-  }
-  
   /* Animation du chevron */
   .chevron-icon {
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -202,19 +191,7 @@ const smoothAnimationCSS = `
   .chevron-icon.rotated {
     transform: rotate(180deg);
   }
-  
-  /* Empêcher le scroll automatique */
-  [data-spell-level] {
-    scroll-margin: 0;
-  }
-  
-  /* Forcer le rendu vers le bas */
-  [data-spell-level] button {
-    position: relative;
-    z-index: 1;
-  }
 `;
-
 
 /* ===== Règles d’affichage des niveaux de slots D&D 5e (bornage par classe/niveau) ===== */
 type CasterType = 'full' | 'half' | 'warlock' | 'none';
@@ -727,36 +704,19 @@ function SpellCard({
 }
 
 // Composant pour gérer l'animation smooth des sections de niveau
+// Composant pour gérer l'affichage des sections de niveau (sans animation de hauteur)
 function SpellLevelSection({
   isExpanded,
   children,
-  isInitialMount,
-  userHasInteracted,
 }: {
   isExpanded: boolean;
   children: React.ReactNode;
-  isInitialMount?: boolean;
-  userHasInteracted?: boolean;
 }) {
-  const contentRef = useRef<HTMLDivElement>(null);
-  const measuredHeight = useMeasuredHeight(contentRef, isExpanded);
-
-  // Affichage direct sans animation si pas encore d'interaction
-  if (isInitialMount || !userHasInteracted) {
-    return isExpanded ? <div className="mt-2">{children}</div> : null;
-  }
-
+  if (!isExpanded) return null;
+  
   return (
-    <div
-      className="spell-level-content"
-      style={{
-        height: isExpanded ? `${measuredHeight}px` : '0px',
-        marginTop: isExpanded && measuredHeight > 0 ? '0.5rem' : '0px',
-      }}
-    >
-      <div ref={contentRef}>
-        {children}
-      </div>
+    <div className="mt-2">
+      {children}
     </div>
   );
 }
