@@ -784,7 +784,7 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
 const sessionKey = `spell-section-first-render-${player.id}`;
 const hasAlreadyRendered = sessionStorage.getItem(sessionKey) === 'true';
 const [isInitialMount, setIsInitialMount] = useState(!hasAlreadyRendered);
-  const userHasInteractedRef = useRef(false); // ✅ AJOUTEZ CETTE LIGNE
+const [userHasInteracted, setUserHasInteracted] = useState(false); // ✅ STATE au lieu de ref
 
 const [searchTerm, setSearchTerm] = useState('');
 const [filterPrepared, setFilterPrepared] = useState<'all' | 'prepared' | 'unprepared'>('all');
