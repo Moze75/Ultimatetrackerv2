@@ -761,6 +761,125 @@ function SpellLevelSection({
   );
 }
 
+export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps) {
+  const [knownSpells, setKnownSpells] = useState<KnownSpell[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showSpellbook, setShowSpellbook] = useState(false);
+  const [selectedSpells, setSelectedSpells] = useState<Spell[]>([]);
+  const [expandedSpell, setExpandedSpell] = useState<string | null>(null);
+  const [collapsedLevels, setCollapsedLevels] = useState<Set<string>>(() => {
+    const saved = localStorage.getItem(`spell-levels-state-${player.id}`);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return new Set(parsed.collapsed || []);
+      } catch {
+        return new Set();
+      }
+    }
+    return new Set();
+  });
+
+  // Utiliser sessionStorage pour savoir si c'est le premier rendu de la session
+  const sessionKey = `spell-section-first-render-${player.id}`;
+  const isFirstRender = !sessionStorage.getItem(sessionKey);
+  const [isInitialMount, setIsInitialMount] = useState(isFirstRender);
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterPrepared, setFilterPrepared] = useState<'all' | 'prepared' | 'unprepared'>('all');
+  const spellSlotsInitialized = useRef(false);
+
+  // Inject animations CSS
+  useEffect(() => {
+    const id = 'magical-animations';
+    const existingStyle = document.getElementById(id);
+    if (existingStyle) {
+      existingStyle.remove();
+    }
+    
+    const style = document.createElement('style');
+    style.id = id;
+    style.textContent = magicalAnimationCSS + smoothAnimationCSS;
+    document.head.appendChild(style);
+  }, []);
+
+  const toggleLevelCollapse = useCallback((levelName: string) => {
+    setCollapsedLevels((prev) => {
+      const next = new Set(prev);
+      if (next.has(levelName)) {
+        next.delete(levelName);
+      } else {
+        next.add(levelName);
+      }
+      
+      localStorage.setItem(
+        `spell-levels-state-${player.id}`,
+        JSON.stringify({ collapsed: Array.from(next) })
+      );
+      
+      return next;
+    });
+  }, [player.id]);
+
+  // Marquer comme non-initial seulement au premier rendu de la session
+  useEffect(() => {
+    if (isFirstRender) {
+      const timer = setTimeout(() => {
+        setIsInitialMount(false);
+        sessionStorage.setItem(sessionKey, 'true');
+      }, 100);
+      return () => clearTimeout(timer);
+    } else {
+      setIsInitialMount(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    fetchKnownSpells();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [player.id]);
+
+  // Initialiser automatiquement les spell_slots si nécessaire
+  useEffect(() => {
+    const initializeSpellSlots = async () => {
+      if (!player.class || !player.id) return;
+
+      const spellcasters = ['Magicien', 'Ensorceleur', 'Barde', 'Clerc', 'Druide', 'Paladin', 'Rôdeur', 'Occultiste'];
+      if (!spellcasters.includes(player.class)) return;
+
+      const hasSpellSlots = player.spell_slots && Object.keys(player.spell_slots).some(key => {
+        if (key.startsWith('level') && !key.startsWith('used')) {
+          return (player.spell_slots as any)[key] > 0;
+        }
+        return false;
+      });
+
+      if (!hasSpellSlots && !spellSlotsInitialized.current) {
+        spellSlotsInitialized.current = true;
+        try {
+          const newSpellSlots = getSpellSlotsByLevel(player.class, player.level || 1, player.spell_slots);
+
+          const { error } = await supabase
+            .from('players')
+            .update({ spell_slots: newSpellSlots })
+            .eq('id', player.id);
+
+          if (error) throw error;
+
+          onUpdate({ ...player, spell_slots: newSpellSlots });
+          console.log('[KnownSpellsSection] Emplacements de sorts initialisés:', newSpellSlots);
+        } catch (err) {
+          console.error('[KnownSpellsSection] Erreur lors de l\'initialisation des spell_slots:', err);
+          spellSlotsInitialized.current = false;
+        }
+      }
+    };
+
+    initializeSpellSlots();
+  }, [player.id, player.class, player.level, player.spell_slots, onUpdate]);
+
+  const fetchKnownSpells = async () => {
 
 const fetchKnownSpells = async () => {
     try {
