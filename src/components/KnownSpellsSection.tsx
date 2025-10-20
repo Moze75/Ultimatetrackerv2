@@ -696,16 +696,16 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
   const [filterPrepared, setFilterPrepared] = useState<'all' | 'prepared' | 'unprepared'>('all');
   const spellSlotsInitialized = useRef(false);
 
-  // Inject animations CSS
-  useEffect(() => {
-    const id = 'magical-animations';
-    if (!document.getElementById(id)) {
-      const style = document.createElement('style');
-      style.id = id;
-      style.textContent = magicalAnimationCSS;
-      document.head.appendChild(style);
-    }
-  }, []);
+// Inject animations CSS
+useEffect(() => {
+  const id = 'magical-animations';
+  if (!document.getElementById(id)) {
+    const style = document.createElement('style');
+    style.id = id;
+    style.textContent = magicalAnimationCSS + smoothAnimationCSS;
+    document.head.appendChild(style);
+  }
+}, []);
 
   const toggleLevelCollapse = useCallback((levelName: string) => {
     setCollapsedLevels((prev) => {
