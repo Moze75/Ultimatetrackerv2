@@ -791,7 +791,7 @@ const hasAlreadyRendered = sessionStorage.getItem(sessionKey) === 'true';
 const [isInitialMount, setIsInitialMount] = useState(!hasAlreadyRendered);
 const [isTabVisible, setIsTabVisible] = useState(true);
 const previousVisibility = useRef(true);
-const [searchTerm, setSearchTerm] = useState('');
+
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPrepared, setFilterPrepared] = useState<'all' | 'prepared' | 'unprepared'>('all');
