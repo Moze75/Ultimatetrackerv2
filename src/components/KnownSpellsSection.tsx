@@ -1118,49 +1118,52 @@ useEffect(() => {
                   })
                   .flatMap(key => groupedSpells[key] || []);
 
-                return (
-                  <div
-                    key={levelName}
-                    className="space-y-2"
-                    data-spell-level="pact"
-                    id="spell-level-pact"
-                  >
-                    <button
-                      onClick={() => toggleLevelCollapse(levelName)}
-                      className="w-full flex items-center justify-between text-left hover:bg-gray-800/30 rounded-lg p-2 transition-all duration-200 group"
-                    >
-                      <div className="flex items-center gap-3 flex-1 pr-2">
-                        <h4 className="text-sm font-semibold text-white group-hover:text-white">
-                          {levelName} - Niveau {pactLevel} ({pactSpells.length})
-                        </h4>
-                        <PactSlotStats
-                          player={player}
-                          onUpdate={onUpdate}
-                        />
-                      </div>
-                      <div className="flex items-center pl-1">
-                        {collapsedLevels.has(levelName) ? (
-                          <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-300" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-gray-300" />
-                        )}
-                      </div>
-                    </button>
+return (
+  <div
+    key={levelName}
+    className="space-y-2"
+    data-spell-level="pact"
+    id="spell-level-pact"
+  >
+    <button
+      onClick={() => toggleLevelCollapse(levelName)}
+      className="w-full flex items-center justify-between text-left hover:bg-gray-800/30 rounded-lg p-2 transition-all duration-200 group"
+    >
+      <div className="flex items-center gap-3 flex-1 pr-2">
+        <h4 className="text-sm font-semibold text-white group-hover:text-white">
+          {levelName} - Niveau {pactLevel} ({pactSpells.length})
+        </h4>
+        <PactSlotStats
+          player={player}
+          onUpdate={onUpdate}
+        />
+      </div>
+      <div className="flex items-center pl-1">
+        {collapsedLevels.has(levelName) ? (
+          <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-300" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-gray-300" />
+        )}
+      </div>
+    </button>
 
-<div className={`spell-level-content ${!collapsedLevels.has(levelName) ? 'expanded' : ''}`}>
-  <div className="space-y-2 ml-2 py-2">
-    {pactSpells.map((spell) => (
-      <SpellCard
-        key={spell.id}
-        spell={spell}
-        expandedSpell={expandedSpell}
-        setExpandedSpell={setExpandedSpell}
-        onTogglePrepared={togglePrepared}
-        onRemoveSpell={removeKnownSpell}
-      />
-    ))}
+    <div className={`spell-level-content ${!collapsedLevels.has(levelName) ? 'expanded' : ''}`}>
+      <div className="space-y-2 ml-2 py-2">
+        {pactSpells.map((spell) => (
+          <SpellCard
+            key={spell.id}
+            spell={spell}
+            expandedSpell={expandedSpell}
+            setExpandedSpell={setExpandedSpell}
+            onTogglePrepared={togglePrepared}
+            onRemoveSpell={removeKnownSpell}
+          />
+        ))}
+      </div>
+    </div>
   </div>
-</div>
+);
+              }
 
               const level = levelName === 'Tours de magie' ? 0 : parseInt(levelName.split(' ')[1]);
               const levelKey = `level${level}` as keyof typeof player.spell_slots;
