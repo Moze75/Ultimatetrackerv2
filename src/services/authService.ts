@@ -6,14 +6,12 @@ export const authService = {
     return data.session;
   },
 
-  // ✅ Inscription avec confirmation d'email obligatoire
   async signUp(email: string, password: string) {
     return await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: 'https://d-d-ultimate-tracker-7ni7.bolt.host',
-        // L'utilisateur devra confirmer son email avant de pouvoir se connecter
+        emailRedirectTo: 'https://d-d-ultimate-tracker-7ni7.bolt.host'
       }
     });
   },
@@ -24,7 +22,6 @@ export const authService = {
       password
     });
     
-    // Vérifier si l'email est confirmé
     if (!error && data.user && !data.user.email_confirmed_at) {
       await supabase.auth.signOut();
       return {
@@ -49,6 +46,20 @@ export const authService = {
           prompt: 'consent',
         }
       }
+    });
+  },
+
+  // ✅ NOUVELLE MÉTHODE - Demander la réinitialisation du mot de passe
+  async resetPassword(email: string) {
+    return await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://d-d-ultimate-tracker-7ni7.bolt.host/reset-password'
+    });
+  },
+
+  // ✅ NOUVELLE MÉTHODE - Mettre à jour le mot de passe
+  async updatePassword(newPassword: string) {
+    return await supabase.auth.updateUser({
+      password: newPassword
     });
   },
 
