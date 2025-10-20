@@ -196,10 +196,12 @@ export function LoginPage() {
   };
 
   // ✅ NOUVEAU - Basculer vers "Mot de passe oublié"
-  const toggleForgotPassword = () => {
-    setIsForgotPassword(!isForgotPassword);
-    resetForm();
-  };
+const toggleForgotPassword = () => {
+  setIsForgotPassword(!isForgotPassword);
+  setPassword('');
+  setConfirmPassword('');
+  // Ne pas réinitialiser l'email ni isForgotPassword
+};
 
   if (isCheckingConnection) {
     return (
