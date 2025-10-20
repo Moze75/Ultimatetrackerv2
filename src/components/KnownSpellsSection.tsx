@@ -681,6 +681,7 @@ function SpellCard({
 </div>
           </div>
         </div>
+  </div>
       )}
     </div>
   );
