@@ -843,20 +843,7 @@ useEffect(() => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, []);
 
-// Détecter quand on revient sur cet onglet
-useEffect(() => {
-  const handleVisibilityChange = () => {
-    const isVisible = document.visibilityState === 'visible';
-    
-    // Si on revient sur l'onglet
-    if (isVisible && !previousVisibility.current) {
-      setIsTabVisible(false);
-      // Forcer un re-render instantané
-      setTimeout(() => setIsTabVisible(true), 0);
-    }
-    
-    previousVisibility.current = isVisible;
-  };
+
 
   document.addEventListener('visibilitychange', handleVisibilityChange);
   return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
