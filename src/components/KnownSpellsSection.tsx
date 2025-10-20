@@ -813,6 +813,7 @@ const spellSlotsInitialized = useRef(false);
   }, []);
 
   const toggleLevelCollapse = useCallback((levelName: string) => {
+    userHasInteractedRef.current = true; // ✅ AJOUTEZ CETTE LIGNE
     setCollapsedLevels((prev) => {
       const next = new Set(prev);
       if (next.has(levelName)) {
