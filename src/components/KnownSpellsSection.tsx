@@ -746,9 +746,14 @@ function SpellLevelSection({
     }
   }, [isExpanded, isInitialMount, hasAnimated]);
 
+  // Si c'est le montage initial, ne pas utiliser le système de hauteur
+  if (isInitialMount) {
+    return isExpanded ? <div className="mt-2">{children}</div> : null;
+  }
+
   return (
     <div
-      className={`spell-level-content ${isInitialMount || !hasAnimated ? 'no-transition' : ''}`}
+      className={`spell-level-content ${!hasAnimated ? 'no-transition' : ''}`}
       style={{
         height: isExpanded ? `${measuredHeight}px` : '0px',
         marginTop: isExpanded && measuredHeight > 0 ? '0.5rem' : '0px',
