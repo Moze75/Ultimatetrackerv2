@@ -754,7 +754,6 @@ function SpellLevelSection({
   );
 }
 
-export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps) {
 
 export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps) {
   const [knownSpells, setKnownSpells] = useState<KnownSpell[]>([]);
