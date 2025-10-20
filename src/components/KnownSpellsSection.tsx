@@ -733,14 +733,40 @@ useEffect(() => {
   console.log('[DEBUG] CSS injected'); // Pour vérifier que ça s'exécute
 }, []);
 
-  const toggleLevelCollapse = useCallback((levelName: string) => {
-    setCollapsedLevels((prev) => {
-      const next = new Set(prev);
-      if (next.has(levelName)) next.delete(levelName);
-      else next.add(levelName);
-      return next;
-    });
-  }, []);
+const toggleLevelCollapse = useCallback((levelName: string) => {
+  setCollapsedLevels((prev) => {
+    const next = new Set(prev);
+    const isCurrentlyCollapsed = prev.has(levelName);
+    
+    if (next.has(levelName)) {
+      next.delete(levelName);
+      
+      // Empêcher le scroll lors du dépliage
+      setTimeout(() => {
+        const element = document.getElementById(
+          levelName === 'Emplacements de Pacte' 
+            ? 'spell-level-pact' 
+            : `spell-level-${levelName === 'Tours de magie' ? '0' : levelName.split(' ')[1]}`
+        );
+        if (element && isCurrentlyCollapsed) {
+          // Récupérer la position avant le dépliage
+          const rect = element.getBoundingClientRect();
+          const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+          
+          // Forcer le maintien de la position
+          window.scrollTo({
+            top: scrollTop,
+            behavior: 'instant' as ScrollBehavior
+          });
+        }
+      }, 0);
+    } else {
+      next.add(levelName);
+    }
+    
+    return next;
+  });
+}, []);
 
   useEffect(() => {
     fetchKnownSpells();
