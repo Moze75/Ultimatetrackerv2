@@ -1172,54 +1172,60 @@ return (
               const maxSlots = level === 0 ? 0 : (player.spell_slots?.[levelKey] || 0);
               const usedSlots = level === 0 ? 0 : (player.spell_slots?.[usedKey] || 0);
 
-              return (
-                <div
-                  key={levelName}
-                  className="space-y-2"
-                  data-spell-level={level}
-                  id={`spell-level-${level}`}
-                >
-                  <button
-                    onClick={() => toggleLevelCollapse(levelName)}
-                    className="w-full flex items-center justify-between text-left hover:bg-gray-800/30 rounded-lg p-2 transition-all duration-200 group"
-                  >
-                    <div className="flex items-center gap-3 flex-1 pr-2">
-                      <h4 className="text-sm font-semibold text-white group-hover:text-white">
-                        {levelName} ({spells.length})
-                      </h4>
-                      {levelName !== 'Tours de magie' && (
-                        <SpellLevelStats
-                          levelName={levelName}
-                          player={player}
-                          onUpdate={onUpdate}
-                          usedSlots={usedSlots}
-                          maxSlots={maxSlots}
-                        />
-                      )}
-                    </div>
-                    <div className="flex items-center pl-1">
-                      {collapsedLevels.has(levelName) ? (
-                        <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-300" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-gray-300" />
-                      )}
-                    </div>
-                  </button>
+return (
+  <div
+    key={levelName}
+    className="space-y-2"
+    data-spell-level={level}
+    id={`spell-level-${level}`}
+  >
+    <button
+      onClick={() => toggleLevelCollapse(levelName)}
+      className="w-full flex items-center justify-between text-left hover:bg-gray-800/30 rounded-lg p-2 transition-all duration-200 group"
+    >
+      <div className="flex items-center gap-3 flex-1 pr-2">
+        <h4 className="text-sm font-semibold text-white group-hover:text-white">
+          {levelName} ({spells.length})
+        </h4>
+        {levelName !== 'Tours de magie' && (
+          <SpellLevelStats
+            levelName={levelName}
+            player={player}
+            onUpdate={onUpdate}
+            usedSlots={usedSlots}
+            maxSlots={maxSlots}
+          />
+        )}
+      </div>
+      <div className="flex items-center pl-1">
+        {collapsedLevels.has(levelName) ? (
+          <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-300" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-gray-300" />
+        )}
+      </div>
+    </button>
 
-<div className={`spell-level-content ${!collapsedLevels.has(levelName) ? 'expanded' : ''}`}>
-  <div className="space-y-2 ml-2 py-2">
-    {spells.map((spell) => (
-      <SpellCard
-        key={spell.id}
-        spell={spell}
-        expandedSpell={expandedSpell}
-        setExpandedSpell={setExpandedSpell}
-        onTogglePrepared={togglePrepared}
-        onRemoveSpell={removeKnownSpell}
-      />
-    ))}
+    <div className={`spell-level-content ${!collapsedLevels.has(levelName) ? 'expanded' : ''}`}>
+      <div className="space-y-2 ml-2 py-2">
+        {spells.map((spell) => (
+          <SpellCard
+            key={spell.id}
+            spell={spell}
+            expandedSpell={expandedSpell}
+            setExpandedSpell={setExpandedSpell}
+            onTogglePrepared={togglePrepared}
+            onRemoveSpell={removeKnownSpell}
+          />
+        ))}
+      </div>
+    </div>
   </div>
-</div>
+);
+            })}
+          </div>
+        )}
+      </div>
 
       {showSpellbook && (
         <SpellbookModal
