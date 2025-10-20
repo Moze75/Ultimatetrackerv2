@@ -743,7 +743,7 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
 // Utiliser sessionStorage pour savoir si c'est le premier rendu de la session
 const [searchTerm, setSearchTerm] = useState('');
 
-const [searchTerm, setSearchTerm] = useState('');
+
 const [filterPrepared, setFilterPrepared] = useState<'all' | 'prepared' | 'unprepared'>('all');
 const spellSlotsInitialized = useRef(false);
 
