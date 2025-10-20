@@ -1052,7 +1052,6 @@ const fetchKnownSpells = async () => {
   }, [levelsToRender, collapsedLevels]);
 
   const toggleAllLevels = useCallback(() => {
- setUserHasInteracted(true); // ✅ setState
     setCollapsedLevels((prev) => {
       if (levelsToRender.length === 0) return prev;
       // Si tout est déplié actuellement -> replier tout. Sinon -> déplier tout.
