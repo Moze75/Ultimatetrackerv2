@@ -793,9 +793,11 @@ const sessionKey = `spell-section-first-render-${player.id}`;
 const hasAlreadyRendered = sessionStorage.getItem(sessionKey) === 'true';
 const [isInitialMount, setIsInitialMount] = useState(!hasAlreadyRendered);
 
-const [searchTerm, setSearchTerm] = useState('');
-const [filterPrepared, setFilterPrepared] = useState<'all' | 'prepared' | 'unprepared'>('all');
-const spellSlotsInitialized = useRef(false);
+
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterPrepared, setFilterPrepared] = useState<'all' | 'prepared' | 'unprepared'>('all');
+  const spellSlotsInitialized = useRef(false);
 
   // Inject animations CSS
   useEffect(() => {
@@ -842,10 +844,6 @@ useEffect(() => {
 }, []);
 
 
-
-  document.addEventListener('visibilitychange', handleVisibilityChange);
-  return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-}, []);
 
 useEffect(() => {
   fetchKnownSpells();
