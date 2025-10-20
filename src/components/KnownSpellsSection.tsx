@@ -1314,6 +1314,8 @@ TSX
 <button
   onClick={() => toggleLevelCollapse(levelName)}
     
+    toggleLevelCollapse(levelName);
+    
     // Compensation immédiate sans attendre l'animation
     requestAnimationFrame(() => {
       const rectAfter = button.getBoundingClientRect();
