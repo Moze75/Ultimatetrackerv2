@@ -761,9 +761,8 @@ const spellSlotsInitialized = useRef(false);
     document.head.appendChild(style);
   }, []);
 
-  const toggleLevelCollapse = useCallback((levelName: string) => {
-  setUserHasInteracted(true); // ✅ setState au lieu de .current
-    setCollapsedLevels((prev) => {
+const toggleLevelCollapse = useCallback((levelName: string) => {
+  setCollapsedLevels((prev) => {
       const next = new Set(prev);
       if (next.has(levelName)) {
         next.delete(levelName);
