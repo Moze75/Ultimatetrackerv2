@@ -167,6 +167,39 @@ const smoothAnimationCSS = `
   }
 `;
 
+const smoothAnimationCSS = `
+  /* Animation pour les cartes de sorts */
+  .spell-card-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .spell-card-content.expanded {
+    max-height: 2000px;
+  }
+  
+  /* Animation pour les sections de niveau */
+  .spell-level-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .spell-level-content.expanded {
+    max-height: 10000px;
+  }
+  
+  /* Animation du chevron */
+  .chevron-icon {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .chevron-icon.rotated {
+    transform: rotate(180deg);
+  }
+`;
+
 /* ===== Règles d’affichage des niveaux de slots D&D 5e (bornage par classe/niveau) ===== */
 type CasterType = 'full' | 'half' | 'warlock' | 'none';
 const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
