@@ -830,64 +830,55 @@ useEffect(() => {
   return () => clearTimeout(timer);
 }, []);
 
-// Initialiser tous les niveaux comme repliés par défaut au premier chargement
 useEffect(() => {
-  const saved = localStorage.getItem(`spell-levels-state-${player.id}`);
-  if (!saved && levelsToRender.length > 0) {
-    // Premier chargement : tout replier
-    setCollapsedLevels(new Set(levelsToRender));
-  }
-}, [player.id, levelsToRender]);
+  fetchKnownSpells();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [player.id]);
 
-  useEffect(() => {
-    fetchKnownSpells();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [player.id]);
+// Initialiser automatiquement les spell_slots si nécessaire
+useEffect(() => {
+  const initializeSpellSlots = async () => {
+    // Vérifier si le joueur a une classe de lanceur de sorts
+    if (!player.class || !player.id) return;
 
-  // Initialiser automatiquement les spell_slots si nécessaire
-  useEffect(() => {
-    const initializeSpellSlots = async () => {
-      // Vérifier si le joueur a une classe de lanceur de sorts
-      if (!player.class || !player.id) return;
+    // Classes de lanceurs de sorts
+    const spellcasters = ['Magicien', 'Ensorceleur', 'Barde', 'Clerc', 'Druide', 'Paladin', 'Rôdeur', 'Occultiste'];
+    if (!spellcasters.includes(player.class)) return;
 
-      // Classes de lanceurs de sorts
-      const spellcasters = ['Magicien', 'Ensorceleur', 'Barde', 'Clerc', 'Druide', 'Paladin', 'Rôdeur', 'Occultiste'];
-      if (!spellcasters.includes(player.class)) return;
-
-      // Vérifier si les spell_slots sont vides ou null
-      const hasSpellSlots = player.spell_slots && Object.keys(player.spell_slots).some(key => {
-        if (key.startsWith('level') && !key.startsWith('used')) {
-          return (player.spell_slots as any)[key] > 0;
-        }
-        return false;
-      });
-
-      // Si pas d'emplacements et pas encore initialisé, les initialiser
-      if (!hasSpellSlots && !spellSlotsInitialized.current) {
-        spellSlotsInitialized.current = true;
-        try {
-          const newSpellSlots = getSpellSlotsByLevel(player.class, player.level || 1, player.spell_slots);
-
-          const { error } = await supabase
-            .from('players')
-            .update({ spell_slots: newSpellSlots })
-            .eq('id', player.id);
-
-          if (error) throw error;
-
-          onUpdate({ ...player, spell_slots: newSpellSlots });
-          console.log('[KnownSpellsSection] Emplacements de sorts initialisés:', newSpellSlots);
-        } catch (err) {
-          console.error('[KnownSpellsSection] Erreur lors de l\'initialisation des spell_slots:', err);
-          spellSlotsInitialized.current = false; // Réessayer en cas d'erreur
-        }
+    // Vérifier si les spell_slots sont vides ou null
+    const hasSpellSlots = player.spell_slots && Object.keys(player.spell_slots).some(key => {
+      if (key.startsWith('level') && !key.startsWith('used')) {
+        return (player.spell_slots as any)[key] > 0;
       }
-    };
+      return false;
+    });
 
-    initializeSpellSlots();
-  }, [player.id, player.class, player.level, player.spell_slots, onUpdate]);
+    // Si pas d'emplacements et pas encore initialisé, les initialiser
+    if (!hasSpellSlots && !spellSlotsInitialized.current) {
+      spellSlotsInitialized.current = true;
+      try {
+        const newSpellSlots = getSpellSlotsByLevel(player.class, player.level || 1, player.spell_slots);
 
-  const fetchKnownSpells = async () => {
+        const { error } = await supabase
+          .from('players')
+          .update({ spell_slots: newSpellSlots })
+          .eq('id', player.id);
+
+        if (error) throw error;
+
+        onUpdate({ ...player, spell_slots: newSpellSlots });
+        console.log('[KnownSpellsSection] Emplacements de sorts initialisés:', newSpellSlots);
+      } catch (err) {
+        console.error('[KnownSpellsSection] Erreur lors de l\'initialisation des spell_slots:', err);
+        spellSlotsInitialized.current = false; // Réessayer en cas d'erreur
+      }
+    }
+  };
+
+  initializeSpellSlots();
+}, [player.id, player.class, player.level, player.spell_slots, onUpdate]);
+
+const fetchKnownSpells = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
