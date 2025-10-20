@@ -169,10 +169,15 @@ const smoothAnimationCSS = `
   .spell-level-content.expanded {
     grid-template-rows: 1fr;
     margin-top: 0.5rem;
+    /* Ajouter une transition sur le margin pour synchroniser */
+    transition: grid-template-rows 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                margin-top 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
   .spell-level-content > div {
     overflow: hidden;
+    /* Empêcher le contenu de "flasher" pendant la transition */
+    min-height: 0;
   }
   
   /* Supprime l'espacement quand replié */
@@ -181,6 +186,13 @@ const smoothAnimationCSS = `
     padding-bottom: 0 !important;
     margin-top: 0 !important;
     margin-bottom: 0 !important;
+  }
+  
+  /* CLEF : Maintenir l'espace pendant la transition de repli */
+  .spell-level-content:not(.expanded) {
+    /* Transition vers 0 en douceur */
+    transition: grid-template-rows 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                margin-top 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
   /* Animation du chevron */
@@ -200,12 +212,20 @@ const smoothAnimationCSS = `
   /* Stabiliser pendant l'animation */
   .spell-level-content {
     will-change: grid-template-rows;
+    /* Contenir le layout pour éviter les shifts */
+    contain: layout;
   }
   
   /* Forcer le rendu vers le bas */
   [data-spell-level] button {
     position: relative;
     z-index: 1;
+  }
+  
+  /* Empêcher les layout shifts pendant l'animation */
+  [data-spell-level] {
+    /* Isoler le layout de chaque niveau */
+    contain: layout style;
   }
 `;
 
