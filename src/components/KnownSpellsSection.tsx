@@ -784,6 +784,7 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
   // Par défaut : tout est replié (Set vide signifie tout déplié, donc on met tous les niveaux)
   return new Set();
 });
+  const [isInitialMount, setIsInitialMount] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPrepared, setFilterPrepared] = useState<'all' | 'prepared' | 'unprepared'>('all');
   const spellSlotsInitialized = useRef(false);
