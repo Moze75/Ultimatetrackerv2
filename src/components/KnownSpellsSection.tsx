@@ -732,16 +732,25 @@ function SpellCard({
 function SpellLevelSection({
   isExpanded,
   children,
+  isInitialMount,
 }: {
   isExpanded: boolean;
   children: React.ReactNode;
+  isInitialMount?: boolean;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const measuredHeight = useMeasuredHeight(contentRef, isExpanded);
+  const [hasAnimated, setHasAnimated] = useState(false);
+
+  useEffect(() => {
+    if (!isInitialMount && !hasAnimated) {
+      setHasAnimated(true);
+    }
+  }, [isExpanded, isInitialMount, hasAnimated]);
 
   return (
     <div
-      className="spell-level-content"
+      className={`spell-level-content ${isInitialMount || !hasAnimated ? 'no-transition' : ''}`}
       style={{
         height: isExpanded ? `${measuredHeight}px` : '0px',
         marginTop: isExpanded && measuredHeight > 0 ? '0.5rem' : '0px',
