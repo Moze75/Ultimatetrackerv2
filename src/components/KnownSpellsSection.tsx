@@ -1194,8 +1194,20 @@ return (
   >
 <button
   onClick={(e) => {
-    e.preventDefault();
+    const button = e.currentTarget;
+    const rect = button.getBoundingClientRect();
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const absoluteTop = rect.top + scrollTop;
+    
     toggleLevelCollapse(levelName);
+    
+    // Maintenir la position du bouton après le toggle
+    requestAnimationFrame(() => {
+      window.scrollTo({
+        top: absoluteTop,
+        behavior: 'instant' as ScrollBehavior
+      });
+    });
   }}
   className="w-full flex items-center justify-between text-left hover:bg-gray-800/30 rounded-lg p-2 transition-all duration-200 group"
 >
