@@ -631,7 +631,7 @@ function SpellCard({
         </div>
       )}
 
-{/* Contenu dépliable avec animation smooth */}
+   {/* Contenu dépliable avec animation smooth */}
 <div className={`spell-card-content ${isExpanded ? 'expanded' : ''}`}>
   <div className="border-t border-gray-700/50 bg-gray-900/50">
     <div className="p-3 space-y-4">
@@ -674,16 +674,14 @@ function SpellCard({
                     : `**Aux niveaux supérieurs :** ${spell.spell_higher_levels}`
                 } 
                 ctx={{}}
-        />
+              />
+            </div>
+          )}
+        </div>
       </div>
-    )}
+    </div>
   </div>
 </div>
-          </div>
-        </div>
-  </div>
-      )}
-    </div>
   );
 }
 
