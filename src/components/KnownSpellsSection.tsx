@@ -145,24 +145,32 @@ const magicalAnimationCSS = `
 const smoothAnimationCSS = `
   /* Animation pour les cartes de sorts */
   .spell-card-content {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
   .spell-card-content.expanded {
-    max-height: 2000px;
+    grid-template-rows: 1fr;
+  }
+  
+  .spell-card-content > div {
+    overflow: hidden;
   }
   
   /* Animation pour les sections de niveau */
   .spell-level-content {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
   .spell-level-content.expanded {
-    max-height: 10000px;
+    grid-template-rows: 1fr;
+  }
+  
+  .spell-level-content > div {
+    overflow: hidden;
   }
   
   /* Animation du chevron */
