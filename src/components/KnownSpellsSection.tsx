@@ -738,18 +738,36 @@ function SpellLevelSection({
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const measuredHeight = useMeasuredHeight(contentRef, isExpanded);
-  const [hasAnimated, setHasAnimated] = useState(false);
+  const [userHasInteracted, setUserHasInteracted] = useState(false);
+  const prevExpanded = useRef(isExpanded);
 
   useEffect(() => {
-    if (!isInitialMount && !hasAnimated) {
-      setHasAnimated(true);
+    // Détecter un changement de state causé par l'utilisateur
+    if (prevExpanded.current !== isExpanded) {
+      setUserHasInteracted(true);
     }
-  }, [isExpanded, isInitialMount, hasAnimated]);
+    prevExpanded.current = isExpanded;
+  }, [isExpanded]);
 
-  // Si c'est le montage initial, ne pas utiliser le système de hauteur
-  if (isInitialMount) {
+  // Affichage direct sans animation si pas encore d'interaction
+  if (isInitialMount || !userHasInteracted) {
     return isExpanded ? <div className="mt-2">{children}</div> : null;
   }
+
+  return (
+    <div
+      className="spell-level-content"
+      style={{
+        height: isExpanded ? `${measuredHeight}px` : '0px',
+        marginTop: isExpanded && measuredHeight > 0 ? '0.5rem' : '0px',
+      }}
+    >
+      <div ref={contentRef}>
+        {children}
+      </div>
+    </div>
+  );
+}
 
   return (
     <div
