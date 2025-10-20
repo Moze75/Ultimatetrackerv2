@@ -1275,7 +1275,7 @@ return (
       </div>
     </button>
 
-<SpellLevelSection isExpanded={!collapsedLevels.has(levelName)} isInitialMount={isInitialMount} userHasInteracted={userHasInteractedRef.current}>
+<SpellLevelSection isExpanded={!collapsedLevels.has(levelName)} isInitialMount={isInitialMount}>
       <div className="space-y-2 ml-2 py-2">
         {pactSpells.map((spell) => (
           <SpellCard
@@ -1334,7 +1334,7 @@ return (
       </div>
     </button>
 
-  <SpellLevelSection isExpanded={!collapsedLevels.has(levelName)} isInitialMount={isInitialMount} userHasInteracted={userHasInteractedRef.current}>
+   <SpellLevelSection isExpanded={!collapsedLevels.has(levelName)} isInitialMount={isInitialMount}> 
       <div className="space-y-2 ml-2 py-2">
         {spells.map((spell) => (
           <SpellCard
