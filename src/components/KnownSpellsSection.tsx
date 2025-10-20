@@ -825,10 +825,17 @@ const toggleLevelCollapse = useCallback((levelName: string) => {
   });
 }, [player.id]);
 
-// Marquer comme non-initial après le premier rendu
+// Marquer comme non-initial après le premier rendu (persiste entre les changements d'onglet)
 useEffect(() => {
-  const timer = setTimeout(() => setIsInitialMount(false), 100);
-  return () => clearTimeout(timer);
+  if (!hasRenderedOnce.current) {
+    const timer = setTimeout(() => {
+      setIsInitialMount(false);
+      hasRenderedOnce.current = true;
+    }, 100);
+    return () => clearTimeout(timer);
+  } else {
+    setIsInitialMount(false);
+  }
 }, []);
 
 useEffect(() => {
