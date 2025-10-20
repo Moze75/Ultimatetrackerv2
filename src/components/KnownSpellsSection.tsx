@@ -780,17 +780,6 @@ const spellSlotsInitialized = useRef(false);
     });
   }, [player.id]);
 
-// Marquer comme non-initial seulement au premier rendu de la session
-useEffect(() => {
-  if (!hasAlreadyRendered) {
-    const timer = setTimeout(() => {
-      setIsInitialMount(false);
-      sessionStorage.setItem(sessionKey, 'true');
-    }, 50);
-    return () => clearTimeout(timer);
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, []);
 
 
 
