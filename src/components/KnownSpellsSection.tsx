@@ -879,7 +879,7 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
     initializeSpellSlots();
   }, [player.id, player.class, player.level, player.spell_slots, onUpdate]);
 
-  const fetchKnownSpells = async () => {
+
 
 const fetchKnownSpells = async () => {
     try {
