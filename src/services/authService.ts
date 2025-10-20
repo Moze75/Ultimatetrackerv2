@@ -49,35 +49,21 @@ export const authService = {
     });
   },
 
-  // ✅ NOUVELLE MÉTHODE - Demander la réinitialisation du mot de passe
+    // ✅ AJOUTEZ ICI - Demander la réinitialisation du mot de passe
   async resetPassword(email: string) {
     return await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'https://d-d-ultimate-tracker-7ni7.bolt.host/reset-password'
+      redirectTo: 'https://d-d-ultimate-tracker-7ni7.bolt.host'
     });
   },
 
-  // ✅ NOUVELLE MÉTHODE - Mettre à jour le mot de passe
+  // ✅ AJOUTEZ ICI - Mettre à jour le mot de passe
   async updatePassword(newPassword: string) {
     return await supabase.auth.updateUser({
       password: newPassword
     });
   },
 
-  // ✅ Ajoutez ces méthodes à la fin de l'objet authService, avant la fermeture
-
-// Demander la réinitialisation du mot de passe
-async resetPassword(email: string) {
-  return await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: 'https://d-d-ultimate-tracker-7ni7.bolt.host'
-  });
-},
-
-// Mettre à jour le mot de passe
-async updatePassword(newPassword: string) {
-  return await supabase.auth.updateUser({
-    password: newPassword
-  });
-},
+   
 
   async signOut() {
     return await supabase.auth.signOut();
