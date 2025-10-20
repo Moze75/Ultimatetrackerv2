@@ -134,6 +134,14 @@ const getAbilityModFromPlayer = (
 };
 
 // Animations CSS (injectées dynamiquement)
+const magicalAnimationCSS = ` 
+  @keyframes magical-explosion {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 1; background: radial-gradient(circle, #8b5cf6 0%, #3b82f6 50%, transparent 70%); border-radius: 50%; }
+    50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.8; box-shadow: 0 0 20px #8b5cf6, 0 0 40px #3b82f6; }
+    100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+  }
+`;
+
 const smoothAnimationCSS = `
   /* Animation pour les cartes de sorts */
   .spell-card-content {
@@ -167,7 +175,6 @@ const smoothAnimationCSS = `
   }
 `;
 
-  
 
 /* ===== Règles d’affichage des niveaux de slots D&D 5e (bornage par classe/niveau) ===== */
 type CasterType = 'full' | 'half' | 'warlock' | 'none';
