@@ -163,14 +163,24 @@ const smoothAnimationCSS = `
     display: grid;
     grid-template-rows: 0fr;
     transition: grid-template-rows 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-top: 0;
   }
   
   .spell-level-content.expanded {
     grid-template-rows: 1fr;
+    margin-top: 0.5rem; /* Espace seulement quand déplié */
   }
   
   .spell-level-content > div {
     overflow: hidden;
+  }
+  
+  /* Supprime l'espacement quand replié */
+  .spell-level-content:not(.expanded) > div {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
   }
   
   /* Animation du chevron */
