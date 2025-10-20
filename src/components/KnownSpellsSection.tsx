@@ -22,6 +22,31 @@ import {
   updateArcaneRecoveryUsage,
 } from '../utils/arcaneRecovery';
 
+// Hook pour mesurer et animer la hauteur du contenu
+const useMeasuredHeight = (ref: React.RefObject<HTMLDivElement>, isExpanded: boolean) => {
+  const [height, setHeight] = useState<number>(0);
+
+  useEffect(() => {
+    if (!ref.current) return;
+
+    const updateHeight = () => {
+      if (ref.current) {
+        const contentHeight = ref.current.scrollHeight;
+        setHeight(contentHeight);
+      }
+    };
+
+    updateHeight();
+
+    const resizeObserver = new ResizeObserver(updateHeight);
+    resizeObserver.observe(ref.current);
+
+    return () => resizeObserver.disconnect();
+  }, [ref, isExpanded]);
+
+  return height;
+};
+
 interface KnownSpell {
   id: string;
   player_id: string;
