@@ -1251,24 +1251,24 @@ return (
     const button = e.currentTarget;
     const rectBefore = button.getBoundingClientRect();
     const topBefore = rectBefore.top;
+    const scrollBefore = window.pageYOffset;
     
     toggleLevelCollapse(levelName);
     
-    // Attendre que le DOM soit mis à jour
+    // Compensation immédiate sans attendre l'animation
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const rectAfter = button.getBoundingClientRect();
-        const topAfter = rectAfter.top;
-        const diff = topAfter - topBefore;
-        
-        // Compenser la différence de position
-        if (diff !== 0) {
-          window.scrollBy({
-            top: diff,
-            behavior: 'instant' as ScrollBehavior
-          });
-        }
-      });
+      const rectAfter = button.getBoundingClientRect();
+      const topAfter = rectAfter.top;
+      const scrollAfter = window.pageYOffset;
+      
+      // Si la position a changé, on compense
+      if (topAfter !== topBefore) {
+        const adjustment = scrollAfter + (topAfter - topBefore);
+        window.scrollTo({
+          top: adjustment,
+          behavior: 'instant' as ScrollBehavior
+        });
+      }
     });
   }}
       className="w-full flex items-center justify-between text-left hover:bg-gray-800/30 rounded-lg p-2 transition-all duration-200 group"
