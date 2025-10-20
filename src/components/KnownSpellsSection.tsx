@@ -1246,23 +1246,31 @@ return (
     data-spell-level={level}
     id={`spell-level-${level}`}
   >
-    <button
-      onClick={(e) => {
-        const button = e.currentTarget;
-        const rect = button.getBoundingClientRect();
-        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-        const absoluteTop = rect.top + scrollTop;
+<button
+  onClick={(e) => {
+    const button = e.currentTarget;
+    const rectBefore = button.getBoundingClientRect();
+    const topBefore = rectBefore.top;
+    
+    toggleLevelCollapse(levelName);
+    
+    // Attendre que le DOM soit mis à jour
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const rectAfter = button.getBoundingClientRect();
+        const topAfter = rectAfter.top;
+        const diff = topAfter - topBefore;
         
-        toggleLevelCollapse(levelName);
-        
-        // Maintenir la position du bouton après le toggle
-        requestAnimationFrame(() => {
-          window.scrollTo({
-            top: absoluteTop,
+        // Compenser la différence de position
+        if (diff !== 0) {
+          window.scrollBy({
+            top: diff,
             behavior: 'instant' as ScrollBehavior
           });
-        });
-      }}
+        }
+      });
+    });
+  }}
       className="w-full flex items-center justify-between text-left hover:bg-gray-800/30 rounded-lg p-2 transition-all duration-200 group"
     >
       <div className="flex items-center gap-3 flex-1 pr-2">
