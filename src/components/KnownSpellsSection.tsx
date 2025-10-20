@@ -826,19 +826,17 @@ const [isInitialMount, setIsInitialMount] = useState(!hasAlreadyRendered);
     });
   }, [player.id]);
 
-  // Marquer comme non-initial seulement au premier rendu de la session
-  useEffect(() => {
-    if (isFirstRender) {
-      const timer = setTimeout(() => {
-        setIsInitialMount(false);
-        sessionStorage.setItem(sessionKey, 'true');
-      }, 100);
-      return () => clearTimeout(timer);
-    } else {
+// Marquer comme non-initial seulement au premier rendu de la session
+useEffect(() => {
+  if (!hasAlreadyRendered) {
+    const timer = setTimeout(() => {
       setIsInitialMount(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+      sessionStorage.setItem(sessionKey, 'true');
+    }, 50); // Réduit à 50ms pour un rendu plus rapide
+    return () => clearTimeout(timer);
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
   useEffect(() => {
     fetchKnownSpells();
