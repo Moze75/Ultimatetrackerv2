@@ -168,7 +168,7 @@ const smoothAnimationCSS = `
   
   .spell-level-content.expanded {
     grid-template-rows: 1fr;
-    margin-top: 0.5rem; /* Espace seulement quand déplié */
+    margin-top: 0.5rem;
   }
   
   .spell-level-content > div {
@@ -190,6 +190,17 @@ const smoothAnimationCSS = `
   
   .chevron-icon.rotated {
     transform: rotate(180deg);
+  }
+  
+  /* Empêcher le scroll automatique lors du dépliage */
+  [data-spell-level] {
+    scroll-margin-top: 0;
+    overflow-anchor: none;
+  }
+  
+  /* Stabiliser la position pendant l'animation */
+  .spell-level-content.expanded {
+    contain: layout;
   }
 `;
 
