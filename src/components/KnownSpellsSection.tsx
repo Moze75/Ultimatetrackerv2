@@ -1147,10 +1147,10 @@ useEffect(() => {
                       </div>
                     </button>
 
-                    {!collapsedLevels.has(levelName) && (
-                      <div className="space-y-2 ml-2">
-                        {pactSpells.map((spell) => (
-                          <SpellCard
+<div className={`spell-level-content ${!collapsedLevels.has(levelName) ? 'expanded' : ''}`}>
+  <div className="space-y-2 ml-2 py-2">
+    {pactSpells.map((spell) => (
+      <SpellCard
                             key={spell.id}
                             spell={spell}
                             expandedSpell={expandedSpell}
