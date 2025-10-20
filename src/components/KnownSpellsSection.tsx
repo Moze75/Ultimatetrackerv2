@@ -1151,21 +1151,16 @@ useEffect(() => {
   <div className="space-y-2 ml-2 py-2">
     {pactSpells.map((spell) => (
       <SpellCard
-                            key={spell.id}
-                            spell={spell}
-                            expandedSpell={expandedSpell}
-                            setExpandedSpell={setExpandedSpell}
-                            onTogglePrepared={togglePrepared}
-                            onRemoveSpell={removeKnownSpell}
-                          />
-                        ))}
-                      </div>
+        key={spell.id}
+        spell={spell}
+        expandedSpell={expandedSpell}
+        setExpandedSpell={setExpandedSpell}
+        onTogglePrepared={togglePrepared}
+        onRemoveSpell={removeKnownSpell}
+      />
+    ))}
   </div>
-                    </div>
-                    )}
-                  </div>
-                );
-              }
+</div>
 
               const level = levelName === 'Tours de magie' ? 0 : parseInt(levelName.split(' ')[1]);
               const levelKey = `level${level}` as keyof typeof player.spell_slots;
