@@ -785,10 +785,10 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
     return new Set();
   });
 
-  // Utiliser sessionStorage pour savoir si c'est le premier rendu de la session
-  const sessionKey = `spell-section-first-render-${player.id}`;
-  const isFirstRender = !sessionStorage.getItem(sessionKey);
-  const [isInitialMount, setIsInitialMount] = useState(isFirstRender);
+// Utiliser sessionStorage pour savoir si c'est le premier rendu de la session
+const sessionKey = `spell-section-first-render-${player.id}`;
+const hasAlreadyRendered = sessionStorage.getItem(sessionKey) === 'true';
+const [isInitialMount, setIsInitialMount] = useState(!hasAlreadyRendered);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPrepared, setFilterPrepared] = useState<'all' | 'prepared' | 'unprepared'>('all');
