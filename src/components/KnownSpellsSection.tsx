@@ -835,16 +835,35 @@ useEffect(() => {
     const timer = setTimeout(() => {
       setIsInitialMount(false);
       sessionStorage.setItem(sessionKey, 'true');
-    }, 50); // Réduit à 50ms pour un rendu plus rapide
+    }, 50);
     return () => clearTimeout(timer);
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, []);
 
-  useEffect(() => {
-    fetchKnownSpells();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [player.id]);
+// Détecter quand on revient sur cet onglet
+useEffect(() => {
+  const handleVisibilityChange = () => {
+    const isVisible = document.visibilityState === 'visible';
+    
+    // Si on revient sur l'onglet
+    if (isVisible && !previousVisibility.current) {
+      setIsTabVisible(false);
+      // Forcer un re-render instantané
+      setTimeout(() => setIsTabVisible(true), 0);
+    }
+    
+    previousVisibility.current = isVisible;
+  };
+
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+}, []);
+
+useEffect(() => {
+  fetchKnownSpells();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [player.id]);
 
   // Initialiser automatiquement les spell_slots si nécessaire
   useEffect(() => {
