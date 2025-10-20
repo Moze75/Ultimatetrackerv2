@@ -570,9 +570,9 @@ function SpellCard({
                 Préparé
               </span>
             )}
-            <div className={`transform transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
-              <ChevronDown className="w-5 h-5 text-gray-400" />
-            </div>
+<div className={`chevron-icon ${isExpanded ? 'rotated' : ''}`}>
+  <ChevronDown className="w-5 h-5 text-gray-400" />
+</div>
           </div>
         </div>
         <div className="text-sm text-gray-400 mb-2 flex items-center gap-2">
