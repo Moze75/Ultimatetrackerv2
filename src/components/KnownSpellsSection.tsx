@@ -728,6 +728,34 @@ function SpellCard({
   );
 }
 
+// Composant pour gérer l'animation smooth des sections de niveau
+function SpellLevelSection({
+  isExpanded,
+  children,
+}: {
+  isExpanded: boolean;
+  children: React.ReactNode;
+}) {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const measuredHeight = useMeasuredHeight(contentRef, isExpanded);
+
+  return (
+    <div
+      className="spell-level-content"
+      style={{
+        height: isExpanded ? `${measuredHeight}px` : '0px',
+        marginTop: isExpanded && measuredHeight > 0 ? '0.5rem' : '0px',
+      }}
+    >
+      <div ref={contentRef}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps) {
+
 export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps) {
   const [knownSpells, setKnownSpells] = useState<KnownSpell[]>([]);
   const [loading, setLoading] = useState(true);
