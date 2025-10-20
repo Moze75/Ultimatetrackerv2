@@ -792,8 +792,7 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
 const sessionKey = `spell-section-first-render-${player.id}`;
 const hasAlreadyRendered = sessionStorage.getItem(sessionKey) === 'true';
 const [isInitialMount, setIsInitialMount] = useState(!hasAlreadyRendered);
-const [isTabVisible, setIsTabVisible] = useState(true);
-const previousVisibility = useRef(true);
+
 
 
   const [searchTerm, setSearchTerm] = useState('');
