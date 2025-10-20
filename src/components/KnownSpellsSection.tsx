@@ -708,12 +708,19 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
 // Inject animations CSS
 useEffect(() => {
   const id = 'magical-animations';
-  if (!document.getElementById(id)) {
-    const style = document.createElement('style');
-    style.id = id;
-    style.textContent = magicalAnimationCSS + smoothAnimationCSS;
-    document.head.appendChild(style);
+  // Supprimer l'ancien style s'il existe
+  const existingStyle = document.getElementById(id);
+  if (existingStyle) {
+    existingStyle.remove();
   }
+  
+  // Créer le nouveau style
+  const style = document.createElement('style');
+  style.id = id;
+  style.textContent = magicalAnimationCSS + smoothAnimationCSS;
+  document.head.appendChild(style);
+  
+  console.log('[DEBUG] CSS injected'); // Pour vérifier que ça s'exécute
 }, []);
 
   const toggleLevelCollapse = useCallback((levelName: string) => {
