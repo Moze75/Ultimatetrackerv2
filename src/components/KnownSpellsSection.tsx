@@ -741,10 +741,7 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
   });
 
 // Utiliser sessionStorage pour savoir si c'est le premier rendu de la session
-const sessionKey = `spell-section-first-render-${player.id}`;
-const hasAlreadyRendered = sessionStorage.getItem(sessionKey) === 'true';
-const [isInitialMount, setIsInitialMount] = useState(!hasAlreadyRendered);
-const [userHasInteracted, setUserHasInteracted] = useState(false); // ✅ STATE au lieu de ref
+const [searchTerm, setSearchTerm] = useState('');
 
 const [searchTerm, setSearchTerm] = useState('');
 const [filterPrepared, setFilterPrepared] = useState<'all' | 'prepared' | 'unprepared'>('all');
