@@ -1249,7 +1249,7 @@ return (
       </div>
     </button>
 
-    <div className={`spell-level-content ${!collapsedLevels.has(levelName) ? 'expanded' : ''}`}>
+    <SpellLevelSection isExpanded={!collapsedLevels.has(levelName)}>
       <div className="space-y-2 ml-2 py-2">
         {pactSpells.map((spell) => (
           <SpellCard
@@ -1262,7 +1262,7 @@ return (
           />
         ))}
       </div>
-    </div>
+    </SpellLevelSection>
   </div>
 );
               }
