@@ -134,11 +134,36 @@ const getAbilityModFromPlayer = (
 };
 
 // Animations CSS (injectées dynamiquement)
-const magicalAnimationCSS = ` 
-  @keyframes magical-explosion {
-    0% { transform: translate(-50%, -50%) scale(0); opacity: 1; background: radial-gradient(circle, #8b5cf6 0%, #3b82f6 50%, transparent 70%); border-radius: 50%; }
-    50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.8; box-shadow: 0 0 20px #8b5cf6, 0 0 40px #3b82f6; }
-    100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+const smoothAnimationCSS = `
+  /* Animation pour les cartes de sorts */
+  .spell-card-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .spell-card-content.expanded {
+    max-height: 2000px;
+  }
+  
+  /* Animation pour les sections de niveau */
+  .spell-level-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .spell-level-content.expanded {
+    max-height: 10000px;
+  }
+  
+  /* Animation du chevron */
+  .chevron-icon {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .chevron-icon.rotated {
+    transform: rotate(180deg);
   }
 `;
 
