@@ -186,14 +186,12 @@ const smoothAnimationCSS = `
   /* Animation pour les sections de niveau avec height contrôlée */
   .spell-level-content {
     overflow: hidden;
-    transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-                margin-top 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    margin-top: 0;
+    transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
-  /* Ajouter le margin seulement quand expanded */
-  .spell-level-content[style*="height: 0px"] {
-    margin-top: 0;
+  /* Désactiver la transition au chargement initial */
+  .spell-level-content.no-transition {
+    transition: none !important;
   }
   
   /* Animation du chevron */
