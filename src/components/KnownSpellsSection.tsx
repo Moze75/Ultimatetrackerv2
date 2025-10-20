@@ -186,12 +186,14 @@ const smoothAnimationCSS = `
   /* Animation pour les sections de niveau avec height contrôlée */
   .spell-level-content {
     overflow: hidden;
-    transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                margin-top 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-top: 0;
   }
   
-  /* Désactiver la transition au chargement initial */
-  .spell-level-content.no-transition {
-    transition: none !important;
+  /* Ajouter le margin seulement quand expanded */
+  .spell-level-content[style*="height: 0px"] {
+    margin-top: 0;
   }
   
   /* Animation du chevron */
@@ -213,7 +215,7 @@ const smoothAnimationCSS = `
     position: relative;
     z-index: 1;
   }
-`;
+`; 
 
 
 /* ===== Règles d’affichage des niveaux de slots D&D 5e (bornage par classe/niveau) ===== */
