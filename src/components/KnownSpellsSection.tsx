@@ -768,7 +768,7 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
   const [showSpellbook, setShowSpellbook] = useState(false);
   const [selectedSpells, setSelectedSpells] = useState<Spell[]>([]);
   const [expandedSpell, setExpandedSpell] = useState<string | null>(null);
-  const [collapsedLevels, setCollapsedLevels] = useState<Set<string>>(() => {
+const [collapsedLevels, setCollapsedLevels] = useState<Set<string>>(() => {
   // Restaurer l'état sauvegardé ou tout replier par défaut
   const saved = localStorage.getItem(`spell-levels-state-${player.id}`);
   if (saved) {
@@ -784,9 +784,9 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
 });
 const hasRenderedOnce = useRef(false);
 const [isInitialMount, setIsInitialMount] = useState(!hasRenderedOnce.current);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterPrepared, setFilterPrepared] = useState<'all' | 'prepared' | 'unprepared'>('all');
-  const spellSlotsInitialized = useRef(false);
+const [searchTerm, setSearchTerm] = useState('');
+const [filterPrepared, setFilterPrepared] = useState<'all' | 'prepared' | 'unprepared'>('all');
+const spellSlotsInitialized = useRef(false);
 
 // Inject animations CSS
 useEffect(() => {
