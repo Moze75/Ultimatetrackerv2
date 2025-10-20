@@ -674,14 +674,13 @@ function SpellCard({
                     : `**Aux niveaux supérieurs :** ${spell.spell_higher_levels}`
                 } 
                 ctx={{}}
-              />
-            </div>
-          )}
-        </div>
+        />
       </div>
-    </div>
+    )}
   </div>
 </div>
+          </div>
+        </div>
       )}
     </div>
   );
