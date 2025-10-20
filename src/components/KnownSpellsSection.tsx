@@ -192,15 +192,20 @@ const smoothAnimationCSS = `
     transform: rotate(180deg);
   }
   
-  /* Empêcher le scroll automatique lors du dépliage */
+  /* Empêcher le scroll automatique */
   [data-spell-level] {
-    scroll-margin-top: 0;
-    overflow-anchor: none;
+    scroll-margin: 0;
   }
   
-  /* Stabiliser la position pendant l'animation */
-  .spell-level-content.expanded {
-    contain: layout;
+  /* Stabiliser pendant l'animation */
+  .spell-level-content {
+    will-change: grid-template-rows;
+  }
+  
+  /* Forcer le rendu vers le bas */
+  [data-spell-level] button {
+    position: relative;
+    z-index: 1;
   }
 `;
 
