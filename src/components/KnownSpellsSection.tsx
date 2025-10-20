@@ -1309,14 +1309,10 @@ return (
     data-spell-level={level}
     id={`spell-level-${level}`}
   >
+
+TSX
 <button
-  onClick={(e) => {
-    const button = e.currentTarget;
-    const rectBefore = button.getBoundingClientRect();
-    const topBefore = rectBefore.top;
-    const scrollBefore = window.pageYOffset;
-    
-    toggleLevelCollapse(levelName);
+  onClick={() => toggleLevelCollapse(levelName)}
     
     // Compensation immédiate sans attendre l'animation
     requestAnimationFrame(() => {
