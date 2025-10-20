@@ -805,9 +805,16 @@ const toggleLevelCollapse = useCallback((levelName: string) => {
     } else {
       next.add(levelName);
     }
+    
+    // Sauvegarder l'état
+    localStorage.setItem(
+      `spell-levels-state-${player.id}`,
+      JSON.stringify({ collapsed: Array.from(next) })
+    );
+    
     return next;
   });
-}, []);
+}, [player.id]);
 
   useEffect(() => {
     fetchKnownSpells();
