@@ -761,7 +761,20 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
   const [showSpellbook, setShowSpellbook] = useState(false);
   const [selectedSpells, setSelectedSpells] = useState<Spell[]>([]);
   const [expandedSpell, setExpandedSpell] = useState<string | null>(null);
-  const [collapsedLevels, setCollapsedLevels] = useState<Set<string>>(new Set());
+  const [collapsedLevels, setCollapsedLevels] = useState<Set<string>>(() => {
+  // Restaurer l'état sauvegardé ou tout replier par défaut
+  const saved = localStorage.getItem(`spell-levels-state-${player.id}`);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      return new Set(parsed.collapsed || []);
+    } catch {
+      return new Set();
+    }
+  }
+  // Par défaut : tout est replié (Set vide signifie tout déplié, donc on met tous les niveaux)
+  return new Set();
+});
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPrepared, setFilterPrepared] = useState<'all' | 'prepared' | 'unprepared'>('all');
   const spellSlotsInitialized = useRef(false);
