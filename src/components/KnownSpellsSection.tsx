@@ -1225,8 +1225,8 @@ return (
     </button>
 
 <SpellLevelSection isExpanded={!collapsedLevels.has(levelName)}>
-      <div className="space-y-2 ml-2 py-2">
-        {pactSpells.map((spell) => (
+      <div className="space-y-2 mx-0 py-2">
+        {pactSpells.map((spell) => ( 
           <SpellCard
             key={spell.id}
             spell={spell}
@@ -1284,7 +1284,7 @@ return (
     </button>
 
 <SpellLevelSection isExpanded={!collapsedLevels.has(levelName)}>
-      <div className="space-y-2 ml-2 py-2">
+      <div className="space-y-2 mx-0 py-2">
         {spells.map((spell) => (
           <SpellCard
             key={spell.id}
