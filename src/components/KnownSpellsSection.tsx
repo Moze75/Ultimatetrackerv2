@@ -1206,19 +1206,21 @@ return (
                     </div>
                   </button>
 
-                  {!collapsedLevels.has(levelName) && (
-                    <div className="space-y-2 ml-2">
-                      {spells.map((spell) => (
-                        <SpellCard
+        <div className={`spell-level-content ${!collapsedLevels.has(levelName) ? 'expanded' : ''}`}>
+  <div className="space-y-2 ml-2 py-2">
+    {spells.map((spell) => (
+      <SpellCard
                           key={spell.id}
                           spell={spell}
                           expandedSpell={expandedSpell}
                           setExpandedSpell={setExpandedSpell}
                           onTogglePrepared={togglePrepared}
                           onRemoveSpell={removeKnownSpell}
-                        />
-                      ))}
-                    </div>
+                             />
+        ))}
+      </div>
+    </div>
+  </div>
                   )}
                 </div>
               );
