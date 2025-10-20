@@ -682,52 +682,6 @@ function SpellCard({
     </div>
   </div>
 </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-gray-800/50 p-2 rounded-lg border border-gray-700/30">
-                <div className="text-xs font-medium text-gray-400 mb-1">Temps d'incantation</div>
-                <div className="text-sm text-gray-200 font-medium">{spell.spell_casting_time}</div>
-              </div>
-              <div className="bg-gray-800/50 p-2 rounded-lg border border-gray-700/30">
-                <div className="text-xs font-medium text-gray-400 mb-1">Portée</div>
-                <div className="text-sm text-gray-200 font-medium">{spell.spell_range}</div>
-              </div>
-              <div className="bg-gray-800/50 p-2 rounded-lg border border-gray-700/30">
-                <div className="text-xs font-medium text-gray-400 mb-1">Composantes</div>
-                <div className="text-sm text-gray-200 font-medium">{getComponentsText(spell.spell_components)}</div>
-              </div>
-              <div className="bg-gray-800/50 p-2 rounded-lg border border-gray-700/30">
-                <div className="text-xs font-medium text-gray-400 mb-1">Durée</div>
-                <div className="text-sm text-gray-200 font-medium">{spell.spell_duration}</div>
-              </div>
-            </div>
-
-<div className="bg-gray-800/30 p-3 rounded-lg border border-gray-700/20">
-  <h5 className="font-semibold text-gray-200 mb-3 flex items-center gap-2">
-    <BookOpen size={16} className="text-blue-400" />
-    Description
-  </h5>
-  <div className="text-gray-300 space-y-2">
-    <MarkdownLite 
-      text={spell.spell_description || ''} 
-      ctx={{}}
-    />
-    
-    {spell.spell_higher_levels && (
-      <div className="mt-4">
-        <MarkdownLite 
-          text={
-            spell.spell_higher_levels.trim().startsWith('**') 
-              ? spell.spell_higher_levels 
-              : `**Aux niveaux supérieurs :** ${spell.spell_higher_levels}`
-          } 
-          ctx={{}}
-        />
-      </div>
-    )}
-  </div>
-</div>
-          </div>
-        </div>
       )}
     </div>
   );
