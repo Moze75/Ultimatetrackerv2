@@ -813,15 +813,6 @@ const toggleLevelCollapse = useCallback((levelName: string) => {
     } else {
       next.add(levelName);
     }
-
-// Initialiser tous les niveaux comme repliés par défaut au premier chargement
-useEffect(() => {
-  const saved = localStorage.getItem(`spell-levels-state-${player.id}`);
-  if (!saved && levelsToRender.length > 0) {
-    // Premier chargement : tout replier
-    setCollapsedLevels(new Set(levelsToRender));
-  }
-}, [player.id, levelsToRender]);
     
     // Sauvegarder l'état
     localStorage.setItem(
@@ -832,6 +823,21 @@ useEffect(() => {
     return next;
   });
 }, [player.id]);
+
+// Marquer comme non-initial après le premier rendu
+useEffect(() => {
+  const timer = setTimeout(() => setIsInitialMount(false), 100);
+  return () => clearTimeout(timer);
+}, []);
+
+// Initialiser tous les niveaux comme repliés par défaut au premier chargement
+useEffect(() => {
+  const saved = localStorage.getItem(`spell-levels-state-${player.id}`);
+  if (!saved && levelsToRender.length > 0) {
+    // Premier chargement : tout replier
+    setCollapsedLevels(new Set(levelsToRender));
+  }
+}, [player.id, levelsToRender]);
 
   useEffect(() => {
     fetchKnownSpells();
