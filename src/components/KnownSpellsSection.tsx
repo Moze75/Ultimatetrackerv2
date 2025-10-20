@@ -782,7 +782,8 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
   // Par défaut : tout est replié (Set vide signifie tout déplié, donc on met tous les niveaux)
   return new Set();
 });
-  const [isInitialMount, setIsInitialMount] = useState(true);
+const hasRenderedOnce = useRef(false);
+const [isInitialMount, setIsInitialMount] = useState(!hasRenderedOnce.current);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPrepared, setFilterPrepared] = useState<'all' | 'prepared' | 'unprepared'>('all');
   const spellSlotsInitialized = useRef(false);
@@ -1250,8 +1251,28 @@ return (
 <button
   onClick={(e) => {
     const button = e.currentTarget;
-<button
-  onClick={() => toggleLevelCollapse(levelName)}
+    const rectBefore = button.getBoundingClientRect();
+    const topBefore = rectBefore.top;
+    const scrollBefore = window.pageYOffset;
+    
+    toggleLevelCollapse(levelName);
+    
+    // Compensation immédiate sans attendre l'animation
+    requestAnimationFrame(() => {
+      const rectAfter = button.getBoundingClientRect();
+      const topAfter = rectAfter.top;
+      const scrollAfter = window.pageYOffset;
+      
+      // Si la position a changé, on compense
+      if (topAfter !== topBefore) {
+        const adjustment = scrollAfter + (topAfter - topBefore);
+        window.scrollTo({
+          top: adjustment,
+          behavior: 'instant' as ScrollBehavior
+        });
+      }
+    });
+  }}
   className="w-full flex items-center justify-between text-left hover:bg-gray-800/30 rounded-lg p-2 transition-all duration-200 group"
 >
       <div className="flex items-center gap-3 flex-1 pr-2">
