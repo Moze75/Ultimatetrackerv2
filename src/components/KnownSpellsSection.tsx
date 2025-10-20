@@ -779,11 +779,14 @@ const [collapsedLevels, setCollapsedLevels] = useState<Set<string>>(() => {
       return new Set();
     }
   }
-  // Par défaut : tout est replié (Set vide signifie tout déplié, donc on met tous les niveaux)
   return new Set();
 });
-const hasRenderedOnce = useRef(false);
-const [isInitialMount, setIsInitialMount] = useState(!hasRenderedOnce.current);
+
+// Utiliser sessionStorage pour savoir si c'est le premier rendu de la session
+const sessionKey = `spell-section-first-render-${player.id}`;
+const isFirstRender = !sessionStorage.getItem(sessionKey);
+const [isInitialMount, setIsInitialMount] = useState(isFirstRender);
+
 const [searchTerm, setSearchTerm] = useState('');
 const [filterPrepared, setFilterPrepared] = useState<'all' | 'prepared' | 'unprepared'>('all');
 const spellSlotsInitialized = useRef(false);
@@ -791,19 +794,49 @@ const spellSlotsInitialized = useRef(false);
 // Inject animations CSS
 useEffect(() => {
   const id = 'magical-animations';
-  // Supprimer l'ancien style s'il existe
   const existingStyle = document.getElementById(id);
   if (existingStyle) {
     existingStyle.remove();
   }
   
-  // Créer le nouveau style
   const style = document.createElement('style');
   style.id = id;
   style.textContent = magicalAnimationCSS + smoothAnimationCSS;
   document.head.appendChild(style);
-  
-  console.log('[DEBUG] CSS injected'); // Pour vérifier que ça s'exécute
+}, []);
+
+const toggleLevelCollapse = useCallback((levelName: string) => {
+  setCollapsedLevels((prev) => {
+    const next = new Set(prev);
+    if (next.has(levelName)) {
+      next.delete(levelName);
+    } else {
+      next.add(levelName);
+    }
+    
+    // Sauvegarder l'état
+    localStorage.setItem(
+      `spell-levels-state-${player.id}`,
+      JSON.stringify({ collapsed: Array.from(next) })
+    );
+    
+    return next;
+  });
+}, [player.id]);
+
+// Marquer comme non-initial seulement au premier rendu de la session
+useEffect(() => {
+  if (isFirstRender) {
+    const timer = setTimeout(() => {
+      setIsInitialMount(false);
+      sessionStorage.setItem(sessionKey, 'true');
+    }, 100);
+    return () => clearTimeout(timer);
+  } else {
+    // Pas le premier rendu : désactiver immédiatement l'animation
+    setIsInitialMount(false);
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
 }, []);
 
 const toggleLevelCollapse = useCallback((levelName: string) => {
