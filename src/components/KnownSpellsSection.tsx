@@ -1172,17 +1172,25 @@ return (
 <button
   onClick={(e) => {
     const button = e.currentTarget;
-    const rect = button.getBoundingClientRect();
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    const absoluteTop = rect.top + scrollTop;
+    const rectBefore = button.getBoundingClientRect();
+    const topBefore = rectBefore.top;
     
     toggleLevelCollapse(levelName);
     
-    // Maintenir la position du bouton après le toggle
+    // Attendre que le DOM soit mis à jour
     requestAnimationFrame(() => {
-      window.scrollTo({
-        top: absoluteTop,
-        behavior: 'instant' as ScrollBehavior
+      requestAnimationFrame(() => {
+        const rectAfter = button.getBoundingClientRect();
+        const topAfter = rectAfter.top;
+        const diff = topAfter - topBefore;
+        
+        // Compenser la différence de position
+        if (diff !== 0) {
+          window.scrollBy({
+            top: diff,
+            behavior: 'instant' as ScrollBehavior
+          });
+        }
       });
     });
   }}
