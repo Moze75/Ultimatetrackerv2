@@ -731,23 +731,15 @@ function SpellLevelSection({
   isExpanded,
   children,
   isInitialMount,
+  userHasInteracted,
 }: {
   isExpanded: boolean;
   children: React.ReactNode;
   isInitialMount?: boolean;
+  userHasInteracted?: boolean;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const measuredHeight = useMeasuredHeight(contentRef, isExpanded);
-  const [userHasInteracted, setUserHasInteracted] = useState(false);
-  const prevExpanded = useRef(isExpanded);
-
-  useEffect(() => {
-    // Détecter un changement de state causé par l'utilisateur
-    if (prevExpanded.current !== isExpanded) {
-      setUserHasInteracted(true);
-    }
-    prevExpanded.current = isExpanded;
-  }, [isExpanded]);
 
   // Affichage direct sans animation si pas encore d'interaction
   if (isInitialMount || !userHasInteracted) {
@@ -1115,6 +1107,7 @@ const fetchKnownSpells = async () => {
   }, [levelsToRender, collapsedLevels]);
 
   const toggleAllLevels = useCallback(() => {
+      userHasInteractedRef.current = true; // ✅ AJOUTEZ CETTE LIGNE
     setCollapsedLevels((prev) => {
       if (levelsToRender.length === 0) return prev;
       // Si tout est déplié actuellement -> replier tout. Sinon -> déplier tout.
