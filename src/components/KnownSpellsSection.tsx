@@ -712,10 +712,15 @@ function SpellLevelSection({
   isExpanded: boolean;
   children: React.ReactNode;
 }) {
-  if (!isExpanded) return null;
-  
   return (
-    <div className="mt-2">
+    <div 
+      className="overflow-hidden transition-all duration-500 ease-in-out"
+      style={{
+        maxHeight: isExpanded ? '10000px' : '0',
+        opacity: isExpanded ? 1 : 0,
+        marginTop: isExpanded ? '0.5rem' : '0',
+      }}
+    >
       {children}
     </div>
   );
