@@ -166,6 +166,16 @@ async declineInvitation(invitationId: string): Promise<void> {
   if (error) throw error;
 },
 
+  // ✅ AJOUTEZ ICI :
+async deleteInvitation(invitationId: string): Promise<void> {
+  const { error } = await supabase
+    .from('campaign_invitations')
+    .delete()
+    .eq('id', invitationId);
+
+  if (error) throw error;
+},
+
   async getMyInvitations(): Promise<CampaignInvitation[]> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Non authentifié');
