@@ -609,6 +609,14 @@ const totalAC = armorAC + shieldBonus + acBonus;
         player={player}
         onUpdate={onUpdate}
       />
+
+      {/* ✅ NOUVEAU : Modal Campagnes */}
+      <CampaignPlayerModal
+        open={showCampaignModal}
+        onClose={() => setShowCampaignModal(false)}
+        player={player}
+        onUpdate={onUpdate}
+      />
     </>
   );
 }
