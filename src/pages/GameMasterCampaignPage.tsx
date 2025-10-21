@@ -1286,6 +1286,13 @@ function SendGiftModal({
     try {
       setSending(true);
 
+    // ✅ LOG DE DEBUG
+    if (giftType === 'item' && selectedItem) {
+      console.log('📤 Objet sélectionné:', selectedItem);
+      console.log('📤 Description brute:', selectedItem.description);
+      console.log('📤 Description complète:', getFullDescription(selectedItem));
+    }
+      
       // ✅ CORRECTION : Utiliser la description COMPLÈTE avec métadonnées
       await campaignService.sendGift(campaignId, giftType, {
         itemName: selectedItem?.name,
