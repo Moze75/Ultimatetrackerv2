@@ -22,6 +22,7 @@ import { PlayerProfileSettingsModal } from './PlayerProfileSettingsModal';
 import { SwipeNavigator } from './SwipeNavigator';
 import { CampaignPlayerModal } from './CampaignPlayerModal'; // ✅ NOUVEAU
 
+
 /* ============================ Helpers ============================ */
 
 const getProficiencyBonusForLevel = (level: number): number => {
@@ -72,6 +73,7 @@ function computeArmorAC(armor_formula: {
 export function PlayerProfile({ player, onUpdate }: PlayerProfileProps) {
   const [editing, setEditing] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<'ac' | 'speed' | 'initiative' | 'proficiency' | null>(null);
+   const [showCampaignModal, setShowCampaignModal] = useState(false); // ✅ AJOUTEZ CETTE LIGNE
 
 const calculatedProficiencyBonus = getProficiencyBonusForLevel(player.level);
 const stats: PlayerStats = player.stats || {
