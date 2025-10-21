@@ -319,20 +319,22 @@ function CampaignDetailView({ campaign, session, onBack }: CampaignDetailViewPro
     }
   };
 
-  const loadInvitations = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('campaign_invitations')
-        .select('*')
-        .eq('campaign_id', campaign.id)
-        .order('invited_at', { ascending: false });
+const loadInvitations = async () => {
+  try {
+    // ✅ CORRECTION : Récupérer SEULEMENT les invitations, sans JOIN sur users
+    const { data, error } = await supabase
+      .from('campaign_invitations')
+      .select('*')
+      .eq('campaign_id', campaign.id)
+      .order('invited_at', { ascending: false });
 
-      if (error) throw error;
-      setInvitations(data || []);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+    if (error) throw error;
+    setInvitations(data || []);
+  } catch (error) {
+    console.error(error);
+    // ✅ Ne pas afficher d'erreur utilisateur ici, c'est normal
+  }
+};
 
   const loadInventory = async () => {
     try {
