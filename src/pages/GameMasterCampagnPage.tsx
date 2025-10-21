@@ -3,6 +3,7 @@ import {
   ArrowLeft, Plus, Users, Package, Send, Crown, X, Trash2, Mail, Copy, Check,
   Settings, Search, Edit2, UserPlus
 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 import { campaignService } from '../services/campaignService';
 import { Campaign, CampaignMember, CampaignInventoryItem, CampaignInvitation } from '../types/campaign';
 import toast from 'react-hot-toast';
@@ -320,7 +321,6 @@ function CampaignDetailView({ campaign, session, onBack }: CampaignDetailViewPro
 
   const loadInvitations = async () => {
     try {
-      // On récupère toutes les invitations de la campagne
       const { data, error } = await supabase
         .from('campaign_invitations')
         .select('*')
@@ -583,8 +583,9 @@ function MembersTab({
   );
 }
 
-// Modal d'invitation (SUITE dans le prochain message pour ne pas dépasser la limite)
-
+// =============================================
+// Modal d'invitation
+// =============================================
 function InvitePlayerModal({
   campaignId,
   onClose,
@@ -606,7 +607,6 @@ function InvitePlayerModal({
       return;
     }
 
-    // Validation email basique
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
       toast.error('Email invalide');
       return;
@@ -749,14 +749,54 @@ function InvitePlayerModal({
   );
 }
 
-// Tabs à implémenter dans le message suivant...
-function InventoryTab({ campaignId, inventory, onReload }: any) {
-  return <div className="text-white">Onglet Inventaire (à continuer)</div>;
+// =============================================
+// Onglet Inventaire (placeholder)
+// =============================================
+function InventoryTab({ 
+  campaignId, 
+  inventory, 
+  onReload 
+}: { 
+  campaignId: string; 
+  inventory: CampaignInventoryItem[]; 
+  onReload: () => void;
+}) {
+  return (
+    <div className="text-center py-12 bg-gray-900/30 rounded-lg border border-gray-700">
+      <Package className="w-16 h-16 mx-auto mb-4 text-gray-600" />
+      <h3 className="text-xl font-semibold text-gray-300 mb-2">
+        Inventaire de campagne
+      </h3>
+      <p className="text-gray-500">
+        Fonctionnalité à venir : gérez les objets de votre campagne ici
+      </p>
+    </div>
+  );
 }
 
-function GiftsTab({ campaignId, members, inventory }: any) {
-  return <div className="text-white">Onglet Envois (à continuer)</div>;
+// =============================================
+// Onglet Envois (placeholder)
+// =============================================
+function GiftsTab({ 
+  campaignId, 
+  members, 
+  inventory 
+}: { 
+  campaignId: string; 
+  members: CampaignMember[]; 
+  inventory: CampaignInventoryItem[];
+}) {
+  return (
+    <div className="text-center py-12 bg-gray-900/30 rounded-lg border border-gray-700">
+      <Send className="w-16 h-16 mx-auto mb-4 text-gray-600" />
+      <h3 className="text-xl font-semibold text-gray-300 mb-2">
+        Envoyer aux joueurs
+      </h3>
+      <p className="text-gray-500">
+        Fonctionnalité à venir : envoyez des objets et de l'argent à vos joueurs
+      </p>
+    </div>
+  );
 }
 
-// Import supabase nécessaire en haut du fichier
-import { supabase } from '../lib/supabase';
+export default GameMasterCampaignPage;
