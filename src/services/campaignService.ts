@@ -180,27 +180,24 @@ export const campaignService = {
   // MEMBRES - ✅ SANS JOIN SUR auth.users
   // =============================================
 
-  async getCampaignMembers(campaignId: string): Promise<CampaignMember[]> {
-    // ✅ Récupérer d'abord les membres
-    const { data: members, error } = await supabase
-      .from('campaign_members')
-      .select(`
-        *,
-        player:players(name, adventurer_name)
-      `)
-      .eq('campaign_id', campaignId)
-      .eq('is_active', true);
+async getCampaignMembers(campaignId: string): Promise<CampaignMember[]> {
+  const { data: members, error } = await supabase
+    .from('campaign_members')
+    .select(`
+      *,
+      player:players(name, adventurer_name)
+    `)
+    .eq('campaign_id', campaignId)
+    .eq('is_active', true);
 
-    if (error) throw error;
+  if (error) throw error;
 
-    // ✅ Enrichir avec les emails en utilisant l'API admin (si disponible) ou RPC
-    // Pour l'instant, on retourne sans email si nécessaire
-    return (members || []).map((member: any) => ({
-      ...member,
-      email: member.player_email || 'Email non disponible', // Fallback
-      player_name: member.player?.adventurer_name || member.player?.name,
-    }));
-  },
+  return (members || []).map((member: any) => ({
+    ...member,
+    email: member.player_email || 'Email inconnu',
+    player_name: member.player?.adventurer_name || member.player?.name,
+  }));
+}
 
   async removeMember(memberId: string): Promise<void> {
     const { error } = await supabase
