@@ -18,7 +18,7 @@ import toast from 'react-hot-toast';
 import { Avatar } from './Avatar';
 import { CONDITIONS } from './ConditionsSection';
 import { PlayerProfileSettingsModal } from './PlayerProfileSettingsModal';
-import { SwipeNavigator } from './SwipeNavigator';
+import { SwipeNavigator } from './SwipeNavigator';+import { CampaignPlayerModal } from './CampaignPlayerModal'; // ✅ NOUVEAU
 
 /* ============================ Helpers ============================ */
 
