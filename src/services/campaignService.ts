@@ -291,55 +291,55 @@ async getCampaignMembers(campaignId: string): Promise<CampaignMember[]> {
   // ENVOIS (GIFTS)
   // =============================================
 
-  async sendGift(
-    campaignId: string,
-    giftType: GiftType,
-    data: {
-      itemName?: string;
-      itemDescription?: string;
-      itemQuantity?: number;
-      gold?: number;
-      silver?: number;
-      copper?: number;
-      distributionMode: DistributionMode;
-      message?: string;
-    }
-  ): Promise<CampaignGift> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Non authentifié');
+async sendGift(
+  campaignId: string,
+  giftType: GiftType,
+  data: {
+    itemName?: string;
+    itemDescription?: string;
+    itemQuantity?: number;
+    gold?: number;
+    silver?: number;
+    copper?: number;
+    distributionMode: DistributionMode;
+    message?: string;
+  }
+): Promise<CampaignGift> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Non authentifié');
 
-    const { data: gift, error } = await supabase
-      .from('campaign_gifts')
-      .insert({
-        campaign_id: campaignId,
-        gift_type: giftType,
-        item_name: data.itemName,
-        item_description: data.itemDescription,
-        item_quantity: data.itemQuantity,
-        gold: data.gold || 0,
-        silver: data.silver || 0,
-        copper: data.copper || 0,
-        distribution_mode: data.distributionMode,
-        message: data.message,
-        sent_by: user.id,
-      })
-      .select()
-      .single();
+  // ✅ Pour les objets, nettoyer la description des métadonnées
+  let cleanDescription = data.itemDescription;
+  if (giftType === 'item' && cleanDescription) {
+    // Retirer les lignes #meta: si présentes
+    cleanDescription = cleanDescription
+      .split('\n')
+      .filter(line => !line.trim().startsWith('#meta:'))
+      .join('\n')
+      .trim();
+  }
 
-    if (error) throw error;
-    return gift;
-  },
+  const { data: gift, error } = await supabase
+    .from('campaign_gifts')
+    .insert({
+      campaign_id: campaignId,
+      gift_type: giftType,
+      item_name: data.itemName,
+      item_description: cleanDescription, // ✅ Description nettoyée
+      item_quantity: data.itemQuantity,
+      gold: data.gold || 0,
+      silver: data.silver || 0,
+      copper: data.copper || 0,
+      distribution_mode: data.distributionMode,
+      message: data.message,
+      sent_by: user.id,
+    })
+    .select()
+    .single();
 
-  async getCampaignGifts(campaignId: string): Promise<CampaignGift[]> {
-    const { data, error } = await supabase
-      .from('campaign_gifts')
-      .select('*')
-      .eq('campaign_id', campaignId)
-      .order('sent_at', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
-  },
+  if (error) throw error;
+  return gift;
+}
 
   async claimGift(
     giftId: string,
