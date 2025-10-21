@@ -242,6 +242,7 @@ const handleClaimGift = async (gift: CampaignGift) => {
               }`}
             >
               Invitations ({invitations.length})
+            </button>
 <button
   onClick={() => setActiveTab('gifts')}
   className={`pb-2 px-1 border-b-2 transition-colors ${
