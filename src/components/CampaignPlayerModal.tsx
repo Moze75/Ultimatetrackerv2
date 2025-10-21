@@ -528,28 +528,34 @@ const handleClaimGift = async (gift: CampaignGift) => {
                           {gift.item_description && (
                             <p className="text-sm text-gray-400 mt-2">{gift.item_description}</p>
                           )}
-                          {gift.message && (
-                            <div className="mt-2 text-sm text-gray-300 italic border-l-2 border-purple-500/40 pl-3">
-                              "{gift.message}"
-                            </div>
-                          )}
-                          <p className="text-xs text-gray-500 mt-2">
-                            Envoyé le {new Date(gift.sent_at).toLocaleDateString('fr-FR')}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+ {getVisibleDescription(gift.item_description) && (
+                <p className="text-sm text-gray-400 mt-2">
+                  {getVisibleDescription(gift.item_description)}
+                </p>
+              )}
 
-                    <button
-                      onClick={() => handleClaimGift(gift)}
-                      className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
-                    >
-                      <Gift size={18} />
-                      Récupérer
-                    </button>
-                  </div>
-                ))
-              ) : (
+              {gift.message && (
+                <div className="mt-2 text-sm text-gray-300 italic border-l-2 border-purple-500/40 pl-3">
+                  "{gift.message}"
+                </div>
+              )}
+              <p className="text-xs text-gray-500 mt-2">
+                Envoyé le {new Date(gift.sent_at).toLocaleDateString('fr-FR')}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={() => handleClaimGift(gift)}
+          className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
+        >
+          <Gift size={18} />
+          Récupérer
+        </button>
+      </div>
+    ))
+  ) : (
                 <div className="text-center py-12 text-gray-500">
                   <Gift className="w-16 h-16 mx-auto mb-4 opacity-50" />
                   <p>Aucun loot en attente</p>
