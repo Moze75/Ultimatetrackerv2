@@ -924,29 +924,48 @@ function InventoryTab({
       )}
 
       {/* Modals */}
-      {showList && (
-        <EquipmentListModal
-          onClose={() => setShowList(false)}
-          onAddItem={async (payload) => {
-            try {
-              await campaignService.addItemToCampaign(
-                campaignId,
-                payload.name,
-                payload.description || '',
-                payload.meta.quantity || 1
-              );
-              toast.success('Objet ajouté à l\'inventaire');
-              onReload();
-            } catch (error) {
-              console.error(error);
-              toast.error('Erreur lors de l\'ajout');
-            } finally {
-              setShowList(false);
-            }
-          }}
-          allowedKinds={null}
-        />
-      )}
+{showList && (
+  <EquipmentListModal
+    onClose={() => setShowList(false)}
+    onAddItem={async (payload) => {
+      try {
+        // ✅ CORRECTION : Injecter les métadonnées dans la description
+        const META_PREFIX = '#meta:';
+        const metaLine = `${META_PREFIX}${JSON.stringify(payload.meta)}`;
+        
+        // Nettoyer la description visible
+        const visibleDesc = (payload.description || '').trim();
+        
+        // Construire la description complète
+        const fullDescription = visibleDesc 
+          ? `${visibleDesc}\n${metaLine}`
+          : metaLine;
+
+        console.log('🎁 Ajout avec métadonnées:', {
+          name: payload.name,
+          description: fullDescription,
+          meta: payload.meta
+        });
+
+        await campaignService.addItemToCampaign(
+          campaignId,
+          payload.name,
+          fullDescription, // ✅ Description COMPLÈTE avec #meta:
+          payload.meta.quantity || 1
+        );
+        
+        toast.success('Objet ajouté à l\'inventaire');
+        onReload();
+      } catch (error) {
+        console.error(error);
+        toast.error('Erreur lors de l\'ajout');
+      } finally {
+        setShowList(false);
+      }
+    }}
+    allowedKinds={null}
+  />
+)}
 
       {showCustom && (
         <CustomItemModal
