@@ -471,7 +471,7 @@ const handleClaimGift = async (gift: CampaignGift) => {
               ) : (
                 <div className="text-center py-12 text-gray-500">
                   <Gift className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                  <p>Aucun cadeau en attente</p>
+                  <p>Aucun loot en attente</p>
                   <p className="text-sm mt-2">Les objets et argent envoyés par votre MJ apparaîtront ici</p>
                 </div>
               )}
