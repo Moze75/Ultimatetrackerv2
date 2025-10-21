@@ -242,17 +242,16 @@ const handleClaimGift = async (gift: CampaignGift) => {
               }`}
             >
               Invitations ({invitations.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('gifts')}
-              className={`pb-2 px-1 border-b-2 transition-colors ${
-                activeTab === 'gifts'
-                  ? 'border-purple-500 text-purple-400'
-                  : 'border-transparent text-gray-400 hover:text-gray-300'
-              }`}
-            >
-              Cadeaux ({pendingGifts.length})
-            </button>
+<button
+  onClick={() => setActiveTab('gifts')}
+  className={`pb-2 px-1 border-b-2 transition-colors ${
+    activeTab === 'gifts'
+      ? 'border-purple-500 text-purple-400'
+      : 'border-transparent text-gray-400 hover:text-gray-300'
+  }`}
+>
+  Loots ({pendingGifts.length}) {/* ✅ CHANGÉ */}
+</button>
           </div>
         </div>
 
