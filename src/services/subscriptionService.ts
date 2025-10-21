@@ -129,20 +129,21 @@ export const subscriptionService = {
    */
   async createMolliePayment(userId: string, tier: SubscriptionTier): Promise<string> {
     // TODO: Implémenter l'appel à Mollie via votre backend
-    // Pour l'instant, retourne une URL fictive
     console.log('Création du paiement Mollie pour:', userId, tier);
     
     const plan = SUBSCRIPTION_PLANS.find(p => p.id === tier);
     console.log('Montant:', plan?.price, '€ (paiement unique)');
     
-    // Exemple de structure pour plus tard :
-    // const response = await fetch('/api/create-mollie-payment', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ userId, tier, amount: plan?.price }),
-    // });
-    // const { checkoutUrl } = await response.json();
-    // return checkoutUrl;
+    /* 
+    Exemple de structure pour plus tard :
+    const response = await fetch('/api/create-mollie-payment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, tier, amount: plan?.price }),
+    });
+    const { checkoutUrl } = await response.json();
+    return checkoutUrl;
+    */
 
     return '#mollie-payment-placeholder';
   },
@@ -184,3 +185,19 @@ export const subscriptionService = {
   },
 
   /**
+   * Annule un abonnement (non applicable pour lifetime, mais gardé pour compatibilité)
+   */
+  async cancelSubscription(userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('user_subscriptions')
+      .update({
+        status: 'cancelled',
+        end_date: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId)
+      .eq('status', 'active');
+
+    if (error) throw error;
+  },
+};
