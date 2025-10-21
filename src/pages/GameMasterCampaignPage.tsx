@@ -805,7 +805,6 @@ function InventoryTab({
       .trim();
   };
 
-  // ✅ AJOUT : Parser les métadonnées
   const parseMeta = (description: string | null | undefined) => {
     if (!description) return null;
     const lines = description.split('\n').map(l => l.trim());
@@ -818,7 +817,6 @@ function InventoryTab({
     }
   };
 
-  // Filtrer l'inventaire selon la recherche
   const filteredInventory = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return inventory;
@@ -901,15 +899,20 @@ function InventoryTab({
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredInventory.map((item) => (
-            <div
-              key={item.id}
-              className="bg-gray-900/60 backdrop-blur-sm border border-gray-700/50 rounded-lg p-4 hover:bg-gray-800/60 transition-colors"
-            >
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-white truncate">{item.name}</h3>
-                    {/* ✅ BADGE TYPE */}
+          {filteredInventory.map((item) => {
+            const meta = parseMeta(item.description);
+            
+            return (
+              <div
+                key={item.id}
+                className="bg-gray-900/60 backdrop-blur-sm border border-gray-700/50 rounded-lg p-4 hover:bg-gray-800/60 transition-colors"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <h3 className="font-semibold text-white truncate">{item.name}</h3>
+                      
+                      {/* ✅ BADGE TYPE */}
                       {meta?.type === 'armor' && (
                         <span className="text-xs px-2 py-0.5 rounded bg-purple-900/30 text-purple-300 border border-purple-500/30">
                           Armure
@@ -926,42 +929,66 @@ function InventoryTab({
                         </span>
                       )}
                     </div>
-                  {item.quantity > 1 && (
-                    <span className="text-xs px-2 py-0.5 rounded bg-purple-900/30 text-purple-300 mt-1 inline-block">
-                      x{item.quantity}
-                    </span>
-                  )}
+
+                    {item.quantity > 1 && (
+                      <span className="text-xs px-2 py-0.5 rounded bg-gray-700/50 text-gray-300 mt-1 inline-block">
+                        x{item.quantity}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setEditingItem(item)}
+                      className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded"
+                      title="Modifier"
+                    >
+                      <Settings size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteItem(item.id)}
+                      className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-900/30 rounded"
+                      title="Supprimer"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setEditingItem(item)}
-                    className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded"
-                    title="Modifier"
-                  >
-                    <Settings size={16} />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteItem(item.id)}
-                    className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-900/30 rounded"
-                    title="Supprimer"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+
+                {/* ✅ PROPRIÉTÉS VISUELLES */}
+                {meta && (
+                  <div className="mb-2 space-y-1 text-xs">
+                    {meta.type === 'armor' && meta.armor && (
+                      <div className="text-purple-300">
+                        🛡️ CA: {meta.armor.label}
+                      </div>
+                    )}
+                    {meta.type === 'shield' && meta.shield && (
+                      <div className="text-blue-300">
+                        🛡️ Bonus: +{meta.shield.bonus}
+                      </div>
+                    )}
+                    {meta.type === 'weapon' && meta.weapon && (
+                      <div className="text-red-300">
+                        ⚔️ {meta.weapon.damageDice} {meta.weapon.damageType}
+                        {meta.weapon.properties && ` • ${meta.weapon.properties}`}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Description visible */}
+                {getVisibleDescription(item.description) && (
+                  <p className="text-sm text-gray-400 line-clamp-2 mb-2">
+                    {getVisibleDescription(item.description)}
+                  </p>
+                )}
+
+                <div className="mt-3 text-xs text-gray-500">
+                  Ajouté le {new Date(item.created_at).toLocaleDateString('fr-FR')}
                 </div>
               </div>
-
-              {/* ✅ Description visible (sans #meta:) */}
-              {getVisibleDescription(item.description) && (
-                <p className="text-sm text-gray-400 line-clamp-3">
-                  {getVisibleDescription(item.description)}
-                </p>
-              )}
-
-              <div className="mt-3 text-xs text-gray-500">
-                Ajouté le {new Date(item.created_at).toLocaleDateString('fr-FR')}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -971,28 +998,17 @@ function InventoryTab({
           onClose={() => setShowList(false)}
           onAddItem={async (payload) => {
             try {
-              // ✅ CORRECTION : Injecter les métadonnées dans la description
               const META_PREFIX = '#meta:';
               const metaLine = `${META_PREFIX}${JSON.stringify(payload.meta)}`;
-              
-              // Nettoyer la description visible
               const visibleDesc = (payload.description || '').trim();
-              
-              // Construire la description complète
               const fullDescription = visibleDesc 
                 ? `${visibleDesc}\n${metaLine}`
                 : metaLine;
 
-              console.log('🎁 Ajout avec métadonnées:', {
-                name: payload.name,
-                description: fullDescription,
-                meta: payload.meta
-              });
-
               await campaignService.addItemToCampaign(
                 campaignId,
                 payload.name,
-                fullDescription, // ✅ Description COMPLÈTE avec #meta:
+                fullDescription,
                 payload.meta.quantity || 1
               );
               
@@ -1014,7 +1030,6 @@ function InventoryTab({
           onClose={() => setShowCustom(false)}
           onAdd={async (payload) => {
             try {
-              // ✅ CORRECTION : Injecter les métadonnées
               const META_PREFIX = '#meta:';
               const metaLine = `${META_PREFIX}${JSON.stringify(payload.meta)}`;
               const visibleDesc = (payload.description || '').trim();
@@ -1025,7 +1040,7 @@ function InventoryTab({
               await campaignService.addItemToCampaign(
                 campaignId,
                 payload.name,
-                fullDescription, // ✅ Description COMPLÈTE
+                fullDescription,
                 payload.meta.quantity || 1
               );
               
