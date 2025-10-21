@@ -368,6 +368,16 @@ const totalAC = armorAC + shieldBonus + acBonus;
               </div>
 
               <div className="flex flex-col gap-3 sm:gap-4 items-stretch w-32 justify-start">
+               
+              {/* ✅ NOUVEAU : Bouton Campagnes */}
+                <button
+                  onClick={() => setShowCampaignModal(true)}
+                  className="w-32 h-9 rounded text-sm bg-gradient-to-r from-purple-600/20 to-blue-600/20 border border-purple-500/40 text-purple-300 hover:from-purple-600/30 hover:to-blue-600/30 flex items-center justify-between px-3 transition-all"
+                >
+                  <span className="ml-1.5 flex-1 text-left">Campagnes</span>
+                  <Scroll className="w-4 h-4" />
+                </button>
+                
                 {/* Inspirations */}
                 <div className="w-32 rounded text-sm bg-gray-800/50 flex flex-col">
                   <div className="text-gray-400 text-sm text-center h-8 flex items-center justify-center gap-1">
