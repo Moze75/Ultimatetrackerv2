@@ -1223,6 +1223,16 @@ function SendGiftModal({
 
   const selectedItem = inventory.find(i => i.id === selectedItemId);
 
+  // ✅ AJOUT : Fonction pour extraire la description visible (sans les métadonnées)
+  const getVisibleDescription = (description: string | null | undefined): string => {
+    if (!description) return '';
+    return description
+      .split('\n')
+      .filter(line => !line.trim().startsWith('#meta:'))
+      .join('\n')
+      .trim();
+  };
+  
   const handleSend = async () => {
     if (giftType === 'item') {
       if (!selectedItemId) {
