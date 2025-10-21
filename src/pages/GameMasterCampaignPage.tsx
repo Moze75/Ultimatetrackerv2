@@ -1207,32 +1207,61 @@ function SendGiftModal({
   onClose: () => void;
   onSent: () => void;
 }) {
-  // États pour les objets
+  // États
   const [selectedItemId, setSelectedItemId] = useState('');
   const [itemQuantity, setItemQuantity] = useState(1);
-
-  // États pour l'argent
   const [gold, setGold] = useState(0);
   const [silver, setSilver] = useState(0);
   const [copper, setCopper] = useState(0);
-
-  // États communs
   const [distributionMode, setDistributionMode] = useState<'individual' | 'shared'>('individual');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
 
   const selectedItem = inventory.find(i => i.id === selectedItemId);
 
-  // ✅ AJOUT : Fonction pour extraire la description visible (sans les métadonnées)
+  // ✅ AJOUT : Constantes et fonctions utilitaires
+  const META_PREFIX = '#meta:';
+  
+  const parseMeta = (description: string | null | undefined) => {
+    if (!description) return null;
+    const lines = description.split('\n').map(l => l.trim());
+    const metaLine = [...lines].reverse().find(l => l.startsWith(META_PREFIX));
+    if (!metaLine) return null;
+    try {
+      return JSON.parse(metaLine.slice(META_PREFIX.length));
+    } catch {
+      return null;
+    }
+  };
+
   const getVisibleDescription = (description: string | null | undefined): string => {
     if (!description) return '';
     return description
       .split('\n')
-      .filter(line => !line.trim().startsWith('#meta:'))
+      .filter(line => !line.trim().startsWith(META_PREFIX))
       .join('\n')
       .trim();
   };
-  
+
+  const getFullDescription = (item: CampaignInventoryItem) => {
+    if (!item) return '';
+    
+    // Parser les métadonnées existantes
+    const existingMeta = parseMeta(item.description);
+    
+    if (!existingMeta) {
+      // Pas de métadonnées, retourner la description brute
+      return item.description || '';
+    }
+
+    // Nettoyer la description visible (sans #meta:)
+    const visibleDesc = getVisibleDescription(item.description);
+
+    // Reconstruire avec les métadonnées
+    const metaLine = `${META_PREFIX}${JSON.stringify(existingMeta)}`;
+    return visibleDesc ? `${visibleDesc}\n${metaLine}` : metaLine;
+  };
+
   const handleSend = async () => {
     if (giftType === 'item') {
       if (!selectedItemId) {
@@ -1256,10 +1285,11 @@ function SendGiftModal({
 
     try {
       setSending(true);
+
       // ✅ CORRECTION : Utiliser la description COMPLÈTE avec métadonnées
       await campaignService.sendGift(campaignId, giftType, {
         itemName: selectedItem?.name,
-        itemDescription: selectedItem ? getFullDescription(selectedItem) : undefined, // ✅ CHANGÉ
+        itemDescription: selectedItem ? getFullDescription(selectedItem) : undefined,
         itemQuantity,
         gold,
         silver,
@@ -1289,20 +1319,9 @@ function SendGiftModal({
     }
   };
 
-  // Fonction helper pour afficher la description visible (sans #meta:)
-  const getVisibleDescription = (description: string | null | undefined): string => {
-    if (!description) return '';
-    return description
-      .split('\n')
-      .filter(line => !line.trim().startsWith(META_PREFIX))
-      .join('\n')
-      .trim();
-  };
-
   return (
     <div className="fixed inset-0 z-[10000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-
-      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
+      <div className="fixed inset-0 bg-black/60" />
       <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(36rem,95vw)] max-h-[90vh] overflow-y-auto bg-gray-900/95 border border-gray-700 rounded-xl p-6">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-bold text-white">
@@ -1314,7 +1333,6 @@ function SendGiftModal({
         </div>
 
         <div className="space-y-6">
-          {/* Sélection de l'objet ou montant */}
           {giftType === 'item' ? (
             <>
               <div>
@@ -1353,18 +1371,47 @@ function SendGiftModal({
                     />
                   </div>
 
-              {selectedItem.description && (
-                <div className="bg-gray-800/40 rounded-lg p-3 border border-gray-700">
-                  <h5 className="text-xs font-medium text-gray-400 mb-2">Aperçu de l'objet :</h5>
-                  <p className="text-sm text-gray-300 whitespace-pre-wrap">
-                    {getVisibleDescription(selectedItem.description)}
-                  </p>
-                </div>
+                  {getVisibleDescription(selectedItem.description) && (
+                    <div className="bg-gray-800/40 rounded-lg p-3 border border-gray-700">
+                      <h5 className="text-xs font-medium text-gray-400 mb-2">Aperçu de l'objet :</h5>
+                      <p className="text-sm text-gray-300 whitespace-pre-wrap">
+                        {getVisibleDescription(selectedItem.description)}
+                      </p>
+                      
+                      {(() => {
+                        const meta = parseMeta(selectedItem.description);
+                        if (!meta) return null;
+                        
+                        return (
+                          <div className="mt-2 pt-2 border-t border-gray-700/50 text-xs text-gray-400 space-y-1">
+                            {meta.type === 'armor' && meta.armor && (
+                              <>
+                                <div className="text-purple-300">📋 Type: Armure</div>
+                                <div>CA: {meta.armor.label}</div>
+                              </>
+                            )}
+                            {meta.type === 'shield' && meta.shield && (
+                              <>
+                                <div className="text-blue-300">📋 Type: Bouclier</div>
+                                <div>Bonus: +{meta.shield.bonus}</div>
+                              </>
+                            )}
+                            {meta.type === 'weapon' && meta.weapon && (
+                              <>
+                                <div className="text-red-300">📋 Type: Arme</div>
+                                <div>Dégâts: {meta.weapon.damageDice} {meta.weapon.damageType}</div>
+                                {meta.weapon.properties && <div>Propriétés: {meta.weapon.properties}</div>}
+                              </>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </>
               )}
             </>
-          )}
-        </>
-      ) : (
+          ) : (
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
                 <div>
@@ -1444,7 +1491,7 @@ function SendGiftModal({
             />
           </div>
 
-          {/* Info sur les destinataires */}
+          {/* Info destinataires */}
           <div className="bg-gray-800/40 rounded-lg p-4">
             <div className="flex items-center gap-2 text-sm text-gray-300 mb-2">
               <Users size={16} />
