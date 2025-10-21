@@ -459,16 +459,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
                 Abonnement
               </button>
               
-              {debugInfo && (
-                <button
-                  onClick={() => setShowDebug(!showDebug)}
-                  className="flex items-center gap-2 text-sm text-blue-300 hover:text-blue-200"
-                >
-                  <AlertCircle size={16} />
-                  Debug
-                </button>
-              )}
-            </div>
+  
 
             {/* ✅ Badge du plan actuel */}
             {currentSubscription && currentSubscription.tier !== 'free' && (
