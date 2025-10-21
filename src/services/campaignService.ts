@@ -197,7 +197,7 @@ async getCampaignMembers(campaignId: string): Promise<CampaignMember[]> {
     email: member.player_email || 'Email inconnu',
     player_name: member.player?.adventurer_name || member.player?.name,
   }));
-}
+},
 
   async removeMember(memberId: string): Promise<void> {
     const { error } = await supabase
