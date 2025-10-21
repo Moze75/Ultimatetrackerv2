@@ -155,7 +155,7 @@ const handleClaimGift = async (gift: CampaignGift) => {
     console.log('🎁 Claiming gift:', gift);
 
     if (gift.gift_type === 'item') {
-      // ✅ Parser les métadonnées de l'objet original (si présentes dans la description)
+      // ✅ CORRECTION : Parser les métadonnées de l'objet original
       const META_PREFIX = '#meta:';
       let originalMeta = null;
       
@@ -165,20 +165,26 @@ const handleClaimGift = async (gift: CampaignGift) => {
         if (metaLine) {
           try {
             originalMeta = JSON.parse(metaLine.trim().slice(META_PREFIX.length));
-          } catch {}
+            console.log('📦 Métadonnées originales trouvées:', originalMeta);
+          } catch (err) {
+            console.error('❌ Erreur parsing métadonnées:', err);
+          }
         }
       }
 
-      // ✅ Utiliser les métadonnées originales ou créer des nouvelles
+      // ✅ Si on a des métadonnées originales, les utiliser
+      // Sinon, créer des métadonnées par défaut
       const itemMeta = originalMeta || {
         type: 'equipment' as const,
         quantity: gift.item_quantity || 1,
         equipped: false,
       };
 
-      // S'assurer que la quantité et equipped sont à jour
+      // ✅ S'assurer que la quantité et equipped sont à jour
       itemMeta.quantity = gift.item_quantity || 1;
       itemMeta.equipped = false;
+
+      console.log('📦 Métadonnées finales:', itemMeta);
 
       const metaLine = `${META_PREFIX}${JSON.stringify(itemMeta)}`;
       
@@ -195,12 +201,7 @@ const handleClaimGift = async (gift: CampaignGift) => {
         ? `${cleanDescription}\n${metaLine}`
         : metaLine;
 
-      console.log('📦 Adding to inventory:', {
-        player_id: player.id,
-        name: gift.item_name,
-        description: finalDescription,
-        meta: itemMeta
-      });
+      console.log('📦 Description finale:', finalDescription);
 
       const { data: insertedItem, error } = await supabase
         .from('inventory_items')
@@ -223,7 +224,14 @@ const handleClaimGift = async (gift: CampaignGift) => {
         quantity: gift.item_quantity || 1,
       });
 
-      toast.success(`${gift.item_name} ajouté à votre inventaire !`);
+      // ✅ Message de succès adapté au type
+      const typeLabel = 
+        itemMeta.type === 'armor' ? 'Armure' :
+        itemMeta.type === 'shield' ? 'Bouclier' :
+        itemMeta.type === 'weapon' ? 'Arme' :
+        'Objet';
+      
+      toast.success(`${typeLabel} "${gift.item_name}" ajouté${itemMeta.type === 'armor' ? 'e' : ''} à votre inventaire !`);
 
       setTimeout(() => {
         onClose();
@@ -231,7 +239,7 @@ const handleClaimGift = async (gift: CampaignGift) => {
       }, 1500);
 
     } else {
-      // Argent (code existant)
+      // Code argent (inchangé)
       const { error } = await supabase.from('players').update({
         gold: (player.gold || 0) + (gift.gold || 0),
         silver: (player.silver || 0) + (gift.silver || 0),
