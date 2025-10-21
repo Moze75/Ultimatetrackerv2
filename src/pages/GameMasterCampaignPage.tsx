@@ -484,92 +484,116 @@ function MembersTab({
         </button>
       </div>
 
-      {/* Invitations en attente */}
-      {invitations.filter(inv => inv.status === 'pending').length > 0 && (
-        <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-4">
-          <h3 className="text-sm font-semibold text-amber-300 mb-3">
-            Invitations en attente ({invitations.filter(inv => inv.status === 'pending').length})
-          </h3>
-          <div className="space-y-2">
-            {invitations
-              .filter(inv => inv.status === 'pending')
-              .map((inv) => (
-                <div
-                  key={inv.id}
-                  className="bg-gray-900/40 rounded-lg p-3 flex items-center justify-between"
-                >
-                  <div>
-                    <p className="text-sm text-gray-200">{inv.player_email}</p>
-                    <p className="text-xs text-gray-500">
-                      Code: <span className="font-mono text-amber-400">{inv.invitation_code}</span>
-                    </p>
-                  </div>
-                  <button
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(inv.invitation_code);
-                        toast.success('Code copié !');
-                      } catch {
-                        toast.error('Erreur copie');
-                      }
-                    }}
-                    className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"
-                    title="Copier le code"
-                  >
-                    <Copy size={16} />
-                  </button>
-                </div>
-              ))}
-          </div>
-        </div>
-      )}
-
-      {/* Liste des membres */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {members.map((member) => (
+{/* Invitations en attente */}
+{invitations.filter(inv => inv.status === 'pending').length > 0 && (
+  <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-4">
+    <h3 className="text-sm font-semibold text-amber-300 mb-3">
+      Invitations en attente ({invitations.filter(inv => inv.status === 'pending').length})
+    </h3>
+    <div className="space-y-2">
+      {invitations
+        .filter(inv => inv.status === 'pending')
+        .map((inv) => (
           <div
-            key={member.id}
-            className="bg-gray-900/60 backdrop-blur-sm border border-gray-700/50 rounded-lg p-4"
+            key={inv.id}
+            className="bg-gray-900/40 rounded-lg p-3 flex items-center justify-between"
           >
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <h3 className="font-semibold text-white">
-                  {member.player_name || 'Personnage non défini'}
-                </h3>
-                <p className="text-sm text-gray-400 mt-1">{member.email}</p>
-                <p className="text-xs text-gray-500 mt-2">
-                  Rejoint le {new Date(member.joined_at).toLocaleDateString('fr-FR')}
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-200">{inv.player_email}</p>
+              <div className="flex items-center gap-4 mt-1">
+                <p className="text-xs text-gray-500">
+                  Code: <span className="font-mono text-amber-400">{inv.invitation_code}</span>
                 </p>
+                <p className="text-xs text-gray-500">⏳ En attente</p>
               </div>
+            </div>
+            
+            <div className="flex items-center gap-1">
               <button
                 onClick={async () => {
-                  if (!confirm('Retirer ce joueur de la campagne ?')) return;
                   try {
-                    await campaignService.removeMember(member.id);
-                    toast.success('Joueur retiré');
+                    await navigator.clipboard.writeText(inv.invitation_code);
+                    toast.success('Code copié !');
+                  } catch {
+                    toast.error('Erreur copie');
+                  }
+                }}
+                className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"
+                title="Copier le code"
+              >
+                <Copy size={16} />
+              </button>
+              
+              <button
+                onClick={async () => {
+                  if (!confirm('Supprimer cette invitation ?')) return;
+                  try {
+                    await campaignService.deleteInvitation(inv.id);
+                    toast.success('Invitation supprimée');
                     onReload();
                   } catch (error) {
                     console.error(error);
-                    toast.error('Erreur');
+                    toast.error('Erreur lors de la suppression');
                   }
                 }}
-                className="p-2 text-red-400 hover:bg-red-900/30 rounded-lg"
-                title="Retirer"
+                className="p-2 text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
+                title="Supprimer l'invitation"
               >
                 <Trash2 size={16} />
               </button>
             </div>
           </div>
         ))}
+    </div>
+  </div>
+)}
 
-        {members.length === 0 && (
-          <div className="col-span-full text-center py-12 text-gray-500 bg-gray-900/30 rounded-lg border-2 border-dashed border-gray-700">
-            Aucun joueur dans la campagne.
-            <br />
-            <span className="text-sm">Invitez des joueurs pour commencer !</span>
-          </div>
-        )}
+{/* Liste des membres */}
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  {members.map((member) => (
+    <div
+      key={member.id}
+      className="bg-gray-900/60 backdrop-blur-sm border border-gray-700/50 rounded-lg p-4"
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <h3 className="font-semibold text-white">
+            {member.player_name || 'Personnage non défini'}
+          </h3>
+          <p className="text-sm text-gray-400 mt-1">{member.email}</p>
+          <p className="text-xs text-gray-500 mt-2">
+            Rejoint le {new Date(member.joined_at).toLocaleDateString('fr-FR')}
+          </p>
+        </div>
+        <button
+          onClick={async () => {
+            if (!confirm('Retirer ce joueur de la campagne ?')) return;
+            try {
+              await campaignService.removeMember(member.id);
+              toast.success('Joueur retiré');
+              onReload();
+            } catch (error) {
+              console.error(error);
+              toast.error('Erreur');
+            }
+          }}
+          className="p-2 text-red-400 hover:bg-red-900/30 rounded-lg"
+          title="Retirer"
+        >
+          <Trash2 size={16} />
+        </button>
       </div>
+    </div>
+  ))}
+
+  {members.length === 0 && (
+    <div className="col-span-full text-center py-12 text-gray-500 bg-gray-900/30 rounded-lg border-2 border-dashed border-gray-700">
+      Aucun joueur dans la campagne.
+      <br />
+      <span className="text-sm">Invitez des joueurs pour commencer !</span>
+    </div>
+  )}
+</div>
 
       {showInviteModal && (
         <InvitePlayerModal
