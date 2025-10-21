@@ -227,30 +227,33 @@ async getCampaignMembers(campaignId: string): Promise<CampaignMember[]> {
   // INVENTAIRE DE CAMPAGNE
   // =============================================
 
-  async addItemToCampaign(
-    campaignId: string,
-    name: string,
-    description: string,
-    quantity: number
-  ): Promise<CampaignInventoryItem> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Non authentifié');
+async addItemToCampaign(
+  campaignId: string,
+  item: {
+    name: string;
+    description?: string;
+    quantity: number;
+  }
+): Promise<CampaignInventoryItem> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Non authentifié');
 
-    const { data, error } = await supabase
-      .from('campaign_inventory')
-      .insert({
-        campaign_id: campaignId,
-        name,
-        description,
-        quantity,
-        created_by: user.id,
-      })
-      .select()
-      .single();
+  // ✅ La description doit contenir les métadonnées #meta:
+  // Elle est fournie par EquipmentListModal lors de l'ajout
+  const { data, error } = await supabase
+    .from('campaign_inventory_items')
+    .insert({
+      campaign_id: campaignId,
+      name: item.name,
+      description: item.description || '', // ✅ NE PAS vider la description !
+      quantity: item.quantity,
+    })
+    .select()
+    .single();
 
-    if (error) throw error;
-    return data;
-  },
+  if (error) throw error;
+  return data;
+},
 
   async getCampaignInventory(campaignId: string): Promise<CampaignInventoryItem[]> {
     const { data, error } = await supabase
