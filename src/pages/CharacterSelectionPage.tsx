@@ -34,10 +34,8 @@ interface CharacterSelectionPageProps {
   onCharacterSelect: (player: Player) => void;
 }
 
-// Clé pour le dernier personnage sélectionné
 const LAST_SELECTED_CHARACTER_SNAPSHOT = 'lastSelectedCharacterSnapshot';
 
-// URL du fond
 const BG_URL =
   (import.meta as any)?.env?.VITE_SELECTION_BG_URL ||
   'https://yumzqyyogwzrmlcpvnky.supabase.co/storage/v1/object/public/static/tmpoofee5sh.png';
@@ -49,7 +47,6 @@ type CreatorModalProps = {
   initialSnapshot?: any;
 };
 
-// ✅ Modal sans Suspense pour affichage instantané
 function CreatorModal({ open, onClose, onComplete, initialSnapshot }: CreatorModalProps) {
   if (!open) return null;
   return (
@@ -77,7 +74,6 @@ function CreatorModal({ open, onClose, onComplete, initialSnapshot }: CreatorMod
   );
 }
 
-// Modal de bienvenue après création de personnage
 type WelcomeModalProps = {
   open: boolean;
   characterName: string;
@@ -157,7 +153,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
       const sub = await subscriptionService.getCurrentSubscription(session.user.id);
       setCurrentSubscription(sub);
 
-      // Charger les jours restants si en essai
       if (sub?.tier === 'free' && sub?.status === 'trial') {
         const days = await subscriptionService.getRemainingTrialDays(session.user.id);
         setRemainingTrialDays(days);
@@ -189,7 +184,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
   const handleCreatorComplete = async (payload: CharacterExportPayload) => {
     if (creating) return;
 
-    // ✅ Vérifier la limite de personnages selon l'abonnement
     const canCreate = await subscriptionService.canCreateCharacter(session.user.id, players.length);
     if (!canCreate) {
       const limit = await subscriptionService.getCharacterLimit(session.user.id);
@@ -355,68 +349,30 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
 
   const displayClassName = (cls?: string | null) => (cls === 'Sorcier' ? 'Occultiste' : cls || '');
 
-  // ✅ Fonction pour obtenir le badge d'abonnement
-  const getSubscriptionBadge = () => {
+  // ✅ Fonction pour obtenir le texte du niveau de compte (sans badge)
+  const getSubscriptionText = () => {
     if (!currentSubscription) return null;
 
-    const plan = SUBSCRIPTION_PLANS.find(p => p.id === currentSubscription.tier);
-    if (!plan) return null;
-
-    // Badge pour essai gratuit
     if (currentSubscription.tier === 'free' && currentSubscription.status === 'trial') {
       const daysLeft = remainingTrialDays ?? 0;
-      const isExpiringSoon = daysLeft <= 3;
-      
-      return (
-        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border ${
-          isExpiringSoon 
-            ? 'bg-red-900/40 border-red-500/50 text-red-300' 
-            : 'bg-gray-800/80 border-gray-700 text-gray-300'
-        }`}>
-          <Clock size={18} />
-          <span className="font-semibold">
-            Essai gratuit : {daysLeft} jour{daysLeft > 1 ? 's' : ''} restant{daysLeft > 1 ? 's' : ''}
-          </span>
-        </div>
-      );
+      return `Essai gratuit : ${daysLeft} jour${daysLeft > 1 ? 's' : ''} restant${daysLeft > 1 ? 's' : ''}`;
     }
 
-    // Badge pour essai expiré
     if (currentSubscription.status === 'expired') {
-      return (
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border bg-red-900/40 border-red-500/50 text-red-300">
-          <Clock size={18} />
-          <span className="font-semibold">Essai expiré - Passez à un plan payant</span>
-        </div>
-      );
+      return 'Essai expiré';
     }
 
-    // Badge pour Héro
     if (currentSubscription.tier === 'hero') {
-      return (
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border bg-blue-900/40 border-blue-500/50 text-blue-300">
-          <Star size={18} className="text-yellow-400" />
-          <span className="font-semibold">Plan Héro</span>
-          <span className="text-xs bg-blue-500/30 px-2 py-0.5 rounded">Accès à vie</span>
-        </div>
-      );
+      return 'Plan Héro';
     }
 
-    // Badge pour Maître du Jeu
     if (currentSubscription.tier === 'game_master') {
-      return (
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border bg-purple-900/40 border-purple-500/50 text-purple-300">
-          <Crown size={18} className="text-yellow-400" />
-          <span className="font-semibold">Plan Maître du Jeu</span>
-          <span className="text-xs bg-purple-500/30 px-2 py-0.5 rounded">Accès à vie</span>
-        </div>
-      );
+      return 'Plan Maître du Jeu';
     }
 
     return null;
   };
 
-  // ✅ Afficher la page de campagnes si demandé
   if (showCampaigns) {
     return <GameMasterCampaignPage session={session} onBack={() => setShowCampaigns(false)} />;
   }
@@ -462,9 +418,18 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
     >
       <div className="min-h-screen py-8 bg-transparent">
         <div className="w-full max-w-6xl mx-auto px-4">
-          {/* ✅ Header avec nouvel ordre */}
-          <div className="text-center mb-8 sm:mb-12 pt-8 space-y-4">
-            {/* 1️⃣ Titre "Mes Personnages" EN PREMIER */}
+          {/* ✅ NOUVEAU : Niveau de compte discret en haut */}
+          {currentSubscription && (
+            <div className="text-center mb-4">
+              <p className="text-xs text-gray-400">
+                {getSubscriptionText()}
+              </p>
+            </div>
+          )}
+
+          {/* Header */}
+          <div className="text-center mb-8 sm:mb-12 space-y-4">
+            {/* Titre */}
             <h1
               className="text-4xl font-bold text-white"
               style={{
@@ -475,7 +440,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
               Mes Personnages
             </h1>
             
-            {/* 2️⃣ Nombre de personnages créés */}
+            {/* Nombre de personnages */}
             <p
               className="text-xl text-gray-200"
               style={{ textShadow: '0 0 10px rgba(255,255,255,.3)' }}
@@ -487,12 +452,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
                 : 'Aucun personnage créé'}
             </p>
 
-            {/* 3️⃣ Badge d'abonnement */}
-            <div className="flex justify-center pt-2">
-              {getSubscriptionBadge()}
-            </div>
-
-            {/* 4️⃣ Boutons d'action */}
+            {/* Boutons d'action */}
             <div className="flex justify-center gap-3 pt-2 flex-wrap">
               <button
                 onClick={() => setShowSubscription(true)}
@@ -505,7 +465,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
                 }
               </button>
 
-              {/* ✅ NOUVEAU: Bouton Campagnes MJ (visible uniquement pour Game Master) */}
               {currentSubscription?.tier === 'game_master' && (
                 <button
                   onClick={() => setShowCampaigns(true)}
@@ -518,7 +477,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
             </div>
           </div>
 
-          {/* Modal de suppression */}
+          {/* Le reste du code reste identique... */}
           {deletingCharacter && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
               <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full border border-red-500/20">
@@ -667,7 +626,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
                 );
               })}
 
-              {/* Create New Character Card */}
               <div
                 onClick={() => setShowCreator(true)}
                 className="w-full max-w-sm cursor-pointer hover:scale-[1.02] transition-all duration-200 bg-slate-800/40 backdrop-blur-sm border-dashed border-2 border-slate-600/50 hover:border-green-500/50 hover:bg-slate-700/40 rounded-xl"
@@ -689,7 +647,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
         </div>
       </div>
 
-      {/* Bandeau de déconnexion */}
       <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
         <div className="w-full max-w-md mx-auto px-4">
           <button
@@ -702,7 +659,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
         </div>
       </div>
 
-      {/* Modal du wizard */}
       <CreatorModal
         open={showCreator}
         onClose={() => {
@@ -729,7 +685,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
         </div>
       )}
 
-      {/* Modal de bienvenue */}
       <WelcomeModal
         open={showWelcome}
         characterName={newCharacter?.adventurer_name || newCharacter?.name || 'Aventurier'}
@@ -739,3 +694,4 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
   );
 }
 
+export default CharacterSelectionPage;
