@@ -10,6 +10,16 @@ import {
   DistributionMode
 } from '../types/campaign';
 
+// ✅ Fonction pour générer un code d'invitation côté client
+function generateInvitationCode(): string {
+  const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Sans O, 0, I, 1
+  let result = '';
+  for (let i = 0; i < 8; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return result;
+}
+
 export const campaignService = {
   // =============================================
   // CAMPAGNES
@@ -84,9 +94,8 @@ export const campaignService = {
   // =============================================
 
   async invitePlayer(campaignId: string, playerEmail: string): Promise<CampaignInvitation> {
-    // Générer un code unique
-    const { data: codeData } = await supabase.rpc('generate_invitation_code');
-    const invitationCode = codeData || Math.random().toString(36).substring(2, 10).toUpperCase();
+    // ✅ Générer le code côté client au lieu d'appeler une fonction SQL
+    const invitationCode = generateInvitationCode();
 
     const { data, error } = await supabase
       .from('campaign_invitations')
@@ -117,7 +126,6 @@ export const campaignService = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Non authentifié');
 
-    // Mettre à jour l'invitation
     const { data: invitation, error: invError } = await supabase
       .from('campaign_invitations')
       .update({
@@ -131,7 +139,6 @@ export const campaignService = {
 
     if (invError) throw invError;
 
-    // Ajouter le joueur comme membre
     const { error: memberError } = await supabase
       .from('campaign_members')
       .insert({
@@ -187,7 +194,6 @@ export const campaignService = {
 
     if (error) throw error;
 
-    // Formater les données
     return (data || []).map((member: any) => ({
       ...member,
       email: member.user?.email,
