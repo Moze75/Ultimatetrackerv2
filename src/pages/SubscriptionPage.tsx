@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Check, Crown, Shield, Sparkles, Users, Coins, Zap } from 'lucide-react';
+import { ArrowLeft, Check, Crown, Shield, Sparkles, Users, Coins, Zap, Clock, Infinity } from 'lucide-react';
 import { subscriptionService } from '../services/subscriptionService';
 import { SUBSCRIPTION_PLANS, UserSubscription } from '../types/subscription';
 import toast from 'react-hot-toast';
@@ -15,6 +15,8 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
   const [currentSubscription, setCurrentSubscription] = useState<UserSubscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [remainingTrialDays, setRemainingTrialDays] = useState<number | null>(null);
+  const [isTrialExpired, setIsTrialExpired] = useState(false);
 
   useEffect(() => {
     loadSubscription();
@@ -25,6 +27,14 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
       setLoading(true);
       const sub = await subscriptionService.getCurrentSubscription(session.user.id);
       setCurrentSubscription(sub);
+
+      // Vérifier les jours restants de l'essai
+      const trialDays = await subscriptionService.getRemainingTrialDays(session.user.id);
+      setRemainingTrialDays(trialDays);
+
+      // Vérifier si l'essai a expiré
+      const expired = await subscriptionService.isTrialExpired(session.user.id);
+      setIsTrialExpired(expired);
     } catch (error) {
       console.error('Erreur lors du chargement de l\'abonnement:', error);
       toast.error('Erreur lors du chargement de l\'abonnement');
@@ -35,12 +45,12 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
 
   const handleSubscribe = async (tier: string) => {
     if (tier === 'free') {
-      toast.error('Vous êtes déjà sur le plan gratuit');
+      toast.error('Vous êtes en période d\'essai gratuit');
       return;
     }
 
-    if (currentSubscription?.tier === tier) {
-      toast.success('Vous êtes déjà abonné à ce plan');
+    if (currentSubscription?.tier === tier && currentSubscription?.status === 'active') {
+      toast.success('Vous possédez déjà cet accès à vie !');
       return;
     }
 
@@ -54,9 +64,10 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       // Pour l'instant, afficher un message
+      const plan = SUBSCRIPTION_PLANS.find(p => p.id === tier);
       toast.error(
-        'Le paiement Mollie n\'est pas encore configuré. Cette fonctionnalité sera bientôt disponible !',
-        { duration: 4000 }
+        `Le paiement Mollie n'est pas encore configuré.\nMontant : ${plan?.price}€ (paiement unique pour accès à vie)\nCette fonctionnalité sera bientôt disponible !`,
+        { duration: 5000 }
       );
 
       // Exemple de ce qu'il faudra faire :
@@ -74,7 +85,7 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
   const getPlanIcon = (planId: string) => {
     switch (planId) {
       case 'free':
-        return <Shield className="w-8 h-8" />;
+        return <Clock className="w-8 h-8" />;
       case 'hero':
         return <Sparkles className="w-8 h-8" />;
       case 'game_master':
@@ -177,21 +188,54 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
                   '0 0 15px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.6), 0 0 30px rgba(255,255,255,0.4)',
               }}
             >
-              Choisissez votre plan
+              Choisissez votre accès
             </h1>
-            <p className="text-lg text-gray-200 max-w-2xl mx-auto">
-              Débloquez plus de personnages et de fonctionnalités pour enrichir vos aventures
+            <p className="text-lg text-gray-200 max-w-2xl mx-auto mb-2">
+              Paiement unique pour un accès à vie
+            </p>
+            <p className="text-sm text-purple-300">
+              ✨ Pas d'abonnement • Payez une fois, gardez pour toujours
             </p>
 
             {/* Badge du plan actuel */}
             {currentSubscription && (
               <div className="mt-6 inline-block">
                 <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700 rounded-lg px-4 py-2">
-                  <p className="text-sm text-gray-400">
-                    Plan actuel :{' '}
-                    <span className="font-bold text-white">
-                      {SUBSCRIPTION_PLANS.find(p => p.id === currentSubscription.tier)?.name || 'Gratuit'}
-                    </span>
+                  {currentSubscription.status === 'trial' && remainingTrialDays !== null ? (
+                    <p className="text-sm text-gray-400">
+                      Essai gratuit :{' '}
+                      <span className={`font-bold ${remainingTrialDays <= 3 ? 'text-red-400' : 'text-white'}`}>
+                        {remainingTrialDays} jour{remainingTrialDays > 1 ? 's' : ''} restant{remainingTrialDays > 1 ? 's' : ''}
+                      </span>
+                    </p>
+                  ) : currentSubscription.status === 'expired' ? (
+                    <p className="text-sm text-red-400">
+                      ⚠️ Essai gratuit expiré - Choisissez un plan pour continuer
+                    </p>
+                  ) : (
+                    <p className="text-sm text-gray-400">
+                      Plan actuel :{' '}
+                      <span className="font-bold text-white">
+                        {SUBSCRIPTION_PLANS.find(p => p.id === currentSubscription.tier)?.name || 'Gratuit'}
+                      </span>
+                      {currentSubscription.tier !== 'free' && (
+                        <span className="ml-2 text-green-400">✓ Accès à vie</span>
+                      )}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Alerte si essai expiré */}
+            {isTrialExpired && (
+              <div className="mt-4 max-w-2xl mx-auto">
+                <div className="bg-red-900/40 border border-red-500/50 rounded-lg p-4">
+                  <p className="text-red-300 font-semibold">
+                    🔒 Votre période d'essai de 15 jours est terminée
+                  </p>
+                  <p className="text-red-200 text-sm mt-1">
+                    Pour continuer à utiliser D&D Ultimate Tracker, choisissez un plan ci-dessous
                   </p>
                 </div>
               </div>
@@ -203,19 +247,28 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {SUBSCRIPTION_PLANS.map((plan) => {
             const colors = getPlanColor(plan.color);
-            const isCurrentPlan = currentSubscription?.tier === plan.id;
+            const isCurrentPlan = currentSubscription?.tier === plan.id && currentSubscription?.status === 'active';
+            const isExpiredTrial = plan.id === 'free' && isTrialExpired;
 
             return (
               <div
                 key={plan.id}
                 className={`relative bg-gray-900/80 backdrop-blur-sm border-2 ${colors.border} rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 ${
                   plan.popular ? 'ring-2 ring-yellow-500/50' : ''
-                }`}
+                } ${isExpiredTrial ? 'opacity-60' : ''}`}
               >
                 {/* Badge "Populaire" */}
                 {plan.popular && (
                   <div className="absolute top-4 right-4 bg-yellow-500 text-gray-900 px-3 py-1 rounded-full text-xs font-bold">
-                    POPULAIRE
+                    ⭐ POPULAIRE
+                  </div>
+                )}
+
+                {/* Badge "Accès à vie" */}
+                {plan.lifetime && (
+                  <div className="absolute top-4 left-4 bg-green-500/20 border border-green-500/50 text-green-300 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                    <Infinity size={14} />
+                    À VIE
                   </div>
                 )}
 
@@ -229,18 +282,34 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
                   <h3 className="text-2xl font-bold text-white mb-2">{plan.name}</h3>
                   <div className="mb-6">
                     <span className="text-4xl font-bold text-white">{plan.price}€</span>
-                    {plan.price > 0 && <span className="text-gray-400 ml-2">/mois</span>}
+                    {plan.price > 0 && (
+                      <span className="text-gray-400 ml-2 text-sm">paiement unique</span>
+                    )}
                   </div>
 
-                  {/* Limite de personnages */}
-                  <div className={`${colors.bg} border ${colors.border} rounded-lg p-4 mb-6`}>
-                    <p className="text-center">
-                      <span className="text-2xl font-bold text-white">{plan.maxCharacters}</span>
-                      <span className="text-gray-300 ml-2">
-                        personnage{plan.maxCharacters > 1 ? 's' : ''} max
-                      </span>
-                    </p>
-                  </div>
+                  {/* Limite de personnages (sauf pour MJ) */}
+                  {plan.id !== 'game_master' && (
+                    <div className={`${colors.bg} border ${colors.border} rounded-lg p-4 mb-6`}>
+                      <p className="text-center">
+                        <span className="text-2xl font-bold text-white">{plan.maxCharacters}</span>
+                        <span className="text-gray-300 ml-2">
+                          personnage{plan.maxCharacters > 1 ? 's' : ''} max
+                        </span>
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Pour MJ : message différent */}
+                  {plan.id === 'game_master' && (
+                    <div className={`${colors.bg} border ${colors.border} rounded-lg p-4 mb-6`}>
+                      <p className="text-center">
+                        <span className="text-2xl font-bold text-purple-300">♾️</span>
+                        <span className="text-gray-300 ml-2">
+                          Personnages pour toute votre campagne
+                        </span>
+                      </p>
+                    </div>
+                  )}
 
                   {/* Fonctionnalités */}
                   <ul className="space-y-3 mb-8">
@@ -254,6 +323,21 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
 
                   {/* Bouton d'action */}
                   {isCurrentPlan ? (
+                    <button
+                      disabled
+                      className="w-full bg-green-700 text-white py-3 px-6 rounded-lg font-semibold cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      <Check size={20} />
+                      Accès actif à vie
+                    </button>
+                  ) : isExpiredTrial ? (
+                    <button
+                      disabled
+                      className="w-full bg-gray-700 text-gray-400 py-3 px-6 rounded-lg font-semibold cursor-not-allowed"
+                    >
+                      Essai expiré
+                    </button>
+                  ) : plan.id === 'free' ? (
                     <button
                       disabled
                       className="w-full bg-gray-700 text-gray-400 py-3 px-6 rounded-lg font-semibold cursor-not-allowed"
@@ -271,12 +355,10 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
                           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
                           Traitement...
                         </>
-                      ) : plan.id === 'free' ? (
-                        'Rester gratuit'
                       ) : (
                         <>
                           <Zap size={20} />
-                          S'abonner maintenant
+                          Obtenir l'accès à vie
                         </>
                       )}
                     </button>
@@ -299,7 +381,7 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
                   Fonctionnalités Maître du Jeu (à venir)
                 </h3>
                 <p className="text-gray-300">
-                  Le plan Maître du Jeu incluera prochainement des outils puissants pour gérer vos campagnes
+                  Le plan Maître du Jeu inclura prochainement des outils puissants pour gérer vos campagnes
                 </p>
               </div>
             </div>
@@ -331,7 +413,7 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
             🔒 Paiements sécurisés via <span className="font-semibold text-white">Mollie</span>
           </p>
           <p className="text-xs text-gray-500 mt-2">
-            Annulez à tout moment • Support disponible
+            Paiement unique • Accès à vie • Support disponible
           </p>
         </div>
       </div>
