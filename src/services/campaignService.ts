@@ -308,24 +308,16 @@ async sendGift(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Non authentifié');
 
-  // ✅ Pour les objets, nettoyer la description des métadonnées
-  let cleanDescription = data.itemDescription;
-  if (giftType === 'item' && cleanDescription) {
-    // Retirer les lignes #meta: si présentes
-    cleanDescription = cleanDescription
-      .split('\n')
-      .filter(line => !line.trim().startsWith('#meta:'))
-      .join('\n')
-      .trim();
-  }
-
+  // ❌ RETIRÉ : Ne plus nettoyer les métadonnées, on les garde !
+  // On envoie la description telle quelle avec les #meta:
+  
   const { data: gift, error } = await supabase
     .from('campaign_gifts')
     .insert({
       campaign_id: campaignId,
       gift_type: giftType,
       item_name: data.itemName,
-      item_description: cleanDescription, // ✅ Description nettoyée
+      item_description: data.itemDescription, // ✅ Description complète avec métadonnées
       item_quantity: data.itemQuantity,
       gold: data.gold || 0,
       silver: data.silver || 0,
