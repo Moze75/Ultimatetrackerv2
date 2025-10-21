@@ -377,7 +377,7 @@ const totalAC = armorAC + shieldBonus + acBonus;
                 >
                   <span className="ml-1.5 flex-1 text-left">Campagnes</span>
                   <Scroll className="w-4 h-4" />
-                </button>
+                </button> 
                 
                 {/* Inspirations */}
                 <div className="w-32 rounded text-sm bg-gray-800/50 flex flex-col">
