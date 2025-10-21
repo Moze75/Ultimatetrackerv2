@@ -794,14 +794,28 @@ function InventoryTab({
   const [editingItem, setEditingItem] = useState<CampaignInventoryItem | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // ✅ AJOUTEZ CETTE FONCTION ICI (après les useState)
+  const META_PREFIX = '#meta:';
+
   const getVisibleDescription = (description: string | null | undefined): string => {
     if (!description) return '';
     return description
       .split('\n')
-      .filter(line => !line.trim().startsWith('#meta:'))
+      .filter(line => !line.trim().startsWith(META_PREFIX))
       .join('\n')
       .trim();
+  };
+
+  // ✅ AJOUT : Parser les métadonnées
+  const parseMeta = (description: string | null | undefined) => {
+    if (!description) return null;
+    const lines = description.split('\n').map(l => l.trim());
+    const metaLine = [...lines].reverse().find(l => l.startsWith(META_PREFIX));
+    if (!metaLine) return null;
+    try {
+      return JSON.parse(metaLine.slice(META_PREFIX.length));
+    } catch {
+      return null;
+    }
   };
 
   // Filtrer l'inventaire selon la recherche
