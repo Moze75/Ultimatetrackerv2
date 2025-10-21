@@ -229,31 +229,28 @@ async getCampaignMembers(campaignId: string): Promise<CampaignMember[]> {
 
 async addItemToCampaign(
   campaignId: string,
-  item: {
-    name: string;
-    description?: string;
-    quantity: number;
-  }
+  name: string,
+  description: string,
+  quantity: number
 ): Promise<CampaignInventoryItem> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Non authentifié');
 
-  // ✅ La description contient les métadonnées #meta: fournies par EquipmentListModal
   const { data, error } = await supabase
-    .from('campaign_inventory') // ✅ Bon nom de table
+    .from('campaign_inventory')
     .insert({
       campaign_id: campaignId,
-      name: item.name,
-      description: item.description || '', // ✅ Garde les métadonnées
-      quantity: item.quantity,
-      created_by: user.id, // ✅ Ajout de created_by
+      name,
+      description, // ✅ Contient les métadonnées #meta: si l'objet vient d'EquipmentListModal
+      quantity,
+      created_by: user.id,
     })
     .select()
     .single();
 
   if (error) throw error;
   return data;
-},
+}
 
   async getCampaignInventory(campaignId: string): Promise<CampaignInventoryItem[]> {
     const { data, error } = await supabase
