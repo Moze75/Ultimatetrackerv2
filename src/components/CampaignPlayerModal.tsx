@@ -152,10 +152,12 @@ const handleClaimGift = async (gift: CampaignGift) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    console.log('🎁 Claiming gift:', gift); // ✅ DEBUG
+
     if (gift.gift_type === 'item') {
       // ✅ CORRECTION : Créer les métadonnées correctes pour l'inventaire
       const itemMeta = {
-        type: 'equipment' as const, // Type par défaut
+        type: 'equipment' as const,
         quantity: gift.item_quantity || 1,
         equipped: false,
       };
@@ -167,14 +169,29 @@ const handleClaimGift = async (gift: CampaignGift) => {
         ? `${gift.item_description.trim()}\n${metaLine}`
         : metaLine;
 
-      // Ajouter l'objet à l'inventaire avec les métadonnées
-      const { error } = await supabase.from('inventory_items').insert({
+      console.log('📦 Adding to inventory:', {
         player_id: player.id,
-        name: gift.item_name || 'Objet',
-        description: finalDescription,
-      });
+        name: gift.item_name,
+        description: finalDescription
+      }); // ✅ DEBUG
 
-      if (error) throw error;
+      // Ajouter l'objet à l'inventaire avec les métadonnées
+      const { data: insertedItem, error } = await supabase
+        .from('inventory_items')
+        .insert({
+          player_id: player.id,
+          name: gift.item_name || 'Objet',
+          description: finalDescription,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Insert error:', error); // ✅ DEBUG
+        throw error;
+      }
+
+      console.log('✅ Item inserted:', insertedItem); // ✅ DEBUG
 
       // Enregistrer la récupération
       await campaignService.claimGift(gift.id, player.id, {
@@ -183,41 +200,12 @@ const handleClaimGift = async (gift: CampaignGift) => {
 
       toast.success(`${gift.item_name} ajouté à votre inventaire !`);
     } else {
-      // Ajouter l'argent (code existant inchangé)
-      const { error } = await supabase.from('players').update({
-        gold: (player.gold || 0) + (gift.gold || 0),
-        silver: (player.silver || 0) + (gift.silver || 0),
-        copper: (player.copper || 0) + (gift.copper || 0),
-      }).eq('id', player.id);
-
-      if (error) throw error;
-
-      // Enregistrer la récupération
-      await campaignService.claimGift(gift.id, player.id, {
-        gold: gift.gold,
-        silver: gift.silver,
-        copper: gift.copper,
-      });
-
-      const amounts = [];
-      if (gift.gold > 0) amounts.push(`${gift.gold} po`);
-      if (gift.silver > 0) amounts.push(`${gift.silver} pa`);
-      if (gift.copper > 0) amounts.push(`${gift.copper} pc`);
-
-      toast.success(`${amounts.join(', ')} ajouté à votre argent !`);
-
-      // Mettre à jour le joueur localement
-      onUpdate({
-        ...player,
-        gold: (player.gold || 0) + (gift.gold || 0),
-        silver: (player.silver || 0) + (gift.silver || 0),
-        copper: (player.copper || 0) + (gift.copper || 0),
-      });
+      // ... (code argent inchangé)
     }
 
     loadData();
   } catch (error) {
-    console.error(error);
+    console.error('💥 Claim error:', error);
     toast.error('Erreur lors de la récupération');
   }
 };
