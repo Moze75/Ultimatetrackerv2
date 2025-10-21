@@ -307,45 +307,69 @@ export function CampaignPlayerModal({
               )}
 
               {/* Liste des invitations */}
-              {invitations.length > 0 ? (
-                invitations.map((invitation) => (
-                  <div
-                    key={invitation.id}
-                    className="bg-gray-800/40 border border-gray-700 rounded-lg p-4"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="font-semibold text-white">Invitation reçue</h3>
-                        <p className="text-sm text-gray-400 mt-1">
-                          Code : <span className="font-mono text-purple-400">{invitation.invitation_code}</span>
-                        </p>
-                      </div>
-                    </div>
+{invitations.length > 0 ? (
+  invitations.map((invitation) => (
+    <div
+      key={invitation.id}
+      className="bg-gray-800/40 border border-purple-500/30 rounded-lg p-4"
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1">
+          <h3 className="font-semibold text-white mb-1">
+            Nouvelle invitation à une campagne
+          </h3>
+          <p className="text-sm text-gray-400">
+            Vous avez été invité à rejoindre une campagne par le Maître du Jeu
+          </p>
+          
+          {/* ✅ Afficher le code seulement en mode "avancé" */}
+          <details className="mt-2">
+            <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-400">
+              Code d'invitation (optionnel)
+            </summary>
+            <p className="text-xs text-gray-400 mt-1">
+              Code : <span className="font-mono text-purple-400">{invitation.invitation_code}</span>
+            </p>
+          </details>
+        </div>
+      </div>
 
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleAcceptInvitation(invitation.id)}
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
-                      >
-                        <Check size={18} />
-                        Accepter
-                      </button>
-                      <button
-                        onClick={() => handleDeclineInvitation(invitation.id)}
-                        className="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg"
-                      >
-                        Refuser
-                      </button>
-                    </div>
-                  </div>
-                ))
-              ) : !showCodeInput ? (
-                <div className="text-center py-12 text-gray-500">
-                  <Users className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                  <p>Aucune invitation en attente</p>
-                  <p className="text-sm mt-2">Demandez un code d'invitation à votre MJ</p>
-                </div>
-              ) : null}
+      <div className="flex gap-2">
+        <button
+          onClick={() => handleAcceptInvitation(invitation.id)}
+          className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 font-medium"
+        >
+          <Check size={18} />
+          Accepter et rejoindre
+        </button>
+        <button
+          onClick={() => handleDeclineInvitation(invitation.id)}
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+        >
+          Refuser
+        </button>
+      </div>
+    </div>
+  ))
+) : !showCodeInput ? (
+  <div className="text-center py-12">
+    <Users className="w-16 h-16 mx-auto mb-4 opacity-50 text-gray-600" />
+    <h3 className="text-lg font-semibold text-gray-300 mb-2">
+      Aucune invitation en attente
+    </h3>
+    <p className="text-sm text-gray-500 mb-4">
+      Demandez à votre Maître du Jeu de vous inviter à une campagne
+    </p>
+    
+    {/* ✅ Code manuel en option secondaire */}
+    <button
+      onClick={() => setShowCodeInput(true)}
+      className="text-sm text-purple-400 hover:text-purple-300 underline"
+    >
+      Ou entrez un code d'invitation manuellement
+    </button>
+  </div>
+) : null}
 
               {/* Mes campagnes */}
               {myCampaigns.length > 0 && (
