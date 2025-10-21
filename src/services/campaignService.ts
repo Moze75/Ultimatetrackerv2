@@ -253,7 +253,7 @@ async addItemToCampaign(
 
   if (error) throw error;
   return data;
-}
+}, 
 
   async getCampaignInventory(campaignId: string): Promise<CampaignInventoryItem[]> {
     const { data, error } = await supabase
