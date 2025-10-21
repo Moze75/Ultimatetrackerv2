@@ -10,7 +10,6 @@ import {
   Sword,
   Shield,
   Sparkles,
-  AlertCircle,
   RefreshCw,
   Trash2,
   Dices,
@@ -127,8 +126,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
   const [loading, setLoading] = useState(true);
   const [players, setPlayers] = useState<Player[]>([]);
   const [creating, setCreating] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<string>('');
-  const [showDebug, setShowDebug] = useState(false);
   const [deletingCharacter, setDeletingCharacter] = useState<Player | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [showCreator, setShowCreator] = useState(false);
@@ -139,7 +136,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
 
   useEffect(() => {
     fetchPlayers();
-    runDiagnostic();
     loadSubscription();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
@@ -163,39 +159,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
     }
   };
 
-  const runDiagnostic = async () => {
-    try {
-      setDebugInfo((prev) => prev + '=== DIAGNOSTIC DE LA BASE DE DONNÉES ===\n');
-
-      const { error: connectionError } = await supabase.from('players').select('id').limit(1);
-      if (connectionError) {
-        setDebugInfo((prev) => prev + `❌ Erreur de connexion: ${connectionError.message}\n`);
-        return;
-      }
-      setDebugInfo((prev) => prev + '✅ Connexion à Supabase OK\n');
-
-      const { data: existingPlayers, error: countError } = await supabase
-        .from('players')
-        .select('id, user_id, name')
-        .eq('user_id', session.user.id);
-
-      if (countError) {
-        setDebugInfo((prev) => prev + `❌ Erreur lors du comptage: ${countError.message}\n`);
-      } else {
-        setDebugInfo(
-          (prev) =>
-            prev +
-            `📊 Personnages existants: ${existingPlayers?.length || 0}\n` +
-            (existingPlayers && existingPlayers.length > 0
-              ? `🔍 Noms: ${existingPlayers.map((p) => p.name).join(', ')}\n`
-              : '')
-        );
-      }
-    } catch (error: any) {
-      setDebugInfo((prev) => prev + `💥 Erreur de diagnostic: ${error.message}\n`);
-    }
-  };
-
   const fetchPlayers = async () => {
     try {
       setLoading(true);
@@ -207,10 +170,8 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
 
       if (error) throw error;
       setPlayers(data || []);
-      setDebugInfo((prev) => prev + `✅ Récupération réussie: ${data?.length || 0} personnages\n`);
     } catch (error: any) {
       console.error('Erreur lors de la récupération des personnages:', error);
-      setDebugInfo((prev) => prev + `❌ Erreur de récupération: ${error.message}\n`);
       toast.error('Erreur lors de la récupération des personnages');
     } finally {
       setLoading(false);
@@ -235,7 +196,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
 
     try {
       setCreating(true);
-      setDebugInfo((prev) => prev + `\n🚀 Création via assistant: "${payload.characterName}"\n`);
       const newPlayer = await createCharacterFromCreatorPayload(session, payload);
       setPlayers((prev) => [...prev, newPlayer]);
       toast.success('Nouveau personnage créé !');
@@ -248,14 +208,12 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
 
     } catch (error: any) {
       console.error('Erreur création via assistant:', error);
-      setDebugInfo((prev) => prev + `💥 ÉCHEC assistant: ${error.message}\n`);
       if (error.message?.includes('Session invalide') || error.message?.includes('non authentifié')) {
         toast.error('Session expirée. Veuillez vous reconnecter.');
         await supabase.auth.signOut();
       } else {
         toast.error("Impossible de créer le personnage depuis l'assistant.");
       }
-      setShowDebug(true);
     } finally {
       setCreating(false);
       setShowCreator(false);
@@ -429,8 +387,19 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
         <div className="w-full max-w-6xl mx-auto px-4">
           {/* Header */}
           <div className="text-center mb-8 sm:mb-12 pt-8">
+            {/* ✅ Bouton d'abonnement en haut */}
+            <div className="flex justify-center mb-6">
+              <button
+                onClick={() => setShowSubscription(true)}
+                className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:scale-105"
+              >
+                <Crown size={20} />
+                Abonnement
+              </button>
+            </div>
+
             <h1
-              className="text-3xl font-bold text-white mb-2"
+              className="text-3xl font-bold text-white mb-4"
               style={{
                 textShadow:
                   '0 0 15px rgba(255,255,255,.9),0 0 20px rgba(255,255,255,.6),0 0 30px rgba(255,255,255,.4),0 0 40px rgba(255,255,255,.2)',
@@ -438,37 +407,17 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
             >
               Mes Personnages
             </h1>
-            <div className="flex items-center justify-center gap-4 flex-wrap">
-              <p
-                className="text-gray-200"
-                style={{ textShadow: '0 0 10px rgba(255,255,255,.3)' }}
-              >
-                {players.length > 0
-                  ? `${players.length} personnage${players.length > 1 ? 's' : ''} créé${
-                      players.length > 1 ? 's' : ''
-                    }`
-                  : 'Aucun personnage créé'}
-              </p>
-              
-              {/* ✅ Nouveau bouton d'abonnement */}
-              <button
-                onClick={() => setShowSubscription(true)}
-                className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white px-4 py-2 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:scale-105"
-              >
-                <Crown size={18} />
-                Abonnement
-              </button>
-              
-              {debugInfo && (
-                <button
-                  onClick={() => setShowDebug(!showDebug)}
-                  className="flex items-center gap-2 text-sm text-blue-300 hover:text-blue-200"
-                >
-                  <AlertCircle size={16} />
-                  Debug
-                </button>
-              )} 
-            </div>
+            
+            <p
+              className="text-gray-200"
+              style={{ textShadow: '0 0 10px rgba(255,255,255,.3)' }}
+            >
+              {players.length > 0
+                ? `${players.length} personnage${players.length > 1 ? 's' : ''} créé${
+                    players.length > 1 ? 's' : ''
+                  }`
+                : 'Aucun personnage créé'}
+            </p>
 
             {/* ✅ Badge du plan actuel */}
             {currentSubscription && currentSubscription.tier !== 'free' && (
@@ -484,37 +433,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
               </div>
             )}
           </div>
-
-          {/* Debug Panel */}
-          {showDebug && debugInfo && (
-            <div className="mb-8">
-              <div className="bg-gray-900/90 border border-gray-700 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-yellow-400">
-                    Informations de débogage
-                  </h3>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={runDiagnostic}
-                      className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300"
-                    >
-                      <RefreshCw size={14} />
-                      Actualiser
-                    </button>
-                    <button
-                      onClick={() => setShowDebug(false)}
-                      className="text-gray-400 hover:text-gray-300"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
-                <pre className="text-xs text-gray-300 bg-black/50 p-3 rounded overflow-x-auto whitespace-pre-wrap">
-                  {debugInfo}
-                </pre>
-              </div>
-            </div>
-          )}
 
           {/* Modal de suppression */}
           {deletingCharacter && (
