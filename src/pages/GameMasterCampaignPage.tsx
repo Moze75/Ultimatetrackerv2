@@ -1343,15 +1343,18 @@ function SendGiftModal({
                     />
                   </div>
 
-                  {selectedItem.description && (
-                    <div className="bg-gray-800/40 rounded-lg p-3">
-                      <p className="text-sm text-gray-400">{selectedItem.description}</p>
-                    </div>
-                  )}
-                </>
+              {selectedItem.description && (
+                <div className="bg-gray-800/40 rounded-lg p-3 border border-gray-700">
+                  <h5 className="text-xs font-medium text-gray-400 mb-2">Aperçu de l'objet :</h5>
+                  <p className="text-sm text-gray-300 whitespace-pre-wrap">
+                    {getVisibleDescription(selectedItem.description)}
+                  </p>
+                </div>
               )}
             </>
-          ) : (
+          )}
+        </>
+      ) : (
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
                 <div>
