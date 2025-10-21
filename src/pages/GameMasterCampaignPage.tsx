@@ -1257,9 +1257,10 @@ function SendGiftModal({
     try {
       setSending(true);
 
+      // ✅ CORRECTION : Utiliser la description complète de l'objet sélectionné
       await campaignService.sendGift(campaignId, giftType, {
         itemName: selectedItem?.name,
-        itemDescription: selectedItem?.description,
+        itemDescription: selectedItem ? getVisibleDescription(selectedItem.description) : undefined, // ✅ CHANGÉ
         itemQuantity,
         gold,
         silver,
