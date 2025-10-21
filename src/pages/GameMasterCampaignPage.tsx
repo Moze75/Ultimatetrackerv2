@@ -1540,6 +1540,6 @@ function SendGiftModal({
       </div>
     </div>
   );
-}
+} 
 
 export default GameMasterCampaignPage;
