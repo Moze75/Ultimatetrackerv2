@@ -152,17 +152,15 @@ const handleClaimGift = async (gift: CampaignGift) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    console.log('🎁 Claiming gift:', gift); // ✅ DEBUG
+    console.log('🎁 Claiming gift:', gift);
 
     if (gift.gift_type === 'item') {
-      // ✅ CORRECTION : Créer les métadonnées correctes pour l'inventaire
       const itemMeta = {
         type: 'equipment' as const,
         quantity: gift.item_quantity || 1,
         equipped: false,
       };
 
-      // Injecter les métadonnées dans la description
       const META_PREFIX = '#meta:';
       const metaLine = `${META_PREFIX}${JSON.stringify(itemMeta)}`;
       const finalDescription = gift.item_description 
@@ -173,9 +171,8 @@ const handleClaimGift = async (gift: CampaignGift) => {
         player_id: player.id,
         name: gift.item_name,
         description: finalDescription
-      }); // ✅ DEBUG
+      });
 
-      // Ajouter l'objet à l'inventaire avec les métadonnées
       const { data: insertedItem, error } = await supabase
         .from('inventory_items')
         .insert({
@@ -187,20 +184,58 @@ const handleClaimGift = async (gift: CampaignGift) => {
         .single();
 
       if (error) {
-        console.error('❌ Insert error:', error); // ✅ DEBUG
+        console.error('❌ Insert error:', error);
         throw error;
       }
 
-      console.log('✅ Item inserted:', insertedItem); // ✅ DEBUG
+      console.log('✅ Item inserted:', insertedItem);
 
-      // Enregistrer la récupération
       await campaignService.claimGift(gift.id, player.id, {
         quantity: gift.item_quantity || 1,
       });
 
       toast.success(`${gift.item_name} ajouté à votre inventaire !`);
+
+      // ✅ Fermer le modal et recharger après 1.5s
+      setTimeout(() => {
+        onClose();
+        window.location.reload();
+      }, 1500);
+
     } else {
-      // ... (code argent inchangé)
+      // Argent (code existant)
+      const { error } = await supabase.from('players').update({
+        gold: (player.gold || 0) + (gift.gold || 0),
+        silver: (player.silver || 0) + (gift.silver || 0),
+        copper: (player.copper || 0) + (gift.copper || 0),
+      }).eq('id', player.id);
+
+      if (error) throw error;
+
+      await campaignService.claimGift(gift.id, player.id, {
+        gold: gift.gold,
+        silver: gift.silver,
+        copper: gift.copper,
+      });
+
+      const amounts = [];
+      if (gift.gold > 0) amounts.push(`${gift.gold} po`);
+      if (gift.silver > 0) amounts.push(`${gift.silver} pa`);
+      if (gift.copper > 0) amounts.push(`${gift.copper} pc`);
+
+      toast.success(`${amounts.join(', ')} ajouté à votre argent !`);
+
+      onUpdate({
+        ...player,
+        gold: (player.gold || 0) + (gift.gold || 0),
+        silver: (player.silver || 0) + (gift.silver || 0),
+        copper: (player.copper || 0) + (gift.copper || 0),
+      });
+
+      setTimeout(() => {
+        onClose();
+        window.location.reload();
+      }, 1500);
     }
 
     loadData();
