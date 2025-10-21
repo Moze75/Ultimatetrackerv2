@@ -909,6 +909,25 @@ function InventoryTab({
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-white truncate">{item.name}</h3>
+
+                    {/* ✅ BADGE TYPE */}
+                      {meta?.type === 'armor' && (
+                        <span className="text-xs px-2 py-0.5 rounded bg-purple-900/30 text-purple-300 border border-purple-500/30">
+                          Armure
+                        </span>
+                      )}
+                      {meta?.type === 'shield' && (
+                        <span className="text-xs px-2 py-0.5 rounded bg-blue-900/30 text-blue-300 border border-blue-500/30">
+                          Bouclier
+                        </span>
+                      )}
+                      {meta?.type === 'weapon' && (
+                        <span className="text-xs px-2 py-0.5 rounded bg-red-900/30 text-red-300 border border-red-500/30">
+                          Arme
+                        </span>
+                      )}
+                    </div>
+                  
                   {item.quantity > 1 && (
                     <span className="text-xs px-2 py-0.5 rounded bg-purple-900/30 text-purple-300 mt-1 inline-block">
                       x{item.quantity}
