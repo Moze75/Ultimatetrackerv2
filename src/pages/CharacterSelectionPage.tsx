@@ -15,11 +15,13 @@ import {
   Crown,
   Star,
   Clock,
+  Scroll,
 } from 'lucide-react';
 import { Avatar } from '../components/Avatar';
 import { authService } from '../services/authService';
 import { subscriptionService } from '../services/subscriptionService';
 import { SubscriptionPage } from './SubscriptionPage';
+import { GameMasterCampaignPage } from './GameMasterCampaignPage';
 import { UserSubscription, SUBSCRIPTION_PLANS } from '../types/subscription';
 
 // Intégration Character Creator (wizard)
@@ -132,6 +134,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
   const [showWelcome, setShowWelcome] = useState(false);
   const [newCharacter, setNewCharacter] = useState<Player | null>(null);
   const [showSubscription, setShowSubscription] = useState(false);
+  const [showCampaigns, setShowCampaigns] = useState(false);
   const [currentSubscription, setCurrentSubscription] = useState<UserSubscription | null>(null);
   const [remainingTrialDays, setRemainingTrialDays] = useState<number | null>(null);
 
@@ -413,6 +416,11 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
     return null;
   };
 
+  // ✅ Afficher la page de campagnes si demandé
+  if (showCampaigns) {
+    return <GameMasterCampaignPage session={session} onBack={() => setShowCampaigns(false)} />;
+  }
+
   if (showSubscription) {
     return <SubscriptionPage session={session} onBack={() => setShowSubscription(false)} />;
   }
@@ -454,7 +462,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
     >
       <div className="min-h-screen py-8 bg-transparent">
         <div className="w-full max-w-6xl mx-auto px-4">
-          {/* ✅ NOUVEL ORDRE : Header */}
+          {/* ✅ Header avec nouvel ordre */}
           <div className="text-center mb-8 sm:mb-12 pt-8 space-y-4">
             {/* 1️⃣ Titre "Mes Personnages" EN PREMIER */}
             <h1
@@ -484,8 +492,8 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
               {getSubscriptionBadge()}
             </div>
 
-            {/* 4️⃣ Bouton d'abonnement */}
-            <div className="flex justify-center pt-2">
+            {/* 4️⃣ Boutons d'action */}
+            <div className="flex justify-center gap-3 pt-2 flex-wrap">
               <button
                 onClick={() => setShowSubscription(true)}
                 className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:scale-105"
@@ -496,6 +504,17 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
                   : 'Gérer mon abonnement'
                 }
               </button>
+
+              {/* ✅ NOUVEAU: Bouton Campagnes MJ (visible uniquement pour Game Master) */}
+              {currentSubscription?.tier === 'game_master' && (
+                <button
+                  onClick={() => setShowCampaigns(true)}
+                  className="flex items-center gap-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:scale-105"
+                >
+                  <Scroll size={20} />
+                  Mes Campagnes
+                </button>
+              )}
             </div>
           </div>
 
