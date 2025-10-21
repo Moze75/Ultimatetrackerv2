@@ -794,6 +794,16 @@ function InventoryTab({
   const [editingItem, setEditingItem] = useState<CampaignInventoryItem | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // ✅ AJOUTEZ CETTE FONCTION ICI (après les useState)
+  const getVisibleDescription = (description: string | null | undefined): string => {
+    if (!description) return '';
+    return description
+      .split('\n')
+      .filter(line => !line.trim().startsWith('#meta:'))
+      .join('\n')
+      .trim();
+  };
+
   // Filtrer l'inventaire selon la recherche
   const filteredInventory = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -909,7 +919,7 @@ function InventoryTab({
                 </div>
               </div>
 
-  {/* ✅ MODIFIEZ CETTE PARTIE : */}
+              {/* ✅ Description visible (sans #meta:) */}
               {getVisibleDescription(item.description) && (
                 <p className="text-sm text-gray-400 line-clamp-3">
                   {getVisibleDescription(item.description)}
@@ -925,80 +935,80 @@ function InventoryTab({
       )}
 
       {/* Modals */}
-{showList && (
-  <EquipmentListModal
-    onClose={() => setShowList(false)}
-    onAddItem={async (payload) => {
-      try {
-        // ✅ CORRECTION : Injecter les métadonnées dans la description
-        const META_PREFIX = '#meta:';
-        const metaLine = `${META_PREFIX}${JSON.stringify(payload.meta)}`;
-        
-        // Nettoyer la description visible
-        const visibleDesc = (payload.description || '').trim();
-        
-        // Construire la description complète
-        const fullDescription = visibleDesc 
-          ? `${visibleDesc}\n${metaLine}`
-          : metaLine;
+      {showList && (
+        <EquipmentListModal
+          onClose={() => setShowList(false)}
+          onAddItem={async (payload) => {
+            try {
+              // ✅ CORRECTION : Injecter les métadonnées dans la description
+              const META_PREFIX = '#meta:';
+              const metaLine = `${META_PREFIX}${JSON.stringify(payload.meta)}`;
+              
+              // Nettoyer la description visible
+              const visibleDesc = (payload.description || '').trim();
+              
+              // Construire la description complète
+              const fullDescription = visibleDesc 
+                ? `${visibleDesc}\n${metaLine}`
+                : metaLine;
 
-        console.log('🎁 Ajout avec métadonnées:', {
-          name: payload.name,
-          description: fullDescription,
-          meta: payload.meta
-        });
+              console.log('🎁 Ajout avec métadonnées:', {
+                name: payload.name,
+                description: fullDescription,
+                meta: payload.meta
+              });
 
-        await campaignService.addItemToCampaign(
-          campaignId,
-          payload.name,
-          fullDescription, // ✅ Description COMPLÈTE avec #meta:
-          payload.meta.quantity || 1
-        );
-        
-        toast.success('Objet ajouté à l\'inventaire');
-        onReload();
-      } catch (error) {
-        console.error(error);
-        toast.error('Erreur lors de l\'ajout');
-      } finally {
-        setShowList(false);
-      }
-    }}
-    allowedKinds={null}
-  />
-)}
+              await campaignService.addItemToCampaign(
+                campaignId,
+                payload.name,
+                fullDescription, // ✅ Description COMPLÈTE avec #meta:
+                payload.meta.quantity || 1
+              );
+              
+              toast.success('Objet ajouté à l\'inventaire');
+              onReload();
+            } catch (error) {
+              console.error(error);
+              toast.error('Erreur lors de l\'ajout');
+            } finally {
+              setShowList(false);
+            }
+          }}
+          allowedKinds={null}
+        />
+      )}
 
-{showCustom && (
-  <CustomItemModal
-    onClose={() => setShowCustom(false)}
-    onAdd={async (payload) => {
-      try {
-        // ✅ CORRECTION : Injecter les métadonnées
-        const META_PREFIX = '#meta:';
-        const metaLine = `${META_PREFIX}${JSON.stringify(payload.meta)}`;
-        const visibleDesc = (payload.description || '').trim();
-        const fullDescription = visibleDesc 
-          ? `${visibleDesc}\n${metaLine}`
-          : metaLine;
+      {showCustom && (
+        <CustomItemModal
+          onClose={() => setShowCustom(false)}
+          onAdd={async (payload) => {
+            try {
+              // ✅ CORRECTION : Injecter les métadonnées
+              const META_PREFIX = '#meta:';
+              const metaLine = `${META_PREFIX}${JSON.stringify(payload.meta)}`;
+              const visibleDesc = (payload.description || '').trim();
+              const fullDescription = visibleDesc 
+                ? `${visibleDesc}\n${metaLine}`
+                : metaLine;
 
-        await campaignService.addItemToCampaign(
-          campaignId,
-          payload.name,
-          fullDescription, // ✅ Description COMPLÈTE
-          payload.meta.quantity || 1
-        );
-        
-        toast.success('Objet personnalisé ajouté');
-        onReload();
-      } catch (error) {
-        console.error(error);
-        toast.error('Erreur lors de l\'ajout');
-      } finally {
-        setShowCustom(false);
-      }
-    }}
-  />
-)}
+              await campaignService.addItemToCampaign(
+                campaignId,
+                payload.name,
+                fullDescription, // ✅ Description COMPLÈTE
+                payload.meta.quantity || 1
+              );
+              
+              toast.success('Objet personnalisé ajouté');
+              onReload();
+            } catch (error) {
+              console.error(error);
+              toast.error('Erreur lors de l\'ajout');
+            } finally {
+              setShowCustom(false);
+            }
+          }}
+        />
+      )}
 
       {editingItem && (
         <EditCampaignItemModal
