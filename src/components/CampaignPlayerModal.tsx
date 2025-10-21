@@ -28,7 +28,10 @@ export function CampaignPlayerModal({
   const [myCampaigns, setMyCampaigns] = useState<Campaign[]>([]);
   const [pendingGifts, setPendingGifts] = useState<CampaignGift[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'invitations' | 'gifts'>('invitations');
+  
+  // ✅ MODIFICATION : Démarrer sur 'gifts' au lieu de 'invitations'
+  const [activeTab, setActiveTab] = useState<'invitations' | 'gifts'>('gifts');
+  
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [invitationCode, setInvitationCode] = useState('');
 
