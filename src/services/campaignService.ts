@@ -149,13 +149,14 @@ export const campaignService = {
     if (memberError) throw memberError;
   },
 
-  async declineInvitation(invitationId: string): Promise<void> {
-    const { error } = await supabase
-      .from('campaign_invitations')
-      .update({
-        status: 'declined',
-        responded_at: new Date().toISOString(),
-      })
+async deleteInvitation(invitationId: string): Promise<void> {
+  const { error } = await supabase
+    .from('campaign_invitations')
+    .delete()
+    .eq('id', invitationId);
+
+  if (error) throw error;
+})
       .eq('id', invitationId);
 
     if (error) throw error;
