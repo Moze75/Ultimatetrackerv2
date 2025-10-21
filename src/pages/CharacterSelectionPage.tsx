@@ -10,16 +10,17 @@ import {
   Sword,
   Shield,
   Sparkles,
-  RefreshCw,
   Trash2,
   Dices,
   Crown,
+  Star,
+  Clock,
 } from 'lucide-react';
 import { Avatar } from '../components/Avatar';
 import { authService } from '../services/authService';
 import { subscriptionService } from '../services/subscriptionService';
 import { SubscriptionPage } from './SubscriptionPage';
-import { UserSubscription } from '../types/subscription';
+import { UserSubscription, SUBSCRIPTION_PLANS } from '../types/subscription';
 
 // Intégration Character Creator (wizard)
 import { CharacterExportPayload } from '../types/characterCreator';
@@ -62,7 +63,6 @@ function CreatorModal({ open, onClose, onComplete, initialSnapshot }: CreatorMod
 
         <div className="w-full h-full bg-gray-900 flex flex-col">
           <div className="flex-1 min-h-0 overflow-y-auto">
-            {/* ✅ Pas de Suspense = affichage instantané */}
             <CharacterCreationWizard 
               onFinish={onComplete} 
               onCancel={onClose}
@@ -133,6 +133,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
   const [newCharacter, setNewCharacter] = useState<Player | null>(null);
   const [showSubscription, setShowSubscription] = useState(false);
   const [currentSubscription, setCurrentSubscription] = useState<UserSubscription | null>(null);
+  const [remainingTrialDays, setRemainingTrialDays] = useState<number | null>(null);
 
   useEffect(() => {
     fetchPlayers();
@@ -140,12 +141,10 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
-  // ✅ Restaurer le wizard silencieusement (sans toast)
   useEffect(() => {
     const wizardSnapshot = appContextService.getWizardSnapshot();
     if (wizardSnapshot) {
       console.log('[CharacterSelection] Snapshot wizard détecté, restauration automatique:', wizardSnapshot);
-      // ✅ Pas de toast, ouverture silencieuse
       setShowCreator(true);
     }
   }, []);
@@ -154,6 +153,12 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
     try {
       const sub = await subscriptionService.getCurrentSubscription(session.user.id);
       setCurrentSubscription(sub);
+
+      // Charger les jours restants si en essai
+      if (sub?.tier === 'free' && sub?.status === 'trial') {
+        const days = await subscriptionService.getRemainingTrialDays(session.user.id);
+        setRemainingTrialDays(days);
+      }
     } catch (error) {
       console.error('Erreur lors du chargement de l\'abonnement:', error);
     }
@@ -185,10 +190,20 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
     const canCreate = await subscriptionService.canCreateCharacter(session.user.id, players.length);
     if (!canCreate) {
       const limit = await subscriptionService.getCharacterLimit(session.user.id);
-      toast.error(
-        `Vous avez atteint la limite de ${limit} personnage${limit > 1 ? 's' : ''}. Mettez à niveau votre abonnement pour en créer plus.`,
-        { duration: 5000 }
-      );
+      const isExpired = await subscriptionService.isTrialExpired(session.user.id);
+      
+      if (isExpired) {
+        toast.error(
+          'Votre période d\'essai de 15 jours est terminée. Choisissez un plan pour continuer.',
+          { duration: 5000 }
+        );
+      } else {
+        toast.error(
+          `Vous avez atteint la limite de ${limit} personnage${limit > 1 ? 's' : ''}. Mettez à niveau votre abonnement pour en créer plus.`,
+          { duration: 5000 }
+        );
+      }
+      
       setShowCreator(false);
       setShowSubscription(true);
       return;
@@ -228,7 +243,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
     }
   };
 
-  // ✅ NOUVELLE FONCTION (25 lignes)
   const clearServiceWorkerCache = async () => {
     try {
       console.log('[CharacterSelection] 🧹 Nettoyage du Service Worker...');
@@ -256,21 +270,17 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
     }
   };
 
-  // ✅ FONCTION MODIFIÉE (ajoute l'appel à clearServiceWorkerCache)
   const handleSignOut = async () => {
     try {
       console.log('[CharacterSelection] 🚪 Déconnexion en cours...');
       
-      // ✅ 1. Nettoyer le cache SW d'abord
       await clearServiceWorkerCache();
       
-      // 2. Déconnexion Supabase
       const { error } = await authService.signOut();
       if (error) throw error;
 
       toast.success('Déconnexion réussie');
 
-      // 3. Nettoyage contexte
       appContextService.clearContext();
       appContextService.clearWizardSnapshot();
       
@@ -279,7 +289,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
         sessionStorage.clear();
       } catch {}
 
-      // 4. Rechargement forcé
       console.log('[CharacterSelection] 🔄 Rechargement...');
       window.location.href = window.location.origin;
       
@@ -343,7 +352,67 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
 
   const displayClassName = (cls?: string | null) => (cls === 'Sorcier' ? 'Occultiste' : cls || '');
 
-  // ✅ Afficher la page d'abonnement si demandé
+  // ✅ Fonction pour obtenir le badge d'abonnement
+  const getSubscriptionBadge = () => {
+    if (!currentSubscription) return null;
+
+    const plan = SUBSCRIPTION_PLANS.find(p => p.id === currentSubscription.tier);
+    if (!plan) return null;
+
+    // Badge pour essai gratuit
+    if (currentSubscription.tier === 'free' && currentSubscription.status === 'trial') {
+      const daysLeft = remainingTrialDays ?? 0;
+      const isExpiringSoon = daysLeft <= 3;
+      
+      return (
+        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border ${
+          isExpiringSoon 
+            ? 'bg-red-900/40 border-red-500/50 text-red-300' 
+            : 'bg-gray-800/80 border-gray-700 text-gray-300'
+        }`}>
+          <Clock size={18} />
+          <span className="font-semibold">
+            Essai gratuit : {daysLeft} jour{daysLeft > 1 ? 's' : ''} restant{daysLeft > 1 ? 's' : ''}
+          </span>
+        </div>
+      );
+    }
+
+    // Badge pour essai expiré
+    if (currentSubscription.status === 'expired') {
+      return (
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border bg-red-900/40 border-red-500/50 text-red-300">
+          <Clock size={18} />
+          <span className="font-semibold">Essai expiré - Passez à un plan payant</span>
+        </div>
+      );
+    }
+
+    // Badge pour Héro
+    if (currentSubscription.tier === 'hero') {
+      return (
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border bg-blue-900/40 border-blue-500/50 text-blue-300">
+          <Star size={18} className="text-yellow-400" />
+          <span className="font-semibold">Plan Héro</span>
+          <span className="text-xs bg-blue-500/30 px-2 py-0.5 rounded">Accès à vie</span>
+        </div>
+      );
+    }
+
+    // Badge pour Maître du Jeu
+    if (currentSubscription.tier === 'game_master') {
+      return (
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border bg-purple-900/40 border-purple-500/50 text-purple-300">
+          <Crown size={18} className="text-yellow-400" />
+          <span className="font-semibold">Plan Maître du Jeu</span>
+          <span className="text-xs bg-purple-500/30 px-2 py-0.5 rounded">Accès à vie</span>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   if (showSubscription) {
     return <SubscriptionPage session={session} onBack={() => setShowSubscription(false)} />;
   }
@@ -386,15 +455,23 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
       <div className="min-h-screen py-8 bg-transparent">
         <div className="w-full max-w-6xl mx-auto px-4">
           {/* Header */}
-          <div className="text-center mb-8 sm:mb-12 pt-8">
-            {/* ✅ Bouton d'abonnement en haut */}
-            <div className="flex justify-center mb-6">
+          <div className="text-center mb-8 sm:mb-12 pt-8 space-y-4">
+            {/* ✅ Badge d'abonnement en haut */}
+            <div className="flex justify-center">
+              {getSubscriptionBadge()}
+            </div>
+
+            {/* ✅ Bouton d'abonnement */}
+            <div className="flex justify-center">
               <button
                 onClick={() => setShowSubscription(true)}
                 className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:scale-105"
               >
                 <Crown size={20} />
-                Abonnement
+                {currentSubscription?.status === 'expired' || currentSubscription?.status === 'trial' 
+                  ? 'Passer à un plan payant'
+                  : 'Gérer mon abonnement'
+                }
               </button>
             </div>
 
@@ -418,20 +495,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
                   }`
                 : 'Aucun personnage créé'}
             </p>
-
-            {/* ✅ Badge du plan actuel */}
-            {currentSubscription && currentSubscription.tier !== 'free' && (
-              <div className="mt-4">
-                <div className="inline-block bg-gradient-to-r from-purple-900/40 to-blue-900/40 backdrop-blur-sm border border-purple-500/30 rounded-lg px-4 py-2">
-                  <p className="text-sm text-gray-300">
-                    Plan actuel :{' '}
-                    <span className="font-bold text-purple-300">
-                      {currentSubscription.tier === 'hero' ? '⭐ Héro' : '👑 Maître du Jeu'}
-                    </span>
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Modal de suppression */}
