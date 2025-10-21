@@ -14,13 +14,9 @@ import {
   RefreshCw,
   Trash2,
   Dices,
-  Crown,
 } from 'lucide-react';
 import { Avatar } from '../components/Avatar';
 import { authService } from '../services/authService';
-import { subscriptionService } from '../services/subscriptionService';
-import { SubscriptionPage } from './SubscriptionPage';
-import { UserSubscription } from '../types/subscription';
 
 // Intégration Character Creator (wizard)
 import { CharacterExportPayload } from '../types/characterCreator';
@@ -31,9 +27,6 @@ interface CharacterSelectionPageProps {
   session: any;
   onCharacterSelect: (player: Player) => void;
 }
-
-// Clé pour le dernier personnage sélectionné
-const LAST_SELECTED_CHARACTER_SNAPSHOT = 'lastSelectedCharacterSnapshot';
 
 // URL du fond
 const BG_URL =
@@ -134,13 +127,12 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
   const [showCreator, setShowCreator] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [newCharacter, setNewCharacter] = useState<Player | null>(null);
-  const [showSubscription, setShowSubscription] = useState(false);
-  const [currentSubscription, setCurrentSubscription] = useState<UserSubscription | null>(null);
+
+
 
   useEffect(() => {
     fetchPlayers();
     runDiagnostic();
-    loadSubscription();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
@@ -153,15 +145,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
       setShowCreator(true);
     }
   }, []);
-
-  const loadSubscription = async () => {
-    try {
-      const sub = await subscriptionService.getCurrentSubscription(session.user.id);
-      setCurrentSubscription(sub);
-    } catch (error) {
-      console.error('Erreur lors du chargement de l\'abonnement:', error);
-    }
-  };
 
   const runDiagnostic = async () => {
     try {
@@ -219,20 +202,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
 
   const handleCreatorComplete = async (payload: CharacterExportPayload) => {
     if (creating) return;
-
-    // ✅ Vérifier la limite de personnages selon l'abonnement
-    const canCreate = await subscriptionService.canCreateCharacter(session.user.id, players.length);
-    if (!canCreate) {
-      const limit = await subscriptionService.getCharacterLimit(session.user.id);
-      toast.error(
-        `Vous avez atteint la limite de ${limit} personnage${limit > 1 ? 's' : ''}. Mettez à niveau votre abonnement pour en créer plus.`,
-        { duration: 5000 }
-      );
-      setShowCreator(false);
-      setShowSubscription(true);
-      return;
-    }
-
     try {
       setCreating(true);
       setDebugInfo((prev) => prev + `\n🚀 Création via assistant: "${payload.characterName}"\n`);
@@ -299,41 +268,41 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
   };
 
   // ✅ FONCTION MODIFIÉE (ajoute l'appel à clearServiceWorkerCache)
-  const handleSignOut = async () => {
+const handleSignOut = async () => {
+  try {
+    console.log('[CharacterSelection] 🚪 Déconnexion en cours...');
+    
+    // ✅ 1. Nettoyer le cache SW d'abord
+    await clearServiceWorkerCache();
+    
+    // 2. Déconnexion Supabase
+    const { error } = await authService.signOut();
+    if (error) throw error;
+
+    toast.success('Déconnexion réussie');
+
+    // 3. Nettoyage contexte
+    appContextService.clearContext();
+    appContextService.clearWizardSnapshot();
+    
     try {
-      console.log('[CharacterSelection] 🚪 Déconnexion en cours...');
-      
-      // ✅ 1. Nettoyer le cache SW d'abord
-      await clearServiceWorkerCache();
-      
-      // 2. Déconnexion Supabase
-      const { error } = await authService.signOut();
-      if (error) throw error;
+      localStorage.removeItem(LAST_SELECTED_CHARACTER_SNAPSHOT);
+      sessionStorage.clear();
+    } catch {}
 
-      toast.success('Déconnexion réussie');
-
-      // 3. Nettoyage contexte
-      appContextService.clearContext();
-      appContextService.clearWizardSnapshot();
-      
-      try {
-        localStorage.removeItem(LAST_SELECTED_CHARACTER_SNAPSHOT);
-        sessionStorage.clear();
-      } catch {}
-
-      // 4. Rechargement forcé
-      console.log('[CharacterSelection] 🔄 Rechargement...');
+    // 4. Rechargement forcé
+    console.log('[CharacterSelection] 🔄 Rechargement...');
+    window.location.href = window.location.origin;
+    
+  } catch (error: any) {
+    console.error('❌ Erreur de déconnexion:', error);
+    toast.error('Erreur lors de la déconnexion');
+    
+    setTimeout(() => {
       window.location.href = window.location.origin;
-      
-    } catch (error: any) {
-      console.error('❌ Erreur de déconnexion:', error);
-      toast.error('Erreur lors de la déconnexion');
-      
-      setTimeout(() => {
-        window.location.href = window.location.origin;
-      }, 1000);
-    }
-  };
+    }, 1000);
+  }
+};
 
   const handleDeleteCharacter = async (character: Player) => {
     if (deleteConfirmation !== 'Supprime') {
@@ -385,11 +354,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
 
   const displayClassName = (cls?: string | null) => (cls === 'Sorcier' ? 'Occultiste' : cls || '');
 
-  // ✅ Afficher la page d'abonnement si demandé
-  if (showSubscription) {
-    return <SubscriptionPage session={session} onBack={() => setShowSubscription(false)} />;
-  }
-
   if (loading) {
     return (
       <div
@@ -438,7 +402,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
             >
               Mes Personnages
             </h1>
-            <div className="flex items-center justify-center gap-4 flex-wrap">
+            <div className="flex items-center justify-center gap-4">
               <p
                 className="text-gray-200"
                 style={{ textShadow: '0 0 10px rgba(255,255,255,.3)' }}
@@ -449,16 +413,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
                     }`
                   : 'Aucun personnage créé'}
               </p>
-              
-              {/* ✅ Nouveau bouton d'abonnement */}
-              <button
-                onClick={() => setShowSubscription(true)}
-                className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white px-4 py-2 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:scale-105"
-              >
-                <Crown size={18} />
-                Abonnement
-              </button>
-              
               {debugInfo && (
                 <button
                   onClick={() => setShowDebug(!showDebug)}
@@ -469,20 +423,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
                 </button>
               )}
             </div>
-
-            {/* ✅ Badge du plan actuel */}
-            {currentSubscription && currentSubscription.tier !== 'free' && (
-              <div className="mt-4">
-                <div className="inline-block bg-gradient-to-r from-purple-900/40 to-blue-900/40 backdrop-blur-sm border border-purple-500/30 rounded-lg px-4 py-2">
-                  <p className="text-sm text-gray-300">
-                    Plan actuel :{' '}
-                    <span className="font-bold text-purple-300">
-                      {currentSubscription.tier === 'hero' ? '⭐ Héro' : '👑 Maître du Jeu'}
-                    </span>
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Debug Panel */}
@@ -668,7 +608,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
               {/* Create New Character Card */}
               <div
                 onClick={() => setShowCreator(true)}
-                className="w-full max-w-sm cursor-pointer hover:scale-[1.02] transition-all duration-200 bg-slate-800/40 backdrop-blur-sm border-dashed border-2 border-slate-600/50 hover:border-green-500/50 hover:bg-slate-700/40 rounded-xl"
+                className="w-full max-w-sm cursor-pointer hover:scale-[1.02] transition-all duration-200 bg-slate-800/40 backdrop-blur-sm border-dashed border-2 border-slate-600/50 hover:border-green-500/50 rounded-xl shadow-lg overflow-hidden"
               >
                 <div className="p-6 flex items-center justify-center gap-6 min-h-[140px]">
                   <div className="w-16 h-16 bg-green-400/20 rounded-full flex items-center justify-center">
@@ -737,4 +677,4 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
   );
 }
 
-export default CharacterSelectionPage; 
+export default CharacterSelectionPage;
