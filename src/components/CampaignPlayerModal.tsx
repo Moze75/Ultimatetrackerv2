@@ -422,6 +422,9 @@ const handleClaimGift = async (gift: CampaignGift) => {
     </div>
   </div>
 )}
+            </div>
+          ) : (
+            <div className="space-y-4">
               
               {/* Liste des cadeaux */}
               {pendingGifts.length > 0 ? (
