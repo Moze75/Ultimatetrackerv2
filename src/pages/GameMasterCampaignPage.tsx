@@ -909,9 +909,10 @@ function InventoryTab({
                 </div>
               </div>
 
-              {item.description && (
+  {/* ✅ MODIFIEZ CETTE PARTIE : */}
+              {getVisibleDescription(item.description) && (
                 <p className="text-sm text-gray-400 line-clamp-3">
-                  {item.description}
+                  {getVisibleDescription(item.description)}
                 </p>
               )}
 
