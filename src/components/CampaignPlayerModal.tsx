@@ -385,28 +385,44 @@ const handleClaimGift = async (gift: CampaignGift) => {
   </div>
 ) : null}
 
-              {/* Mes campagnes */}
-              {myCampaigns.length > 0 && (
-                <div className="mt-6">
-                  <h3 className="text-sm font-semibold text-gray-400 mb-3">Mes campagnes actives</h3>
-                  <div className="space-y-2">
-                    {myCampaigns.map((campaign) => (
-                      <div
-                        key={campaign.id}
-                        className="bg-gray-800/40 border border-gray-700/50 rounded-lg p-3"
-                      >
-                        <h4 className="font-medium text-white">{campaign.name}</h4>
-                        {campaign.description && (
-                          <p className="text-sm text-gray-400 mt-1">{campaign.description}</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+{/* Mes campagnes */}
+{myCampaigns.length > 0 && (
+  <div className="mt-6">
+    <h3 className="text-sm font-semibold text-gray-400 mb-3 flex items-center gap-2">
+      <Users className="w-4 h-4" />
+      Mes campagnes actives
+    </h3>
+    <div className="space-y-2">
+      {myCampaigns.map((campaign) => (
+        <div
+          key={campaign.id}
+          className="bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-500/30 rounded-lg p-4"
+        >
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+              <Crown className="w-5 h-5 text-purple-400" />
             </div>
-          ) : (
-            <div className="space-y-4">
+            <div className="flex-1 min-w-0">
+              <h4 className="font-semibold text-white text-lg mb-1">{campaign.name}</h4>
+              {campaign.description && (
+                <p className="text-sm text-gray-400 mb-2">{campaign.description}</p>
+              )}
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <span>Créée le {new Date(campaign.created_at).toLocaleDateString('fr-FR')}</span>
+                {campaign.is_active && (
+                  <span className="px-2 py-0.5 bg-green-500/20 text-green-300 rounded-full border border-green-500/30">
+                    Active
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+              
               {/* Liste des cadeaux */}
               {pendingGifts.length > 0 ? (
                 pendingGifts.map((gift) => (
