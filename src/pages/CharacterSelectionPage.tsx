@@ -739,4 +739,3 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
   );
 }
 
-export default CharacterSelectionPage;
