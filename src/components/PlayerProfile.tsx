@@ -11,6 +11,7 @@ import {
   Sword,
   Sparkles,
   Menu,
+   Scroll, // ✅ AJOUTER ICI
 } from 'lucide-react';
 import { Player, PlayerStats } from '../types/dnd';
 import { supabase } from '../lib/supabase';
