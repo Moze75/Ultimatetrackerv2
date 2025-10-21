@@ -155,22 +155,51 @@ const handleClaimGift = async (gift: CampaignGift) => {
     console.log('🎁 Claiming gift:', gift);
 
     if (gift.gift_type === 'item') {
-      const itemMeta = {
+      // ✅ Parser les métadonnées de l'objet original (si présentes dans la description)
+      const META_PREFIX = '#meta:';
+      let originalMeta = null;
+      
+      if (gift.item_description) {
+        const lines = gift.item_description.split('\n');
+        const metaLine = lines.find(l => l.trim().startsWith(META_PREFIX));
+        if (metaLine) {
+          try {
+            originalMeta = JSON.parse(metaLine.trim().slice(META_PREFIX.length));
+          } catch {}
+        }
+      }
+
+      // ✅ Utiliser les métadonnées originales ou créer des nouvelles
+      const itemMeta = originalMeta || {
         type: 'equipment' as const,
         quantity: gift.item_quantity || 1,
         equipped: false,
       };
 
-      const META_PREFIX = '#meta:';
+      // S'assurer que la quantité et equipped sont à jour
+      itemMeta.quantity = gift.item_quantity || 1;
+      itemMeta.equipped = false;
+
       const metaLine = `${META_PREFIX}${JSON.stringify(itemMeta)}`;
-      const finalDescription = gift.item_description 
-        ? `${gift.item_description.trim()}\n${metaLine}`
+      
+      // Nettoyer la description (retirer les anciennes métadonnées si présentes)
+      const cleanDescription = gift.item_description
+        ? gift.item_description
+            .split('\n')
+            .filter(line => !line.trim().startsWith(META_PREFIX))
+            .join('\n')
+            .trim()
+        : '';
+
+      const finalDescription = cleanDescription
+        ? `${cleanDescription}\n${metaLine}`
         : metaLine;
 
       console.log('📦 Adding to inventory:', {
         player_id: player.id,
         name: gift.item_name,
-        description: finalDescription
+        description: finalDescription,
+        meta: itemMeta
       });
 
       const { data: insertedItem, error } = await supabase
@@ -196,7 +225,6 @@ const handleClaimGift = async (gift: CampaignGift) => {
 
       toast.success(`${gift.item_name} ajouté à votre inventaire !`);
 
-      // ✅ Fermer le modal et recharger après 1.5s
       setTimeout(() => {
         onClose();
         window.location.reload();
