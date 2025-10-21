@@ -32,6 +32,16 @@ export function CampaignPlayerModal({
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [invitationCode, setInvitationCode] = useState('');
 
+  // ✅ AJOUTEZ cette fonction juste après les useState, avant loadData
+  const getVisibleDescription = (description: string | null | undefined): string => {
+    if (!description) return '';
+    return description
+      .split('\n')
+      .filter(line => !line.trim().startsWith('#meta:'))
+      .join('\n')
+      .trim();
+  };
+  
   useEffect(() => {
     if (open) {
       loadData();
