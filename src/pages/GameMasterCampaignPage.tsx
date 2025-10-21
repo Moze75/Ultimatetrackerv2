@@ -1314,12 +1314,12 @@ function SendGiftModal({
     try {
       setSending(true);
 
-    // ✅ LOG DE DEBUG
-    if (giftType === 'item' && selectedItem) {
-      console.log('📤 Objet sélectionné:', selectedItem);
-      console.log('📤 Description brute:', selectedItem.description);
-      console.log('📤 Description complète:', getFullDescription(selectedItem));
-    }
+      // ✅ LOG DE DEBUG
+      if (giftType === 'item' && selectedItem) {
+        console.log('📤 Objet sélectionné:', selectedItem);
+        console.log('📤 Description brute:', selectedItem.description);
+        console.log('📤 Description complète:', getFullDescription(selectedItem));
+      }
       
       // ✅ CORRECTION : Utiliser la description COMPLÈTE avec métadonnées
       await campaignService.sendGift(campaignId, giftType, {
@@ -1406,6 +1406,7 @@ function SendGiftModal({
                     />
                   </div>
 
+                  {/* ✅ CORRECTION : Afficher seulement la description visible */}
                   {getVisibleDescription(selectedItem.description) && (
                     <div className="bg-gray-800/40 rounded-lg p-3 border border-gray-700">
                       <h5 className="text-xs font-medium text-gray-400 mb-2">Aperçu de l'objet :</h5>
@@ -1575,6 +1576,6 @@ function SendGiftModal({
       </div>
     </div>
   );
-} 
+}
 
 export default GameMasterCampaignPage;
