@@ -454,15 +454,38 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
     >
       <div className="min-h-screen py-8 bg-transparent">
         <div className="w-full max-w-6xl mx-auto px-4">
-          {/* Header */}
+          {/* ✅ NOUVEL ORDRE : Header */}
           <div className="text-center mb-8 sm:mb-12 pt-8 space-y-4">
-            {/* ✅ Badge d'abonnement en haut */}
-            <div className="flex justify-center">
+            {/* 1️⃣ Titre "Mes Personnages" EN PREMIER */}
+            <h1
+              className="text-4xl font-bold text-white"
+              style={{
+                textShadow:
+                  '0 0 15px rgba(255,255,255,.9),0 0 20px rgba(255,255,255,.6),0 0 30px rgba(255,255,255,.4),0 0 40px rgba(255,255,255,.2)',
+              }}
+            >
+              Mes Personnages
+            </h1>
+            
+            {/* 2️⃣ Nombre de personnages créés */}
+            <p
+              className="text-xl text-gray-200"
+              style={{ textShadow: '0 0 10px rgba(255,255,255,.3)' }}
+            >
+              {players.length > 0
+                ? `${players.length} personnage${players.length > 1 ? 's' : ''} créé${
+                    players.length > 1 ? 's' : ''
+                  }`
+                : 'Aucun personnage créé'}
+            </p>
+
+            {/* 3️⃣ Badge d'abonnement */}
+            <div className="flex justify-center pt-2">
               {getSubscriptionBadge()}
             </div>
 
-            {/* ✅ Bouton d'abonnement */}
-            <div className="flex justify-center">
+            {/* 4️⃣ Bouton d'abonnement */}
+            <div className="flex justify-center pt-2">
               <button
                 onClick={() => setShowSubscription(true)}
                 className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:scale-105"
@@ -474,27 +497,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
                 }
               </button>
             </div>
-
-            <h1
-              className="text-3xl font-bold text-white mb-4"
-              style={{
-                textShadow:
-                  '0 0 15px rgba(255,255,255,.9),0 0 20px rgba(255,255,255,.6),0 0 30px rgba(255,255,255,.4),0 0 40px rgba(255,255,255,.2)',
-              }}
-            >
-              Mes Personnages
-            </h1>
-            
-            <p
-              className="text-gray-200"
-              style={{ textShadow: '0 0 10px rgba(255,255,255,.3)' }}
-            >
-              {players.length > 0
-                ? `${players.length} personnage${players.length > 1 ? 's' : ''} créé${
-                    players.length > 1 ? 's' : ''
-                  }`
-                : 'Aucun personnage créé'}
-            </p>
           </div>
 
           {/* Modal de suppression */}
