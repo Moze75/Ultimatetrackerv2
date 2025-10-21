@@ -1257,10 +1257,10 @@ function SendGiftModal({
     try {
       setSending(true);
 
-      // ✅ CORRECTION : Utiliser la description complète de l'objet sélectionné
+      // ✅ CORRECTION : Utiliser la description COMPLÈTE avec métadonnées
       await campaignService.sendGift(campaignId, giftType, {
         itemName: selectedItem?.name,
-        itemDescription: selectedItem ? getVisibleDescription(selectedItem.description) : undefined, // ✅ CHANGÉ
+        itemDescription: selectedItem ? getFullDescription(selectedItem) : undefined, // ✅ CHANGÉ
         itemQuantity,
         gold,
         silver,
@@ -1269,7 +1269,7 @@ function SendGiftModal({
         message: message.trim() || undefined,
       });
 
-      // Si c'est un objet, décrémenter la quantité dans l'inventaire
+      // Si c'est un objet, décrémenter la quantité
       if (giftType === 'item' && selectedItem) {
         const newQuantity = selectedItem.quantity - itemQuantity;
         if (newQuantity > 0) {
@@ -1288,6 +1288,16 @@ function SendGiftModal({
     } finally {
       setSending(false);
     }
+  };
+
+  // Fonction helper pour afficher la description visible (sans #meta:)
+  const getVisibleDescription = (description: string | null | undefined): string => {
+    if (!description) return '';
+    return description
+      .split('\n')
+      .filter(line => !line.trim().startsWith(META_PREFIX))
+      .join('\n')
+      .trim();
   };
 
   return (
