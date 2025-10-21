@@ -149,18 +149,21 @@ export const campaignService = {
     if (memberError) throw memberError;
   },
 
-async deleteInvitation(invitationId: string): Promise<void> {
+async declineInvitation(invitationId: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Non authentifié');
+
   const { error } = await supabase
     .from('campaign_invitations')
-    .delete()
+    .update({
+      status: 'declined',
+      responded_at: new Date().toISOString(),
+      player_id: user.id, // ✅ Ajouter le player_id pour satisfaire la policy
+    })
     .eq('id', invitationId);
 
   if (error) throw error;
-})
-      .eq('id', invitationId);
-
-    if (error) throw error;
-  },
+},
 
   async getMyInvitations(): Promise<CampaignInvitation[]> {
     const { data: { user } } = await supabase.auth.getUser();
