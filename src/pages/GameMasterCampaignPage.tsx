@@ -967,28 +967,37 @@ function InventoryTab({
   />
 )}
 
-      {showCustom && (
-        <CustomItemModal
-          onClose={() => setShowCustom(false)}
-          onAdd={async (payload) => {
-            try {
-              await campaignService.addItemToCampaign(
-                campaignId,
-                payload.name,
-                payload.description || '',
-                payload.meta.quantity || 1
-              );
-              toast.success('Objet personnalisé ajouté');
-              onReload();
-            } catch (error) {
-              console.error(error);
-              toast.error('Erreur lors de l\'ajout');
-            } finally {
-              setShowCustom(false);
-            }
-          }}
-        />
-      )}
+{showCustom && (
+  <CustomItemModal
+    onClose={() => setShowCustom(false)}
+    onAdd={async (payload) => {
+      try {
+        // ✅ CORRECTION : Injecter les métadonnées
+        const META_PREFIX = '#meta:';
+        const metaLine = `${META_PREFIX}${JSON.stringify(payload.meta)}`;
+        const visibleDesc = (payload.description || '').trim();
+        const fullDescription = visibleDesc 
+          ? `${visibleDesc}\n${metaLine}`
+          : metaLine;
+
+        await campaignService.addItemToCampaign(
+          campaignId,
+          payload.name,
+          fullDescription, // ✅ Description COMPLÈTE
+          payload.meta.quantity || 1
+        );
+        
+        toast.success('Objet personnalisé ajouté');
+        onReload();
+      } catch (error) {
+        console.error(error);
+        toast.error('Erreur lors de l\'ajout');
+      } finally {
+        setShowCustom(false);
+      }
+    }}
+  />
+)}
 
       {editingItem && (
         <EditCampaignItemModal
