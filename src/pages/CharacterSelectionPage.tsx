@@ -459,7 +459,9 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
                 Abonnement
               </button>
               
-  
+        
+              )}
+            </div>
 
             {/* ✅ Badge du plan actuel */}
             {currentSubscription && currentSubscription.tier !== 'free' && (
