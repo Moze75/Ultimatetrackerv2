@@ -12,7 +12,7 @@ import {
 
 // ✅ Fonction pour générer un code d'invitation côté client
 function generateInvitationCode(): string {
-  const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Sans O, 0, I, 1
+  const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let result = '';
   for (let i = 0; i < 8; i++) {
     result += characters.charAt(Math.floor(Math.random() * characters.length));
@@ -94,7 +94,6 @@ export const campaignService = {
   // =============================================
 
   async invitePlayer(campaignId: string, playerEmail: string): Promise<CampaignInvitation> {
-    // ✅ Générer le code côté client au lieu d'appeler une fonction SQL
     const invitationCode = generateInvitationCode();
 
     const { data, error } = await supabase
@@ -178,15 +177,15 @@ export const campaignService = {
   },
 
   // =============================================
-  // MEMBRES
+  // MEMBRES - ✅ SANS JOIN SUR auth.users
   // =============================================
 
   async getCampaignMembers(campaignId: string): Promise<CampaignMember[]> {
-    const { data, error } = await supabase
+    // ✅ Récupérer d'abord les membres
+    const { data: members, error } = await supabase
       .from('campaign_members')
       .select(`
         *,
-        user:users!inner(email),
         player:players(name, adventurer_name)
       `)
       .eq('campaign_id', campaignId)
@@ -194,9 +193,11 @@ export const campaignService = {
 
     if (error) throw error;
 
-    return (data || []).map((member: any) => ({
+    // ✅ Enrichir avec les emails en utilisant l'API admin (si disponible) ou RPC
+    // Pour l'instant, on retourne sans email si nécessaire
+    return (members || []).map((member: any) => ({
       ...member,
-      email: member.user?.email,
+      email: member.player_email || 'Email non disponible', // Fallback
       player_name: member.player?.adventurer_name || member.player?.name,
     }));
   },
