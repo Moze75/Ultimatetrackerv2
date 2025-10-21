@@ -8,15 +8,18 @@ export interface SubscriptionPlan {
   features: string[];
   popular?: boolean;
   color: string;
+  trialDays?: number;
+  lifetime?: boolean;
 }
 
 export interface UserSubscription {
   id: string;
   user_id: string;
   tier: SubscriptionTier;
-  status: 'active' | 'cancelled' | 'expired';
+  status: 'active' | 'cancelled' | 'expired' | 'trial';
   start_date: string;
   end_date?: string;
+  trial_end_date?: string;
   mollie_customer_id?: string;
   mollie_subscription_id?: string;
   created_at: string;
@@ -26,12 +29,14 @@ export interface UserSubscription {
 export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
     id: 'free',
-    name: 'Gratuit',
+    name: 'Essai Gratuit',
     price: 0,
     maxCharacters: 1,
     color: 'gray',
+    trialDays: 15,
     features: [
-      '1 personnage maximum',
+      '15 jours d\'essai gratuit',
+      '1 personnage',
       'Gestion de base',
       'Sauvegarde automatique',
       'Accès aux fonctionnalités essentielles',
@@ -44,11 +49,14 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     maxCharacters: 5,
     color: 'blue',
     popular: true,
+    lifetime: true,
     features: [
-      '5 personnages maximum',
+      'Accès à vie (paiement unique)',
+      'Jusqu\'à 5 personnages',
       'Toutes les fonctionnalités de base',
       'Gestion avancée des personnages',
       'Support prioritaire',
+      'Mises à jour incluses',
     ],
   },
   {
@@ -57,14 +65,17 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     price: 15,
     maxCharacters: 15,
     color: 'purple',
+    lifetime: true,
     features: [
-      '15 personnages maximum',
+      'Accès à vie (paiement unique)',
+      'Personnages illimités pour vos campagnes',
       'Toutes les fonctionnalités Héro',
-      'Gestion de campagnes',
-      'Gestion des joueurs',
-      'Envoi d\'items et d\'or aux joueurs',
-      'Tableaux de bord MJ',
-      'Support premium',
+      '🎭 Gestion de campagnes complètes',
+      '👥 Gestion des joueurs',
+      '⚔️ Envoi d\'items et d\'or aux joueurs',
+      '📊 Tableaux de bord MJ avancés',
+      '🎲 Outils pour Maître du Jeu',
+      '🌟 Support premium',
     ],
   },
 ];
