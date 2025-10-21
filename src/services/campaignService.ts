@@ -153,12 +153,13 @@ async declineInvitation(invitationId: string): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Non authentifié');
 
+  // Remplir le player_id lors du refus pour satisfaire la policy
   const { error } = await supabase
     .from('campaign_invitations')
     .update({
       status: 'declined',
       responded_at: new Date().toISOString(),
-      player_id: user.id, // ✅ Ajouter le player_id pour satisfaire la policy
+      player_id: user.id,
     })
     .eq('id', invitationId);
 
