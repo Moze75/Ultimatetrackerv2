@@ -528,11 +528,11 @@ const handleClaimGift = async (gift: CampaignGift) => {
                           {gift.item_description && (
                             <p className="text-sm text-gray-400 mt-2">{gift.item_description}</p>
                           )}
- {getVisibleDescription(gift.item_description) && (
-                <p className="text-sm text-gray-400 mt-2">
-                  {getVisibleDescription(gift.item_description)}
-                </p>
-              )}
+{getVisibleDescription(gift.item_description) && (
+  <p className="text-sm text-gray-400 mt-2">
+    {getVisibleDescription(gift.item_description)}
+  </p>
+)}
 
               {gift.message && (
                 <div className="mt-2 text-sm text-gray-300 italic border-l-2 border-purple-500/40 pl-3">
