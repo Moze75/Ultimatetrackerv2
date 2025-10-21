@@ -1256,7 +1256,6 @@ function SendGiftModal({
 
     try {
       setSending(true);
-
       // ✅ CORRECTION : Utiliser la description COMPLÈTE avec métadonnées
       await campaignService.sendGift(campaignId, giftType, {
         itemName: selectedItem?.name,
@@ -1302,6 +1301,7 @@ function SendGiftModal({
 
   return (
     <div className="fixed inset-0 z-[10000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+
       <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
       <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(36rem,95vw)] max-h-[90vh] overflow-y-auto bg-gray-900/95 border border-gray-700 rounded-xl p-6">
         <div className="flex items-center justify-between mb-6">
