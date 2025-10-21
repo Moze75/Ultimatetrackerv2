@@ -749,8 +749,10 @@ function InvitePlayerModal({
   );
 }
 
+// ... (gardez tout le code existant jusqu'à la fonction InventoryTab)
+
 // =============================================
-// Onglet Inventaire (placeholder)
+// Onglet Inventaire - IMPLÉMENTATION COMPLÈTE
 // =============================================
 function InventoryTab({ 
   campaignId, 
@@ -761,21 +763,311 @@ function InventoryTab({
   inventory: CampaignInventoryItem[]; 
   onReload: () => void;
 }) {
+  const [showList, setShowList] = useState(false);
+  const [showCustom, setShowCustom] = useState(false);
+  const [editingItem, setEditingItem] = useState<CampaignInventoryItem | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filtrer l'inventaire selon la recherche
+  const filteredInventory = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return inventory;
+    return inventory.filter(item => 
+      item.name.toLowerCase().includes(q) || 
+      (item.description || '').toLowerCase().includes(q)
+    );
+  }, [inventory, searchQuery]);
+
+  const handleDeleteItem = async (itemId: string) => {
+    if (!confirm('Supprimer cet objet de l\'inventaire de campagne ?')) return;
+    
+    try {
+      await campaignService.deleteCampaignItem(itemId);
+      toast.success('Objet supprimé');
+      onReload();
+    } catch (error) {
+      console.error(error);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
   return (
-    <div className="text-center py-12 bg-gray-900/30 rounded-lg border border-gray-700">
-      <Package className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-      <h3 className="text-xl font-semibold text-gray-300 mb-2">
-        Inventaire de campagne
-      </h3>
-      <p className="text-gray-500">
-        Fonctionnalité à venir : gérez les objets de votre campagne ici
-      </p>
+    <div className="space-y-6">
+      {/* Header avec actions */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <h2 className="text-xl font-semibold text-white">Inventaire de la campagne</h2>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowList(true)}
+            className="btn-primary px-4 py-2 rounded-lg flex items-center gap-2"
+          >
+            <Plus size={20} />
+            Liste d'équipement
+          </button>
+          <button
+            onClick={() => setShowCustom(true)}
+            className="px-4 py-2 rounded-lg border border-gray-600 hover:bg-gray-700/40 text-gray-200 flex items-center gap-2"
+          >
+            <Plus size={18} />
+            Objet personnalisé
+          </button>
+        </div>
+      </div>
+
+      {/* Barre de recherche */}
+      <div className="flex items-center gap-2">
+        <Search className="w-5 h-5 text-gray-400" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Rechercher dans l'inventaire..."
+          className="input-dark flex-1 px-4 py-2 rounded-lg"
+        />
+      </div>
+
+      {/* Liste des objets */}
+      {filteredInventory.length === 0 ? (
+        <div className="text-center py-12 bg-gray-900/30 rounded-lg border-2 border-dashed border-gray-700">
+          <Package className="w-16 h-16 mx-auto mb-4 text-gray-600" />
+          <h3 className="text-lg font-semibold text-gray-300 mb-2">
+            {searchQuery ? 'Aucun résultat' : 'Inventaire vide'}
+          </h3>
+          <p className="text-gray-500 mb-4">
+            {searchQuery 
+              ? 'Aucun objet ne correspond à votre recherche'
+              : 'Ajoutez des objets pour créer votre inventaire de campagne'
+            }
+          </p>
+          {!searchQuery && (
+            <button
+              onClick={() => setShowList(true)}
+              className="btn-primary px-6 py-3 rounded-lg inline-flex items-center gap-2"
+            >
+              <Plus size={20} />
+              Ajouter un objet
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredInventory.map((item) => (
+            <div
+              key={item.id}
+              className="bg-gray-900/60 backdrop-blur-sm border border-gray-700/50 rounded-lg p-4 hover:bg-gray-800/60 transition-colors"
+            >
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-white truncate">{item.name}</h3>
+                  {item.quantity > 1 && (
+                    <span className="text-xs px-2 py-0.5 rounded bg-purple-900/30 text-purple-300 mt-1 inline-block">
+                      x{item.quantity}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setEditingItem(item)}
+                    className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded"
+                    title="Modifier"
+                  >
+                    <Settings size={16} />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteItem(item.id)}
+                    className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-900/30 rounded"
+                    title="Supprimer"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+
+              {item.description && (
+                <p className="text-sm text-gray-400 line-clamp-3">
+                  {item.description}
+                </p>
+              )}
+
+              <div className="mt-3 text-xs text-gray-500">
+                Ajouté le {new Date(item.created_at).toLocaleDateString('fr-FR')}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modals */}
+      {showList && (
+        <EquipmentListModal
+          onClose={() => setShowList(false)}
+          onAddItem={async (payload) => {
+            try {
+              await campaignService.addItemToCampaign(
+                campaignId,
+                payload.name,
+                payload.description || '',
+                payload.meta.quantity || 1
+              );
+              toast.success('Objet ajouté à l\'inventaire');
+              onReload();
+            } catch (error) {
+              console.error(error);
+              toast.error('Erreur lors de l\'ajout');
+            } finally {
+              setShowList(false);
+            }
+          }}
+          allowedKinds={null}
+        />
+      )}
+
+      {showCustom && (
+        <CustomItemModal
+          onClose={() => setShowCustom(false)}
+          onAdd={async (payload) => {
+            try {
+              await campaignService.addItemToCampaign(
+                campaignId,
+                payload.name,
+                payload.description || '',
+                payload.meta.quantity || 1
+              );
+              toast.success('Objet personnalisé ajouté');
+              onReload();
+            } catch (error) {
+              console.error(error);
+              toast.error('Erreur lors de l\'ajout');
+            } finally {
+              setShowCustom(false);
+            }
+          }}
+        />
+      )}
+
+      {editingItem && (
+        <EditCampaignItemModal
+          item={editingItem}
+          onClose={() => setEditingItem(null)}
+          onSaved={() => {
+            setEditingItem(null);
+            onReload();
+          }}
+        />
+      )}
     </div>
   );
 }
 
 // =============================================
-// Onglet Envois (placeholder)
+// Modal d'édition d'objet de campagne
+// =============================================
+function EditCampaignItemModal({
+  item,
+  onClose,
+  onSaved
+}: {
+  item: CampaignInventoryItem;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState(item.name);
+  const [description, setDescription] = useState(item.description || '');
+  const [quantity, setQuantity] = useState(item.quantity);
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      toast.error('Le nom est requis');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await campaignService.updateCampaignItem(item.id, {
+        name: name.trim(),
+        description: description.trim(),
+        quantity,
+      });
+      toast.success('Objet modifié');
+      onSaved();
+    } catch (error) {
+      console.error(error);
+      toast.error('Erreur lors de la modification');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[10000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
+      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(32rem,95vw)] bg-gray-900/95 border border-gray-700 rounded-xl p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-bold text-white">Modifier l'objet</h3>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:bg-gray-800 rounded-lg">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Nom</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="input-dark w-full px-4 py-2 rounded-lg"
+              placeholder="Nom de l'objet"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Quantité</label>
+            <input
+              type="number"
+              min="1"
+              value={quantity}
+              onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+              className="input-dark w-full px-4 py-2 rounded-lg"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Description</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="input-dark w-full px-4 py-2 rounded-lg"
+              rows={4}
+              placeholder="Description de l'objet"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 mt-6">
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="btn-secondary px-4 py-2 rounded-lg"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="btn-primary px-4 py-2 rounded-lg disabled:opacity-50"
+          >
+            {saving ? 'Sauvegarde...' : 'Sauvegarder'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =============================================
+// Onglet Envois - IMPLÉMENTATION COMPLÈTE
 // =============================================
 function GiftsTab({ 
   campaignId, 
@@ -786,15 +1078,369 @@ function GiftsTab({
   members: CampaignMember[]; 
   inventory: CampaignInventoryItem[];
 }) {
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [giftType, setGiftType] = useState<'item' | 'currency'>('item');
+
   return (
-    <div className="text-center py-12 bg-gray-900/30 rounded-lg border border-gray-700">
-      <Send className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-      <h3 className="text-xl font-semibold text-gray-300 mb-2">
-        Envoyer aux joueurs
-      </h3>
-      <p className="text-gray-500">
-        Fonctionnalité à venir : envoyez des objets et de l'argent à vos joueurs
-      </p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-white">Envoyer aux joueurs</h2>
+        <button
+          onClick={() => setShowSendModal(true)}
+          className="btn-primary px-6 py-3 rounded-lg flex items-center gap-2"
+        >
+          <Send size={20} />
+          Nouvel envoi
+        </button>
+      </div>
+
+      {/* Sélecteur de type */}
+      <div className="flex items-center gap-4 bg-gray-900/40 p-4 rounded-lg">
+        <span className="text-sm font-medium text-gray-300">Type d'envoi :</span>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setGiftType('item')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              giftType === 'item'
+                ? 'bg-purple-600 text-white'
+                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+            }`}
+          >
+            Objets
+          </button>
+          <button
+            onClick={() => setGiftType('currency')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              giftType === 'currency'
+                ? 'bg-yellow-600 text-white'
+                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+            }`}
+          >
+            Argent
+          </button>
+        </div>
+      </div>
+
+      {/* Info */}
+      <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+        <p className="text-sm text-blue-200">
+          {giftType === 'item' 
+            ? '💎 Envoyez des objets de votre inventaire aux joueurs. Ils pourront choisir de les récupérer individuellement.'
+            : '💰 Distribuez de l\'argent (or, argent, cuivre) aux joueurs. Ils pourront se le répartir équitablement ou individuellement.'
+          }
+        </p>
+      </div>
+
+      {/* Placeholder - Historique des envois (à implémenter plus tard) */}
+      <div className="bg-gray-900/30 border border-gray-700 rounded-lg p-8 text-center">
+        <div className="w-16 h-16 mx-auto mb-4 bg-gray-800/60 rounded-full flex items-center justify-center">
+          <Send className="w-8 h-8 text-gray-600" />
+        </div>
+        <h3 className="text-lg font-semibold text-gray-300 mb-2">
+          Historique des envois
+        </h3>
+        <p className="text-gray-500 text-sm">
+          L'historique des objets et argent envoyés apparaîtra ici
+        </p>
+      </div>
+
+      {/* Modal d'envoi */}
+      {showSendModal && (
+        <SendGiftModal
+          campaignId={campaignId}
+          members={members}
+          inventory={inventory}
+          giftType={giftType}
+          onClose={() => setShowSendModal(false)}
+          onSent={() => {
+            setShowSendModal(false);
+            toast.success('Envoi effectué aux joueurs !');
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// =============================================
+// Modal d'envoi de cadeaux
+// =============================================
+function SendGiftModal({
+  campaignId,
+  members,
+  inventory,
+  giftType,
+  onClose,
+  onSent
+}: {
+  campaignId: string;
+  members: CampaignMember[];
+  inventory: CampaignInventoryItem[];
+  giftType: 'item' | 'currency';
+  onClose: () => void;
+  onSent: () => void;
+}) {
+  // États pour les objets
+  const [selectedItemId, setSelectedItemId] = useState('');
+  const [itemQuantity, setItemQuantity] = useState(1);
+
+  // États pour l'argent
+  const [gold, setGold] = useState(0);
+  const [silver, setSilver] = useState(0);
+  const [copper, setCopper] = useState(0);
+
+  // États communs
+  const [distributionMode, setDistributionMode] = useState<'individual' | 'shared'>('individual');
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+
+  const selectedItem = inventory.find(i => i.id === selectedItemId);
+
+  const handleSend = async () => {
+    if (giftType === 'item') {
+      if (!selectedItemId) {
+        toast.error('Sélectionnez un objet');
+        return;
+      }
+      if (itemQuantity <= 0) {
+        toast.error('Quantité invalide');
+        return;
+      }
+      if (selectedItem && itemQuantity > selectedItem.quantity) {
+        toast.error(`Quantité disponible : ${selectedItem.quantity}`);
+        return;
+      }
+    } else {
+      if (gold <= 0 && silver <= 0 && copper <= 0) {
+        toast.error('Entrez un montant');
+        return;
+      }
+    }
+
+    try {
+      setSending(true);
+
+      await campaignService.sendGift(campaignId, giftType, {
+        itemName: selectedItem?.name,
+        itemDescription: selectedItem?.description,
+        itemQuantity,
+        gold,
+        silver,
+        copper,
+        distributionMode,
+        message: message.trim() || undefined,
+      });
+
+      // Si c'est un objet, décrémenter la quantité dans l'inventaire
+      if (giftType === 'item' && selectedItem) {
+        const newQuantity = selectedItem.quantity - itemQuantity;
+        if (newQuantity > 0) {
+          await campaignService.updateCampaignItem(selectedItem.id, {
+            quantity: newQuantity,
+          });
+        } else {
+          await campaignService.deleteCampaignItem(selectedItem.id);
+        }
+      }
+
+      onSent();
+    } catch (error) {
+      console.error(error);
+      toast.error('Erreur lors de l\'envoi');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[10000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
+      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(36rem,95vw)] max-h-[90vh] overflow-y-auto bg-gray-900/95 border border-gray-700 rounded-xl p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold text-white">
+            {giftType === 'item' ? '📦 Envoyer un objet' : '💰 Envoyer de l\'argent'}
+          </h3>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:bg-gray-800 rounded-lg">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="space-y-6">
+          {/* Sélection de l'objet ou montant */}
+          {giftType === 'item' ? (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Objet à envoyer</label>
+                <select
+                  value={selectedItemId}
+                  onChange={(e) => {
+                    setSelectedItemId(e.target.value);
+                    const item = inventory.find(i => i.id === e.target.value);
+                    if (item) setItemQuantity(Math.min(1, item.quantity));
+                  }}
+                  className="input-dark w-full px-4 py-2 rounded-lg"
+                >
+                  <option value="">-- Sélectionner un objet --</option>
+                  {inventory.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name} (x{item.quantity} disponible{item.quantity > 1 ? 's' : ''})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedItem && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Quantité (max: {selectedItem.quantity})
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max={selectedItem.quantity}
+                      value={itemQuantity}
+                      onChange={(e) => setItemQuantity(Math.min(parseInt(e.target.value) || 1, selectedItem.quantity))}
+                      className="input-dark w-full px-4 py-2 rounded-lg"
+                    />
+                  </div>
+
+                  {selectedItem.description && (
+                    <div className="bg-gray-800/40 rounded-lg p-3">
+                      <p className="text-sm text-gray-400">{selectedItem.description}</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-yellow-400 mb-2">Or</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={gold}
+                    onChange={(e) => setGold(parseInt(e.target.value) || 0)}
+                    className="input-dark w-full px-4 py-2 rounded-lg text-center"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Argent</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={silver}
+                    onChange={(e) => setSilver(parseInt(e.target.value) || 0)}
+                    className="input-dark w-full px-4 py-2 rounded-lg text-center"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-orange-400 mb-2">Cuivre</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={copper}
+                    onChange={(e) => setCopper(parseInt(e.target.value) || 0)}
+                    className="input-dark w-full px-4 py-2 rounded-lg text-center"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Mode de distribution */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Mode de distribution</label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setDistributionMode('individual')}
+                className={`p-4 rounded-lg border-2 transition-colors ${
+                  distributionMode === 'individual'
+                    ? 'border-purple-500 bg-purple-900/20 text-white'
+                    : 'border-gray-700 bg-gray-800/40 text-gray-300 hover:bg-gray-700/40'
+                }`}
+              >
+                <div className="font-semibold mb-1">Individuel</div>
+                <div className="text-xs opacity-80">Chaque joueur récupère pour lui</div>
+              </button>
+              <button
+                onClick={() => setDistributionMode('shared')}
+                className={`p-4 rounded-lg border-2 transition-colors ${
+                  distributionMode === 'shared'
+                    ? 'border-purple-500 bg-purple-900/20 text-white'
+                    : 'border-gray-700 bg-gray-800/40 text-gray-300 hover:bg-gray-700/40'
+                }`}
+              >
+                <div className="font-semibold mb-1">Partagé</div>
+                <div className="text-xs opacity-80">À répartir entre les joueurs</div>
+              </button>
+            </div>
+          </div>
+
+          {/* Message optionnel */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Message (optionnel)
+            </label>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              className="input-dark w-full px-4 py-2 rounded-lg"
+              rows={3}
+              placeholder="Ajoutez un message pour les joueurs..."
+            />
+          </div>
+
+          {/* Info sur les destinataires */}
+          <div className="bg-gray-800/40 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-sm text-gray-300 mb-2">
+              <Users size={16} />
+              <span className="font-medium">Destinataires ({members.length})</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {members.map((member) => (
+                <span
+                  key={member.id}
+                  className="px-2 py-1 bg-gray-700/50 rounded text-xs text-gray-300"
+                >
+                  {member.player_name || member.email}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Boutons */}
+        <div className="flex justify-end gap-3 mt-6">
+          <button
+            onClick={onClose}
+            disabled={sending}
+            className="btn-secondary px-6 py-3 rounded-lg"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={handleSend}
+            disabled={sending}
+            className="btn-primary px-6 py-3 rounded-lg disabled:opacity-50 flex items-center gap-2"
+          >
+            {sending ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                Envoi en cours...
+              </>
+            ) : (
+              <>
+                <Send size={18} />
+                Envoyer aux joueurs
+              </>
+            )}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
