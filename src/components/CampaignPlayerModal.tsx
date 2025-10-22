@@ -489,10 +489,10 @@ export function CampaignPlayerModal({
       setShowDistributionModal(false);
       setSelectedGiftForDistribution(null);
       
-      setTimeout(() => {
-        onClose();
-        window.location.reload();
-      }, 1500);
+setTimeout(() => {
+  onClose();
+  // Le polling gérera la mise à jour automatiquement
+}, 800);
     } catch (error) {
       console.error('Erreur distribution:', error);
       throw error;
