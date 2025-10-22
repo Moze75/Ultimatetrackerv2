@@ -1479,6 +1479,8 @@ function GiftsTab({
 // =============================================
 // Modal d'envoi de cadeaux
 // =============================================
+// Remplacez uniquement la fonction SendGiftModal existante par celle-ci.
+
 function SendGiftModal({
   campaignId,
   members,
@@ -1503,6 +1505,11 @@ function SendGiftModal({
   const [distributionMode, setDistributionMode] = useState<'individual' | 'shared'>('individual');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
+
+  // Liste des destinataires sélectionnés (user ids)
+  const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
+  // Option pour "tous les membres" quand distribution shared ou individual
+  const [selectAllRecipients, setSelectAllRecipients] = useState(false);
 
   const selectedItem = inventory.find(i => i.id === selectedItemId);
 
@@ -1549,7 +1556,42 @@ function SendGiftModal({
     return visibleDesc ? `${visibleDesc}\n${metaLine}` : metaLine;
   };
 
+  // Sync selectAllRecipients <-> selectedRecipients
+  useEffect(() => {
+    if (selectAllRecipients) {
+      const allIds = members.map(m => m.user_id || m.player_id || m.id).filter(Boolean) as string[];
+      setSelectedRecipients(allIds);
+    } else {
+      setSelectedRecipients([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectAllRecipients]);
+
+  // Quand on change l'item sélectionné, réinitialiser la quantité
+  useEffect(() => {
+    const item = inventory.find(i => i.id === selectedItemId);
+    if (item) {
+      setItemQuantity(1);
+    } else {
+      setItemQuantity(1);
+    }
+  }, [selectedItemId, inventory]);
+
+  const toggleRecipient = (userId: string) => {
+    setSelectedRecipients(prev => {
+      if (prev.includes(userId)) return prev.filter(id => id !== userId);
+      return [...prev, userId];
+    });
+    setSelectAllRecipients(false);
+  };
+
   const handleSend = async () => {
+    // Validation supplémentaire : pour 'individual' il faut au moins un destinataire
+    if (distributionMode === 'individual' && (!selectedRecipients || selectedRecipients.length === 0)) {
+      toast.error('Sélectionnez au moins un destinataire pour un envoi individuel');
+      return;
+    }
+
     if (giftType === 'item') {
       if (!selectedItemId) {
         toast.error('Sélectionnez un objet');
@@ -1573,26 +1615,32 @@ function SendGiftModal({
     try {
       setSending(true);
 
-      // ✅ LOG DE DEBUG
+      // LOG DE DEBUG
       if (giftType === 'item' && selectedItem) {
         console.log('📤 Objet sélectionné:', selectedItem);
         console.log('📤 Description brute:', selectedItem.description);
         console.log('📤 Description complète:', getFullDescription(selectedItem));
       }
-      
-      // ✅ CORRECTION : Utiliser la description COMPLÈTE avec métadonnées
+
+      // Préparer recipientIds : null = visible par tous (shared), tableau = destinataires explicites (individual)
+      const recipientIds = distributionMode === 'individual' ? selectedRecipients : null;
+
+      // Appel au service en envoyant aussi l'id de l'item en inventaire si on veut le décrémenter côté service
       await campaignService.sendGift(campaignId, giftType, {
         itemName: selectedItem?.name,
         itemDescription: selectedItem ? getFullDescription(selectedItem) : undefined,
-        itemQuantity,
+        itemQuantity: giftType === 'item' ? itemQuantity : undefined,
         gold,
         silver,
         copper,
         distributionMode,
         message: message.trim() || undefined,
+        recipientIds: recipientIds || undefined,
+        inventoryItemId: giftType === 'item' && selectedItem ? selectedItem.id : undefined,
       });
 
-      // Si c'est un objet, décrémenter la quantité
+      // Si c'est un objet et que le service ne l'a pas géré (fallback), on décrémente localement comme avant.
+      // (Le service devrait idéalement décrémenter l'inventaire de manière atomique si inventoryItemId est fourni.)
       if (giftType === 'item' && selectedItem) {
         const newQuantity = selectedItem.quantity - itemQuantity;
         if (newQuantity > 0) {
@@ -1636,7 +1684,7 @@ function SendGiftModal({
                   onChange={(e) => {
                     setSelectedItemId(e.target.value);
                     const item = inventory.find(i => i.id === e.target.value);
-                    if (item) setItemQuantity(Math.min(1, item.quantity));
+                    if (item) setItemQuantity(1);
                   }}
                   className="input-dark w-full px-4 py-2 rounded-lg"
                 >
@@ -1665,7 +1713,7 @@ function SendGiftModal({
                     />
                   </div>
 
-                  {/* ✅ CORRECTION : Afficher seulement la description visible */}
+                  {/* Aperçu */}
                   {getVisibleDescription(selectedItem.description) && (
                     <div className="bg-gray-800/40 rounded-lg p-3 border border-gray-700">
                       <h5 className="text-xs font-medium text-gray-400 mb-2">Aperçu de l'objet :</h5>
@@ -1748,7 +1796,11 @@ function SendGiftModal({
             <label className="block text-sm font-medium text-gray-300 mb-2">Mode de distribution</label>
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => setDistributionMode('individual')}
+                onClick={() => {
+                  setDistributionMode('individual');
+                  setSelectAllRecipients(false);
+                  setSelectedRecipients([]);
+                }}
                 className={`p-4 rounded-lg border-2 transition-colors ${
                   distributionMode === 'individual'
                     ? 'border-purple-500 bg-purple-900/20 text-white'
@@ -1756,10 +1808,14 @@ function SendGiftModal({
                 }`}
               >
                 <div className="font-semibold mb-1">Individuel</div>
-                <div className="text-xs opacity-80">Chaque joueur récupère pour lui</div>
+                <div className="text-xs opacity-80">Envoyer à des destinataires spécifiques</div>
               </button>
               <button
-                onClick={() => setDistributionMode('shared')}
+                onClick={() => {
+                  setDistributionMode('shared');
+                  setSelectAllRecipients(false);
+                  setSelectedRecipients([]);
+                }}
                 className={`p-4 rounded-lg border-2 transition-colors ${
                   distributionMode === 'shared'
                     ? 'border-purple-500 bg-purple-900/20 text-white'
@@ -1767,10 +1823,47 @@ function SendGiftModal({
                 }`}
               >
                 <div className="font-semibold mb-1">Partagé</div>
-                <div className="text-xs opacity-80">À répartir entre les joueurs</div>
+                <div className="text-xs opacity-80">Visible à tous (1 exemplaire)</div>
               </button>
             </div>
           </div>
+
+          {/* Sélection des destinataires si individual */}
+          {distributionMode === 'individual' && (
+            <div className="bg-gray-800/30 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-medium text-gray-300">Destinataires spécifiques</div>
+                <label className="text-xs text-gray-400 inline-flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectAllRecipients}
+                    onChange={(e) => setSelectAllRecipients(e.target.checked)}
+                  />
+                  <span>Tous</span>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+                {members.map((m) => {
+                  const uid = m.user_id || m.player_id || m.id;
+                  return (
+                    <label key={uid} className="inline-flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={selectedRecipients.includes(uid)}
+                        onChange={() => toggleRecipient(uid)}
+                      />
+                      <span className="ml-1">{m.player_name || m.email}</span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              <p className="text-xs text-gray-400 mt-2">
+                Les destinataires choisis recevront l'envoi en priorité. Un objet partagé reste visible par tous.
+              </p>
+            </div>
+          )}
 
           {/* Message optionnel */}
           <div>
@@ -1816,7 +1909,7 @@ function SendGiftModal({
           </button>
           <button
             onClick={handleSend}
-            disabled={sending}
+            disabled={sending || (distributionMode === 'individual' && selectedRecipients.length === 0)}
             className="btn-primary px-6 py-3 rounded-lg disabled:opacity-50 flex items-center gap-2"
           >
             {sending ? (
@@ -1836,5 +1929,4 @@ function SendGiftModal({
     </div>
   );
 }
-
 export default GameMasterCampaignPage;
