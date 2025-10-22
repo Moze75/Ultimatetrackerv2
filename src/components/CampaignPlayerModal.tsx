@@ -701,11 +701,13 @@ setTimeout(() => {
       }
 
       loadData();
-    } catch (error) {
-      console.error('💥 Claim error:', error);
-      toast.error('Erreur lors de la récupération');
-    }
-  };
+  } catch (error) {
+    console.error('💥 Claim error:', error);
+    toast.error('Erreur lors de la récupération');
+  } finally {
+    setClaiming(false); // ✅ AJOUTE pour libérer
+  }
+};
 
   if (!open) return null;
 
