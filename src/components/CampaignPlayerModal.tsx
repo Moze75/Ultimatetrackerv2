@@ -618,6 +618,17 @@ export function CampaignPlayerModal({
 
         console.log('✅ Item inserted:', insertedItem);
 
+console.log('✅ Item inserted:', insertedItem);
+
+// ✅ AJOUTE CES 3 LIGNES
+window.dispatchEvent(new CustomEvent('inventory:refresh', { 
+  detail: { playerId: player.id } 
+}));
+
+await campaignService.claimGift(gift.id, player.id, {
+  quantity: gift.item_quantity || 1,
+});
+        
 window.dispatchEvent(new CustomEvent('inventory:refresh', { 
   detail: { playerId: player.id } 
 }));
