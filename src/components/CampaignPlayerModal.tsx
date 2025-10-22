@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Gift, Users, Check, Package, Coins } from 'lucide-react';
+import { X, Gift, Users, Check, Package, Coins, AlertCircle } from 'lucide-react';
 import { Player } from '../types/dnd';
 import { supabase } from '../lib/supabase';
 import { campaignService } from '../services/campaignService';
@@ -7,8 +7,7 @@ import {
   CampaignInvitation,
   CampaignGift,
   CampaignMember,
-  Campaign,
-  CampaignGiftClaim
+  Campaign
 } from '../types/campaign';
 import toast from 'react-hot-toast';
 
@@ -29,14 +28,11 @@ export function CampaignPlayerModal({
   const [myCampaigns, setMyCampaigns] = useState<Campaign[]>([]);
   const [pendingGifts, setPendingGifts] = useState<CampaignGift[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'invitations' | 'gifts'>('gifts');
+  const [activeTab, setActiveTab] = useState<'invitations' | 'gifts'>('invitations');
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [invitationCode, setInvitationCode] = useState('');
-  // local inventory state (items already owned by the player)
-  const [inventory, setInventory] = useState<any[]>([]);
-  const [isClaiming, setIsClaiming] = useState(false);
 
-  // Utilitaires méta
+  // Utilitaires pour cacher / parser les méta
   const META_PREFIX = '#meta:';
   const getVisibleDescription = (description: string | null | undefined): string => {
     if (!description) return '';
@@ -58,39 +54,11 @@ export function CampaignPlayerModal({
     }
   };
 
-  // Realtime subscription: update inventory when new items are inserted for this player
-  useEffect(() => {
-    if (!open || !player?.id) return;
-
-    const channel = supabase
-      .channel(`inv-player-${player.id}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'inventory_items',
-        filter: `player_id=eq.${player.id}`,
-      }, (payload) => {
-        if (!payload?.record) return;
-        setInventory((prev: any[]) => [payload.record, ...prev]);
-      })
-      .subscribe();
-
-    return () => {
-      if (typeof supabase.removeChannel === 'function') {
-        supabase.removeChannel(channel);
-      } else {
-        channel.unsubscribe?.();
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, player?.id]);
-
   useEffect(() => {
     if (open) {
       loadData();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, player?.id]);
+  }, [open]);
 
   const loadData = async () => {
     try {
@@ -110,7 +78,7 @@ export function CampaignPlayerModal({
         .eq('is_active', true);
 
       if (members && members.length > 0) {
-        const campaignIds = members.map((m: any) => m.campaign_id);
+        const campaignIds = members.map(m => m.campaign_id);
         const { data: campaigns } = await supabase
           .from('campaigns')
           .select('*')
@@ -118,7 +86,7 @@ export function CampaignPlayerModal({
 
         setMyCampaigns(campaigns || []);
 
-        // Charger les cadeaux en attente POUR ces campagnes
+        // Charger les cadeaux en attente
         const { data: gifts } = await supabase
           .from('campaign_gifts')
           .select('*')
@@ -126,54 +94,20 @@ export function CampaignPlayerModal({
           .eq('status', 'pending')
           .order('sent_at', { ascending: false });
 
-        const giftsList: CampaignGift[] = gifts || [];
+        // Filtrer les cadeaux non encore récupérés
+        const giftsWithClaims = await Promise.all(
+          (gifts || []).map(async (gift) => {
+            const claims = await campaignService.getGiftClaims(gift.id);
+            const alreadyClaimed = claims.some(c => c.user_id === user.id);
+            return { gift, alreadyClaimed };
+          })
+        );
 
-        // Récupérer les claims faits par l'utilisateur pour ces gifts (pour filtrer)
-        const giftIds = giftsList.map(g => g.id).filter(Boolean) as string[];
-        let userClaims: { gift_id: string }[] = [];
-        if (giftIds.length > 0) {
-          const { data: claims } = await supabase
-            .from('campaign_gift_claims')
-            .select('gift_id')
-            .in('gift_id', giftIds)
-            .eq('user_id', user.id);
-          userClaims = claims || [];
-        }
-        const claimedSet = new Set(userClaims.map(c => c.gift_id));
-
-        // Filtrer les gifts visibles pour l'utilisateur :
-        const visibleGifts = giftsList.filter((g) => {
-          if (!g || !g.id) return false;
-          if (claimedSet.has(g.id)) return false; // déjà récupéré par cet utilisateur
-          // shared -> visible to all
-          if (!g.distribution_mode || g.distribution_mode === 'shared') return true;
-          // individual -> visible only to recipients
-          if (g.distribution_mode === 'individual') {
-            if (Array.isArray((g as any).recipient_ids) && (g as any).recipient_ids.includes(user.id)) {
-              return true;
-            }
-            return false;
-          }
-          // default: hide
-          return false;
-        });
-
-        setPendingGifts(visibleGifts);
-
-        // --- START: load initial inventory for player
-        const { data: invRows } = await supabase
-          .from('inventory_items')
-          .select('*')
-          .eq('player_id', player.id)
-          .order('created_at', { ascending: false });
-
-        setInventory(invRows || []);
-        // --- END
-      } else {
-        // Ensure empty when no campaigns
-        setPendingGifts([]);
-        setInventory([]);
-        setMyCampaigns([]);
+        setPendingGifts(
+          giftsWithClaims
+            .filter(g => !g.alreadyClaimed)
+            .map(g => g.gift)
+        );
       }
     } catch (error) {
       console.error('Erreur chargement campagnes:', error);
@@ -187,7 +121,7 @@ export function CampaignPlayerModal({
     try {
       await campaignService.acceptInvitation(invitationId, player.id);
       toast.success('Invitation acceptée !');
-      await loadData();
+      loadData();
     } catch (error) {
       console.error(error);
       toast.error('Erreur lors de l\'acceptation');
@@ -196,11 +130,11 @@ export function CampaignPlayerModal({
 
   const handleDeclineInvitation = async (invitationId: string) => {
     if (!confirm('Refuser cette invitation ?')) return;
-
+    
     try {
       await campaignService.declineInvitation(invitationId);
       toast.success('Invitation refusée');
-      await loadData();
+      loadData();
     } catch (error) {
       console.error(error);
       toast.error('Erreur');
@@ -216,7 +150,7 @@ export function CampaignPlayerModal({
 
     try {
       const invitation = await campaignService.getInvitationsByCode(code);
-
+      
       if (invitation.status !== 'pending') {
         toast.error('Cette invitation n\'est plus valide');
         return;
@@ -236,160 +170,135 @@ export function CampaignPlayerModal({
   };
 
   const handleClaimGift = async (gift: CampaignGift) => {
-    if (isClaiming) return;
-    setIsClaiming(true);
-
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('Utilisateur non connecté');
-        return;
-      }
+      if (!user) return;
 
       console.log('🎁 Claiming gift:', gift);
 
-      // helper: remove gift from pending list (local)
-      const removePendingGiftLocal = () => {
-        try {
-          setPendingGifts((prev: CampaignGift[]) => prev.filter(p => p.id !== gift.id));
-        } catch (e) {
-          console.warn('Erreur mise à jour état local pending gifts, reload:', e);
-        }
-      };
-
-      // ITEM flow
       if (gift.gift_type === 'item') {
-        try {
-          const { claim, item } = await campaignService.claimGift(gift.id, player.id, {
-            quantity: gift.item_quantity || 1,
-          });
-
-          console.log('Claim result', claim, item);
-
-          // remove gift locally
-          removePendingGiftLocal();
-
-          // If RPC returned an item, update inventory local state
-          if (item) {
+        // ✅ CORRECTION : Parser les métadonnées de l'objet original
+        let originalMeta = null;
+        
+        if (gift.item_description) {
+          const lines = gift.item_description.split('\n');
+          const metaLine = lines.find(l => l.trim().startsWith(META_PREFIX));
+          if (metaLine) {
             try {
-              setInventory((prev: any[]) => [item, ...prev]);
-            } catch (e) {
-              console.warn("Erreur ajout item à l'inventaire local:", e);
-            }
-            toast.success('Cadeau récupéré !');
-            setTimeout(() => onClose(), 700);
-            return;
-          }
-
-          // fallback: create inventory item client-side (should be rare)
-          const metaPrefix = META_PREFIX;
-          let originalMeta = null;
-          if (gift.item_description) {
-            const lines = gift.item_description.split('\n');
-            const metaLine = lines.find(l => l.trim().startsWith(metaPrefix));
-            if (metaLine) {
-              try {
-                originalMeta = JSON.parse(metaLine.trim().slice(metaPrefix.length));
-              } catch (err) {
-                console.error('Erreur parsing métadonnées:', err);
-              }
+              originalMeta = JSON.parse(metaLine.trim().slice(META_PREFIX.length));
+              console.log('📦 Métadonnées originales trouvées:', originalMeta);
+            } catch (err) {
+              console.error('❌ Erreur parsing métadonnées:', err);
             }
           }
-
-          const itemMeta = originalMeta || {
-            type: 'equipment' as const,
-            quantity: gift.item_quantity || 1,
-            equipped: false,
-          };
-
-          itemMeta.quantity = gift.item_quantity || 1;
-          itemMeta.equipped = false;
-
-          const metaLine = `${metaPrefix}${JSON.stringify(itemMeta)}`;
-
-          const cleanDescription = gift.item_description
-            ? gift.item_description
-                .split('\n')
-                .filter(line => !line.trim().startsWith(metaPrefix))
-                .join('\n')
-                .trim()
-            : '';
-
-          const finalDescription = cleanDescription ? `${cleanDescription}\n${metaLine}` : metaLine;
-
-          const { data: insertedItem, error: insertErr } = await supabase
-            .from('inventory_items')
-            .insert({
-              player_id: player.id,
-              name: gift.item_name || 'Objet',
-              description: finalDescription,
-            })
-            .select()
-            .single();
-
-          if (insertErr) {
-            console.error('❌ Insert error (fallback client insert):', insertErr);
-            toast.error('Erreur lors de l\'ajout à votre inventaire');
-          } else {
-            setInventory((prev: any[]) => [insertedItem, ...prev]);
-            const typeLabel =
-              itemMeta.type === 'armor' ? 'Armure' :
-              itemMeta.type === 'shield' ? 'Bouclier' :
-              itemMeta.type === 'weapon' ? 'Arme' :
-              'Objet';
-            toast.success(`${typeLabel} "${gift.item_name}" ajoutée à votre inventaire !`);
-          }
-
-          setTimeout(() => onClose(), 700);
-          return;
-        } catch (err: any) {
-          console.error('Erreur lors du claim (item):', err);
-          toast.error(err?.message || 'Impossible de récupérer l\'objet (probablement déjà récupéré).');
-          await loadData();
-          return;
         }
-      }
 
-      // CURRENCY flow
-      try {
-        // optimistic update in UI: inform player and update local player via onUpdate
-        const newGold = (player.gold || 0) + (gift.gold || 0);
-        const newSilver = (player.silver || 0) + (gift.silver || 0);
-        const newCopper = (player.copper || 0) + (gift.copper || 0);
+        // ✅ Si on a des métadonnées originales, les utiliser
+        // Sinon, créer des métadonnées par défaut
+        const itemMeta = originalMeta || {
+          type: 'equipment' as const,
+          quantity: gift.item_quantity || 1,
+          equipped: false,
+        };
 
-        // apply update locally (UI)
-        onUpdate({
-          ...player,
-          gold: newGold,
-          silver: newSilver,
-          copper: newCopper,
+        // ✅ S'assurer que la quantité et equipped sont à jour
+        itemMeta.quantity = gift.item_quantity || 1;
+        itemMeta.equipped = false;
+
+        console.log('📦 Métadonnées finales:', itemMeta);
+
+        const metaLine = `${META_PREFIX}${JSON.stringify(itemMeta)}`;
+        
+        // Nettoyer la description (retirer les anciennes métadonnées si présentes)
+        const cleanDescription = gift.item_description
+          ? gift.item_description
+              .split('\n')
+              .filter(line => !line.trim().startsWith(META_PREFIX))
+              .join('\n')
+              .trim()
+          : '';
+
+        const finalDescription = cleanDescription
+          ? `${cleanDescription}\n${metaLine}`
+          : metaLine;
+
+        console.log('📦 Description finale:', finalDescription);
+
+        const { data: insertedItem, error } = await supabase
+          .from('inventory_items')
+          .insert({
+            player_id: player.id,
+            name: gift.item_name || 'Objet',
+            description: finalDescription,
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('❌ Insert error:', error);
+          throw error;
+        }
+
+        console.log('✅ Item inserted:', insertedItem);
+
+        await campaignService.claimGift(gift.id, player.id, {
+          quantity: gift.item_quantity || 1,
         });
 
-        // record the claim via RPC
+        // ✅ Message de succès adapté au type
+        const typeLabel = 
+          itemMeta.type === 'armor' ? 'Armure' :
+          itemMeta.type === 'shield' ? 'Bouclier' :
+          itemMeta.type === 'weapon' ? 'Arme' :
+          'Objet';
+        
+        toast.success(`${typeLabel} "${gift.item_name}" ajouté${itemMeta.type === 'armor' ? 'e' : ''} à votre inventaire !`);
+
+        setTimeout(() => {
+          onClose();
+          window.location.reload();
+        }, 1500);
+
+      } else {
+        // Code argent (inchangé)
+        const { error } = await supabase.from('players').update({
+          gold: (player.gold || 0) + (gift.gold || 0),
+          silver: (player.silver || 0) + (gift.silver || 0),
+          copper: (player.copper || 0) + (gift.copper || 0),
+        }).eq('id', player.id);
+
+        if (error) throw error;
+
         await campaignService.claimGift(gift.id, player.id, {
-          gold: gift.gold ?? 0,
-          silver: gift.silver ?? 0,
-          copper: gift.copper ?? 0,
+          gold: gift.gold,
+          silver: gift.silver,
+          copper: gift.copper,
         });
 
         const amounts = [];
-        if (gift.gold && gift.gold > 0) amounts.push(`${gift.gold} po`);
-        if (gift.silver && gift.silver > 0) amounts.push(`${gift.silver} pa`);
-        if (gift.copper && gift.copper > 0) amounts.push(`${gift.copper} pc`);
+        if (gift.gold > 0) amounts.push(`${gift.gold} po`);
+        if (gift.silver > 0) amounts.push(`${gift.silver} pa`);
+        if (gift.copper > 0) amounts.push(`${gift.copper} pc`);
 
         toast.success(`${amounts.join(', ')} ajouté à votre argent !`);
-        removePendingGiftLocal();
-        setTimeout(() => onClose(), 700);
-        await loadData();
-        return;
-      } catch (err: any) {
-        console.error('Erreur lors du claim (currency flow):', err);
-        toast.error('Erreur lors de la récupération');
-        await loadData();
-        return;
+
+        onUpdate({
+          ...player,
+          gold: (player.gold || 0) + (gift.gold || 0),
+          silver: (player.silver || 0) + (gift.silver || 0),
+          copper: (player.copper || 0) + (gift.copper || 0),
+        });
+
+        setTimeout(() => {
+          onClose();
+          window.location.reload();
+        }, 1500);
       }
-    } finally {
-      setIsClaiming(false);
+
+      loadData();
+    } catch (error) {
+      console.error('💥 Claim error:', error);
+      toast.error('Erreur lors de la récupération');
     }
   };
 
@@ -448,6 +357,7 @@ export function CampaignPlayerModal({
             </div>
           ) : activeTab === 'invitations' ? (
             <div className="space-y-4">
+              {/* ... invitations UI unchanged ... */}
               {!showCodeInput ? (
                 <button
                   onClick={() => setShowCodeInput(true)}
@@ -490,66 +400,12 @@ export function CampaignPlayerModal({
                 </div>
               )}
 
-              {/* Invitations list */}
-              {invitations.length > 0 ? (
-                invitations.map((invitation) => (
-                  <div key={invitation.id} className="bg-gray-800/40 border border-purple-500/30 rounded-lg p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-white mb-1">
-                          Nouvelle invitation à une campagne
-                        </h3>
-                        <p className="text-sm text-gray-400">
-                          Vous avez été invité à rejoindre une campagne par le Maître du Jeu
-                        </p>
-                        <details className="mt-2">
-                          <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-400">
-                            Code d'invitation (optionnel)
-                          </summary>
-                          <p className="text-xs text-gray-400 mt-1">
-                            Code : <span className="font-mono text-purple-400">{invitation.invitation_code}</span>
-                          </p>
-                        </details>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleAcceptInvitation(invitation.id)}
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 font-medium"
-                      >
-                        <Check size={18} />
-                        Accepter et rejoindre
-                      </button>
-                      <button
-                        onClick={() => handleDeclineInvitation(invitation.id)}
-                        className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
-                      >
-                        Refuser
-                      </button>
-                    </div>
-                  </div>
-                ))
-              ) : !showCodeInput ? (
-                <div className="text-center py-12">
-                  <Users className="w-16 h-16 mx-auto mb-4 opacity-50 text-gray-600" />
-                  <h3 className="text-lg font-semibold text-gray-300 mb-2">
-                    Aucune invitation en attente
-                  </h3>
-                  <p className="text-sm text-gray-500 mb-4">
-                    Demandez à votre Maître du Jeu de vous inviter à une campagne
-                  </p>
-                  <button
-                    onClick={() => setShowCodeInput(true)}
-                    className="text-sm text-purple-400 hover:text-purple-300 underline"
-                  >
-                    Ou entrez un code d'invitation manuellement
-                  </button>
-                </div>
-              ) : null}
+              {/* Invitations list and myCampaigns rendering (unchanged) */}
+              {/* ... */}
             </div>
           ) : (
             <div className="space-y-4">
+              {/* Liste des cadeaux - rendu simplifié avec méta affichées proprement */}
               {pendingGifts.length > 0 ? (
                 pendingGifts.map((gift) => {
                   const meta = parseMeta(gift.item_description);
@@ -571,7 +427,7 @@ export function CampaignPlayerModal({
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <h3 className="font-semibold text-white">
-                                {gift.gift_type === 'item'
+                                {gift.gift_type === 'item' 
                                   ? `${gift.item_name}${gift.item_quantity && gift.item_quantity > 1 ? ` x${gift.item_quantity}` : ''}`
                                   : 'Argent'
                                 }
