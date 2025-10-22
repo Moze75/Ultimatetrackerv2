@@ -981,28 +981,41 @@ export function CampaignPlayerModal({
                         </div>
 
                         {/* ✅ Bouton conditionnel selon le type */}
-                        {isCurrencyShared ? (
-                          <button
-                            onClick={async () => {
-                              const members = await loadCampaignMembers(gift.campaign_id);
-                              setCampaignMembersForDistribution(members);
-                              setSelectedGiftForDistribution(gift);
-                              setShowDistributionModal(true);
-                            }}
-                            className="w-full bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
-                          >
-                            <Users size={18} />
-                            Distribuer équitablement
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleClaimGift(gift)}
-                            className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
-                          >
-                            <Gift size={18} />
-                            Récupérer
-                          </button>
-                        )}
+                      {isCurrencyShared ? (
+  <div className="flex gap-2">
+    {/* Bouton pour récupérer tout l'argent */}
+    <button
+      onClick={() => handleClaimGift(gift)}
+      className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
+    >
+      <Gift size={18} />
+      Récupérer (tout)
+    </button>
+    
+    {/* Bouton pour distribuer équitablement */}
+    <button
+      onClick={async () => {
+        const members = await loadCampaignMembers(gift.campaign_id);
+        setCampaignMembersForDistribution(members);
+        setSelectedGiftForDistribution(gift);
+        setShowDistributionModal(true);
+      }}
+      className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
+    >
+      <Users size={18} />
+      Distribuer
+    </button>
+  </div>
+) : (
+  <button
+    onClick={() => handleClaimGift(gift)}
+    className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
+  >
+    <Gift size={18} />
+    Récupérer
+  </button>
+)}
+                        
                       </div>
                     );
                   })
