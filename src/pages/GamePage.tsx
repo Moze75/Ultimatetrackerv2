@@ -928,7 +928,7 @@ const showAsStatic = !isInteracting && !animating;
       </div> 
 
       <div className="w-full max-w-md mx-auto mt-6 px-4">
-        <button
+        <button 
           onClick={handleBackToSelection}
           className="w-full btn-secondary px-4 py-2 rounded-lg flex items-center justify-center gap-2"
         >
@@ -947,33 +947,6 @@ const showAsStatic = !isInteracting && !animating;
           slideFrom={settingsSlideFrom}
         />
       )}
-    </div>
-  );
-}
-
-  return (
-    <div className="min-h-screen p-2 sm:p-4 md:p-6 no-overflow-anchor">
-      {/* Principal UI unchanged (kept same as earlier) */}
-      <div className="w-full max-w-6xl mx-auto space-y-4 sm:space-y-6">
-        {currentPlayer && (
-          <PlayerContext.Provider value={currentPlayer}>
-            <PlayerProfile
-              player={currentPlayer}
-              onUpdate={applyPlayerUpdate}
-              onInventoryAdd={(item: any) => {
-                console.log('GamePage: onInventoryAdd called with', item?.id);
-                if (!item || !item.id) return;
-                setInventory(prev => (prev.some(i => i.id === item.id) ? prev : [item, ...prev]));
-              }}
-            />
-            <TabNavigation activeTab={activeTab} onTabChange={() => {}} />
-            <div className="p-4">
-              {/* placeholder area */}
-              <p className="text-gray-300">Game UI</p>
-            </div>
-          </PlayerContext.Provider>
-        )}
-      </div>
     </div>
   );
 }
