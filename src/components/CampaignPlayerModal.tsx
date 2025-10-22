@@ -473,8 +473,8 @@ console.log('About to call RPC claimGift for gift', gift.id, 'player', player.id
 
           // prefer item returned by RPC
 if (item) {
-  setInventory((prev) => [item, ...prev]); // état local modal
-  onInventoryAdd?.(item);                    // NOTIFIE le parent (GamePage)
+  setInventory((prev) => [item, ...prev]);
+  onInventoryAdd?.(item); // <-- notifier le parent
   toast.success('Cadeau récupéré !');
   setTimeout(() => onClose(), 700);
   return;
