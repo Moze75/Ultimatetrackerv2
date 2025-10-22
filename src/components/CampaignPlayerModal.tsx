@@ -221,7 +221,7 @@ try {
   toast.error(err?.message || 'Impossible de récupérer l\'objet (probablement déjà récupéré).');
   // rafraîchir l'état si besoin
   loadData();
-}
+},
       } catch (e) {
         console.warn('Erreur mise à jour état local pending gifts, reload:', e);
         loadData();
