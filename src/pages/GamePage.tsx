@@ -823,7 +823,15 @@ const showAsStatic = !isInteracting && !animating;
       <div className="w-full max-w-6xl mx-auto space-y-4 sm:space-y-6">
         {currentPlayer && (
           <PlayerContext.Provider value={currentPlayer}>
-            <PlayerProfile player={currentPlayer} onUpdate={applyPlayerUpdate} />
+            <PlayerProfile
+  player={currentPlayer}
+  onUpdate={applyPlayerUpdate}
+  onInventoryAdd={(item: any) => {
+    console.log('GamePage: onInventoryAdd called with', item?.id);
+    if (!item || !item.id) return;
+    setInventory(prev => (prev.some(i => i.id === item.id) ? prev : [item, ...prev]));
+  }}
+/>
             <TabNavigation activeTab={activeTab} onTabChange={handleTabClickChange} />
 
             <div
