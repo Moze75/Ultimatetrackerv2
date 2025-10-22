@@ -94,113 +94,63 @@ export function GamePage({
   const [inventory, setInventory] = useState<any[]>([]);
   const [classSections, setClassSections] = useState<any[] | null>(null);
 
-  // Refs pour channels realtime centralisés
-  const invChannelRef = useRef<any | null>(null);
-  const invDebugRef = useRef<any | null>(null);
-  const prevPlayerId = useRef<string | null>(selectedCharacter?.id ?? null);
-  const refreshSeqRef = useRef(0);
-
   // --- START: Realtime subscription for inventory_items (GamePage) ---
+  const invChannelRef = useRef<any>(null);
+  
+
   useEffect(() => {
-    // cleanup previous channels
-    try {
-      if (invChannelRef.current) {
-        if (typeof supabase.removeChannel === 'function') supabase.removeChannel(invChannelRef.current);
-        else invChannelRef.current.unsubscribe?.();
+    // cleanup previous channel if any
+    if (invChannelRef.current) {
+      if (typeof supabase.removeChannel === 'function') {
+        supabase.removeChannel(invChannelRef.current);
+      } else {
+        invChannelRef.current.unsubscribe?.();
       }
-      if (invDebugRef.current) {
-        if (typeof supabase.removeChannel === 'function') supabase.removeChannel(invDebugRef.current);
-        else invDebugRef.current.unsubscribe?.();
-      }
-    } catch (e) {
-      console.warn('cleanup previous inv channels failed', e);
-    } finally {
       invChannelRef.current = null;
-      invDebugRef.current = null;
     }
 
-    const playerId = selectedCharacter?.id ?? currentPlayer?.id;
-    if (!playerId) return;
+    if (!currentPlayer?.id) return; // use the currentPlayer state you declared
 
-    console.log('GamePage: subscribe inventory_items realtime for player', playerId);
-
-    const handlePayload = (payload: any) => {
-      try {
-        console.log('[Realtime FILTERED] inventory_items payload:', payload);
-        const record = payload?.record ?? payload?.new;
-        if (!record) {
-          console.warn('Realtime payload had no record/new:', payload);
-          return;
-        }
-        // Defensive update: dedupe and prepend
-        setInventory((prev) => {
-          try {
-            if (!record || !record.id) return prev;
-            if (prev.some((i) => i.id === record.id)) {
-              console.log('GamePage: incoming record already present, skipping', record.id);
-              return prev;
-            }
-            const next = [record, ...prev];
-            console.log('GamePage: setInventory adding record', record.id, 'new length', next.length);
-            return next;
-          } catch (reducerErr) {
-            console.error('GamePage: error in setInventory reducer', reducerErr);
-            return prev;
-          }
-        });
-      } catch (e) {
-        console.error('GamePage: realtime handler error', e);
-      }
-    };
+    console.log('GamePage: subscribe inventory_items realtime for player', currentPlayer.id);
 
     const ch = supabase
-      .channel(`inv-player-${playerId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'inventory_items',
-        filter: `player_id=eq.${playerId}`,
-      }, handlePayload)
-      .subscribe((status: any) => {
-        console.log('inv-player channel subscribe status:', status);
-      });
+      .channel(`inv-player-${currentPlayer.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'inventory_items',
+          filter: `player_id=eq.${currentPlayer.id}`,
+        },
+        (payload: any) => {
+          console.log('[Realtime] inventory_items INSERT payload:', payload);
+          const rec = payload?.record ?? payload?.new;
+          if (!rec) return;
+
+          // update local inventory state (this will propagate as prop to EquipmentTab)
+          setInventory((prev) => {
+            // avoid duplicates if present
+            if (prev.some((i) => i.id === rec.id)) return prev;
+            return [rec, ...prev];
+          });
+        }
+      )
+      .subscribe();
 
     invChannelRef.current = ch;
 
-    // debug unfiltered channel (temporary)
-    const dbg = supabase
-      .channel(`inv-player-debug-${playerId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'inventory_items',
-      }, (payload: any) => {
-        console.log('[Realtime UNFILTERED] inventory_items payload:', payload);
-      })
-      .subscribe((status: any) => {
-        console.log('inv-player-debug channel subscribe status:', status);
-      });
-
-    invDebugRef.current = dbg;
-
     return () => {
-      try {
-        if (invChannelRef.current) {
-          if (typeof supabase.removeChannel === 'function') supabase.removeChannel(invChannelRef.current);
-          else invChannelRef.current.unsubscribe?.();
+      if (invChannelRef.current) {
+        if (typeof supabase.removeChannel === 'function') {
+          supabase.removeChannel(invChannelRef.current);
+        } else {
+          invChannelRef.current.unsubscribe?.();
         }
-        if (invDebugRef.current) {
-          if (typeof supabase.removeChannel === 'function') supabase.removeChannel(invDebugRef.current);
-          else invDebugRef.current.unsubscribe?.();
-        }
-      } catch (e) {
-        // noop
-      } finally {
         invChannelRef.current = null;
-        invDebugRef.current = null;
       }
     };
-  }, [selectedCharacter?.id, currentPlayer?.id]);
+  }, [currentPlayer?.id]);
   // --- END
 
   // Onglet initial
@@ -250,6 +200,8 @@ export function GamePage({
   const recentMovesRef = useRef<Array<{ x: number; t: number }>>([]);
   // Nouveau: mémorise la direction du voisin affiché pendant le drag pour le garder monté pendant l’animation
   const [latchedNeighbor, setLatchedNeighbor] = useState<'prev' | 'next' | null>(null);
+
+  const prevPlayerId = useRef<string | null>(selectedCharacter?.id ?? null);
 
   /* ---------------- Scroll Freeze Safe API ---------------- */
   const safeFreeze = useCallback(() => {
@@ -780,23 +732,23 @@ export function GamePage({
   }
 
   /* ---------------- Swipe transforms ---------------- */
-const neighborTypeRaw: 'prev' | 'next' | null = (() => {
-  if (dragX > 0 && prevKey) return 'prev';
-  if (dragX < 0 && nextKey) return 'next';
-  return null;
-})();
-// Pendant l’animation, garde le voisin verrouillé si dragX est revenu à 0
-const neighborType: 'prev' | 'next' | null =
-  neighborTypeRaw ?? (animating ? latchedNeighbor : null);
+  const neighborTypeRaw: 'prev' | 'next' | null = (() => {
+    if (dragX > 0 && prevKey) return 'prev';
+    if (dragX < 0 && nextKey) return 'next';
+    return null;
+  })();
+  // Pendant l’animation, garde le voisin verrouillé si dragX est revenu à 0
+  const neighborType: 'prev' | 'next' | null =
+    neighborTypeRaw ?? (animating ? latchedNeighbor : null);
 
-const currentTransform = `translate3d(${dragX}px, 0, 0)`;
-const neighborTransform =
-  neighborType === 'next'
-    ? `translate3d(calc(100% + ${dragX}px), 0, 0)`
-    : neighborType === 'prev'
-    ? `translate3d(calc(-100% + ${dragX}px), 0, 0)`
-    : undefined;
-const showAsStatic = !isInteracting && !animating;
+  const currentTransform = `translate3d(${dragX}px, 0, 0)`;
+  const neighborTransform =
+    neighborType === 'next'
+      ? `translate3d(calc(100% + ${dragX}px), 0, 0)`
+      : neighborType === 'prev'
+      ? `translate3d(calc(-100% + ${dragX}px), 0, 0)`
+      : undefined;
+  const showAsStatic = !isInteracting && !animating;
 
   /* ---------------- Rendu principal ---------------- */
   return (
@@ -839,21 +791,7 @@ const showAsStatic = !isInteracting && !animating;
       <div className="w-full max-w-6xl mx-auto space-y-4 sm:space-y-6">
         {currentPlayer && (
           <PlayerContext.Provider value={currentPlayer}>
-            <PlayerProfile
-  player={currentPlayer}
-  onUpdate={applyPlayerUpdate}
-  onInventoryAdd={(item: any) => {
-    console.log('GamePage: onInventoryAdd called with', item?.id);
-    if (!item || !item.id) return;
-    setInventory(prev => {
-  const map = new Map(prev.map(i => [i.id, i]));
-  map.set(rec.id, rec);
-  // keep previous order but place rec at front:
-  const next = [rec, ...prev.filter(i => i.id !== rec.id)];
-  return next;
-});
-  }}
-/>
+            <PlayerProfile player={currentPlayer} onUpdate={applyPlayerUpdate} />
             <TabNavigation activeTab={activeTab} onTabChange={handleTabClickChange} />
 
             <div
@@ -925,10 +863,10 @@ const showAsStatic = !isInteracting && !animating;
             </div>
           </PlayerContext.Provider>
         )}
-      </div> 
+      </div>
 
       <div className="w-full max-w-md mx-auto mt-6 px-4">
-        <button 
+        <button
           onClick={handleBackToSelection}
           className="w-full btn-secondary px-4 py-2 rounded-lg flex items-center justify-center gap-2"
         >
