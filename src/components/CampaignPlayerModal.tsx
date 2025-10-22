@@ -597,55 +597,77 @@ export function CampaignPlayerModal({
         console.log('📦 Description finale:', finalDescription);
 
         // ✅ 1. CLAIM D'ABORD (avant l'insert)
-        try {
-          await campaignService.claimGift(gift.id, player.id, {
-            quantity: gift.item_quantity || 1,
-          });
-          console.log('✅ Gift claimed successfully');
-        } catch (claimError: any) {
-          console.error('❌ Claim error:', claimError);
-          if (claimError.message?.includes('déjà récupéré')) {
-            toast.error('Cet objet a déjà été récupéré');
-            return;
-          }
-          throw claimError;
-        }
+     try {
+    await campaignService.claimGift(gift.id, player.id, {
+      quantity: gift.item_quantity || 1,
+    });
+    console.log('✅ Gift claimed successfully');
+  } catch (claimError: any) {
+    console.error('❌ Claim error:', claimError);
+    if (claimError.message?.includes('déjà récupéré')) {
+      toast.error('Cet objet a déjà été récupéré');
+      return;
+    }
+    throw claimError;
+  }
 
-        // ✅ 2. ENSUITE INSERT
-        const { data: insertedItem, error } = await supabase
-          .from('inventory_items')
-          .insert({
-            player_id: player.id,
-            name: gift.item_name || 'Objet',
-            description: finalDescription,
-          })
-          .select()
-          .single();
+  // ✅ 2. SI le gift a déjà un inventory_item_id, on le récupère au lieu de créer
+  let insertedItem;
+  
+  if (gift.inventory_item_id) {
+    // L'item existe déjà, on le récupère
+    const { data, error } = await supabase
+      .from('inventory_items')
+      .select()
+      .eq('id', gift.inventory_item_id)
+      .single();
+    
+    if (error) {
+      console.error('❌ Fetch existing item error:', error);
+      throw error;
+    }
+    
+    insertedItem = data;
+    console.log('✅ Item récupéré (existant):', insertedItem);
+  } else {
+    // Pas d'item existant, on le crée
+    const { data, error } = await supabase
+      .from('inventory_items')
+      .insert({
+        player_id: player.id,
+        name: gift.item_name || 'Objet',
+        description: finalDescription,
+      })
+      .select()
+      .single();
 
-        if (error) {
-          console.error('❌ Insert error:', error);
-          throw error;
-        }
+    if (error) {
+      console.error('❌ Insert error:', error);
+      throw error;
+    }
 
-        console.log('✅ Item inserted:', insertedItem);
+    insertedItem = data;
+    console.log('✅ Item créé (nouveau):', insertedItem);
+  }
 
-        // ✅ 3. DISPATCH EVENT
-        window.dispatchEvent(new CustomEvent('inventory:refresh', { 
-          detail: { playerId: player.id } 
-        }));
+  // 3. Dispatch event
+  window.dispatchEvent(new CustomEvent('inventory:refresh', { 
+    detail: { playerId: player.id } 
+  }));
 
-        // ✅ 4. TOAST DE SUCCÈS
-        const typeLabel = 
-          itemMeta.type === 'armor' ? 'Armure' :
-          itemMeta.type === 'shield' ? 'Bouclier' :
-          itemMeta.type === 'weapon' ? 'Arme' :
-          'Objet';
-        
-        toast.success(`${typeLabel} "${gift.item_name}" ajouté${itemMeta.type === 'armor' ? 'e' : ''} à votre inventaire !`);
+  // 4. Toast
+  const typeLabel = 
+    itemMeta.type === 'armor' ? 'Armure' :
+    itemMeta.type === 'shield' ? 'Bouclier' :
+    itemMeta.type === 'weapon' ? 'Arme' :
+    'Objet';
+  
+  toast.success(`${typeLabel} "${gift.item_name}" ajouté${itemMeta.type === 'armor' ? 'e' : ''} à votre inventaire !`);
 
-        setTimeout(() => {
-          onClose();
-        }, 800);
+  setTimeout(() => {
+    onClose();
+  }, 800);
+}
 
       } else {
         // ✅ ARGENT: même logique (claim puis update)
