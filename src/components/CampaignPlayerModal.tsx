@@ -17,6 +17,7 @@ interface CampaignPlayerModalProps {
   onClose: () => void;
   player: Player;
   onUpdate: (player: Player) => void;
+  onInventoryAdd?: (item: any) => void; // <-- ajout
 }
 
 export function CampaignPlayerModal({
