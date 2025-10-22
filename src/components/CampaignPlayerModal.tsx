@@ -356,11 +356,11 @@ const [membersByCampaign, setMembersByCampaign] = useState<Record<string, Campai
     }
   }, [open]);
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+const loadData = async () => {
+  try {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
       // Charger les invitations
       const invites = await campaignService.getMyInvitations();
