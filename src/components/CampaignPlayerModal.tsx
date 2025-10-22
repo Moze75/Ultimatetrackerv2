@@ -435,6 +435,8 @@ export function CampaignPlayerModal({
     }
   };
 
+console.log('About to call RPC claimGift for gift', gift.id, 'player', player.id, 'invChannel:', !!invChannelRef?.current);
+  
   const handleClaimGift = async (gift: CampaignGift) => {
     if (isClaiming) return;
     setIsClaiming(true);
