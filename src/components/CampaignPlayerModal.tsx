@@ -26,9 +26,10 @@ export function CampaignPlayerModal({
 }: CampaignPlayerModalProps) {
   const [invitations, setInvitations] = useState<CampaignInvitation[]>([]);
   const [myCampaigns, setMyCampaigns] = useState<Campaign[]>([]);
+  const [activeCampaigns, setActiveCampaigns] = useState<Campaign[]>([]); // ✅ NOUVEAU
   const [pendingGifts, setPendingGifts] = useState<CampaignGift[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'invitations' | 'gifts'>('invitations');
+  const [activeTab, setActiveTab] = useState<'invitations' | 'gifts'>('gifts'); // ✅ Changé à 'gifts'
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [invitationCode, setInvitationCode] = useState('');
 
@@ -85,45 +86,46 @@ export function CampaignPlayerModal({
           .in('id', campaignIds);
 
         setMyCampaigns(campaigns || []);
+        setActiveCampaigns(campaigns || []); // ✅ NOUVEAU
 
         // Charger les cadeaux en attente
-const { data: gifts } = await supabase
-  .from('campaign_gifts')
-  .select('*')
-  .in('campaign_id', campaignIds)
-  .eq('status', 'pending')
-  .order('sent_at', { ascending: false });
+        const { data: gifts } = await supabase
+          .from('campaign_gifts')
+          .select('*')
+          .in('campaign_id', campaignIds)
+          .eq('status', 'pending')
+          .order('sent_at', { ascending: false });
 
-// ✅ CORRECTION : Filtrer les cadeaux selon le mode de distribution
-const filteredGifts = (gifts || []).filter((gift) => {
-  // Les cadeaux partagés sont visibles par tous
-  if (gift.distribution_mode === 'shared') {
-    return true;
-  }
-  
-  // Les cadeaux individuels ne sont visibles que pour les destinataires spécifiques
-  if (gift.distribution_mode === 'individual' && gift.recipient_ids) {
-    return gift.recipient_ids.includes(user.id);
-  }
-  
-  // Par défaut, ne pas afficher
-  return false;
-});
+        // ✅ CORRECTION : Filtrer les cadeaux selon le mode de distribution
+        const filteredGifts = (gifts || []).filter((gift) => {
+          // Les cadeaux partagés sont visibles par tous
+          if (gift.distribution_mode === 'shared') {
+            return true;
+          }
+          
+          // Les cadeaux individuels ne sont visibles que pour les destinataires spécifiques
+          if (gift.distribution_mode === 'individual' && gift.recipient_ids) {
+            return gift.recipient_ids.includes(user.id);
+          }
+          
+          // Par défaut, ne pas afficher
+          return false;
+        });
 
-// Filtrer les cadeaux non encore récupérés
-const giftsWithClaims = await Promise.all(
-  filteredGifts.map(async (gift) => {
-    const claims = await campaignService.getGiftClaims(gift.id);
-    const alreadyClaimed = claims.some(c => c.user_id === user.id);
-    return { gift, alreadyClaimed };
-  })
-);
+        // Filtrer les cadeaux non encore récupérés
+        const giftsWithClaims = await Promise.all(
+          filteredGifts.map(async (gift) => {
+            const claims = await campaignService.getGiftClaims(gift.id);
+            const alreadyClaimed = claims.some(c => c.user_id === user.id);
+            return { gift, alreadyClaimed };
+          })
+        );
 
-setPendingGifts(
-  giftsWithClaims
-    .filter(g => !g.alreadyClaimed)
-    .map(g => g.gift)
-);
+        setPendingGifts(
+          giftsWithClaims
+            .filter(g => !g.alreadyClaimed)
+            .map(g => g.gift)
+        );
       }
     } catch (error) {
       console.error('Erreur chargement campagnes:', error);
@@ -323,14 +325,31 @@ setPendingGifts(
   return (
     <div className="fixed inset-0 z-[11000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
-      <div className="fixed inset-0 sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[min(42rem,95vw)] sm:max-h-[90vh] sm:rounded-xl overflow-hidden bg-gray-900 border-0 sm:border sm:border-gray-700 rounded-none">
+      <div className="fixed inset-0 sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[min(42rem,95vw)] sm:max-h-[90vh] sm:rounded-xl overflow-hidden bg-gray-900 border-0 sm:border sm:border-gray-700">
         {/* Header */}
         <div className="bg-gray-800/60 border-b border-gray-700 px-4 py-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <Users className="w-6 h-6 text-purple-400" />
-              Mes Campagnes
-            </h2>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex-1">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <Users className="w-6 h-6 text-purple-400" />
+                Mes Campagnes
+              </h2>
+              
+              {/* ✅ NOUVEAU : Afficher les campagnes actives */}
+              {activeCampaigns.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {activeCampaigns.map((camp) => (
+                    <span
+                      key={camp.id}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-900/30 border border-purple-500/40 rounded-full text-sm text-purple-200"
+                    >
+                      <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                      {camp.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
             <button
               onClick={onClose}
               className="p-2 text-gray-400 hover:bg-gray-700/50 rounded-lg"
@@ -339,7 +358,7 @@ setPendingGifts(
             </button>
           </div>
 
-          {/* Tabs */}
+          {/* Tabs avec badge de loots */}
           <div className="flex gap-4 mt-3">
             <button
               onClick={() => setActiveTab('invitations')}
@@ -353,13 +372,22 @@ setPendingGifts(
             </button>
             <button
               onClick={() => setActiveTab('gifts')}
-              className={`pb-2 px-1 border-b-2 transition-colors ${
+              className={`pb-2 px-1 border-b-2 transition-colors relative ${
                 activeTab === 'gifts'
                   ? 'border-purple-500 text-purple-400'
                   : 'border-transparent text-gray-400 hover:text-gray-300'
               }`}
             >
-              Loots ({pendingGifts.length})
+              <span className="flex items-center gap-2">
+                Loots ({pendingGifts.length})
+                {/* ✅ Badge visuel si loots disponibles */}
+                {pendingGifts.length > 0 && (
+                  <span className="flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-green-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                  </span>
+                )}
+              </span>
             </button>
           </div>
         </div>
@@ -373,7 +401,6 @@ setPendingGifts(
             </div>
           ) : activeTab === 'invitations' ? (
             <div className="space-y-4">
-              {/* ... invitations UI unchanged ... */}
               {!showCodeInput ? (
                 <button
                   onClick={() => setShowCodeInput(true)}
@@ -416,12 +443,96 @@ setPendingGifts(
                 </div>
               )}
 
-              {/* Invitations list and myCampaigns rendering (unchanged) */}
-              {/* ... */}
+              {invitations.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-300">Invitations en attente</h3>
+                  {invitations.map((invitation) => (
+                    <div
+                      key={invitation.id}
+                      className="bg-gray-800/40 border border-gray-700/50 rounded-lg p-4"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <p className="font-medium text-white mb-1">
+                            Invitation à une campagne
+                          </p>
+                          <p className="text-sm text-gray-400">
+                            Code: <span className="font-mono text-purple-400">{invitation.invitation_code}</span>
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Reçue le {new Date(invitation.invited_at).toLocaleDateString('fr-FR')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleAcceptInvitation(invitation.id)}
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
+                        >
+                          <Check size={18} />
+                          Accepter
+                        </button>
+                        <button
+                          onClick={() => handleDeclineInvitation(invitation.id)}
+                          className="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 px-4 py-2 rounded-lg border border-red-500/30"
+                        >
+                          Refuser
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {myCampaigns.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-300">Mes campagnes actives</h3>
+                  {myCampaigns.map((campaign) => (
+                    <div
+                      key={campaign.id}
+                      className="bg-gray-800/40 border border-green-500/30 rounded-lg p-4"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold text-white">{campaign.name}</h3>
+                            <span className="px-2 py-0.5 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
+                              Active
+                            </span>
+                          </div>
+                          {campaign.description && (
+                            <p className="text-sm text-gray-400 mt-1">{campaign.description}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Liste des cadeaux - rendu simplifié avec méta affichées proprement */}
+              {/* ✅ NOUVEAU : Message d'accueil contextuel */}
+              {activeCampaigns.length > 0 && pendingGifts.length > 0 && (
+                <div className="bg-gradient-to-r from-purple-900/40 to-blue-900/40 border border-purple-500/30 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Gift className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-white mb-1">
+                        {pendingGifts.length} loot{pendingGifts.length > 1 ? 's' : ''} en attente !
+                      </h3>
+                      <p className="text-sm text-gray-300">
+                        Votre Maître du Jeu a envoyé {pendingGifts.length > 1 ? 'des objets' : 'un objet'} pour votre aventure.
+                        Récupérez-{pendingGifts.length > 1 ? 'les' : 'le'} ci-dessous.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Liste des cadeaux */}
               {pendingGifts.length > 0 ? (
                 pendingGifts.map((gift) => {
                   const meta = parseMeta(gift.item_description);
@@ -520,7 +631,19 @@ setPendingGifts(
                 <div className="text-center py-12 text-gray-500">
                   <Gift className="w-16 h-16 mx-auto mb-4 opacity-50" />
                   <p>Aucun loot en attente</p>
-                  <p className="text-sm mt-2">Les objets et argent envoyés par votre MJ apparaîtront ici</p>
+                  {activeCampaigns.length > 0 ? (
+                    <p className="text-sm mt-2">
+                      Les objets et argent envoyés par votre MJ dans{' '}
+                      <span className="text-purple-400 font-semibold">
+                        {activeCampaigns.map(c => c.name).join(', ')}
+                      </span>
+                      {' '}apparaîtront ici
+                    </p>
+                  ) : (
+                    <p className="text-sm mt-2">
+                      Rejoignez une campagne pour recevoir des loots !
+                    </p>
+                  )}
                 </div>
               )}
             </div>
