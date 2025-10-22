@@ -95,11 +95,93 @@ export function GamePage({
   const [classSections, setClassSections] = useState<any[] | null>(null);
 
   // --- START: Realtime subscription for inventory_items (GamePage) ---
-  const invChannelRef = useRef<any | null>(null);
-  const invDebugRef = useRef<any | null>(null);
+// REPLACE the existing inventory subscription useEffect with this block
+const invChannelRef = useRef<any>(null);
+const invDebugRef = useRef<any>(null);
 
-  useEffect(() => {
-    // cleanup previous channels
+useEffect(() => {
+  // cleanup previous channels
+  try {
+    if (invChannelRef.current) {
+      if (typeof supabase.removeChannel === 'function') supabase.removeChannel(invChannelRef.current);
+      else invChannelRef.current.unsubscribe?.();
+    }
+    if (invDebugRef.current) {
+      if (typeof supabase.removeChannel === 'function') supabase.removeChannel(invDebugRef.current);
+      else invDebugRef.current.unsubscribe?.();
+    }
+  } catch (e) {
+    console.warn('cleanup previous inv channels failed', e);
+  } finally {
+    invChannelRef.current = null;
+    invDebugRef.current = null;
+  }
+
+  const playerId = selectedCharacter?.id ?? currentPlayer?.id;
+  if (!playerId) return;
+
+  console.log('GamePage: subscribe inventory_items realtime for player', playerId);
+
+  // filtered channel (only this player's rows)
+  const ch = supabase
+    .channel(`inv-player-${playerId}`)
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'inventory_items',
+      filter: `player_id=eq.${playerId}`,
+    }, (payload: any) => {
+      try {
+        console.log('[Realtime FILTERED] inventory_items payload:', payload);
+        const rec = payload?.record ?? payload?.new;
+        if (!rec) {
+          console.warn('Realtime payload had no record/new:', payload);
+          return;
+        }
+
+        // Defensive update of parent state
+        setInventory((prev) => {
+          try {
+            if (!rec || !rec.id) return prev;
+            if (prev.some((i) => i.id === rec.id)) {
+              console.log('GamePage: incoming rec already present, skipping', rec.id);
+              return prev;
+            }
+            const next = [rec, ...prev];
+            console.log('GamePage: setInventory adding rec', rec.id, 'new length', next.length);
+            return next;
+          } catch (innerErr) {
+            console.error('GamePage: error inside setInventory reducer', innerErr);
+            return prev;
+          }
+        });
+      } catch (e) {
+        console.error('GamePage: realtime handler failed', e);
+      }
+    })
+    .subscribe((status: any) => {
+      console.log('inv-player channel subscribe status:', status);
+    });
+
+  invChannelRef.current = ch;
+
+  // debug unfiltered channel (temporary)
+  const dbg = supabase
+    .channel(`inv-player-debug-${playerId}`)
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'inventory_items',
+    }, (payload: any) => {
+      console.log('[Realtime UNFILTERED] inventory_items payload:', payload);
+    })
+    .subscribe((status: any) => {
+      console.log('inv-player-debug channel subscribe status:', status);
+    });
+
+  invDebugRef.current = dbg;
+
+  return () => {
     try {
       if (invChannelRef.current) {
         if (typeof supabase.removeChannel === 'function') supabase.removeChannel(invChannelRef.current);
@@ -110,79 +192,13 @@ export function GamePage({
         else invDebugRef.current.unsubscribe?.();
       }
     } catch (e) {
-      console.warn('cleanup previous inv channels failed', e);
+      // noop
     } finally {
       invChannelRef.current = null;
       invDebugRef.current = null;
     }
-
-    const playerId = selectedCharacter?.id ?? currentPlayer?.id;
-    if (!playerId) return;
-
-    console.log('GamePage: subscribe inventory_items realtime for player', playerId);
-
-    // filtered channel (only this player's rows)
-    const ch = supabase
-      .channel(`inv-player-${playerId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'inventory_items',
-        filter: `player_id=eq.${playerId}`,
-      }, (payload: any) => {
-        console.log('[Realtime FILTERED] inventory_items payload:', payload);
-        const rec = payload?.record ?? payload?.new;
-        if (!rec) return;
-        setInventory((prev) => {
-          if (prev.some(i => i.id === rec.id)) {
-            console.log('GamePage: incoming rec already present, skipping', rec.id);
-            return prev;
-          }
-          const next = [rec, ...prev];
-          console.log('GamePage: setInventory adding rec', rec.id, 'new length', next.length);
-          return next;
-        });
-      })
-      .subscribe((status: any) => {
-        console.log('inv-player channel subscribe status:', status);
-      });
-
-    invChannelRef.current = ch;
-
-    // debug unfiltered channel (temporary, to help debugging)
-    const dbg = supabase
-      .channel(`inv-player-debug-${playerId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'inventory_items',
-      }, (payload: any) => {
-        console.log('[Realtime UNFILTERED] inventory_items payload:', payload);
-      })
-      .subscribe((status: any) => {
-        console.log('inv-player-debug channel subscribe status:', status);
-      });
-
-    invDebugRef.current = dbg;
-
-    return () => {
-      try {
-        if (invChannelRef.current) {
-          if (typeof supabase.removeChannel === 'function') supabase.removeChannel(invChannelRef.current);
-          else invChannelRef.current.unsubscribe?.();
-        }
-        if (invDebugRef.current) {
-          if (typeof supabase.removeChannel === 'function') supabase.removeChannel(invDebugRef.current);
-          else invDebugRef.current.unsubscribe?.();
-        }
-      } catch (e) {
-        // noop
-      } finally {
-        invChannelRef.current = null;
-        invDebugRef.current = null;
-      }
-    };
-  }, [selectedCharacter?.id, currentPlayer?.id]);
+  };
+}, [selectedCharacter?.id, currentPlayer?.id]);
   // --- END
 
   // Onglet initial
