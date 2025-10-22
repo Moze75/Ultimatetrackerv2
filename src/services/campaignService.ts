@@ -408,73 +408,74 @@ async claimGift(
     copper?: number;
   }
 ): Promise<CampaignGiftClaim> {
-  // Essayer la RPC transactionnelle qui fait : verrous, update gift status, insert claim,
-  // création d'item joueur et update inventaire campagne / joueurs en une transaction.
+  // Essayer la RPC transactionnelle
   try {
-const rpcRes = await callRpc('rpc_claim_gift', { 
-  _gift_id: giftId,
-  _player_id: playerId,
-  _claimed: claimed
-});
-    // rpc_claim_gift renvoie un JSON { claim: ..., item: ... } selon la migration proposée.
+    const rpcRes = await callRpc('rpc_claim_gift', {
+      _gift_id: giftId,
+      _player_id: playerId,
+      _claimed: claimed
+    });
+
     const parsed = Array.isArray(rpcRes) ? rpcRes[0] : rpcRes;
     if (parsed && parsed.claim) {
       return parsed.claim as CampaignGiftClaim;
     }
     throw new Error('rpc_claim_gift returned unexpected shape');
   } catch (err) {
-// Fallback non-transactionnel mais plus sûr : update conditionnel D'ABORD, puis insert claim
-console.warn('rpc_claim_gift failed, falling back to non-transactional flow:', err);
-const sessionRes = await supabase.auth.getUser();
-const user = sessionRes?.data?.user;
-if (!user) throw new Error('Non authentifié');
+    // Fallback non-transactionnel mais plus sûr : update conditionnel D'ABORD, puis insert claim
+    console.warn('rpc_claim_gift failed, falling back to non-transactional flow:', err);
 
-// 1) Tentative atomique : marquer le gift comme 'claimed' seulement si status = 'pending'
-// nouveau : utiliser 'distributed' (valeur autorisée)
-const { data: updatedGift, error: updateErr } = await supabase
-  .from('campaign_gifts')
-  .update({
-    status: 'distributed',
-    claimed_by: user.id,
-    claimed_at: new Date().toISOString()
-  })
-  .eq('id', giftId)
-  .eq('status', 'pending')
-  .select()
-  .single();
+    const sessionRes = await supabase.auth.getUser();
+    const user = sessionRes?.data?.user;
+    if (!user) throw new Error('Non authentifié');
 
-// Si l'update n'a pas retourné de ligne => déjà récupéré ou introuvable
-if (updateErr) {
-  console.error('Erreur mise à jour gift (fallback):', updateErr);
-  throw new Error('Impossible de marquer le cadeau comme récupéré (déjà récupéré ou introuvable).');
-}
-if (!updatedGift) {
-  throw new Error('Cadeau déjà récupéré ou non disponible.');
-}
+    // 1) Tentative atomique : marquer le gift comme 'distributed' seulement si status = 'pending'
+    // Utiliser maybeSingle() pour éviter l'erreur PGRST116 si aucune ligne n'est retournée
+    const { data: updatedGift, error: updateErr } = await supabase
+      .from('campaign_gifts')
+      .update({
+        status: 'distributed',
+        claimed_by: user.id,
+        claimed_at: new Date().toISOString()
+      })
+      .eq('id', giftId)
+      .eq('status', 'pending')
+      .select()
+      .maybeSingle();
 
-// 2) Insérer le claim (si update OK)
-const { data: claimRow, error: claimErr } = await supabase
-  .from('campaign_gift_claims')
-  .insert({
-    gift_id: giftId,
-    user_id: user.id,
-    player_id: playerId,
-    claimed_quantity: claimed.quantity ?? null,
-    claimed_gold: claimed.gold ?? 0,
-    claimed_silver: claimed.silver ?? 0,
-    claimed_copper: claimed.copper ?? 0,
-    claimed_at: new Date().toISOString()
-  })
-  .select()
-  .single();
+    if (updateErr) {
+      console.error('Erreur mise à jour gift (fallback):', updateErr);
+      throw new Error('Impossible de marquer le cadeau comme récupéré (erreur base).');
+    }
 
-if (claimErr) {
-  // le gift est déjà marqué claimed — on préfère laisser l'update pour éviter double-claim
-  console.error('Erreur insertion claim (fallback) après avoir marqué gift:', claimErr);
-  throw claimErr;
-}
+    if (!updatedGift) {
+      // Pas de ligne modifiée -> déjà récupéré ou introuvable
+      throw new Error('Cadeau déjà récupéré ou non disponible.');
+    }
 
-return claimRow as CampaignGiftClaim;
+    // 2) Insérer le claim (si update OK)
+    const { data: claimRow, error: claimErr } = await supabase
+      .from('campaign_gift_claims')
+      .insert({
+        gift_id: giftId,
+        user_id: user.id,
+        player_id: playerId,
+        claimed_quantity: claimed.quantity ?? null,
+        claimed_gold: claimed.gold ?? 0,
+        claimed_silver: claimed.silver ?? 0,
+        claimed_copper: claimed.copper ?? 0,
+        claimed_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (claimErr) {
+      console.error('Erreur insertion claim (fallback) après update:', claimErr);
+      // On laisse l'update (status distributed) pour éviter double-claim
+      throw claimErr;
+    }
+
+    return claimRow as CampaignGiftClaim;
   }
 },
 
