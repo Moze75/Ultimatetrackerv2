@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { LogOut } from 'lucide-react';
 
-import { testConnection } from '../lib/supabase';
+import { testConnection, supabase } from '../lib/supabase';
 import { Player } from '../types/dnd';
 
 import { PlayerProfile } from '../components/PlayerProfile';
@@ -94,57 +94,11 @@ export function GamePage({
   const [inventory, setInventory] = useState<any[]>([]);
   const [classSections, setClassSections] = useState<any[] | null>(null);
 
-// --- START: Realtime subscription for inventory_items (GamePage) ---
-const invChannelRef = useRef<any>(null);
+  // --- START: Realtime subscription for inventory_items (GamePage) ---
+  const invChannelRef = useRef<any>(null);
 
-useEffect(() => {
-  // cleanup previous channel if any
-  if (invChannelRef.current) {
-    if (typeof supabase.removeChannel === 'function') {
-      supabase.removeChannel(invChannelRef.current);
-    } else {
-      invChannelRef.current.unsubscribe?.();
-    }
-    invChannelRef.current = null;
-  }
-
-  if (!currentPlayer?.id) return; // use the currentPlayer state you declared
-
-  console.log('GamePage: subscribe inventory_items realtime for player', currentPlayer.id);
-
-  const ch = supabase
-    .channel(`inv-player-${currentPlayer.id}`)
-    .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'inventory_items',
-        filter: `player_id=eq.${currentPlayer.id}`,
-      },
-      (payload: any) => {
-        console.log('[Realtime] inventory_items INSERT payload:', payload);
-        const rec = payload?.record ?? payload?.new;
-        if (!rec) return;
-
-        // update local inventory and notify parent in a single atomic step
-        setInventory((prev) => {
-          const next = [rec, ...prev];
-          try {
-            // notify parent with the new array (onInventoryUpdate is expected to accept the full array)
-            onInventoryUpdate?.(next);
-          } catch (e) {
-            console.warn('onInventoryUpdate failed', e);
-          }
-          return next;
-        });
-      }
-    )
-    .subscribe();
-
-  invChannelRef.current = ch;
-
-  return () => {
+  useEffect(() => {
+    // cleanup previous channel if any
     if (invChannelRef.current) {
       if (typeof supabase.removeChannel === 'function') {
         supabase.removeChannel(invChannelRef.current);
@@ -153,10 +107,50 @@ useEffect(() => {
       }
       invChannelRef.current = null;
     }
-  };
-}, [currentPlayer?.id, onInventoryUpdate]);
-// --- END
-  
+
+    if (!currentPlayer?.id) return; // use the currentPlayer state you declared
+
+    console.log('GamePage: subscribe inventory_items realtime for player', currentPlayer.id);
+
+    const ch = supabase
+      .channel(`inv-player-${currentPlayer.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'inventory_items',
+          filter: `player_id=eq.${currentPlayer.id}`,
+        },
+        (payload: any) => {
+          console.log('[Realtime] inventory_items INSERT payload:', payload);
+          const rec = payload?.record ?? payload?.new;
+          if (!rec) return;
+
+          // update local inventory and notify children by updating the inventory state
+          setInventory((prev) => {
+            const next = [rec, ...prev];
+            return next;
+          });
+        }
+      )
+      .subscribe();
+
+    invChannelRef.current = ch;
+
+    return () => {
+      if (invChannelRef.current) {
+        if (typeof supabase.removeChannel === 'function') {
+          supabase.removeChannel(invChannelRef.current);
+        } else {
+          invChannelRef.current.unsubscribe?.();
+        }
+        invChannelRef.current = null;
+      }
+    };
+  }, [currentPlayer?.id]);
+  // --- END
+
   // Onglet initial
   const initialTab: TabKey = (() => {
     try {
@@ -200,8 +194,8 @@ useEffect(() => {
   const [isInteracting, setIsInteracting] = useState(false);
   const [containerH, setContainerH] = useState<number | undefined>(undefined);
   const [heightLocking, setHeightLocking] = useState(false);
-// Nouveau: historique récent des mouvements pour calculer la vitesse (flick)
-const recentMovesRef = useRef<Array<{ x: number; t: number }>>([]);
+  // Nouveau: historique récent des mouvements pour calculer la vitesse (flick)
+  const recentMovesRef = useRef<Array<{ x: number; t: number }>>([]);
   // Nouveau: mémorise la direction du voisin affiché pendant le drag pour le garder monté pendant l’animation
   const [latchedNeighbor, setLatchedNeighbor] = useState<'prev' | 'next' | null>(null);
 
@@ -398,15 +392,15 @@ const recentMovesRef = useRef<Array<{ x: number; t: number }>>([]);
   }, [activeTab, isInteracting, animating, measureActiveHeight]);
 
   /* ---------------- Swipe tactile amélioré + sûreté ---------------- */
-const HORIZONTAL_DECIDE_THRESHOLD = 10;   // déclenche un peu plus tôt
-const HORIZONTAL_DOMINANCE_RATIO = 1.10;  // dominance horizontale légèrement moins stricte
-// Nouveaux seuils "plus faciles"
-const SWIPE_THRESHOLD_RATIO = 0.18;       // 18% de la largeur au lieu de 25%
-const SWIPE_THRESHOLD_MIN_PX = 36;        // min 36px au lieu de 48px
+  const HORIZONTAL_DECIDE_THRESHOLD = 10;   // déclenche un peu plus tôt
+  const HORIZONTAL_DOMINANCE_RATIO = 1.10;  // dominance horizontale légèrement moins stricte
+  // Nouveaux seuils "plus faciles"
+  const SWIPE_THRESHOLD_RATIO = 0.18;       // 18% de la largeur au lieu de 25%
+  const SWIPE_THRESHOLD_MIN_PX = 36;        // min 36px au lieu de 48px
 
-// Flick: vitesse au-dessus de laquelle on valide même si la distance < seuil
-// 0.35 px/ms = 350 px/s (ajuste si besoin entre 0.3 et 0.45)
-const FLICK_VELOCITY_PX_PER_MS = 0.35;
+  // Flick: vitesse au-dessus de laquelle on valide même si la distance < seuil
+  // 0.35 px/ms = 350 px/s (ajuste si besoin entre 0.3 et 0.45)
+  const FLICK_VELOCITY_PX_PER_MS = 0.35;
   const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (e.touches.length !== 1) return;
     const t = e.touches[0];
@@ -415,8 +409,8 @@ const FLICK_VELOCITY_PX_PER_MS = 0.35;
     gestureDirRef.current = 'undetermined';
     setAnimating(false);
     setLatchedNeighbor(null);
-      // seed de l’historique pour le flick
-  recentMovesRef.current = [{ x: t.clientX, t: performance.now() }];
+    // seed de l’historique pour le flick
+    recentMovesRef.current = [{ x: t.clientX, t: performance.now() }];
   };
 
   const onTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
@@ -466,14 +460,14 @@ const FLICK_VELOCITY_PX_PER_MS = 0.35;
     setDragX(clamped);
     // Note: ce return n’annule pas le rAF (dans un handler React), on garde simple ici
     requestAnimationFrame(measureDuringSwipe);
-  // Historique pour la vitesse (garde ~120ms de data)
-  const now = performance.now();
-  recentMovesRef.current.push({ x: t.clientX, t: now });
-  const cutoff = now - 120;
-  while (recentMovesRef.current.length > 2 && recentMovesRef.current[0].t < cutoff) {
-    recentMovesRef.current.shift();
-  }
-    
+    // Historique pour la vitesse (garde ~120ms de data)
+    const now = performance.now();
+    recentMovesRef.current.push({ x: t.clientX, t: now });
+    const cutoff = now - 120;
+    while (recentMovesRef.current.length > 2 && recentMovesRef.current[0].t < cutoff) {
+      recentMovesRef.current.shift();
+    }
+
   };
 
   // Déclenche la transition proprement: active d’abord l’anim, puis change le transform dans le frame suivant
@@ -511,17 +505,17 @@ const FLICK_VELOCITY_PX_PER_MS = 0.35;
 
     // Horizontal
     const width = widthRef.current || (stageRef.current?.clientWidth ?? 0);
-      const threshold = Math.max(SWIPE_THRESHOLD_MIN_PX, width * SWIPE_THRESHOLD_RATIO);
+    const threshold = Math.max(SWIPE_THRESHOLD_MIN_PX, width * SWIPE_THRESHOLD_RATIO);
 
-  // Vitesse pour flick (px/ms) sur la fenêtre ~120ms
-  let vx = 0;
-  const moves = recentMovesRef.current;
-  if (moves.length >= 2) {
-    const first = moves[0];
-    const last = moves[moves.length - 1];
-    const dt = Math.max(1, last.t - first.t);
-    vx = (last.x - first.x) / dt; // >0 vers la droite, <0 vers la gauche
-  }
+    // Vitesse pour flick (px/ms) sur la fenêtre ~120ms
+    let vx = 0;
+    const moves = recentMovesRef.current;
+    if (moves.length >= 2) {
+      const first = moves[0];
+      const last = moves[moves.length - 1];
+      const dt = Math.max(1, last.t - first.t);
+      vx = (last.x - first.x) / dt; // >0 vers la droite, <0 vers la gauche
+    }
 
     const commit = (dir: -1 | 1) => {
       const toPx = dir === 1 ? -width : width;
@@ -547,8 +541,8 @@ const FLICK_VELOCITY_PX_PER_MS = 0.35;
 
     if (dragX <= -threshold && nextKey) commit(1);
     else if (dragX >= threshold && prevKey) commit(-1);
-        else if (vx <= -FLICK_VELOCITY_PX_PER_MS && nextKey) commit(1);
-  else if (vx >= FLICK_VELOCITY_PX_PER_MS && prevKey) commit(-1);
+    else if (vx <= -FLICK_VELOCITY_PX_PER_MS && nextKey) commit(1);
+    else if (vx >= FLICK_VELOCITY_PX_PER_MS && prevKey) commit(-1);
     else cancel();
   };
 
@@ -682,20 +676,20 @@ const FLICK_VELOCITY_PX_PER_MS = 0.35;
   };
 
   /* ---------------- Loading / Error ---------------- */
-if (loading) {
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center space-y-4">
-        <img 
-          src="/icons/wmremove-transformed.png" 
-          alt="Chargement..." 
-          className="animate-spin rounded-full h-12 w-12 mx-auto object-cover" 
-        />
-        <p className="text-gray-400">Chargement en cours...</p>
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <img
+            src="/icons/wmremove-transformed.png"
+            alt="Chargement..."
+            className="animate-spin rounded-full h-12 w-12 mx-auto object-cover"
+          />
+          <p className="text-gray-400">Chargement en cours...</p>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
   if (connectionError) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
@@ -892,3 +886,5 @@ if (loading) {
     </div>
   );
 }
+
+export default GamePage;
