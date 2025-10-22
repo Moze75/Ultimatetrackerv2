@@ -524,7 +524,7 @@ async claimGift(
   }
 
   return claimRow;
-}
+},
 
   async getGiftClaims(giftId: string): Promise<CampaignGiftClaim[]> {
     const { data, error } = await supabase
