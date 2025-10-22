@@ -618,6 +618,14 @@ export function CampaignPlayerModal({
 
         console.log('✅ Item inserted:', insertedItem);
 
+window.dispatchEvent(new CustomEvent('inventory:refresh', { 
+  detail: { playerId: player.id } 
+}));
+
+await campaignService.claimGift(gift.id, player.id, {
+  quantity: gift.item_quantity || 1,
+});
+        
         await campaignService.claimGift(gift.id, player.id, {
           quantity: gift.item_quantity || 1,
         });
