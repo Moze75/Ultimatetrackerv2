@@ -411,12 +411,11 @@ async claimGift(
   // Essayer la RPC transactionnelle qui fait : verrous, update gift status, insert claim,
   // création d'item joueur et update inventaire campagne / joueurs en une transaction.
   try {
-    const rpcRes = await callRpc('rpc_claim_gift', { 
-      _gift_id: giftId,
-      _player_id: playerId,
-      _claimed: JSON.stringify(claimed)
-    });
-
+const rpcRes = await callRpc('rpc_claim_gift', { 
+  _gift_id: giftId,
+  _player_id: playerId,
+  _claimed: claimed
+});
     // rpc_claim_gift renvoie un JSON { claim: ..., item: ... } selon la migration proposée.
     const parsed = Array.isArray(rpcRes) ? rpcRes[0] : rpcRes;
     if (parsed && parsed.claim) {
