@@ -94,94 +94,15 @@ export function GamePage({
   const [inventory, setInventory] = useState<any[]>([]);
   const [classSections, setClassSections] = useState<any[] | null>(null);
 
+  // Refs pour channels realtime centralisés
+  const invChannelRef = useRef<any | null>(null);
+  const invDebugRef = useRef<any | null>(null);
+  const prevPlayerId = useRef<string | null>(selectedCharacter?.id ?? null);
+  const refreshSeqRef = useRef(0);
+
   // --- START: Realtime subscription for inventory_items (GamePage) ---
-// REPLACE the existing inventory subscription useEffect with this block
-const invChannelRef = useRef<any>(null);
-const invDebugRef = useRef<any>(null);
-
-useEffect(() => {
-  // cleanup previous channels
-  try {
-    if (invChannelRef.current) {
-      if (typeof supabase.removeChannel === 'function') supabase.removeChannel(invChannelRef.current);
-      else invChannelRef.current.unsubscribe?.();
-    }
-    if (invDebugRef.current) {
-      if (typeof supabase.removeChannel === 'function') supabase.removeChannel(invDebugRef.current);
-      else invDebugRef.current.unsubscribe?.();
-    }
-  } catch (e) {
-    console.warn('cleanup previous inv channels failed', e);
-  } finally {
-    invChannelRef.current = null;
-    invDebugRef.current = null;
-  }
-
-  const playerId = selectedCharacter?.id ?? currentPlayer?.id;
-  if (!playerId) return;
-
-  console.log('GamePage: subscribe inventory_items realtime for player', playerId);
-
-  // filtered channel (only this player's rows)
-  const ch = supabase
-    .channel(`inv-player-${playerId}`)
-    .on('postgres_changes', {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'inventory_items',
-      filter: `player_id=eq.${playerId}`,
-    }, (payload: any) => {
-      try {
-        console.log('[Realtime FILTERED] inventory_items payload:', payload);
-        const rec = payload?.record ?? payload?.new;
-        if (!rec) {
-          console.warn('Realtime payload had no record/new:', payload);
-          return;
-        }
-
-        // Defensive update of parent state
-        setInventory((prev) => {
-          try {
-            if (!rec || !rec.id) return prev;
-            if (prev.some((i) => i.id === rec.id)) {
-              console.log('GamePage: incoming rec already present, skipping', rec.id);
-              return prev;
-            }
-            const next = [rec, ...prev];
-            console.log('GamePage: setInventory adding rec', rec.id, 'new length', next.length);
-            return next;
-          } catch (innerErr) {
-            console.error('GamePage: error inside setInventory reducer', innerErr);
-            return prev;
-          }
-        });
-      } catch (e) {
-        console.error('GamePage: realtime handler failed', e);
-      }
-    })
-    .subscribe((status: any) => {
-      console.log('inv-player channel subscribe status:', status);
-    });
-
-  invChannelRef.current = ch;
-
-  // debug unfiltered channel (temporary)
-  const dbg = supabase
-    .channel(`inv-player-debug-${playerId}`)
-    .on('postgres_changes', {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'inventory_items',
-    }, (payload: any) => {
-      console.log('[Realtime UNFILTERED] inventory_items payload:', payload);
-    })
-    .subscribe((status: any) => {
-      console.log('inv-player-debug channel subscribe status:', status);
-    });
-
-  invDebugRef.current = dbg;
-
-  return () => {
+  useEffect(() => {
+    // cleanup previous channels
     try {
       if (invChannelRef.current) {
         if (typeof supabase.removeChannel === 'function') supabase.removeChannel(invChannelRef.current);
@@ -192,13 +113,94 @@ useEffect(() => {
         else invDebugRef.current.unsubscribe?.();
       }
     } catch (e) {
-      // noop
+      console.warn('cleanup previous inv channels failed', e);
     } finally {
       invChannelRef.current = null;
       invDebugRef.current = null;
     }
-  };
-}, [selectedCharacter?.id, currentPlayer?.id]);
+
+    const playerId = selectedCharacter?.id ?? currentPlayer?.id;
+    if (!playerId) return;
+
+    console.log('GamePage: subscribe inventory_items realtime for player', playerId);
+
+    const handlePayload = (payload: any) => {
+      try {
+        console.log('[Realtime FILTERED] inventory_items payload:', payload);
+        const record = payload?.record ?? payload?.new;
+        if (!record) {
+          console.warn('Realtime payload had no record/new:', payload);
+          return;
+        }
+        // Defensive update: dedupe and prepend
+        setInventory((prev) => {
+          try {
+            if (!record || !record.id) return prev;
+            if (prev.some((i) => i.id === record.id)) {
+              console.log('GamePage: incoming record already present, skipping', record.id);
+              return prev;
+            }
+            const next = [record, ...prev];
+            console.log('GamePage: setInventory adding record', record.id, 'new length', next.length);
+            return next;
+          } catch (reducerErr) {
+            console.error('GamePage: error in setInventory reducer', reducerErr);
+            return prev;
+          }
+        });
+      } catch (e) {
+        console.error('GamePage: realtime handler error', e);
+      }
+    };
+
+    const ch = supabase
+      .channel(`inv-player-${playerId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'inventory_items',
+        filter: `player_id=eq.${playerId}`,
+      }, handlePayload)
+      .subscribe((status: any) => {
+        console.log('inv-player channel subscribe status:', status);
+      });
+
+    invChannelRef.current = ch;
+
+    // debug unfiltered channel (temporary)
+    const dbg = supabase
+      .channel(`inv-player-debug-${playerId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'inventory_items',
+      }, (payload: any) => {
+        console.log('[Realtime UNFILTERED] inventory_items payload:', payload);
+      })
+      .subscribe((status: any) => {
+        console.log('inv-player-debug channel subscribe status:', status);
+      });
+
+    invDebugRef.current = dbg;
+
+    return () => {
+      try {
+        if (invChannelRef.current) {
+          if (typeof supabase.removeChannel === 'function') supabase.removeChannel(invChannelRef.current);
+          else invChannelRef.current.unsubscribe?.();
+        }
+        if (invDebugRef.current) {
+          if (typeof supabase.removeChannel === 'function') supabase.removeChannel(invDebugRef.current);
+          else invDebugRef.current.unsubscribe?.();
+        }
+      } catch (e) {
+        // noop
+      } finally {
+        invChannelRef.current = null;
+        invDebugRef.current = null;
+      }
+    };
+  }, [selectedCharacter?.id, currentPlayer?.id]);
   // --- END
 
   // Onglet initial
@@ -248,8 +250,6 @@ useEffect(() => {
   const recentMovesRef = useRef<Array<{ x: number; t: number }>>([]);
   // Nouveau: mémorise la direction du voisin affiché pendant le drag pour le garder monté pendant l’animation
   const [latchedNeighbor, setLatchedNeighbor] = useState<'prev' | 'next' | null>(null);
-
-  const prevPlayerId = useRef<string | null>(selectedCharacter?.id ?? null);
 
   /* ---------------- Scroll Freeze Safe API ---------------- */
   const safeFreeze = useCallback(() => {
