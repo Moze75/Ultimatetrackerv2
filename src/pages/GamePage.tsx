@@ -764,23 +764,23 @@ export function GamePage({
   }
 
   /* ---------------- Swipe transforms ---------------- */
-  const neighborTypeRaw: 'prev' | 'next' | null = (() => {
-    if (dragX > 0 && prevKey) return 'prev';
-    if (dragX < 0 && nextKey) return 'next';
-    return null;
-  })();
-  // Pendant l’animation, garde le voisin verrouillé si dragX est revenu à 0
-  const neighborType: 'prev' | 'next' null =
-    neighborTypeRaw ?? (animating ? latchedNeighbor : null);
+const neighborTypeRaw: 'prev' | 'next' | null = (() => {
+  if (dragX > 0 && prevKey) return 'prev';
+  if (dragX < 0 && nextKey) return 'next';
+  return null;
+})();
+// Pendant l’animation, garde le voisin verrouillé si dragX est revenu à 0
+const neighborType: 'prev' | 'next' | null =
+  neighborTypeRaw ?? (animating ? latchedNeighbor : null);
 
-  const currentTransform = `translate3d(${dragX}px, 0, 0)`;
-  const neighborTransform =
-    neighborType === 'next'
-      ? `translate3d(calc(100% + ${dragX}px), 0, 0)`
-      : neighborType === 'prev'
-      ? `translate3d(calc(-100% + ${dragX}px), 0, 0)`
-      : undefined;
-  const showAsStatic = !isInteracting && !animating;
+const currentTransform = `translate3d(${dragX}px, 0, 0)`;
+const neighborTransform =
+  neighborType === 'next'
+    ? `translate3d(calc(100% + ${dragX}px), 0, 0)`
+    : neighborType === 'prev'
+    ? `translate3d(calc(-100% + ${dragX}px), 0, 0)`
+    : undefined;
+const showAsStatic = !isInteracting && !animating;
 
   /* ---------------- Rendu principal ---------------- */
   return (
@@ -823,7 +823,21 @@ export function GamePage({
       <div className="w-full max-w-6xl mx-auto space-y-4 sm:space-y-6">
         {currentPlayer && (
           <PlayerContext.Provider value={currentPlayer}>
-            <PlayerProfile player={currentPlayer} onUpdate={applyPlayerUpdate} />
+            <PlayerProfile
+  player={currentPlayer}
+  onUpdate={applyPlayerUpdate}
+  onInventoryAdd={(item: any) => {
+    console.log('GamePage: onInventoryAdd called with', item?.id);
+    if (!item || !item.id) return;
+    setInventory(prev => {
+  const map = new Map(prev.map(i => [i.id, i]));
+  map.set(rec.id, rec);
+  // keep previous order but place rec at front:
+  const next = [rec, ...prev.filter(i => i.id !== rec.id)];
+  return next;
+});
+  }}
+/>
             <TabNavigation activeTab={activeTab} onTabChange={handleTabClickChange} />
 
             <div
@@ -895,7 +909,7 @@ export function GamePage({
             </div>
           </PlayerContext.Provider>
         )}
-      </div>
+      </div> 
 
       <div className="w-full max-w-md mx-auto mt-6 px-4">
         <button
