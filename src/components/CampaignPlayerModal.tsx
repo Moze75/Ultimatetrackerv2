@@ -989,7 +989,7 @@ export function CampaignPlayerModal({
       className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
     >
       <Gift size={18} />
-      Récupérer (tout)
+      Récupérer
     </button>
     
     {/* Bouton pour distribuer équitablement */}
