@@ -11,6 +11,8 @@ import {
 } from '../types/campaign';
 import toast from 'react-hot-toast';
 
+const [claiming, setClaiming] = useState(false);
+
 // =============================================
 // Modal de distribution équitable d'argent
 // =============================================
