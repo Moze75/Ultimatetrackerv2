@@ -32,7 +32,9 @@ export function CampaignPlayerModal({
   const [activeTab, setActiveTab] = useState<'invitations' | 'gifts'>('gifts');
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [invitationCode, setInvitationCode] = useState('');
-
+  // local inventory state (items already owned by the player)
+  const [inventory, setInventory] = useState<any[]>([]);
+  const [isClaiming, setIsClaiming] = useState(false);
 
   // Utilitaires méta
   const META_PREFIX = '#meta:';
@@ -56,11 +58,39 @@ export function CampaignPlayerModal({
     }
   };
 
+  // Realtime subscription: update inventory when new items are inserted for this player
+  useEffect(() => {
+    if (!open || !player?.id) return;
+
+    const channel = supabase
+      .channel(`inv-player-${player.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'inventory_items',
+        filter: `player_id=eq.${player.id}`,
+      }, (payload) => {
+        if (!payload?.record) return;
+        setInventory((prev: any[]) => [payload.record, ...prev]);
+      })
+      .subscribe();
+
+    return () => {
+      if (typeof supabase.removeChannel === 'function') {
+        supabase.removeChannel(channel);
+      } else {
+        channel.unsubscribe?.();
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, player?.id]);
+
   useEffect(() => {
     if (open) {
       loadData();
     }
-  }, [open]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, player?.id]);
 
   const loadData = async () => {
     try {
@@ -80,7 +110,7 @@ export function CampaignPlayerModal({
         .eq('is_active', true);
 
       if (members && members.length > 0) {
-        const campaignIds = members.map(m => m.campaign_id);
+        const campaignIds = members.map((m: any) => m.campaign_id);
         const { data: campaigns } = await supabase
           .from('campaigns')
           .select('*')
@@ -129,6 +159,21 @@ export function CampaignPlayerModal({
         });
 
         setPendingGifts(visibleGifts);
+
+        // --- START: load initial inventory for player
+        const { data: invRows } = await supabase
+          .from('inventory_items')
+          .select('*')
+          .eq('player_id', player.id)
+          .order('created_at', { ascending: false });
+
+        setInventory(invRows || []);
+        // --- END
+      } else {
+        // Ensure empty when no campaigns
+        setPendingGifts([]);
+        setInventory([]);
+        setMyCampaigns([]);
       }
     } catch (error) {
       console.error('Erreur chargement campagnes:', error);
@@ -138,13 +183,11 @@ export function CampaignPlayerModal({
     }
   };
 
-
-  
   const handleAcceptInvitation = async (invitationId: string) => {
     try {
       await campaignService.acceptInvitation(invitationId, player.id);
       toast.success('Invitation acceptée !');
-      loadData();
+      await loadData();
     } catch (error) {
       console.error(error);
       toast.error('Erreur lors de l\'acceptation');
@@ -153,11 +196,11 @@ export function CampaignPlayerModal({
 
   const handleDeclineInvitation = async (invitationId: string) => {
     if (!confirm('Refuser cette invitation ?')) return;
-    
+
     try {
       await campaignService.declineInvitation(invitationId);
       toast.success('Invitation refusée');
-      loadData();
+      await loadData();
     } catch (error) {
       console.error(error);
       toast.error('Erreur');
@@ -173,7 +216,7 @@ export function CampaignPlayerModal({
 
     try {
       const invitation = await campaignService.getInvitationsByCode(code);
-      
+
       if (invitation.status !== 'pending') {
         toast.error('Cette invitation n\'est plus valide');
         return;
@@ -192,258 +235,163 @@ export function CampaignPlayerModal({
     }
   };
 
-// state local pour l'inventaire (coller JUSTE après setInvitationCode)
-const [inventory, setInventory] = useState<any[]>([]);
+  const handleClaimGift = async (gift: CampaignGift) => {
+    if (isClaiming) return;
+    setIsClaiming(true);
 
-// Realtime : subscribe aux INSERT sur inventory_items pour ce player
-useEffect(() => {
-  // Ne pas s'abonner si la modal est fermée ou si on n'a pas de player.id
-  if (!open || !player?.id) return;
-
-  const channel = supabase
-    .channel(`inv-player-${player.id}`)
-    .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'inventory_items',
-        filter: `player_id=eq.${player.id}`,
-      },
-      (payload) => {
-        if (!payload?.record) return;
-        // Ajoute l'item reçu en tête de l'inventaire local
-        setInventory((prev: any[]) => [payload.record, ...prev]);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Utilisateur non connecté');
+        return;
       }
-    )
-    .subscribe();
 
-  // cleanup à l'unmount / quand player.id ou open change
-  return () => {
-    if (typeof supabase.removeChannel === 'function') {
-      supabase.removeChannel(channel);
-    } else {
-      channel.unsubscribe?.();
-    }
-  };
-}, [open, player?.id]);
+      console.log('🎁 Claiming gift:', gift);
 
-  
-const handleClaimGift = async (gift: CampaignGift) => {
-  // Prevent double clicks while an operation is in progress
-  if ((window as any).__isClaiming) return;
-  (window as any).__isClaiming = true;
-
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    console.log('🎁 Claiming gift:', gift);
-
-    // common claimed payload
-    const claimedPayload = {
-      quantity: gift.item_quantity || 1,
-      gold: gift.gold ?? 0,
-      silver: gift.silver ?? 0,
-      copper: gift.copper ?? 0,
-    };
-
-    // helper: remove gift from local list or fallback to reload
-    const removePendingGiftLocal = async () => {
-      try {
-        if (typeof setPendingGifts === 'function') {
+      // helper: remove gift from pending list (local)
+      const removePendingGiftLocal = () => {
+        try {
           setPendingGifts((prev: CampaignGift[]) => prev.filter(p => p.id !== gift.id));
-        } else {
-          await loadData();
+        } catch (e) {
+          console.warn('Erreur mise à jour état local pending gifts, reload:', e);
         }
-      } catch (e) {
-        console.warn('Erreur mise à jour état local pending gifts, reload:', e);
-        await loadData();
-      }
-    };
+      };
 
-    // If item -> use item flow (RPC may return created item)
-    if (gift.gift_type === 'item') {
-      try {
-        const { claim, item } = await campaignService.claimGift(gift.id, player.id, {
-          quantity: gift.item_quantity || 1,
-        });
+      // ITEM flow
+      if (gift.gift_type === 'item') {
+        try {
+          const { claim, item } = await campaignService.claimGift(gift.id, player.id, {
+            quantity: gift.item_quantity || 1,
+          });
 
-        console.log('Claim result', claim, item);
+          console.log('Claim result', claim, item);
 
-        // remove gift locally
-        await removePendingGiftLocal();
+          // remove gift locally
+          removePendingGiftLocal();
 
-        // If RPC returned an item, prefer using it to update local inventory
-        if (item) {
-          try {
-            if (typeof setInventory === 'function') {
+          // If RPC returned an item, update inventory local state
+          if (item) {
+            try {
               setInventory((prev: any[]) => [item, ...prev]);
-            } else if (typeof addInventoryItem === 'function') {
-              addInventoryItem(item);
-            } else {
-              // fallback: reload inventories/gifts
-              await loadData();
+            } catch (e) {
+              console.warn("Erreur ajout item à l'inventaire local:", e);
             }
-          } catch (e) {
-            console.warn("Erreur ajout item à l'inventaire local, reload:", e);
-            await loadData();
+            toast.success('Cadeau récupéré !');
+            setTimeout(() => onClose(), 700);
+            return;
           }
-          toast.success('Cadeau récupéré !');
-          // Close modal and refresh view a bit later for UX
-          setTimeout(() => {
-            onClose();
-          }, 800);
+
+          // fallback: create inventory item client-side (should be rare)
+          const metaPrefix = META_PREFIX;
+          let originalMeta = null;
+          if (gift.item_description) {
+            const lines = gift.item_description.split('\n');
+            const metaLine = lines.find(l => l.trim().startsWith(metaPrefix));
+            if (metaLine) {
+              try {
+                originalMeta = JSON.parse(metaLine.trim().slice(metaPrefix.length));
+              } catch (err) {
+                console.error('Erreur parsing métadonnées:', err);
+              }
+            }
+          }
+
+          const itemMeta = originalMeta || {
+            type: 'equipment' as const,
+            quantity: gift.item_quantity || 1,
+            equipped: false,
+          };
+
+          itemMeta.quantity = gift.item_quantity || 1;
+          itemMeta.equipped = false;
+
+          const metaLine = `${metaPrefix}${JSON.stringify(itemMeta)}`;
+
+          const cleanDescription = gift.item_description
+            ? gift.item_description
+                .split('\n')
+                .filter(line => !line.trim().startsWith(metaPrefix))
+                .join('\n')
+                .trim()
+            : '';
+
+          const finalDescription = cleanDescription ? `${cleanDescription}\n${metaLine}` : metaLine;
+
+          const { data: insertedItem, error: insertErr } = await supabase
+            .from('inventory_items')
+            .insert({
+              player_id: player.id,
+              name: gift.item_name || 'Objet',
+              description: finalDescription,
+            })
+            .select()
+            .single();
+
+          if (insertErr) {
+            console.error('❌ Insert error (fallback client insert):', insertErr);
+            toast.error('Erreur lors de l\'ajout à votre inventaire');
+          } else {
+            setInventory((prev: any[]) => [insertedItem, ...prev]);
+            const typeLabel =
+              itemMeta.type === 'armor' ? 'Armure' :
+              itemMeta.type === 'shield' ? 'Bouclier' :
+              itemMeta.type === 'weapon' ? 'Arme' :
+              'Objet';
+            toast.success(`${typeLabel} "${gift.item_name}" ajoutée à votre inventaire !`);
+          }
+
+          setTimeout(() => onClose(), 700);
+          return;
+        } catch (err: any) {
+          console.error('Erreur lors du claim (item):', err);
+          toast.error(err?.message || 'Impossible de récupérer l\'objet (probablement déjà récupéré).');
+          await loadData();
           return;
         }
-
-        // If RPC didn't return an item (fallback), ensure inventory row exists:
-        // We'll create the inventory row client-side as a last-resort fallback,
-        // but prefer the server-created one when available.
-        const metaPrefix = META_PREFIX;
-        let originalMeta = null;
-        if (gift.item_description) {
-          const lines = gift.item_description.split('\n');
-          const metaLine = lines.find(l => l.trim().startsWith(metaPrefix));
-          if (metaLine) {
-            try {
-              originalMeta = JSON.parse(metaLine.trim().slice(metaPrefix.length));
-            } catch (err) {
-              console.error('Erreur parsing métadonnées:', err);
-            }
-          }
-        }
-
-        const itemMeta = originalMeta || {
-          type: 'equipment' as const,
-          quantity: gift.item_quantity || 1,
-          equipped: false,
-        };
-
-        itemMeta.quantity = gift.item_quantity || 1;
-        itemMeta.equipped = false;
-
-        const metaLine = `${metaPrefix}${JSON.stringify(itemMeta)}`;
-
-        const cleanDescription = gift.item_description
-          ? gift.item_description
-              .split('\n')
-              .filter(line => !line.trim().startsWith(metaPrefix))
-              .join('\n')
-              .trim()
-          : '';
-
-        const finalDescription = cleanDescription
-          ? `${cleanDescription}\n${metaLine}`
-          : metaLine;
-
-        // Insert inventory item client-side as fallback (server should have done it)
-        const { data: insertedItem, error: insertErr } = await supabase
-          .from('inventory_items')
-          .insert({
-            player_id: player.id,
-            name: gift.item_name || 'Objet',
-            description: finalDescription,
-          })
-          .select()
-          .single();
-
-        if (insertErr) {
-          console.error('❌ Insert error (fallback client insert):', insertErr);
-          toast.error('Erreur lors de l\'ajout à votre inventaire');
-        } else {
-          const typeLabel =
-            itemMeta.type === 'armor' ? 'Armure' :
-            itemMeta.type === 'shield' ? 'Bouclier' :
-            itemMeta.type === 'weapon' ? 'Arme' :
-            'Objet';
-
-          toast.success(`${typeLabel} "${gift.item_name}" ajoutée à votre inventaire !`);
-        }
-
-        // close modal and reload view shortly after
-        setTimeout(() => {
-          onClose();
-          window.location.reload();
-        }, 1200);
-        return;
-      } catch (err: any) {
-        console.error('Erreur lors du claim (item):', err);
-        toast.error(err?.message || 'Impossible de récupérer l\'objet (probablement déjà récupéré).');
-        await loadData();
-        return;
-      }
-    }
-
-    // Currency / other flow
-    try {
-      // For currency we first update player's balances client-side (optimistic),
-      // then call the RPC to record the claim (RPC is authoritative).
-      const { data: { user: sessionUser } } = await supabase.auth.getUser();
-      if (!sessionUser) throw new Error('Non authentifié');
-
-      // Update player balances locally in DB
-      const { error: updateMoneyErr } = await supabase.from('players').update({
-        gold: (player.gold || 0) + (gift.gold || 0),
-        silver: (player.silver || 0) + (gift.silver || 0),
-        copper: (player.copper || 0) + (gift.copper || 0),
-      }).eq('id', player.id);
-
-      if (updateMoneyErr) {
-        console.error('Erreur update player money:', updateMoneyErr);
-        toast.error('Erreur lors de l\'ajout d\'argent');
-        return;
       }
 
-      // Record the claim server-side (RPC preferred)
+      // CURRENCY flow
       try {
+        // optimistic update in UI: inform player and update local player via onUpdate
+        const newGold = (player.gold || 0) + (gift.gold || 0);
+        const newSilver = (player.silver || 0) + (gift.silver || 0);
+        const newCopper = (player.copper || 0) + (gift.copper || 0);
+
+        // apply update locally (UI)
+        onUpdate({
+          ...player,
+          gold: newGold,
+          silver: newSilver,
+          copper: newCopper,
+        });
+
+        // record the claim via RPC
         await campaignService.claimGift(gift.id, player.id, {
           gold: gift.gold ?? 0,
           silver: gift.silver ?? 0,
           copper: gift.copper ?? 0,
         });
-      } catch (err) {
-        console.error('Erreur lors du claim currency:', err);
-        toast.error('Erreur lors de la réservation du loot');
-        // player's money was already updated; for full atomicity use RPC-only flow
+
+        const amounts = [];
+        if (gift.gold && gift.gold > 0) amounts.push(`${gift.gold} po`);
+        if (gift.silver && gift.silver > 0) amounts.push(`${gift.silver} pa`);
+        if (gift.copper && gift.copper > 0) amounts.push(`${gift.copper} pc`);
+
+        toast.success(`${amounts.join(', ')} ajouté à votre argent !`);
+        removePendingGiftLocal();
+        setTimeout(() => onClose(), 700);
+        await loadData();
+        return;
+      } catch (err: any) {
+        console.error('Erreur lors du claim (currency flow):', err);
+        toast.error('Erreur lors de la récupération');
+        await loadData();
         return;
       }
-
-      const amounts = [];
-      if (gift.gold && gift.gold > 0) amounts.push(`${gift.gold} po`);
-      if (gift.silver && gift.silver > 0) amounts.push(`${gift.silver} pa`);
-      if (gift.copper && gift.copper > 0) amounts.push(`${gift.copper} pc`);
-
-      toast.success(`${amounts.join(', ')} ajouté à votre argent !`);
-
-      onUpdate({
-        ...player,
-        gold: (player.gold || 0) + (gift.gold || 0),
-        silver: (player.silver || 0) + (gift.silver || 0),
-        copper: (player.copper || 0) + (gift.copper || 0),
-      });
-
-      setTimeout(() => {
-        onClose();
-        window.location.reload();
-      }, 1200);
-
-      // Refresh local list
-      loadData();
-      return;
-    } catch (err: any) {
-      console.error('Erreur lors du claim (currency flow):', err);
-      toast.error('Erreur lors de la récupération');
-      return;
+    } finally {
+      setIsClaiming(false);
     }
-  } catch (error) {
-    console.error('💥 Claim error:', error);
-    toast.error('Erreur lors de la récupération');
-    return;
-  } finally {
-    (window as any).__isClaiming = false;
-  }
-};
+  };
 
   if (!open) return null;
 
@@ -623,7 +571,7 @@ const handleClaimGift = async (gift: CampaignGift) => {
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <h3 className="font-semibold text-white">
-                                {gift.gift_type === 'item' 
+                                {gift.gift_type === 'item'
                                   ? `${gift.item_name}${gift.item_quantity && gift.item_quantity > 1 ? ` x${gift.item_quantity}` : ''}`
                                   : 'Argent'
                                 }
