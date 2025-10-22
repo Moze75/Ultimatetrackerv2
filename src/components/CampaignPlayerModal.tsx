@@ -11,6 +11,294 @@ import {
 } from '../types/campaign';
 import toast from 'react-hot-toast';
 
+// =============================================
+// Modal de distribution équitable d'argent
+// =============================================
+interface DistributionModalProps {
+  gift: CampaignGift;
+  campaignMembers: CampaignMember[];
+  currentUserId: string;
+  playerId: string;
+  currentPlayer: Player;
+  onClose: () => void;
+  onDistribute: (distribution: { userId: string; playerId: string; gold: number; silver: number; copper: number }[]) => Promise<void>;
+}
+
+function CurrencyDistributionModal({
+  gift,
+  campaignMembers,
+  currentUserId,
+  playerId,
+  currentPlayer,
+  onClose,
+  onDistribute
+}: DistributionModalProps) {
+  const [distributing, setDistributing] = useState(false);
+  const [selectedMembers, setSelectedMembers] = useState<string[]>(
+    campaignMembers.map(m => m.user_id)
+  );
+
+  // Calculer la distribution équitable
+  const calculateDistribution = () => {
+    if (selectedMembers.length === 0) return [];
+
+    const totalGold = gift.gold || 0;
+    const totalSilver = gift.silver || 0;
+    const totalCopper = gift.copper || 0;
+
+    const numMembers = selectedMembers.length;
+
+    // Distribution de base (division entière)
+    const goldPerPerson = Math.floor(totalGold / numMembers);
+    const silverPerPerson = Math.floor(totalSilver / numMembers);
+    const copperPerPerson = Math.floor(totalCopper / numMembers);
+
+    // Calculer les restes
+    const remainingGold = totalGold % numMembers;
+    const remainingSilver = totalSilver % numMembers;
+    const remainingCopper = totalCopper % numMembers;
+
+    // Créer la distribution
+    const distribution = selectedMembers.map((userId, index) => {
+      const member = campaignMembers.find(m => m.user_id === userId);
+      return {
+        userId,
+        playerId: member?.player_id || '',
+        gold: goldPerPerson + (index === 0 ? remainingGold : 0), // Le premier reçoit le surplus
+        silver: silverPerPerson + (index === 0 ? remainingSilver : 0),
+        copper: copperPerPerson + (index === 0 ? remainingCopper : 0),
+      };
+    });
+
+    return distribution;
+  };
+
+  const distribution = calculateDistribution();
+  const myShare = distribution.find(d => d.userId === currentUserId);
+
+  const toggleMember = (userId: string) => {
+    setSelectedMembers(prev => {
+      if (prev.includes(userId)) {
+        return prev.filter(id => id !== userId);
+      } else {
+        return [...prev, userId];
+      }
+    });
+  };
+
+  const handleDistribute = async () => {
+    if (distribution.length === 0) {
+      toast.error('Sélectionnez au moins un membre');
+      return;
+    }
+
+    try {
+      setDistributing(true);
+      await onDistribute(distribution);
+      toast.success('Argent distribué avec succès !');
+      onClose();
+    } catch (error) {
+      console.error(error);
+      toast.error('Erreur lors de la distribution');
+    } finally {
+      setDistributing(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[12000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" />
+      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(36rem,95vw)] max-h-[85vh] overflow-y-auto bg-gray-900 border border-gray-700 rounded-xl shadow-2xl">
+        <div className="sticky top-0 bg-gray-800/95 backdrop-blur-sm border-b border-gray-700 px-6 py-4 z-10">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                <Coins className="w-5 h-5 text-yellow-400" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white">Distribution équitable</h3>
+                <p className="text-sm text-gray-400">Répartir l'argent entre les joueurs</p>
+              </div>
+            </div>
+            <button onClick={onClose} className="p-2 text-gray-400 hover:bg-gray-700 rounded-lg transition-colors">
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Montant total */}
+          <div className="bg-gradient-to-br from-yellow-900/30 to-orange-900/30 border border-yellow-500/30 rounded-lg p-4">
+            <h4 className="text-sm font-semibold text-yellow-200 mb-3">💰 Montant total à distribuer</h4>
+            <div className="flex items-center justify-center gap-6 text-lg">
+              {gift.gold > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-yellow-400">{gift.gold}</span>
+                  <span className="text-yellow-300 text-sm">po</span>
+                </div>
+              )}
+              {gift.silver > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-gray-300">{gift.silver}</span>
+                  <span className="text-gray-400 text-sm">pa</span>
+                </div>
+              )}
+              {gift.copper > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-orange-400">{gift.copper}</span>
+                  <span className="text-orange-300 text-sm">pc</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Sélection des membres */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-semibold text-gray-300">Joueurs participants ({selectedMembers.length})</h4>
+              <button
+                onClick={() => {
+                  if (selectedMembers.length === campaignMembers.length) {
+                    setSelectedMembers([]);
+                  } else {
+                    setSelectedMembers(campaignMembers.map(m => m.user_id));
+                  }
+                }}
+                className="text-xs text-purple-400 hover:text-purple-300"
+              >
+                {selectedMembers.length === campaignMembers.length ? 'Désélectionner tout' : 'Sélectionner tout'}
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {campaignMembers.map((member) => {
+                const isSelected = selectedMembers.includes(member.user_id);
+                const memberShare = distribution.find(d => d.userId === member.user_id);
+
+                return (
+                  <label
+                    key={member.user_id}
+                    className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                      isSelected
+                        ? 'bg-purple-900/30 border-purple-500/50 hover:bg-purple-900/40'
+                        : 'bg-gray-800/40 border-gray-700/50 hover:bg-gray-800/60'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleMember(member.user_id)}
+                        className="w-4 h-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500 focus:ring-offset-gray-900"
+                      />
+                      <div>
+                        <p className="font-medium text-white">
+                          {member.player_name || member.email}
+                          {member.user_id === currentUserId && (
+                            <span className="ml-2 text-xs text-purple-400">(Vous)</span>
+                          )}
+                        </p>
+                        {isSelected && memberShare && (
+                          <div className="flex gap-3 mt-1 text-xs">
+                            {memberShare.gold > 0 && (
+                              <span className="text-yellow-400">{memberShare.gold} po</span>
+                            )}
+                            {memberShare.silver > 0 && (
+                              <span className="text-gray-400">{memberShare.silver} pa</span>
+                            )}
+                            {memberShare.copper > 0 && (
+                              <span className="text-orange-400">{memberShare.copper} pc</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {isSelected && memberShare && distribution[0]?.userId === member.user_id && (
+                      <span className="text-xs px-2 py-1 bg-green-500/20 text-green-300 rounded border border-green-500/30">
+                        + surplus
+                      </span>
+                    )}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Résumé de ma part */}
+          {myShare && selectedMembers.includes(currentUserId) && (
+            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Users className="w-4 h-4 text-blue-400" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-blue-200 mb-1">Votre part</h4>
+                  <div className="flex gap-4 text-sm">
+                    {myShare.gold > 0 && (
+                      <span className="text-yellow-300 font-medium">{myShare.gold} po</span>
+                    )}
+                    {myShare.silver > 0 && (
+                      <span className="text-gray-300 font-medium">{myShare.silver} pa</span>
+                    )}
+                    {myShare.copper > 0 && (
+                      <span className="text-orange-300 font-medium">{myShare.copper} pc</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Info surplus */}
+          {selectedMembers.length > 0 && (
+            <div className="bg-gray-800/40 rounded-lg p-3 text-xs text-gray-400">
+              <p>
+                💡 <strong className="text-gray-300">Astuce :</strong> S'il y a un reste non divisible, 
+                {' '}<strong className="text-purple-400">{campaignMembers.find(m => m.user_id === distribution[0]?.userId)?.player_name || 'le premier joueur'}</strong>
+                {' '}recevra le surplus.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="sticky bottom-0 bg-gray-800/95 backdrop-blur-sm border-t border-gray-700 px-6 py-4">
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={onClose}
+              disabled={distributing}
+              className="btn-secondary px-6 py-3 rounded-lg"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleDistribute}
+              disabled={distributing || selectedMembers.length === 0}
+              className="btn-primary px-6 py-3 rounded-lg disabled:opacity-50 flex items-center gap-2"
+            >
+              {distributing ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  Distribution...
+                </>
+              ) : (
+                <>
+                  <Coins size={18} />
+                  Distribuer l'argent
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =============================================
+// Composant principal CampaignPlayerModal
+// =============================================
 interface CampaignPlayerModalProps {
   open: boolean;
   onClose: () => void;
@@ -26,11 +314,17 @@ export function CampaignPlayerModal({
 }: CampaignPlayerModalProps) {
   const [invitations, setInvitations] = useState<CampaignInvitation[]>([]);
   const [myCampaigns, setMyCampaigns] = useState<Campaign[]>([]);
+  const [activeCampaigns, setActiveCampaigns] = useState<Campaign[]>([]);
   const [pendingGifts, setPendingGifts] = useState<CampaignGift[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'invitations' | 'gifts'>('invitations');
+  const [activeTab, setActiveTab] = useState<'invitations' | 'gifts'>('gifts');
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [invitationCode, setInvitationCode] = useState('');
+  
+  // ✅ NOUVEAUX états pour la distribution
+  const [showDistributionModal, setShowDistributionModal] = useState(false);
+  const [selectedGiftForDistribution, setSelectedGiftForDistribution] = useState<CampaignGift | null>(null);
+  const [campaignMembersForDistribution, setCampaignMembersForDistribution] = useState<CampaignMember[]>([]);
 
   // Utilitaires pour cacher / parser les méta
   const META_PREFIX = '#meta:';
@@ -85,51 +379,112 @@ export function CampaignPlayerModal({
           .in('id', campaignIds);
 
         setMyCampaigns(campaigns || []);
+        setActiveCampaigns(campaigns || []);
 
         // Charger les cadeaux en attente
-const { data: gifts } = await supabase
-  .from('campaign_gifts')
-  .select('*')
-  .in('campaign_id', campaignIds)
-  .eq('status', 'pending')
-  .order('sent_at', { ascending: false });
+        const { data: gifts } = await supabase
+          .from('campaign_gifts')
+          .select('*')
+          .in('campaign_id', campaignIds)
+          .eq('status', 'pending')
+          .order('sent_at', { ascending: false });
 
-// ✅ CORRECTION : Filtrer les cadeaux selon le mode de distribution
-const filteredGifts = (gifts || []).filter((gift) => {
-  // Les cadeaux partagés sont visibles par tous
-  if (gift.distribution_mode === 'shared') {
-    return true;
-  }
-  
-  // Les cadeaux individuels ne sont visibles que pour les destinataires spécifiques
-  if (gift.distribution_mode === 'individual' && gift.recipient_ids) {
-    return gift.recipient_ids.includes(user.id);
-  }
-  
-  // Par défaut, ne pas afficher
-  return false;
-});
+        // ✅ CORRECTION : Filtrer les cadeaux selon le mode de distribution
+        const filteredGifts = (gifts || []).filter((gift) => {
+          if (gift.distribution_mode === 'shared') {
+            return true;
+          }
+          if (gift.distribution_mode === 'individual' && gift.recipient_ids) {
+            return gift.recipient_ids.includes(user.id);
+          }
+          return false;
+        });
 
-// Filtrer les cadeaux non encore récupérés
-const giftsWithClaims = await Promise.all(
-  filteredGifts.map(async (gift) => {
-    const claims = await campaignService.getGiftClaims(gift.id);
-    const alreadyClaimed = claims.some(c => c.user_id === user.id);
-    return { gift, alreadyClaimed };
-  })
-);
+        // Filtrer les cadeaux non encore récupérés
+        const giftsWithClaims = await Promise.all(
+          filteredGifts.map(async (gift) => {
+            const claims = await campaignService.getGiftClaims(gift.id);
+            const alreadyClaimed = claims.some(c => c.user_id === user.id);
+            return { gift, alreadyClaimed };
+          })
+        );
 
-setPendingGifts(
-  giftsWithClaims
-    .filter(g => !g.alreadyClaimed)
-    .map(g => g.gift)
-);
+        setPendingGifts(
+          giftsWithClaims
+            .filter(g => !g.alreadyClaimed)
+            .map(g => g.gift)
+        );
       }
     } catch (error) {
       console.error('Erreur chargement campagnes:', error);
       toast.error('Erreur lors du chargement');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ✅ Fonction pour charger les membres d'une campagne
+  const loadCampaignMembers = async (campaignId: string) => {
+    try {
+      const members = await campaignService.getCampaignMembers(campaignId);
+      return members;
+    } catch (error) {
+      console.error('Erreur chargement membres:', error);
+      return [];
+    }
+  };
+
+  // ✅ Fonction pour gérer la distribution
+  const handleDistributeCurrency = async (distribution: { userId: string; playerId: string; gold: number; silver: number; copper: number }[]) => {
+    if (!selectedGiftForDistribution) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Trouver ma part dans la distribution
+      const myShare = distribution.find(d => d.userId === user.id);
+      if (!myShare) {
+        throw new Error('Votre part n\'a pas été trouvée');
+      }
+
+      // Mettre à jour mon argent
+      const { error: updateError } = await supabase
+        .from('players')
+        .update({
+          gold: (player.gold || 0) + myShare.gold,
+          silver: (player.silver || 0) + myShare.silver,
+          copper: (player.copper || 0) + myShare.copper,
+        })
+        .eq('id', player.id);
+
+      if (updateError) throw updateError;
+
+      // Enregistrer le claim avec les montants partiels
+      await campaignService.claimGift(selectedGiftForDistribution.id, player.id, {
+        gold: myShare.gold,
+        silver: myShare.silver,
+        copper: myShare.copper,
+      });
+
+      // Mettre à jour l'état local
+      onUpdate({
+        ...player,
+        gold: (player.gold || 0) + myShare.gold,
+        silver: (player.silver || 0) + myShare.silver,
+        copper: (player.copper || 0) + myShare.copper,
+      });
+
+      setShowDistributionModal(false);
+      setSelectedGiftForDistribution(null);
+      
+      setTimeout(() => {
+        onClose();
+        window.location.reload();
+      }, 1500);
+    } catch (error) {
+      console.error('Erreur distribution:', error);
+      throw error;
     }
   };
 
@@ -193,7 +548,6 @@ setPendingGifts(
       console.log('🎁 Claiming gift:', gift);
 
       if (gift.gift_type === 'item') {
-        // ✅ CORRECTION : Parser les métadonnées de l'objet original
         let originalMeta = null;
         
         if (gift.item_description) {
@@ -209,15 +563,12 @@ setPendingGifts(
           }
         }
 
-        // ✅ Si on a des métadonnées originales, les utiliser
-        // Sinon, créer des métadonnées par défaut
         const itemMeta = originalMeta || {
           type: 'equipment' as const,
           quantity: gift.item_quantity || 1,
           equipped: false,
         };
 
-        // ✅ S'assurer que la quantité et equipped sont à jour
         itemMeta.quantity = gift.item_quantity || 1;
         itemMeta.equipped = false;
 
@@ -225,7 +576,6 @@ setPendingGifts(
 
         const metaLine = `${META_PREFIX}${JSON.stringify(itemMeta)}`;
         
-        // Nettoyer la description (retirer les anciennes métadonnées si présentes)
         const cleanDescription = gift.item_description
           ? gift.item_description
               .split('\n')
@@ -261,7 +611,6 @@ setPendingGifts(
           quantity: gift.item_quantity || 1,
         });
 
-        // ✅ Message de succès adapté au type
         const typeLabel = 
           itemMeta.type === 'armor' ? 'Armure' :
           itemMeta.type === 'shield' ? 'Bouclier' :
@@ -321,213 +670,383 @@ setPendingGifts(
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[11000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
-      <div className="fixed inset-0 sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[min(42rem,95vw)] sm:max-h-[90vh] sm:rounded-xl overflow-hidden bg-gray-900 border-0 sm:border sm:border-gray-700 rounded-none">
-        {/* Header */}
-        <div className="bg-gray-800/60 border-b border-gray-700 px-4 py-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <Users className="w-6 h-6 text-purple-400" />
-              Mes Campagnes
-            </h2>
-            <button
-              onClick={onClose}
-              className="p-2 text-gray-400 hover:bg-gray-700/50 rounded-lg"
-            >
-              <X size={20} />
-            </button>
-          </div>
-
-          {/* Tabs */}
-          <div className="flex gap-4 mt-3">
-            <button
-              onClick={() => setActiveTab('invitations')}
-              className={`pb-2 px-1 border-b-2 transition-colors ${
-                activeTab === 'invitations'
-                  ? 'border-purple-500 text-purple-400'
-                  : 'border-transparent text-gray-400 hover:text-gray-300'
-              }`}
-            >
-              Invitations ({invitations.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('gifts')}
-              className={`pb-2 px-1 border-b-2 transition-colors ${
-                activeTab === 'gifts'
-                  ? 'border-purple-500 text-purple-400'
-                  : 'border-transparent text-gray-400 hover:text-gray-300'
-              }`}
-            >
-              Loots ({pendingGifts.length})
-            </button>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="p-4 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 140px)' }}>
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4" />
-              <p className="text-gray-400">Chargement...</p>
+    <>
+      <div className="fixed inset-0 z-[11000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
+        <div className="fixed inset-0 sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[min(42rem,95vw)] sm:max-h-[90vh] sm:rounded-xl overflow-hidden bg-gray-900 border-0 sm:border sm:border-gray-700">
+          {/* Header */}
+          <div className="bg-gray-800/60 border-b border-gray-700 px-4 py-3">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex-1">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Users className="w-6 h-6 text-purple-400" />
+                  Mes Campagnes
+                </h2>
+                
+                {/* Afficher les campagnes actives */}
+                {activeCampaigns.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {activeCampaigns.map((camp) => (
+                      <span
+                        key={camp.id}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-900/30 border border-purple-500/40 rounded-full text-sm text-purple-200"
+                      >
+                        <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                        {camp.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={onClose}
+                className="p-2 text-gray-400 hover:bg-gray-700/50 rounded-lg"
+              >
+                <X size={20} />
+              </button>
             </div>
-          ) : activeTab === 'invitations' ? (
-            <div className="space-y-4">
-              {/* ... invitations UI unchanged ... */}
-              {!showCodeInput ? (
-                <button
-                  onClick={() => setShowCodeInput(true)}
-                  className="w-full btn-primary px-4 py-3 rounded-lg flex items-center justify-center gap-2"
-                >
-                  <Check size={20} />
-                  Rejoindre avec un code
-                </button>
-              ) : (
-                <div className="bg-gray-800/40 rounded-lg p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-white">Code d'invitation</h3>
-                    <button
-                      onClick={() => {
-                        setShowCodeInput(false);
-                        setInvitationCode('');
+
+            {/* Tabs avec badge de loots */}
+            <div className="flex gap-4 mt-3">
+              <button
+                onClick={() => setActiveTab('invitations')}
+                className={`pb-2 px-1 border-b-2 transition-colors ${
+                  activeTab === 'invitations'
+                    ? 'border-purple-500 text-purple-400'
+                    : 'border-transparent text-gray-400 hover:text-gray-300'
+                }`}
+              >
+                Invitations ({invitations.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('gifts')}
+                className={`pb-2 px-1 border-b-2 transition-colors relative ${
+                  activeTab === 'gifts'
+                    ? 'border-purple-500 text-purple-400'
+                    : 'border-transparent text-gray-400 hover:text-gray-300'
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  Loots ({pendingGifts.length})
+                  {pendingGifts.length > 0 && (
+                    <span className="flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-green-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                  )}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="p-4 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 140px)' }}>
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4" />
+                <p className="text-gray-400">Chargement...</p>
+              </div>
+            ) : activeTab === 'invitations' ? (
+              <div className="space-y-4">
+                {!showCodeInput ? (
+                  <button
+                    onClick={() => setShowCodeInput(true)}
+                    className="w-full btn-primary px-4 py-3 rounded-lg flex items-center justify-center gap-2"
+                  >
+                    <Check size={20} />
+                    Rejoindre avec un code
+                  </button>
+                ) : (
+                  <div className="bg-gray-800/40 rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-white">Code d'invitation</h3>
+                      <button
+                        onClick={() => {
+                          setShowCodeInput(false);
+                          setInvitationCode('');
+                        }}
+                        className="text-gray-400 hover:text-white"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={invitationCode}
+                      onChange={(e) => setInvitationCode(e.target.value.toUpperCase())}
+                      className="input-dark w-full px-4 py-2 rounded-lg text-center font-mono text-lg tracking-wider"
+                      placeholder="ABCD1234"
+                      maxLength={8}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleJoinWithCode();
                       }}
-                      className="text-gray-400 hover:text-white"
+                    />
+                    <button
+                      onClick={handleJoinWithCode}
+                      className="w-full btn-primary px-4 py-2 rounded-lg"
                     >
-                      <X size={18} />
+                      Rejoindre la campagne
                     </button>
                   </div>
-                  <input
-                    type="text"
-                    value={invitationCode}
-                    onChange={(e) => setInvitationCode(e.target.value.toUpperCase())}
-                    className="input-dark w-full px-4 py-2 rounded-lg text-center font-mono text-lg tracking-wider"
-                    placeholder="ABCD1234"
-                    maxLength={8}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleJoinWithCode();
-                    }}
-                  />
-                  <button
-                    onClick={handleJoinWithCode}
-                    className="w-full btn-primary px-4 py-2 rounded-lg"
-                  >
-                    Rejoindre la campagne
-                  </button>
-                </div>
-              )}
+                )}
 
-              {/* Invitations list and myCampaigns rendering (unchanged) */}
-              {/* ... */}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {/* Liste des cadeaux - rendu simplifié avec méta affichées proprement */}
-              {pendingGifts.length > 0 ? (
-                pendingGifts.map((gift) => {
-                  const meta = parseMeta(gift.item_description);
-
-                  return (
-                    <div
-                      key={gift.id}
-                      className="bg-gray-800/40 border border-purple-500/30 rounded-lg p-4"
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center">
-                            {gift.gift_type === 'item' ? (
-                              <Package className="w-5 h-5 text-purple-400" />
-                            ) : (
-                              <Coins className="w-5 h-5 text-yellow-400" />
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-semibold text-white">
-                                {gift.gift_type === 'item' 
-                                  ? `${gift.item_name}${gift.item_quantity && gift.item_quantity > 1 ? ` x${gift.item_quantity}` : ''}`
-                                  : 'Argent'
-                                }
-                              </h3>
-
-                              {/* BADGE TYPE */}
-                              {meta?.type === 'armor' && (
-                                <span className="text-xs px-2 py-0.5 rounded bg-purple-900/30 text-purple-300 border border-purple-500/30 ml-2">
-                                  Armure
-                                </span>
-                              )}
-                              {meta?.type === 'shield' && (
-                                <span className="text-xs px-2 py-0.5 rounded bg-blue-900/30 text-blue-300 border border-blue-500/30 ml-2">
-                                  Bouclier
-                                </span>
-                              )}
-                              {meta?.type === 'weapon' && (
-                                <span className="text-xs px-2 py-0.5 rounded bg-red-900/30 text-red-300 border border-red-500/30 ml-2">
-                                  Arme
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Propriétés lisibles extraites des méta */}
-                            {meta && (
-                              <div className="mb-2 mt-2 text-xs text-gray-300">
-                                {meta.type === 'armor' && meta.armor && (
-                                  <div className="text-purple-300 flex items-center gap-2">
-                                    <span className="text-sm">🛡️ CA: {meta.armor.label}</span>
-                                  </div>
-                                )}
-                                {meta.type === 'shield' && meta.shield && (
-                                  <div className="text-blue-300">🛡️ Bonus: +{meta.shield.bonus}</div>
-                                )}
-                                {meta.type === 'weapon' && meta.weapon && (
-                                  <div className="text-red-300">
-                                    ⚔️ {meta.weapon.damageDice} {meta.weapon.damageType}
-                                    {meta.weapon.properties && ` • ${meta.weapon.properties}`}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-
-                            {/* Description visible (sans #meta:) */}
-                            {getVisibleDescription(gift.item_description) && (
-                              <p className="text-sm text-gray-400 mt-2">
-                                {getVisibleDescription(gift.item_description)}
-                              </p>
-                            )}
-
-                            {gift.message && (
-                              <div className="mt-2 text-sm text-gray-300 italic border-l-2 border-purple-500/40 pl-3">
-                                "{gift.message}"
-                              </div>
-                            )}
-                            <p className="text-xs text-gray-500 mt-2">
-                              Envoyé le {new Date(gift.sent_at).toLocaleDateString('fr-FR')}
+                {invitations.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-gray-300">Invitations en attente</h3>
+                    {invitations.map((invitation) => (
+                      <div
+                        key={invitation.id}
+                        className="bg-gray-800/40 border border-gray-700/50 rounded-lg p-4"
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <p className="font-medium text-white mb-1">
+                              Invitation à une campagne
+                            </p>
+                            <p className="text-sm text-gray-400">
+                              Code: <span className="font-mono text-purple-400">{invitation.invitation_code}</span>
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Reçue le {new Date(invitation.invited_at).toLocaleDateString('fr-FR')}
                             </p>
                           </div>
                         </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleAcceptInvitation(invitation.id)}
+                            className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
+                          >
+                            <Check size={18} />
+                            Accepter
+                          </button>
+                          <button
+                            onClick={() => handleDeclineInvitation(invitation.id)}
+                            className="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 px-4 py-2 rounded-lg border border-red-500/30"
+                          >
+                            Refuser
+                          </button>
+                        </div>
                       </div>
+                    ))}
+                  </div>
+                )}
 
-                      <button
-                        onClick={() => handleClaimGift(gift)}
-                        className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
+                {myCampaigns.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-gray-300">Mes campagnes actives</h3>
+                    {myCampaigns.map((campaign) => (
+                      <div
+                        key={campaign.id}
+                        className="bg-gray-800/40 border border-green-500/30 rounded-lg p-4"
                       >
-                        <Gift size={18} />
-                        Récupérer
-                      </button>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold text-white">{campaign.name}</h3>
+                              <span className="px-2 py-0.5 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
+                                Active
+                              </span>
+                            </div>
+                            {campaign.description && (
+                              <p className="text-sm text-gray-400 mt-1">{campaign.description}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Message d'accueil contextuel */}
+                {activeCampaigns.length > 0 && pendingGifts.length > 0 && (
+                  <div className="bg-gradient-to-r from-purple-900/40 to-blue-900/40 border border-purple-500/30 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                        <Gift className="w-5 h-5 text-purple-400" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-white mb-1">
+                          {pendingGifts.length} loot{pendingGifts.length > 1 ? 's' : ''} en attente !
+                        </h3>
+                        <p className="text-sm text-gray-300">
+                          Votre Maître du Jeu a envoyé {pendingGifts.length > 1 ? 'des objets' : 'un objet'} pour votre aventure.
+                          Récupérez-{pendingGifts.length > 1 ? 'les' : 'le'} ci-dessous.
+                        </p>
+                      </div>
                     </div>
-                  );
-                })
-              ) : (
-                <div className="text-center py-12 text-gray-500">
-                  <Gift className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                  <p>Aucun loot en attente</p>
-                  <p className="text-sm mt-2">Les objets et argent envoyés par votre MJ apparaîtront ici</p>
-                </div>
-              )}
-            </div>
-          )}
-        </div> 
+                  </div>
+                )}
+
+                {/* Liste des cadeaux */}
+                {pendingGifts.length > 0 ? (
+                  pendingGifts.map((gift) => {
+                    const meta = parseMeta(gift.item_description);
+                    const isCurrencyShared = gift.gift_type === 'currency' && gift.distribution_mode === 'shared';
+
+                    return (
+                      <div
+                        key={gift.id}
+                        className="bg-gray-800/40 border border-purple-500/30 rounded-lg p-4"
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center">
+                              {gift.gift_type === 'item' ? (
+                                <Package className="w-5 h-5 text-purple-400" />
+                              ) : (
+                                <Coins className="w-5 h-5 text-yellow-400" />
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-semibold text-white">
+                                  {gift.gift_type === 'item' 
+                                    ? `${gift.item_name}${gift.item_quantity && gift.item_quantity > 1 ? ` x${gift.item_quantity}` : ''}`
+                                    : 'Argent'
+                                  }
+                                </h3>
+
+                                {/* BADGE TYPE */}
+                                {meta?.type === 'armor' && (
+                                  <span className="text-xs px-2 py-0.5 rounded bg-purple-900/30 text-purple-300 border border-purple-500/30 ml-2">
+                                    Armure
+                                  </span>
+                                )}
+                                {meta?.type === 'shield' && (
+                                  <span className="text-xs px-2 py-0.5 rounded bg-blue-900/30 text-blue-300 border border-blue-500/30 ml-2">
+                                    Bouclier
+                                  </span>
+                                )}
+                                {meta?.type === 'weapon' && (
+                                  <span className="text-xs px-2 py-0.5 rounded bg-red-900/30 text-red-300 border border-red-500/30 ml-2">
+                                    Arme
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Propriétés lisibles extraites des méta */}
+                              {meta && (
+                                <div className="mb-2 mt-2 text-xs text-gray-300">
+                                  {meta.type === 'armor' && meta.armor && (
+                                    <div className="text-purple-300 flex items-center gap-2">
+                                      <span className="text-sm">🛡️ CA: {meta.armor.label}</span>
+                                    </div>
+                                  )}
+                                  {meta.type === 'shield' && meta.shield && (
+                                    <div className="text-blue-300">🛡️ Bonus: +{meta.shield.bonus}</div>
+                                  )}
+                                  {meta.type === 'weapon' && meta.weapon && (
+                                    <div className="text-red-300">
+                                      ⚔️ {meta.weapon.damageDice} {meta.weapon.damageType}
+                                      {meta.weapon.properties && ` • ${meta.weapon.properties}`}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Description visible (sans #meta:) */}
+                              {getVisibleDescription(gift.item_description) && (
+                                <p className="text-sm text-gray-400 mt-2">
+                                  {getVisibleDescription(gift.item_description)}
+                                </p>
+                              )}
+
+                              {/* Afficher le montant pour l'argent */}
+                              {gift.gift_type === 'currency' && (
+                                <div className="flex gap-3 mt-2 text-sm">
+                                  {gift.gold > 0 && (
+                                    <span className="text-yellow-400 font-medium">{gift.gold} po</span>
+                                  )}
+                                  {gift.silver > 0 && (
+                                    <span className="text-gray-300 font-medium">{gift.silver} pa</span>
+                                  )}
+                                  {gift.copper > 0 && (
+                                    <span className="text-orange-400 font-medium">{gift.copper} pc</span>
+                                  )}
+                                </div>
+                              )}
+
+                              {gift.message && (
+                                <div className="mt-2 text-sm text-gray-300 italic border-l-2 border-purple-500/40 pl-3">
+                                  "{gift.message}"
+                                </div>
+                              )}
+                              <p className="text-xs text-gray-500 mt-2">
+                                Envoyé le {new Date(gift.sent_at).toLocaleDateString('fr-FR')}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* ✅ Bouton conditionnel selon le type */}
+                        {isCurrencyShared ? (
+                          <button
+                            onClick={async () => {
+                              const members = await loadCampaignMembers(gift.campaign_id);
+                              setCampaignMembersForDistribution(members);
+                              setSelectedGiftForDistribution(gift);
+                              setShowDistributionModal(true);
+                            }}
+                            className="w-full bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
+                          >
+                            <Users size={18} />
+                            Distribuer équitablement
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleClaimGift(gift)}
+                            className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
+                          >
+                            <Gift size={18} />
+                            Récupérer
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-12 text-gray-500">
+                    <Gift className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                    <p>Aucun loot en attente</p>
+                    {activeCampaigns.length > 0 ? (
+                      <p className="text-sm mt-2">
+                        Les objets et argent envoyés par votre MJ dans{' '}
+                        <span className="text-purple-400 font-semibold">
+                          {activeCampaigns.map(c => c.name).join(', ')}
+                        </span>
+                        {' '}apparaîtront ici
+                      </p>
+                    ) : (
+                      <p className="text-sm mt-2">
+                        Rejoignez une campagne pour recevoir des loots !
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
+
+      {/* ✅ Modal de distribution (z-index plus élevé) */}
+      {showDistributionModal && selectedGiftForDistribution && (
+        <CurrencyDistributionModal
+          gift={selectedGiftForDistribution}
+          campaignMembers={campaignMembersForDistribution}
+          currentUserId={(async () => { const { data: { user } } = await supabase.auth.getUser(); return user?.id || ''; })() as any}
+          playerId={player.id}
+          currentPlayer={player}
+          onClose={() => {
+            setShowDistributionModal(false);
+            setSelectedGiftForDistribution(null);
+          }}
+          onDistribute={handleDistributeCurrency}
+        />
+      )}
+    </>
   );
 }
 
