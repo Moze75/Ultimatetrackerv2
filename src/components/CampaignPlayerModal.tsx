@@ -664,19 +664,16 @@ export function CampaignPlayerModal({
       <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
       <div className="fixed inset-0 sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[min(42rem,95vw)] sm:max-h-[90vh] sm:rounded-xl overflow-hidden bg-gray-900 border-0 sm:border s[...]
         {/* Header */}
-        <div className="bg-gray-800/60 border-b border-gray-700 px-4 py-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <Users className="w-6 h-6 text-purple-400" />
-              Mes Campagnes
-            </h2>
-            <button
-              onClick={onClose}
-              className="p-2 text-gray-400 hover:bg-gray-700/50 rounded-lg"
-            >
-              <X size={20} />
-            </button>
-          </div>
+  <div className="bg-gray-800/60 border-b border-gray-700 px-4 py-3">
+    <div className="flex items-center justify-between">
+      <h2 className="text-xl font-bold text-white flex items-center gap-2">
+        <Users className="w-6 h-6 text-purple-400" />
+        Mes Campagnes
+      </h2>
+      <button onClick={onClose} className="p-2 text-gray-400 ...">
+        <X size={20} />
+      </button>
+    </div>
 
           {/* Tabs */}
           <div className="flex gap-4 mt-3">
