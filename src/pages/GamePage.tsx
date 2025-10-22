@@ -97,9 +97,11 @@ export function GamePage({
   // --- START: Realtime subscription for inventory_items (GamePage) ---
 const lastInventoryCheckRef = useRef<string | null>(null);
 const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+const isPollingActiveRef = useRef(false);
 
 useEffect(() => {
-  if (!currentPlayer?.id) return;
+  if (!currentPlayer?.id || isPollingActiveRef.current) return;
+  isPollingActiveRef.current = true;
 
   console.log('🔄 Mode polling activé pour player:', currentPlayer.id);
 
@@ -132,7 +134,6 @@ useEffect(() => {
           
           if (newItems.length > 0) {
             console.log('🆕 Nouveaux items détectés:', newItems.map(i => i.name));
-            // Afficher un toast pour chaque nouvel item
             newItems.forEach(item => {
               toast.success(`Nouvel objet reçu : ${item.name}`, { duration: 3000 });
             });
@@ -155,12 +156,29 @@ useEffect(() => {
 
   return () => {
     console.log('🧹 Arrêt du polling');
+    isPollingActiveRef.current = false;
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
       pollingIntervalRef.current = null;
     }
   };
-}, [currentPlayer?.id]); // On ne met PAS inventory dans les deps pour éviter les loops
+}, [currentPlayer?.id]);
+
+// Event custom pour refresh forcé depuis CampaignPlayerModal
+useEffect(() => {
+  const handleRefreshRequest = (e: CustomEvent) => {
+    if (e.detail?.playerId === currentPlayer?.id) {
+      console.log('⚡ Refresh forcé demandé');
+      lastInventoryCheckRef.current = null; // Force un re-check au prochain poll
+    }
+  };
+
+  window.addEventListener('inventory:refresh', handleRefreshRequest as EventListener);
+  
+  return () => {
+    window.removeEventListener('inventory:refresh', handleRefreshRequest as EventListener);
+  };
+}, [currentPlayer?.id]);
 
 // DEBUG: Track inventory changes
 useEffect(() => {
