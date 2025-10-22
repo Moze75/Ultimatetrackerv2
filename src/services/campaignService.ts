@@ -462,36 +462,69 @@ export async function claimGift(
     return data || [];
   },
 
-  async claimGift(
-    giftId: string,
-    playerId: string,
-    claimed: {
-      quantity?: number;
-      gold?: number;
-      silver?: number;
-      copper?: number;
-    }
-  ): Promise<CampaignGiftClaim> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Non authentifié');
+// Remplacer l'ancienne implémentation de claimGift par ceci :
+async claimGift(
+  giftId: string,
+  playerId: string,
+  claimed: {
+    quantity?: number;
+    gold?: number;
+    silver?: number;
+    copper?: number;
+  }
+): Promise<CampaignGiftClaim> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Non authentifié');
 
-    const { data, error } = await supabase
-      .from('campaign_gift_claims')
-      .insert({
-        gift_id: giftId,
-        user_id: user.id,
-        player_id: playerId,
-        claimed_quantity: claimed.quantity,
-        claimed_gold: claimed.gold || 0,
-        claimed_silver: claimed.silver || 0,
-        claimed_copper: claimed.copper || 0,
-      })
-      .select()
-      .single();
+  // 1) Tentative atomique : marquer le gift comme 'claimed' seulement si status = 'pending'
+  //    L'update renverra la row modifiée si et seulement si status était 'pending'.
+  const { data: updatedGift, error: updateErr } = await supabase
+    .from('campaign_gifts')
+    .update({
+      status: 'claimed',
+      claimed_by: user.id,
+      claimed_at: new Date().toISOString()
+    })
+    .eq('id', giftId)
+    .eq('status', 'pending')
+    .select()
+    .single();
 
-    if (error) throw error;
-    return data;
-  },
+  if (updateErr) {
+    // Si updateErr n'est pas null, il peut indiquer erreur SQL ou "no rows"
+    console.error('Erreur mise à jour gift:', updateErr);
+    throw new Error('Impossible de marquer le cadeau comme récupéré (déjà récupéré ou introuvable).');
+  }
+
+  if (!updatedGift) {
+    // Pas de ligne retournée -> déjà revendiqué
+    throw new Error('Cadeau déjà récupéré ou non disponible.');
+  }
+
+  // 2) Insérer l'enregistrement du claim
+  const { data: claimRow, error: claimErr } = await supabase
+    .from('campaign_gift_claims')
+    .insert({
+      gift_id: giftId,
+      user_id: user.id,
+      player_id: playerId,
+      claimed_quantity: claimed.quantity ?? null,
+      claimed_gold: claimed.gold ?? 0,
+      claimed_silver: claimed.silver ?? 0,
+      claimed_copper: claimed.copper ?? 0,
+      claimed_at: new Date().toISOString()
+    })
+    .select()
+    .single();
+
+  if (claimErr) {
+    // Le gift est déjà marqué 'claimed' — on ne le remettra pas en 'pending' pour éviter races.
+    console.error('Erreur insertion claim:', claimErr);
+    throw claimErr;
+  }
+
+  return claimRow;
+}
 
   async getGiftClaims(giftId: string): Promise<CampaignGiftClaim[]> {
     const { data, error } = await supabase
