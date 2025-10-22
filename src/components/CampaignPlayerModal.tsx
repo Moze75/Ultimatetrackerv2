@@ -666,10 +666,10 @@ setTimeout(() => {
           copper: (player.copper || 0) + (gift.copper || 0),
         });
 
-        setTimeout(() => {
-          onClose();
-          window.location.reload();
-        }, 1500);
+// ✅ APRÈS
+setTimeout(() => {
+  onClose();
+}, 800);
       }
 
       loadData();
