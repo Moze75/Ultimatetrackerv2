@@ -467,6 +467,10 @@ export function EquipmentTab({
     [player]
   );
 
+useEffect(() => {
+  console.log('EquipmentTab: inventory prop changed length=', inventory?.length);
+}, [inventory]);
+  
   useEffect(() => {
     stableEquipmentRef.current = { armor, shield, bag };
   }, [armor, shield, bag]);
