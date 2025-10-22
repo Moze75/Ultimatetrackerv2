@@ -882,6 +882,7 @@ const loadData = async () => {
                 )}
 
                 {/* Liste des cadeaux */}
+                {pendingGifts.length > 0 ? (
 {pendingGifts.map((gift) => {
   const meta = parseMeta(gift.item_description);
   const isCurrencyShared = gift.gift_type === 'currency' && gift.distribution_mode === 'shared';
