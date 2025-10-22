@@ -430,10 +430,11 @@ const { data: { user } } = await supabase.auth.getUser();
 if (!user) throw new Error('Non authentifié');
 
 // 1) Tentative atomique : marquer le gift comme 'claimed' seulement si status = 'pending'
+// nouveau : utiliser 'distributed' (valeur autorisée)
 const { data: updatedGift, error: updateErr } = await supabase
   .from('campaign_gifts')
   .update({
-    status: 'claimed',
+    status: 'distributed',
     claimed_by: user.id,
     claimed_at: new Date().toISOString()
   })
