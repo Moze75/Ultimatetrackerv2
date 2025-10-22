@@ -553,12 +553,19 @@ setTimeout(() => {
     }
   };
 
-  const handleClaimGift = async (gift: CampaignGift) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+const handleClaimGift = async (gift: CampaignGift) => {
+  // ✅ AJOUTE CE GUARD au tout début
+  if (claiming) {
+    console.log('⏳ Claim déjà en cours, ignoré');
+    return;
+  }
 
-      console.log('🎁 Claiming gift:', gift);
+  try {
+    setClaiming(true); // ✅ AJOUTE
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    console.log('🎁 Claiming gift:', gift);
 
       if (gift.gift_type === 'item') {
         let originalMeta = null;
