@@ -630,10 +630,11 @@ export function CampaignPlayerModal({
         
         toast.success(`${typeLabel} "${gift.item_name}" ajouté${itemMeta.type === 'armor' ? 'e' : ''} à votre inventaire !`);
 
-        setTimeout(() => {
-          onClose();
-          window.location.reload();
-        }, 1500);
+// ✅ APRÈS
+setTimeout(() => {
+  onClose();
+  // Le polling s'occupera de la mise à jour
+}, 800);
 
       } else {
         // Code argent
