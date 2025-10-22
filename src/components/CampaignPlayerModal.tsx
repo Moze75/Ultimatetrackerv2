@@ -491,17 +491,13 @@ export function CampaignPlayerModal({
 
           removePendingGiftLocal();
 
-          if (item) {
-            setInventory((prev) => [item, ...prev]);
-            try {
-              onInventoryAdd?.(item);
-            } catch {
-              /* noop */
-            }
-            toast.success('Cadeau récupéré !');
-            setTimeout(() => onClose(), 700);
-            return;
-          }
+if (item) {
+  setInventory(prev => [item, ...prev]);   // état local modal
+  onInventoryAdd?.(item);                  // NOTIFIER le parent (GamePage)
+  toast.success('Cadeau récupéré !');
+  setTimeout(() => onClose(), 700);
+  return;
+}
 
           // fallback: fetch newest inventory row for player
           try {
