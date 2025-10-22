@@ -1116,6 +1116,12 @@ useEffect(() => {
             </div>
           </div>
 
+  {/* DEBUG: bouton pour forcer le refresh de l'inventaire */}
+  <div className="mb-3 flex items-center gap-2">
+    <button onClick={() => refreshInventory(0)} className="btn-secondary">Forcer refresh</button>
+    <span className="text-xs text-gray-400">Utilisez pour forcer un fetch du serveur si la synchro realtime ne suffit pas</span>
+  </div>
+          
           <div className="space-y-2">
             {filteredInventory.map(item => {
               const meta = parseMeta(item.description);
