@@ -32,6 +32,7 @@ export function CampaignPlayerModal({
   const [activeTab, setActiveTab] = useState<'invitations' | 'gifts'>('gifts');
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [invitationCode, setInvitationCode] = useState('');
+  const [inventory, setInventory] = useState<any[]>([]);
 
   // Utilitaires méta
   const META_PREFIX = '#meta:';
