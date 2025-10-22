@@ -15,7 +15,7 @@ import { ClassesTab } from '../components/ClassesTab';
 import { PlayerContext } from '../contexts/PlayerContext';
 
 import { inventoryService } from '../services/inventoryService';
-import PlayerProfileProfileTab from '../components/PlayerProfileProfileTab';
+import PlayerProfileProfileTab from '../components/PlayerProfileProfileTab'; 
 import { loadAbilitySections } from '../services/classesContent';
 
 import { PlayerProfileSettingsModal } from '../components/PlayerProfileSettingsModal';
@@ -96,118 +96,61 @@ export function GamePage({
 
   // --- START: Realtime subscription for inventory_items (GamePage) ---
   const invChannelRef = useRef<any>(null);
-  const invDebugRef = useRef<any>(null);
-  
 
-useEffect(() => {
-  // cleanup previous channels
-  try {
+  useEffect(() => {
+    // cleanup previous channel if any
     if (invChannelRef.current) {
-      if (typeof supabase.removeChannel === 'function') supabase.removeChannel(invChannelRef.current);
-      else invChannelRef.current.unsubscribe?.();
-    }
-    if (invDebugRef.current) {
-      if (typeof supabase.removeChannel === 'function') supabase.removeChannel(invDebugRef.current);
-      else invDebugRef.current.unsubscribe?.();
-    }
-  } catch (e) {
-    console.warn('cleanup previous inv channels failed', e);
-  } finally {
-    invChannelRef.current = null;
-    invDebugRef.current = null;
-  }
-
-  const playerId = selectedCharacter?.id ?? currentPlayer?.id;
-  if (!playerId) return;
-
-  console.log('GamePage: subscribe inventory_items realtime for player', playerId);
-
-  // filtered channel (only this player's rows)
-  const ch = supabase
-    .channel(`inv-player-${playerId}`)
-    .on('postgres_changes', {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'inventory_items',
-      filter: `player_id=eq.${playerId}`,
-    }, (payload: any) => {
-      console.log('[Realtime FILTERED] inventory_items payload:', payload);
-      const rec = payload?.record ?? payload?.new;
-      if (!rec) return;
-      // atomic update + dedupe
-      setInventory(prev => {
-        if (prev.some(i => i.id === rec.id)) return prev;
-        return [rec, ...prev];
-      });
-    })
-    .subscribe((status: any) => {
-      console.log('inv-player channel subscribe status:', status);
-    });
-
-  invChannelRef.current = ch;
-
-  // debug unfiltered channel (temporary, to help debugging)
-  const dbg = supabase
-    .channel(`inv-player-debug-${playerId}`)
-    .on('postgres_changes', {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'inventory_items',
-    }, (payload: any) => {
-      console.log('[Realtime UNFILTERED] inventory_items payload:', payload);
-    })
-    .subscribe((status: any) => {
-      console.log('inv-player-debug channel subscribe status:', status);
-    });
-
-  invDebugRef.current = dbg;
-
-  // Keep a small safety fetch in case the realtime misses (race)
-  const cleanupTimer = { id: 0 as any };
-  const watch = (recId: string) => {
-    // after 200ms, if the recId is not in inventory, refetch latest (rare case)
-    cleanupTimer.id = window.setTimeout(async () => {
-      const found = inventory.some(i => i.id === recId);
-      if (!found) {
-        try {
-          const { data: latestRows } = await supabase
-            .from('inventory_items')
-            .select('*')
-            .eq('player_id', playerId)
-            .order('created_at', { ascending: false })
-            .limit(3);
-          if (latestRows && latestRows.length > 0) {
-            setInventory(prev => {
-              const merged = [...latestRows.filter((r:any) => !prev.some(p => p.id === r.id)), ...prev];
-              return merged;
-            });
-          }
-        } catch (e) {
-          console.warn('safety fetch failed', e);
-        }
+      if (typeof supabase.removeChannel === 'function') {
+        supabase.removeChannel(invChannelRef.current);
+      } else {
+        invChannelRef.current.unsubscribe?.();
       }
-    }, 200);
-  };
-
-  return () => {
-    try {
-      if (invChannelRef.current) {
-        if (typeof supabase.removeChannel === 'function') supabase.removeChannel(invChannelRef.current);
-        else invChannelRef.current.unsubscribe?.();
-      }
-      if (invDebugRef.current) {
-        if (typeof supabase.removeChannel === 'function') supabase.removeChannel(invDebugRef.current);
-        else invDebugRef.current.unsubscribe?.();
-      }
-    } catch (e) {
-      // noop
-    } finally {
       invChannelRef.current = null;
-      invDebugRef.current = null;
-      if (cleanupTimer.id) window.clearTimeout(cleanupTimer.id);
     }
-  };
-}, [selectedCharacter?.id, currentPlayer?.id]); // subscribe when selectedCharacter or currentPlayer changes
+
+    if (!currentPlayer?.id) return; // use the currentPlayer state you declared
+
+    console.log('GamePage: subscribe inventory_items realtime for player', currentPlayer.id);
+
+    const ch = supabase
+      .channel(`inv-player-${currentPlayer.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'inventory_items',
+          filter: `player_id=eq.${currentPlayer.id}`,
+        },
+        (payload: any) => {
+          console.log('[Realtime] inventory_items INSERT payload:', payload);
+          const rec = payload?.record ?? payload?.new;
+          if (!rec) return;
+
+          // update local inventory state (this will propagate as prop to EquipmentTab)
+          setInventory((prev) => {
+            // avoid duplicates if present
+            if (prev.some((i) => i.id === rec.id)) return prev;
+            return [rec, ...prev];
+          });
+        }
+      )
+      .subscribe();
+
+    invChannelRef.current = ch;
+
+    return () => {
+      if (invChannelRef.current) {
+        if (typeof supabase.removeChannel === 'function') {
+          supabase.removeChannel(invChannelRef.current);
+        } else {
+          invChannelRef.current.unsubscribe?.();
+        }
+        invChannelRef.current = null;
+      }
+    };
+  }, [currentPlayer?.id]);
+  // --- END
 
   // Onglet initial
   const initialTab: TabKey = (() => {
