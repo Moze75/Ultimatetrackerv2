@@ -563,6 +563,59 @@ export function EquipmentTab({
     return () => clearTimeout(timeoutId);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+// --- START: Realtime subscription for inventory_items (insert) ---
+// Place this AFTER the "Sync initial armes" useEffect and BEFORE `const jewelryItems = ...`
+const invChannelRef = useRef<any>(null);
+
+useEffect(() => {
+  // cleanup previous channel if any
+  if (invChannelRef.current) {
+    if (typeof supabase.removeChannel === 'function') {
+      supabase.removeChannel(invChannelRef.current);
+    } else {
+      invChannelRef.current.unsubscribe?.();
+    }
+    invChannelRef.current = null;
+  }
+
+  if (!player?.id) return;
+
+  console.log('EquipmentTab: subscribing inventory_items realtime for player', player.id);
+
+  const ch = supabase
+    .channel(`inv-player-${player.id}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'inventory_items',
+        filter: `player_id=eq.${player.id}`,
+      },
+      (payload: any) => {
+        console.log('[Realtime] inventory_items payload:', payload);
+        // Prefer to re-fetch the inventory so we stay consistent with policies/ordering
+        // call refreshInventory (non-blocking)
+        try { refreshInventory(150); } catch (e) { console.warn('refreshInventory failed', e); }
+      }
+    )
+    .subscribe();
+
+  invChannelRef.current = ch;
+
+  return () => {
+    if (invChannelRef.current) {
+      if (typeof supabase.removeChannel === 'function') {
+        supabase.removeChannel(invChannelRef.current);
+      } else {
+        invChannelRef.current.unsubscribe?.();
+      }
+      invChannelRef.current = null;
+    }
+  };
+}, [player?.id]);
+// --- END
+  
   const jewelryItems = useMemo(() => inventory.filter(i => parseMeta(i.description)?.type === 'jewelry'), [inventory]);
   const potionItems = useMemo(() => inventory.filter(i => parseMeta(i.description)?.type === 'potion'), [inventory]);
 
