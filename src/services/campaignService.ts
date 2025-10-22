@@ -291,47 +291,165 @@ async addItemToCampaign(
   // ENVOIS (GIFTS)
   // =============================================
 
-async sendGift(
+// Remplacez les implémentations existantes de sendGift et claimGift par ce code.
+// Ces fonctions utilisent le client `supabase` déjà importé dans ce fichier.
+// Note : pour une atomicité parfaite (ex : insert gift + décrémenter inventory ou insert claim + marquer gift claimed)
+// il est recommandé d'implémenter une fonction PL/pgSQL (RPC) et l'appeler via supabase.rpc(...) — voir commentaires plus bas.
+
+type DistributionMode = 'individual' | 'shared';
+
+export async function sendGift(
   campaignId: string,
-  giftType: GiftType,
-  data: {
-    itemName?: string;
-    itemDescription?: string;
-    itemQuantity?: number;
-    gold?: number;
-    silver?: number;
-    copper?: number;
-    distributionMode: DistributionMode;
-    message?: string;
+  type: 'item' | 'currency',
+  payload: {
+    itemName?: string | null;
+    itemDescription?: string | null;
+    itemQuantity?: number | null;
+    gold?: number | null;
+    silver?: number | null;
+    copper?: number | null;
+    distributionMode?: DistributionMode | null;
+    recipientIds?: string[] | null;
+    message?: string | null;
+    inventoryItemId?: string | null; // facultatif : id du campaign_inventory à décrémenter/supprimer
   }
-): Promise<CampaignGift> {
+) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Non authentifié');
 
-  // ❌ RETIRÉ : Ne plus nettoyer les métadonnées, on les garde !
-  // On envoie la description telle quelle avec les #meta:
-  
-  const { data: gift, error } = await supabase
+  // Créer le gift (status = 'pending')
+  const { data: insertedGift, error: insertErr } = await supabase
     .from('campaign_gifts')
     .insert({
       campaign_id: campaignId,
-      gift_type: giftType,
-      item_name: data.itemName,
-      item_description: data.itemDescription, // ✅ Description complète avec métadonnées
-      item_quantity: data.itemQuantity,
-      gold: data.gold || 0,
-      silver: data.silver || 0,
-      copper: data.copper || 0,
-      distribution_mode: data.distributionMode,
-      message: data.message,
+      gift_type: type,
+      item_name: payload.itemName ?? null,
+      item_description: payload.itemDescription ?? null,
+      item_quantity: payload.itemQuantity ?? null,
+      gold: payload.gold ?? null,
+      silver: payload.silver ?? null,
+      copper: payload.copper ?? null,
+      distribution_mode: payload.distributionMode ?? 'individual',
+      recipient_ids: payload.recipientIds ?? null,
+      message: payload.message ?? null,
       sent_by: user.id,
+      status: 'pending',
+      sent_at: new Date().toISOString()
     })
     .select()
     .single();
 
-  if (error) throw error;
-  return gift;
-},
+  if (insertErr) throw insertErr;
+
+  // Optionnel : décrémenter / supprimer l'item dans l'inventaire de campagne
+  // NOTE: cette étape n'est pas atomique avec la création du gift. Pour atomicité, créez un RPC côté serveur.
+  if (payload.inventoryItemId && payload.itemQuantity && payload.itemQuantity > 0) {
+    try {
+      // Décrémenter la quantité
+      const { data: updatedInv, error: updErr } = await supabase
+        .from('campaign_inventory')
+        .update({
+          quantity: supabase.rpc ? undefined : (/* fallback, will use SQL below */ null)
+        })
+        // Using a raw SQL update pattern because supabase-js doesn't support column = column - value directly in update payload.
+        // We'll run a SQL RPC-like query via from().update with raw SQL via .eq + .filter? Simpler: fetch current quantity then update/delete.
+        .eq('id', payload.inventoryItemId);
+
+      // Fallback / portable approach: read current quantity then update or delete.
+      const { data: invRow, error: invErr } = await supabase
+        .from('campaign_inventory')
+        .select('id, quantity')
+        .eq('id', payload.inventoryItemId)
+        .single();
+
+      if (invErr) {
+        console.warn('Impossible de lire l\'inventaire pour décrémentation', invErr);
+      } else {
+        const newQty = (invRow.quantity || 0) - (payload.itemQuantity || 0);
+        if (newQty > 0) {
+          const { error: qErr } = await supabase
+            .from('campaign_inventory')
+            .update({ quantity: newQty })
+            .eq('id', payload.inventoryItemId);
+          if (qErr) console.warn('Erreur mise à jour quantité inventaire:', qErr);
+        } else {
+          const { error: delErr } = await supabase
+            .from('campaign_inventory')
+            .delete()
+            .eq('id', payload.inventoryItemId);
+          if (delErr) console.warn('Erreur suppression inventaire:', delErr);
+        }
+      }
+    } catch (err) {
+      console.warn('Erreur lors de la décrémentation d\'inventaire après envoi du gift:', err);
+    }
+  }
+
+  return insertedGift;
+}
+
+/**
+ * claimGift : marque un gift comme "claimed" de façon conditionnelle (update WHERE status='pending')
+ * et enregistre une ligne dans campaign_gift_claims.
+ *
+ * Comportement :
+ * - Si le gift.status n'est pas 'pending' la fonction échoue (déjà récupéré)
+ * - L'update conditionnel `status='pending' -> status='claimed'` est atomique côté DB :
+ *   si deux joueurs appellent simultanément, un seul update retournera une ligne.
+ *
+ * IMPORTANT : Pour une garantie ACID complète (insert claim + update gift en une transaction),
+ * implémentez un RPC Postgres (PL/pgSQL) et appelez-le via supabase.rpc(...).
+ */
+export async function claimGift(
+  giftId: string,
+  userId: string,
+  opts?: Record<string, any>
+) {
+  // Étape 1 : tenter d'atomiquement marquer le gift comme claimed (ne réussira que si status = 'pending')
+  const { data: updatedGift, error: updateErr } = await supabase
+    .from('campaign_gifts')
+    .update({
+      status: 'claimed',
+      claimed_by: userId,
+      claimed_at: new Date().toISOString()
+    })
+    .eq('id', giftId)
+    .eq('status', 'pending') // conditionnelle : atomicité garantie côté Postgres
+    .select()
+    .single();
+
+  if (updateErr) {
+    // Si updateErr contient "No rows found" / nothing returned, on transforme en message lisible
+    console.error('Erreur mise à jour gift:', updateErr);
+    throw new Error('Impossible de marquer le cadeau comme récupéré (déjà récupéré ou introuvable).');
+  }
+
+  if (!updatedGift) {
+    // Pas de ligne retournée -> déjà revendiqué
+    throw new Error('Cadeau déjà récupéré ou non disponible.');
+  }
+
+  // Étape 2 : insérer l'enregistrement de claim
+  const { data: claimRow, error: claimErr } = await supabase
+    .from('campaign_gift_claims')
+    .insert({
+      gift_id: giftId,
+      user_id: userId,
+      claimed_at: new Date().toISOString(),
+      details: opts || {}
+    })
+    .select()
+    .single();
+
+  if (claimErr) {
+    // Attention : ici le gift est déjà marqué 'claimed' ; en cas d'erreur d'insertion, on laisse le statut claimed
+    // pour éviter double-claim. Vous pouvez implémenter un RPC transactionnel pour éviter cet état intermédiaire.
+    console.error('Erreur insertion claim:', claimErr);
+    throw claimErr;
+  }
+
+  return { gift: updatedGift, claim: claimRow };
+}
 
   async getCampaignGifts(campaignId: string): Promise<CampaignGift[]> {
     const { data, error } = await supabase
