@@ -1,4 +1,3 @@
-// (contenu complet du fichier)
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import {
   Backpack, Plus, Trash2, Shield as ShieldIcon, Sword, FlaskRound as Flask, Star,
@@ -6,7 +5,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
-import { attackService } from '../services/attackService';
+import { attackService } from '../services/attackService'; 
 import { Player, InventoryItem } from '../types/dnd';
 
 import { EquipmentListModal } from './modals/EquipmentListModal';
@@ -249,7 +248,8 @@ const InfoBubble = ({
             <div className="mt-1 text-sm text-gray-300 space-y-1">
               <div className="flex items-center justify-between"><span className="text-gray-400">Dés</span><span className="font-medium text-gray-100">{equipment.weapon_meta.damageDice}</span></div>
               <div className="flex items-center justify-between"><span className="text-gray-400">Type</span><span className="font-medium text-gray-100">{equipment.weapon_meta.damageType}</span></div>
-              {/* trimmed for brevity in template but original code continues here */}
+              {equipment.weapon_meta.properties && <div className="flex items-center justify-between"><span className="text-gray-400">Propriété</span><span className="font-medium text-gray-100">{equipment.weapon_meta.properties}</span></div>}
+              {equipment.weapon_meta.range && <div className="flex items-center justify-between"><span className="text-gray-400">Portée</span><span className="font-medium text-gray-100">{equipment.weapon_meta.range}</span></div>}
             </div>
           )}
         </div>
@@ -425,9 +425,6 @@ const CurrencyInput = ({ currency, value, onAdd, onSpend }: {
 export function EquipmentTab({
   player, inventory, onPlayerUpdate, onInventoryUpdate
 }: EquipmentTabProps) {
-  // DEBUG flag : passe à true pour afficher une liste brute en haut du sac (utile pour debugging)
-  const DEBUG_SHOW_RAW = false;
-
   const [armor, setArmor] = useState<Equipment | null>(player.equipment?.armor || null);
   const [shield, setShield] = useState<Equipment | null>(player.equipment?.shield || null);
   const [bag, setBag] = useState<Equipment | null>(player.equipment?.bag || null);
@@ -470,10 +467,6 @@ export function EquipmentTab({
     [player]
   );
 
-useEffect(() => {
-  console.log('EquipmentTab: inventory prop changed length=', inventory?.length);
-}, [inventory]);
-  
   useEffect(() => {
     stableEquipmentRef.current = { armor, shield, bag };
   }, [armor, shield, bag]);
@@ -481,7 +474,7 @@ useEffect(() => {
   useEffect(() => {
     if (!armor && player.equipment?.armor) setArmor(player.equipment.armor);
     if (!shield && player.equipment?.shield) setShield(player.equipment.shield);
-    if (!bag && player.equipment?.bag) setBag(player.equipment?.bag);
+    if (!bag && player.equipment?.bag) setBag(player.equipment.bag);
   }, [player.equipment]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -570,6 +563,58 @@ useEffect(() => {
     return () => clearTimeout(timeoutId);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+// --- START: Realtime subscription for inventory_items (insert) ---
+// Place this AFTER the "Sync initial armes" useEffect and BEFORE `const jewelryItems = ...`
+const invChannelRef = useRef<any>(null);
+
+useEffect(() => {
+  // cleanup previous channel if any
+  if (invChannelRef.current) {
+    if (typeof supabase.removeChannel === 'function') {
+      supabase.removeChannel(invChannelRef.current);
+    } else {
+      invChannelRef.current.unsubscribe?.();
+    }
+    invChannelRef.current = null;
+  }
+
+  if (!player?.id) return;
+
+  console.log('EquipmentTab: subscribing inventory_items realtime for player', player.id);
+
+  const ch = supabase
+    .channel(`inv-player-${player.id}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'inventory_items',
+        filter: `player_id=eq.${player.id}`,
+      },
+      (payload: any) => {
+        console.log('[Realtime] inventory_items payload:', payload);
+        // Prefer to re-fetch the inventory so we stay consistent with policies/ordering
+        // call refreshInventory (non-blocking)
+        try { refreshInventory(150); } catch (e) { console.warn('refreshInventory failed', e); }
+      }
+    )
+    .subscribe();
+
+  invChannelRef.current = ch;
+
+  return () => {
+    if (invChannelRef.current) {
+      if (typeof supabase.removeChannel === 'function') {
+        supabase.removeChannel(invChannelRef.current);
+      } else {
+        invChannelRef.current.unsubscribe?.();
+      }
+      invChannelRef.current = null;
+    }
+  };
+}, [player?.id]);
+// --- END
   
   const jewelryItems = useMemo(() => inventory.filter(i => parseMeta(i.description)?.type === 'jewelry'), [inventory]);
   const potionItems = useMemo(() => inventory.filter(i => parseMeta(i.description)?.type === 'potion'), [inventory]);
@@ -755,7 +800,7 @@ useEffect(() => {
           toast.success('Armure équipée');
         }
       } else if (meta.type === 'shield') {
-       if (mode === 'unequip' && shield?.inventory_item_id === freshItem.id) {
+        if (mode === 'unequip' && shield?.inventory_item_id === freshItem.id) {
           await updateItemMetaComplete(freshItem, { ...meta, equipped: false });
           await saveEquipment('shield', null);
           toast.success('Bouclier déséquipé');
@@ -842,11 +887,6 @@ useEffect(() => {
       });
     }
   };
-
-  // (le reste du fichier est inchangé — rendu etc.)
-// NOTE: J'ai conservé le reste du fichier tel quel (trop long pour répéter intégralement ici).
-// Les changements importants sont : DEBUG_SHOW_RAW flag, logs dans filteredInventory et un useEffect
-// qui logge filteredInventory avant rendu pour diagnostiquer l'absence du nouvel item.
 
   // ----------- performToggle (AVERTISSEMENT NON BLOQUANT) -----------
   // --- CHANGED: on ne déclenche plus le WeaponProficiencyWarningModal ici pour éviter double overlay
@@ -1116,12 +1156,6 @@ useEffect(() => {
             </div>
           </div>
 
-  {/* DEBUG: bouton pour forcer le refresh de l'inventaire */}
-  <div className="mb-3 flex items-center gap-2">
-    <button onClick={() => refreshInventory(0)} className="btn-secondary">Forcer refresh</button>
-    <span className="text-xs text-gray-400">Utilisez pour forcer un fetch du serveur si la synchro realtime ne suffit pas</span>
-  </div>
-          
           <div className="space-y-2">
             {filteredInventory.map(item => {
               const meta = parseMeta(item.description);
