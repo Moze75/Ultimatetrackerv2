@@ -829,7 +829,13 @@ const showAsStatic = !isInteracting && !animating;
   onInventoryAdd={(item: any) => {
     console.log('GamePage: onInventoryAdd called with', item?.id);
     if (!item || !item.id) return;
-    setInventory(prev => (prev.some(i => i.id === item.id) ? prev : [item, ...prev]));
+    setInventory(prev => {
+  const map = new Map(prev.map(i => [i.id, i]));
+  map.set(rec.id, rec);
+  // keep previous order but place rec at front:
+  const next = [rec, ...prev.filter(i => i.id !== rec.id)];
+  return next;
+});
   }}
 />
             <TabNavigation activeTab={activeTab} onTabChange={handleTabClickChange} />
