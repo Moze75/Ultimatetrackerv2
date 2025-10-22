@@ -1083,13 +1083,18 @@ setTimeout(() => {
                             </div>
                           </div>
                         ) : (
-                          <button
-                            onClick={() => handleClaimGift(gift)}
-                            className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
-                          >
-                            <Gift size={18} />
-                            Récupérer
-                          </button>
+<button
+  onClick={() => handleClaimGift(gift)}
+  disabled={claiming} // ✅ AJOUTE
+  className={`w-full px-4 py-2 rounded-lg flex items-center justify-center gap-2 ${
+    claiming 
+      ? 'bg-gray-600 cursor-not-allowed' 
+      : 'bg-purple-600 hover:bg-purple-700'
+  } text-white`}
+>
+  <Gift size={18} />
+  {claiming ? 'Récupération...' : 'Récupérer'}
+</button>
                         )}
                       </div>
                     );
