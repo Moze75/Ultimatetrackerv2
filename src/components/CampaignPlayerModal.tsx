@@ -74,6 +74,49 @@ export function CampaignPlayerModal({
     }
   };
 
+  // small helper: refetch most recent inventory rows and notify parent
+  const refreshLatestInventory = async (delayMs = 0) => {
+    try {
+      if (!player?.id) return;
+      if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));
+      const { data: latestRows, error } = await supabase
+        .from('inventory_items')
+        .select('*')
+        .eq('player_id', player.id)
+        .order('created_at', { ascending: false })
+        .limit(3);
+      if (error) {
+        console.warn('CampaignPlayerModal: refreshLatestInventory fetch error', error);
+        return;
+      }
+      if (latestRows && latestRows.length > 0) {
+        // merge into modal inventory (dedupe)
+        setInventory((prev) => {
+          try {
+            const merged = [
+              ...latestRows.filter((r: any) => !prev.some((p) => p.id === r.id)),
+              ...prev,
+            ];
+            return merged;
+          } catch (e) {
+            console.warn('CampaignPlayerModal: merge error', e);
+            return prev;
+          }
+        });
+        // notify parent for each new row (dedupe by checking parent's callback responsibility)
+        try {
+          latestRows.forEach((r: any) => {
+            try { onInventoryAdd?.(r); } catch (e) { /* noop */ }
+          });
+        } catch (e) {
+          // noop
+        }
+      }
+    } catch (e) {
+      console.warn('CampaignPlayerModal: refreshLatestInventory failed', e);
+    }
+  };
+
   /* ---------------- Realtime: inventory_items (INSERT) ---------------- */
   useEffect(() => {
     // cleanup previous channel(s)
@@ -494,6 +537,14 @@ export function CampaignPlayerModal({
               console.warn('CampaignPlayerModal: scheduling onInventoryAdd failed', e);
             }
 
+            // small refresh to ensure parent sees the new rows (defensive)
+            try {
+              // give DB a short moment then fetch the latest rows and notify parent
+              refreshLatestInventory(250);
+            } catch (e) {
+              console.warn('CampaignPlayerModal: scheduled refresh failed', e);
+            }
+
             // close modal after a small delay so parent/UI can update
             setTimeout(() => {
               try {
@@ -519,6 +570,8 @@ export function CampaignPlayerModal({
             setInventory((prev) => [latestRows[0], ...prev]);
             try { onInventoryAdd?.(latestRows[0]); } catch {}
             toast.success('Cadeau récupéré !');
+            // also refresh latest to notify parent of up to 3 recent rows
+            try { refreshLatestInventory(0); } catch {}
             setTimeout(() => onClose(), 700);
             return;
           }
@@ -553,6 +606,8 @@ export function CampaignPlayerModal({
           } else {
             setInventory((prev) => [insertedItem, ...prev]);
             try { onInventoryAdd?.(insertedItem); } catch {}
+            // notify parent more thoroughly
+            try { refreshLatestInventory(0); } catch {}
             const typeLabel =
               itemMeta.type === 'armor' ? 'Armure' :
               itemMeta.type === 'shield' ? 'Bouclier' :
@@ -607,7 +662,7 @@ export function CampaignPlayerModal({
   return (
     <div className="fixed inset-0 z-[11000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
-      <div className="fixed inset-0 sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[min(42rem,95vw)] sm:max-h-[90vh] sm:rounded-xl overflow-hidden bg-gray-900 border-0 sm:border sm:border-gray-700 rounded-none">
+      <div className="fixed inset-0 sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[min(42rem,95vw)] sm:max-h-[90vh] sm:rounded-xl overflow-hidden bg-gray-900 border-0 sm:border s[...]
         {/* Header */}
         <div className="bg-gray-800/60 border-b border-gray-700 px-4 py-3">
           <div className="flex items-center justify-between">
@@ -665,7 +720,7 @@ export function CampaignPlayerModal({
                       <X size={18} />
                     </button>
                   </div>
-                  <input type="text" value={invitationCode} onChange={(e) => setInvitationCode(e.target.value.toUpperCase())} className="input-dark w-full px-4 py-2 rounded-lg text-center font-mono text-lg tracking-wider" placeholder="ABCD1234" maxLength={8} onKeyDown={(e) => { if (e.key === 'Enter') handleJoinWithCode(); }} />
+                  <input type="text" value={invitationCode} onChange={(e) => setInvitationCode(e.target.value.toUpperCase())} className="input-dark w-full px-4 py-2 rounded-lg text-center font-mono te[...]
                   <button onClick={handleJoinWithCode} className="w-full btn-primary px-4 py-2 rounded-lg">Rejoindre la campagne</button>
                 </div>
               )}
@@ -686,7 +741,7 @@ export function CampaignPlayerModal({
                     </div>
 
                     <div className="flex gap-2">
-                      <button onClick={() => handleAcceptInvitation(invitation.id)} className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 font-medium">
+                      <button onClick={() => handleAcceptInvitation(invitation.id)} className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center g[...]
                         <Check size={18} /> Accepter et rejoindre
                       </button>
                       <button onClick={() => handleDeclineInvitation(invitation.id)} className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg">Refuser</button>
