@@ -429,7 +429,7 @@ async claimGift(
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Non authentifié');
 
-    // Insérer le claim
+    // Insérer le claim (fallback minimal — n'inclut pas 'details' pour compatibilité)
     const { data, error } = await supabase
       .from('campaign_gift_claims')
       .insert({
@@ -440,8 +440,7 @@ async claimGift(
         claimed_gold: claimed.gold ?? 0,
         claimed_silver: claimed.silver ?? 0,
         claimed_copper: claimed.copper ?? 0,
-        claimed_at: new Date().toISOString(),
-        details: claimed
+        claimed_at: new Date().toISOString()
       })
       .select()
       .single();
