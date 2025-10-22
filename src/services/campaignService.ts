@@ -425,7 +425,8 @@ const rpcRes = await callRpc('rpc_claim_gift', {
   } catch (err) {
 // Fallback non-transactionnel mais plus sûr : update conditionnel D'ABORD, puis insert claim
 console.warn('rpc_claim_gift failed, falling back to non-transactional flow:', err);
-const { data: { user } } = await supabase.auth.getUser();
+const sessionRes = await supabase.auth.getUser();
+const user = sessionRes?.data?.user;
 if (!user) throw new Error('Non authentifié');
 
 // 1) Tentative atomique : marquer le gift comme 'claimed' seulement si status = 'pending'
