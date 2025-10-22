@@ -11,6 +11,55 @@ import {
 } from '../types/campaign';
 import toast from 'react-hot-toast';
 
+{pendingGifts.map((gift) => {
+  const meta = parseMeta(gift.item_description);
+  const isCurrencyShared = gift.gift_type === 'currency' && gift.distribution_mode === 'shared';
+
+  return (
+    <div key={gift.id} className="bg-gray-800/40 border border-purple-500/30 rounded-lg p-4">
+      {/* ... contenu existant ... */}
+
+      {/* Bouton de récupération modifié */}
+      {isCurrencyShared ? (
+        <button
+          onClick={async () => {
+            const members = await loadCampaignMembers(gift.campaign_id);
+            setCampaignMembersForDistribution(members);
+            setSelectedGiftForDistribution(gift);
+            setShowDistributionModal(true);
+          }}
+          className="w-full bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
+        >
+          <Users size={18} />
+          Distribuer équitablement
+        </button>
+      ) : (
+        <button
+          onClick={() => handleClaimGift(gift)}
+          className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
+        >
+          <Gift size={18} />
+          Récupérer
+        </button>
+      )}
+    </div>
+  );
+})}
+
+{/* Ajoutez le modal de distribution avant la fermeture du composant */}
+{showDistributionModal && selectedGiftForDistribution && (
+  <CurrencyDistributionModal
+    gift={selectedGiftForDistribution}
+    campaignMembers={campaignMembersForDistribution}
+    currentUserId={user.id}
+    onClose={() => {
+      setShowDistributionModal(false);
+      setSelectedGiftForDistribution(null);
+    }}
+    onDistribute={handleDistributeCurrency}
+  />
+)}
+
 interface CampaignPlayerModalProps {
   open: boolean;
   onClose: () => void;
