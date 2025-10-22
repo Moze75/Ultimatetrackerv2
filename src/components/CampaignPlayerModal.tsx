@@ -190,47 +190,81 @@ export function CampaignPlayerModal({
   };
  
   const handleClaimGift = async (gift: CampaignGift) => {
+  try {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  console.log('🎁 Claiming gift:', gift);
+
+  if (gift.gift_type === 'item') {
+    // 1) Attempt to claim atomically via service (will mark gift as 'distributed' server-side)
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { claim, item } = await campaignService.claimGift(gift.id, player.id, {
+        quantity: gift.item_quantity || 1,
+      });
 
-      console.log('🎁 Claiming gift:', gift);
+      console.log('Claim result', claim, item);
 
-      if (gift.gift_type === 'item') {
-        // 1) Attempt to claim atomically via service (will mark gift as 'claimed' server-side)
-        try {
-          await campaignService.claimGift(gift.id, player.id, {
-            quantity: gift.item_quantity || 1,
-          });
-        } catch (err: any) {
-          console.error('Erreur lors du claim:', err);
-          toast.error(err?.message || 'Impossible de récupérer l\'objet (probablement déjà récupéré).');
-          // reload to refresh state
+      // 1a) Retirer le gift de la liste locale (si vous stockez pendingGifts en state)
+      try {
+        if (typeof setPendingGifts === 'function') {
+          setPendingGifts((prev: CampaignGift[]) => prev.filter(g => g.id !== gift.id));
+        } else {
+          // fallback : reload si on n'a pas de setter local
           loadData();
-          return;
         }
+      } catch (e) {
+        console.warn('Erreur mise à jour état local pending gifts, reload:', e);
+        loadData();
+      }
 
-        // 2) If claim succeeded, insert the item into the player's inventory
-        // Parse original meta if present
-        const metaPrefix = META_PREFIX;
-        let originalMeta = null;
-        if (gift.item_description) {
-          const lines = gift.item_description.split('\n');
-          const metaLine = lines.find(l => l.trim().startsWith(metaPrefix));
-          if (metaLine) {
-            try {
-              originalMeta = JSON.parse(metaLine.trim().slice(metaPrefix.length));
-            } catch (err) {
-              console.error('Erreur parsing métadonnées:', err);
-            }
+      // 1b) Ajouter l'item retourné par la RPC à l'inventaire local si présent
+      if (item) {
+        try {
+          if (typeof setInventory === 'function') {
+            setInventory((prev: any[]) => [item, ...prev]);
+          } else if (typeof addInventoryItem === 'function') {
+            addInventoryItem(item);
+          } else {
+            // fallback : reload si on ne sait pas mettre à jour localement
+            loadData();
           }
+        } catch (e) {
+          console.warn("Erreur ajout item à l'inventaire local, reload:", e);
+          loadData();
         }
+      }
 
-        const itemMeta = originalMeta || {
-          type: 'equipment' as const,
-          quantity: gift.item_quantity || 1,
-          equipped: false,
-        };
+      toast.success('Cadeau récupéré !');
+    } catch (err: any) {
+      console.error('Erreur lors du claim:', err);
+      toast.error(err?.message || 'Impossible de récupérer l\'objet (probablement déjà récupéré).');
+      // reload to refresh state
+      loadData();
+      return;
+    }
+
+    // 2) If claim succeeded (or after fallback), prepare metadata for the created item
+    // Parse original meta if present
+    const metaPrefix = META_PREFIX;
+    let originalMeta = null;
+    if (gift.item_description) {
+      const lines = gift.item_description.split('\n');
+      const metaLine = lines.find(l => l.trim().startsWith(metaPrefix));
+      if (metaLine) {
+        try {
+          originalMeta = JSON.parse(metaLine.trim().slice(metaPrefix.length));
+        } catch (err) {
+          console.error('Erreur parsing métadonnées:', err);
+        }
+      }
+    }
+
+    const itemMeta = originalMeta || {
+      type: 'equipment' as const,
+      quantity: gift.item_quantity || 1,
+      equipped: false,
+    };
 
         itemMeta.quantity = gift.item_quantity || 1;
         itemMeta.equipped = false;
