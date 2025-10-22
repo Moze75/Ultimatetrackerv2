@@ -149,32 +149,32 @@ export const campaignService = {
     if (memberError) throw memberError;
   },
 
-async declineInvitation(invitationId: string): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Non authentifié');
+  async declineInvitation(invitationId: string): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Non authentifié');
 
-  // Remplir le player_id lors du refus pour satisfaire la policy
-  const { error } = await supabase
-    .from('campaign_invitations')
-    .update({
-      status: 'declined',
-      responded_at: new Date().toISOString(),
-      player_id: user.id,
-    })
-    .eq('id', invitationId);
+    // Remplir le player_id lors du refus pour satisfaire la policy
+    const { error } = await supabase
+      .from('campaign_invitations')
+      .update({
+        status: 'declined',
+        responded_at: new Date().toISOString(),
+        player_id: user.id,
+      })
+      .eq('id', invitationId);
 
-  if (error) throw error;
-},
+    if (error) throw error;
+  },
 
   // ✅ AJOUTEZ ICI :
-async deleteInvitation(invitationId: string): Promise<void> {
-  const { error } = await supabase
-    .from('campaign_invitations')
-    .delete()
-    .eq('id', invitationId);
+  async deleteInvitation(invitationId: string): Promise<void> {
+    const { error } = await supabase
+      .from('campaign_invitations')
+      .delete()
+      .eq('id', invitationId);
 
-  if (error) throw error;
-},
+    if (error) throw error;
+  },
 
   async getMyInvitations(): Promise<CampaignInvitation[]> {
     const { data: { user } } = await supabase.auth.getUser();
@@ -195,24 +195,24 @@ async deleteInvitation(invitationId: string): Promise<void> {
   // MEMBRES - ✅ SANS JOIN SUR auth.users
   // =============================================
 
-async getCampaignMembers(campaignId: string): Promise<CampaignMember[]> {
-  const { data: members, error } = await supabase
-    .from('campaign_members')
-    .select(`
+  async getCampaignMembers(campaignId: string): Promise<CampaignMember[]> {
+    const { data: members, error } = await supabase
+      .from('campaign_members')
+      .select(`
       *,
       player:players(name, adventurer_name)
     `)
-    .eq('campaign_id', campaignId)
-    .eq('is_active', true);
+      .eq('campaign_id', campaignId)
+      .eq('is_active', true);
 
-  if (error) throw error;
+    if (error) throw error;
 
-  return (members || []).map((member: any) => ({
-    ...member,
-    email: member.player_email || 'Email inconnu',
-    player_name: member.player?.adventurer_name || member.player?.name,
-  }));
-},
+    return (members || []).map((member: any) => ({
+      ...member,
+      email: member.player_email || 'Email inconnu',
+      player_name: member.player?.adventurer_name || member.player?.name,
+    }));
+  },
 
   async removeMember(memberId: string): Promise<void> {
     const { error } = await supabase
@@ -227,30 +227,30 @@ async getCampaignMembers(campaignId: string): Promise<CampaignMember[]> {
   // INVENTAIRE DE CAMPAGNE
   // =============================================
 
-async addItemToCampaign(
-  campaignId: string,
-  name: string,
-  description: string,
-  quantity: number
-): Promise<CampaignInventoryItem> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Non authentifié');
+  async addItemToCampaign(
+    campaignId: string,
+    name: string,
+    description: string,
+    quantity: number
+  ): Promise<CampaignInventoryItem> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Non authentifié');
 
-  const { data, error } = await supabase
-    .from('campaign_inventory')
-    .insert({
-      campaign_id: campaignId,
-      name,
-      description, // ✅ Contient les métadonnées #meta: si l'objet vient d'EquipmentListModal
-      quantity,
-      created_by: user.id,
-    })
-    .select()
-    .single();
+    const { data, error } = await supabase
+      .from('campaign_inventory')
+      .insert({
+        campaign_id: campaignId,
+        name,
+        description, // ✅ Contient les métadonnées #meta: si l'objet vient d'EquipmentListModal
+        quantity,
+        created_by: user.id,
+      })
+      .select()
+      .single();
 
-  if (error) throw error;
-  return data;
-},
+    if (error) throw error;
+    return data;
+  },
 
   async getCampaignInventory(campaignId: string): Promise<CampaignInventoryItem[]> {
     const { data, error } = await supabase
@@ -291,47 +291,84 @@ async addItemToCampaign(
   // ENVOIS (GIFTS)
   // =============================================
 
-async sendGift(
-  campaignId: string,
-  giftType: GiftType,
-  data: {
-    itemName?: string;
-    itemDescription?: string;
-    itemQuantity?: number;
-    gold?: number;
-    silver?: number;
-    copper?: number;
-    distributionMode: DistributionMode;
-    message?: string;
-  }
-): Promise<CampaignGift> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Non authentifié');
+  async sendGift(
+    campaignId: string,
+    giftType: GiftType,
+    data: {
+      itemName?: string;
+      itemDescription?: string;
+      itemQuantity?: number;
+      gold?: number;
+      silver?: number;
+      copper?: number;
+      distributionMode: DistributionMode;
+      message?: string;
+      recipientIds?: string[]; // destinataires explicites pour mode 'individual'
+      inventoryItemId?: string; // facultatif : id du campaign_inventory à décrémenter/supprimer
+    }
+  ): Promise<CampaignGift> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Non authentifié');
 
-  // ❌ RETIRÉ : Ne plus nettoyer les métadonnées, on les garde !
-  // On envoie la description telle quelle avec les #meta:
-  
-  const { data: gift, error } = await supabase
-    .from('campaign_gifts')
-    .insert({
-      campaign_id: campaignId,
-      gift_type: giftType,
-      item_name: data.itemName,
-      item_description: data.itemDescription, // ✅ Description complète avec métadonnées
-      item_quantity: data.itemQuantity,
-      gold: data.gold || 0,
-      silver: data.silver || 0,
-      copper: data.copper || 0,
-      distribution_mode: data.distributionMode,
-      message: data.message,
-      sent_by: user.id,
-    })
-    .select()
-    .single();
+    // Insère le gift (status = 'pending')
+    const { data: gift, error } = await supabase
+      .from('campaign_gifts')
+      .insert({
+        campaign_id: campaignId,
+        gift_type: giftType,
+        item_name: data.itemName ?? null,
+        item_description: data.itemDescription ?? null,
+        item_quantity: data.itemQuantity ?? null,
+        gold: data.gold ?? 0,
+        silver: data.silver ?? 0,
+        copper: data.copper ?? 0,
+        distribution_mode: data.distributionMode,
+        recipient_ids: data.recipientIds ?? null,
+        message: data.message ?? null,
+        sent_by: user.id,
+        status: 'pending',
+        sent_at: new Date().toISOString()
+      })
+      .select()
+      .single();
 
-  if (error) throw error;
-  return gift;
-},
+    if (error) throw error;
+
+    // Optionnel : décrémenter / supprimer l'item dans l'inventaire de campagne
+    // NOTE: ceci n'est pas atomique avec la création du gift. Pour atomicité, créez un RPC PL/pgSQL.
+    if (data.inventoryItemId && data.itemQuantity && data.itemQuantity > 0) {
+      try {
+        const { data: invRow, error: invErr } = await supabase
+          .from('campaign_inventory')
+          .select('id, quantity')
+          .eq('id', data.inventoryItemId)
+          .single();
+
+        if (invErr) {
+          console.warn('Impossible de lire l\'inventaire pour décrémentation', invErr);
+        } else {
+          const newQty = (invRow.quantity || 0) - (data.itemQuantity || 0);
+          if (newQty > 0) {
+            const { error: qErr } = await supabase
+              .from('campaign_inventory')
+              .update({ quantity: newQty })
+              .eq('id', data.inventoryItemId);
+            if (qErr) console.warn('Erreur mise à jour quantité inventaire:', qErr);
+          } else {
+            const { error: delErr } = await supabase
+              .from('campaign_inventory')
+              .delete()
+              .eq('id', data.inventoryItemId);
+            if (delErr) console.warn('Erreur suppression inventaire:', delErr);
+          }
+        }
+      } catch (err) {
+        console.warn('Erreur lors de la décrémentation d\'inventaire après envoi du gift:', err);
+      }
+    }
+
+    return gift;
+  },
 
   async getCampaignGifts(campaignId: string): Promise<CampaignGift[]> {
     const { data, error } = await supabase
@@ -357,22 +394,50 @@ async sendGift(
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Non authentifié');
 
-    const { data, error } = await supabase
+    // 1) Tentative atomique : marquer le gift comme 'claimed' seulement si status = 'pending'
+    const { data: updatedGift, error: updateErr } = await supabase
+      .from('campaign_gifts')
+      .update({
+        status: 'claimed',
+        claimed_by: user.id,
+        claimed_at: new Date().toISOString()
+      })
+      .eq('id', giftId)
+      .eq('status', 'pending')
+      .select()
+      .single();
+
+    if (updateErr) {
+      console.error('Erreur mise à jour gift:', updateErr);
+      throw new Error('Impossible de marquer le cadeau comme récupéré (déjà récupéré ou introuvable).');
+    }
+
+    if (!updatedGift) {
+      throw new Error('Cadeau déjà récupéré ou non disponible.');
+    }
+
+    // 2) Insérer l'enregistrement du claim
+    const { data: claimRow, error: claimErr } = await supabase
       .from('campaign_gift_claims')
       .insert({
         gift_id: giftId,
         user_id: user.id,
         player_id: playerId,
-        claimed_quantity: claimed.quantity,
-        claimed_gold: claimed.gold || 0,
-        claimed_silver: claimed.silver || 0,
-        claimed_copper: claimed.copper || 0,
+        claimed_quantity: claimed.quantity ?? null,
+        claimed_gold: claimed.gold ?? 0,
+        claimed_silver: claimed.silver ?? 0,
+        claimed_copper: claimed.copper ?? 0,
+        claimed_at: new Date().toISOString()
       })
       .select()
       .single();
 
-    if (error) throw error;
-    return data;
+    if (claimErr) {
+      console.error('Erreur insertion claim:', claimErr);
+      throw claimErr;
+    }
+
+    return claimRow;
   },
 
   async getGiftClaims(giftId: string): Promise<CampaignGiftClaim[]> {
