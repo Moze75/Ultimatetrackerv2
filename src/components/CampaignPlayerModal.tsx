@@ -553,50 +553,51 @@ export function CampaignPlayerModal({
 
       console.log('🎁 Claiming gift:', gift);
 
-      if (gift.gift_type === 'item') {
-        let originalMeta = null;
-        
-        if (gift.item_description) {
-          const lines = gift.item_description.split('\n');
-          const metaLine = lines.find(l => l.trim().startsWith(META_PREFIX));
-          if (metaLine) {
-            try {
-              originalMeta = JSON.parse(metaLine.trim().slice(META_PREFIX.length));
-              console.log('📦 Métadonnées originales trouvées:', originalMeta);
-            } catch (err) {
-              console.error('❌ Erreur parsing métadonnées:', err);
-            }
-          }
-        }
+    if (gift.gift_type === 'item') {
+  // 1. Parser les méta (garde le code existant)
+  let originalMeta = null;
+  
+  if (gift.item_description) {
+    const lines = gift.item_description.split('\n');
+    const metaLine = lines.find(l => l.trim().startsWith(META_PREFIX));
+    if (metaLine) {
+      try {
+        originalMeta = JSON.parse(metaLine.trim().slice(META_PREFIX.length));
+        console.log('📦 Métadonnées originales trouvées:', originalMeta);
+      } catch (err) {
+        console.error('❌ Erreur parsing métadonnées:', err);
+      }
+    }
+  }
 
-        const itemMeta = originalMeta || {
-          type: 'equipment' as const,
-          quantity: gift.item_quantity || 1,
-          equipped: false,
-        };
+  const itemMeta = originalMeta || {
+    type: 'equipment' as const,
+    quantity: gift.item_quantity || 1,
+    equipped: false,
+  };
 
-        itemMeta.quantity = gift.item_quantity || 1;
-        itemMeta.equipped = false;
+  itemMeta.quantity = gift.item_quantity || 1;
+  itemMeta.equipped = false;
 
-        console.log('📦 Métadonnées finales:', itemMeta);
+  console.log('📦 Métadonnées finales:', itemMeta);
 
-        const metaLine = `${META_PREFIX}${JSON.stringify(itemMeta)}`;
-        
-        const cleanDescription = gift.item_description
-          ? gift.item_description
-              .split('\n')
-              .filter(line => !line.trim().startsWith(META_PREFIX))
-              .join('\n')
-              .trim()
-          : '';
+  const metaLine = `${META_PREFIX}${JSON.stringify(itemMeta)}`;
+  
+  const cleanDescription = gift.item_description
+    ? gift.item_description
+        .split('\n')
+        .filter(line => !line.trim().startsWith(META_PREFIX))
+        .join('\n')
+        .trim()
+    : '';
 
-        const finalDescription = cleanDescription
-          ? `${cleanDescription}\n${metaLine}`
-          : metaLine;
+  const finalDescription = cleanDescription
+    ? `${cleanDescription}\n${metaLine}`
+    : metaLine;
 
-        console.log('📦 Description finale:', finalDescription);
+  console.log('📦 Description finale:', finalDescription);
 
-        // ✅ 1. CLAIM D'ABORD (avant l'insert)
+  // 2. Claim le gift AVANT de créer l'item
   try {
     await campaignService.claimGift(gift.id, player.id, {
       quantity: gift.item_quantity || 1,
@@ -611,51 +612,61 @@ export function CampaignPlayerModal({
     throw claimError;
   }
 
-  // ✅ 2. SI le gift a déjà un inventory_item_id, on le récupère au lieu de créer
-  let insertedItem;
-  
-  if (gift.inventory_item_id) {
-    // L'item existe déjà, on le récupère
-    const { data, error } = await supabase
-      .from('inventory_items')
-      .select()
-      .eq('id', gift.inventory_item_id)
-      .single();
-    
-    if (error) {
-      console.error('❌ Fetch existing item error:', error);
-      throw error;
-    }
-    
-    insertedItem = data;
-    console.log('✅ Item récupéré (existant):', insertedItem);
-  } else {
-    // Pas d'item existant, on le crée
-    const { data, error } = await supabase
-      .from('inventory_items')
-      .insert({
-        player_id: player.id,
-        name: gift.item_name || 'Objet',
-        description: finalDescription,
-      })
-      .select()
-      .single();
+  // ✅ 3. Vérifie si l'item existe DÉJÀ dans l'inventaire du joueur
+  const { data: existingItems } = await supabase
+    .from('inventory_items')
+    .select('id')
+    .eq('player_id', player.id)
+    .eq('name', gift.item_name || 'Objet')
+    .gte('created_at', new Date(Date.now() - 5000).toISOString()); // Créé dans les 5 dernières secondes
 
-    if (error) {
-      console.error('❌ Insert error:', error);
-      throw error;
-    }
+  if (existingItems && existingItems.length > 0) {
+    console.log('⚠️ Item déjà créé (probablement via trigger), on skip la création');
+    
+    // Dispatch event quand même
+    window.dispatchEvent(new CustomEvent('inventory:refresh', { 
+      detail: { playerId: player.id } 
+    }));
 
-    insertedItem = data;
-    console.log('✅ Item créé (nouveau):', insertedItem);
+    const typeLabel = 
+      itemMeta.type === 'armor' ? 'Armure' :
+      itemMeta.type === 'shield' ? 'Bouclier' :
+      itemMeta.type === 'weapon' ? 'Arme' :
+      'Objet';
+    
+    toast.success(`${typeLabel} "${gift.item_name}" ajouté${itemMeta.type === 'armor' ? 'e' : ''} à votre inventaire !`);
+
+    setTimeout(() => {
+      onClose();
+    }, 800);
+
+    return; // Stop ici
   }
 
-  // 3. Dispatch event
+  // 4. Sinon, créer l'item
+  const { data: insertedItem, error } = await supabase
+    .from('inventory_items')
+    .insert({
+      player_id: player.id,
+      name: gift.item_name || 'Objet',
+      description: finalDescription,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('❌ Insert error:', error);
+    throw error;
+  }
+
+  console.log('✅ Item créé:', insertedItem);
+
+  // 5. Dispatch event
   window.dispatchEvent(new CustomEvent('inventory:refresh', { 
     detail: { playerId: player.id } 
   }));
 
-  // 4. Toast
+  // 6. Toast
   const typeLabel = 
     itemMeta.type === 'armor' ? 'Armure' :
     itemMeta.type === 'shield' ? 'Bouclier' :
@@ -667,6 +678,7 @@ export function CampaignPlayerModal({
   setTimeout(() => {
     onClose();
   }, 800);
+
 
       } else {
         // ✅ ARGENT: même logique (claim puis update)
