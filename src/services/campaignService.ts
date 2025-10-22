@@ -411,7 +411,7 @@ async claimGift(
   // Essayer la RPC transactionnelle qui fait : verrous, update gift status, insert claim,
   // création d'item joueur et update inventaire campagne / joueurs en une transaction.
   try {
-    const rpcRes = await callRpc('rpc_claim_gift', {
+    const rpcRes = await callRpc('rpc_claim_gift', { 
       _gift_id: giftId,
       _player_id: playerId,
       _claimed: JSON.stringify(claimed)
@@ -424,7 +424,44 @@ async claimGift(
     }
     throw new Error('rpc_claim_gift returned unexpected shape');
   } catch (err) {
- 
+    // Fallback non-transactionnel
+    console.warn('rpc_claim_gift failed, falling back to non-transactional flow:', err);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Non authentifié');
+
+    // Insérer le claim (fallback minimal — n'inclut pas 'details' pour compatibilité)
+    const { data, error } = await supabase
+      .from('campaign_gift_claims')
+      .insert({
+        gift_id: giftId,
+        user_id: user.id,
+        player_id: playerId,
+        claimed_quantity: claimed.quantity ?? null,
+        claimed_gold: claimed.gold ?? 0,
+        claimed_silver: claimed.silver ?? 0,
+        claimed_copper: claimed.copper ?? 0,
+        claimed_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Best-effort : marquer gift comme claimed si il était pending
+    try {
+      await supabase
+        .from('campaign_gifts')
+        .update({ status: 'claimed', claimed_by: user.id, claimed_at: new Date().toISOString() })
+        .eq('id', giftId)
+        .eq('status', 'pending');
+    } catch (e) {
+      console.warn('Erreur marquage gift claimed en fallback:', e);
+    }
+
+    return data as CampaignGiftClaim;
+  }
+},
+
   async getGiftClaims(giftId: string): Promise<CampaignGiftClaim[]> {
     const { data, error } = await supabase
       .from('campaign_gift_claims')
