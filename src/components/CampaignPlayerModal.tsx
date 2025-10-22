@@ -137,15 +137,7 @@ export function CampaignPlayerModal({
     }
   };
 
-// --- START: load initial inventory for player (coller IMMEDIATEMENT après setPendingGifts(visibleGifts);)
-const { data: invRows } = await supabase
-  .from('inventory_items')
-  .select('*')
-  .eq('player_id', player.id)
-  .order('created_at', { ascending: false });
 
-setInventory(invRows || []);
-// --- END
   
   const handleAcceptInvitation = async (invitationId: string) => {
     try {
