@@ -127,10 +127,11 @@ export function GamePage({
           const rec = payload?.record ?? payload?.new;
           if (!rec) return;
 
-          // update local inventory and notify children by updating the inventory state
+          // update local inventory state (this will propagate as prop to EquipmentTab)
           setInventory((prev) => {
-            const next = [rec, ...prev];
-            return next;
+            // avoid duplicates if present
+            if (prev.some((i) => i.id === rec.id)) return prev;
+            return [rec, ...prev];
           });
         }
       )
