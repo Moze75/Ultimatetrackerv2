@@ -11,8 +11,6 @@ import {
 } from '../types/campaign';
 import toast from 'react-hot-toast';
 
-const [claiming, setClaiming] = useState(false);
-
 // =============================================
 // Modal de distribution équitable d'argent
 // =============================================
@@ -40,7 +38,6 @@ function CurrencyDistributionModal({
     campaignMembers.map(m => m.user_id)
   );
 
-  // Calculer la distribution équitable
   const calculateDistribution = () => {
     if (selectedMembers.length === 0) return [];
 
@@ -50,23 +47,20 @@ function CurrencyDistributionModal({
 
     const numMembers = selectedMembers.length;
 
-    // Distribution de base (division entière)
     const goldPerPerson = Math.floor(totalGold / numMembers);
     const silverPerPerson = Math.floor(totalSilver / numMembers);
     const copperPerPerson = Math.floor(totalCopper / numMembers);
 
-    // Calculer les restes
     const remainingGold = totalGold % numMembers;
     const remainingSilver = totalSilver % numMembers;
     const remainingCopper = totalCopper % numMembers;
 
-    // Créer la distribution
     const distribution = selectedMembers.map((userId, index) => {
       const member = campaignMembers.find(m => m.user_id === userId);
       return {
         userId,
         playerId: member?.player_id || '',
-        gold: goldPerPerson + (index === 0 ? remainingGold : 0), // Le premier reçoit le surplus
+        gold: goldPerPerson + (index === 0 ? remainingGold : 0),
         silver: silverPerPerson + (index === 0 ? remainingSilver : 0),
         copper: copperPerPerson + (index === 0 ? remainingCopper : 0),
       };
@@ -301,6 +295,8 @@ function CurrencyDistributionModal({
 // =============================================
 // Composant principal CampaignPlayerModal
 // =============================================
+const META_PREFIX = '#meta:';
+
 interface CampaignPlayerModalProps {
   open: boolean;
   onClose: () => void;
@@ -329,8 +325,9 @@ export function CampaignPlayerModal({
   const [campaignMembersForDistribution, setCampaignMembersForDistribution] = useState<CampaignMember[]>([]);
   const [membersByCampaign, setMembersByCampaign] = useState<Record<string, CampaignMember[]>>({});
 
-  // Utilitaires pour cacher / parser les méta
-  const META_PREFIX = '#meta:';
+  // ✅ AJOUT: État pour empêcher double-clic
+  const [claiming, setClaiming] = useState(false);
+
   const getVisibleDescription = (description: string | null | undefined): string => {
     if (!description) return '';
     return description
@@ -339,6 +336,7 @@ export function CampaignPlayerModal({
       .join('\n')
       .trim();
   };
+  
   const parseMeta = (description: string | null | undefined) => {
     if (!description) return null;
     const lines = description.split('\n').map(l => l.trim());
@@ -357,7 +355,6 @@ export function CampaignPlayerModal({
     }
   }, [open]);
 
-  // Fonction pour charger les membres d'une campagne
   const loadCampaignMembers = async (campaignId: string) => {
     try {
       const members = await campaignService.getCampaignMembers(campaignId);
@@ -374,11 +371,9 @@ export function CampaignPlayerModal({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Charger les invitations
       const invites = await campaignService.getMyInvitations();
       setInvitations(invites);
 
-      // Charger mes campagnes
       const { data: members } = await supabase
         .from('campaign_members')
         .select('campaign_id')
@@ -395,7 +390,6 @@ export function CampaignPlayerModal({
         setMyCampaigns(campaigns || []);
         setActiveCampaigns(campaigns || []);
 
-        // ✅ Charger les membres de chaque campagne
         const membersMap: Record<string, CampaignMember[]> = {};
         await Promise.all(
           campaignIds.map(async (campaignId) => {
@@ -405,7 +399,6 @@ export function CampaignPlayerModal({
         );
         setMembersByCampaign(membersMap);
 
-        // Charger les cadeaux en attente
         const { data: gifts } = await supabase
           .from('campaign_gifts')
           .select('*')
@@ -413,7 +406,6 @@ export function CampaignPlayerModal({
           .eq('status', 'pending')
           .order('sent_at', { ascending: false });
 
-        // Filtrer les cadeaux selon le mode de distribution
         const filteredGifts = (gifts || []).filter((gift) => {
           if (gift.distribution_mode === 'shared') {
             return true;
@@ -424,7 +416,6 @@ export function CampaignPlayerModal({
           return false;
         });
 
-        // Filtrer les cadeaux non encore récupérés
         const giftsWithClaims = await Promise.all(
           filteredGifts.map(async (gift) => {
             const claims = await campaignService.getGiftClaims(gift.id);
@@ -447,7 +438,6 @@ export function CampaignPlayerModal({
     }
   };
 
-  // Fonction pour gérer la distribution
   const handleDistributeCurrency = async (distribution: { userId: string; playerId: string; gold: number; silver: number; copper: number }[]) => {
     if (!selectedGiftForDistribution) return;
 
@@ -455,13 +445,11 @@ export function CampaignPlayerModal({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Trouver ma part dans la distribution
       const myShare = distribution.find(d => d.userId === user.id);
       if (!myShare) {
         throw new Error('Votre part n\'a pas été trouvée');
       }
 
-      // Mettre à jour mon argent
       const { error: updateError } = await supabase
         .from('players')
         .update({
@@ -473,14 +461,12 @@ export function CampaignPlayerModal({
 
       if (updateError) throw updateError;
 
-      // Enregistrer le claim avec les montants partiels
       await campaignService.claimGift(selectedGiftForDistribution.id, player.id, {
         gold: myShare.gold,
         silver: myShare.silver,
         copper: myShare.copper,
       });
 
-      // Mettre à jour l'état local
       onUpdate({
         ...player,
         gold: (player.gold || 0) + myShare.gold,
@@ -491,10 +477,9 @@ export function CampaignPlayerModal({
       setShowDistributionModal(false);
       setSelectedGiftForDistribution(null);
       
-setTimeout(() => {
-  onClose();
-  // Le polling gérera la mise à jour automatiquement
-}, 800);
+      setTimeout(() => {
+        onClose();
+      }, 800);
     } catch (error) {
       console.error('Erreur distribution:', error);
       throw error;
@@ -553,166 +538,167 @@ setTimeout(() => {
     }
   };
 
-const handleClaimGift = async (gift: CampaignGift) => {
-  // Guard contre double-clic
-  if (claiming) {
-    console.log('⏳ Claim déjà en cours, ignoré');
-    return;
-  }
-
-  try {
-    setClaiming(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    console.log('🎁 Claiming gift:', gift);
-
-    if (gift.gift_type === 'item') {
-      // 1. Parser les méta
-      let originalMeta = null;
-      if (gift.item_description) {
-        const lines = gift.item_description.split('\n');
-        const metaLine = lines.find(l => l.trim().startsWith(META_PREFIX));
-        if (metaLine) {
-          try {
-            originalMeta = JSON.parse(metaLine.trim().slice(META_PREFIX.length));
-            console.log('📦 Métadonnées originales trouvées:', originalMeta);
-          } catch (err) {
-            console.error('❌ Erreur parsing métadonnées:', err);
-          }
-        }
-      }
-
-      const itemMeta = originalMeta || {
-        type: 'equipment' as const,
-        quantity: gift.item_quantity || 1,
-        equipped: false,
-      };
-
-      itemMeta.quantity = gift.item_quantity || 1;
-      itemMeta.equipped = false;
-
-      console.log('📦 Métadonnées finales:', itemMeta);
-
-      const metaLine = `${META_PREFIX}${JSON.stringify(itemMeta)}`;
-      const cleanDescription = gift.item_description
-        ? gift.item_description
-            .split('\n')
-            .filter(line => !line.trim().startsWith(META_PREFIX))
-            .join('\n')
-            .trim()
-        : '';
-
-      const finalDescription = cleanDescription
-        ? `${cleanDescription}\n${metaLine}`
-        : metaLine;
-
-   console.log('📦 Description finale:', finalDescription);
-
-// ✅ BON ORDRE : Claim d'abord
-try {
-  await campaignService.claimGift(gift.id, player.id, {
-    quantity: gift.item_quantity || 1,
-  });
-  console.log('✅ Gift claimed successfully');
-} catch (claimError: any) {
-  console.error('❌ Claim error:', claimError);
-  // Si déjà récupéré, on stop tout
-  if (claimError.message?.includes('déjà récupéré')) {
-    toast.error('Cet objet a déjà été récupéré');
-    return; // ← Important : on arrête ici
-  }
-  throw claimError;
-}
-
-// PUIS insert l'item
-const { data: insertedItem, error } = await supabase
-  .from('inventory_items')
-  .insert({
-    player_id: player.id,
-    name: gift.item_name || 'Objet',
-    description: finalDescription,
-  })
-  .select()
-  .single();
-
-if (error) {
-  console.error('❌ Insert error:', error);
-  throw error;
-}
-
-console.log('✅ Item inserted:', insertedItem);
-
-// Dispatch event
-window.dispatchEvent(new CustomEvent('inventory:refresh', { 
-  detail: { playerId: player.id } 
-}));
-
-// Toast de succès
-const typeLabel = 
-  itemMeta.type === 'armor' ? 'Armure' :
-  itemMeta.type === 'shield' ? 'Bouclier' :
-  itemMeta.type === 'weapon' ? 'Arme' :
-  'Objet';
-
-toast.success(`${typeLabel} "${gift.item_name}" ajouté${itemMeta.type === 'armor' ? 'e' : ''} à votre inventaire !`);
-
-setTimeout(() => {
-  onClose();
-}, 800);
-
-    } else {
-      // ARGENT (même logique: claim d'abord, puis update)
-      try {
-        await campaignService.claimGift(gift.id, player.id, {
-          gold: gift.gold,
-          silver: gift.silver,
-          copper: gift.copper,
-        });
-      } catch (claimError: any) {
-        if (claimError.message?.includes('déjà récupéré')) {
-          toast.error('Cet argent a déjà été récupéré');
-          return;
-        }
-        throw claimError;
-      }
-
-      const { error } = await supabase.from('players').update({
-        gold: (player.gold || 0) + (gift.gold || 0),
-        silver: (player.silver || 0) + (gift.silver || 0),
-        copper: (player.copper || 0) + (gift.copper || 0),
-      }).eq('id', player.id);
-
-      if (error) throw error;
-
-      const amounts = [];
-      if (gift.gold > 0) amounts.push(`${gift.gold} po`);
-      if (gift.silver > 0) amounts.push(`${gift.silver} pa`);
-      if (gift.copper > 0) amounts.push(`${gift.copper} pc`);
-
-      toast.success(`${amounts.join(', ')} ajouté à votre argent !`);
-
-      onUpdate({
-        ...player,
-        gold: (player.gold || 0) + (gift.gold || 0),
-        silver: (player.silver || 0) + (gift.silver || 0),
-        copper: (player.copper || 0) + (gift.copper || 0),
-      });
-
-      setTimeout(() => {
-        onClose();
-      }, 800);
+  // ✅ FONCTION CLAIM CORRIGÉE (ordre fixé + guard double-clic)
+  const handleClaimGift = async (gift: CampaignGift) => {
+    // ✅ Guard contre double-clic
+    if (claiming) {
+      console.log('⏳ Claim déjà en cours, ignoré');
+      return;
     }
 
-    loadData(); // Refresh la liste des loots
+    try {
+      setClaiming(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-  } catch (error) {
-    console.error('💥 Claim error:', error);
-    toast.error('Erreur lors de la récupération');
-  } finally {
-    setClaiming(false);
-  }
-};
+      console.log('🎁 Claiming gift:', gift);
+
+      if (gift.gift_type === 'item') {
+        let originalMeta = null;
+        
+        if (gift.item_description) {
+          const lines = gift.item_description.split('\n');
+          const metaLine = lines.find(l => l.trim().startsWith(META_PREFIX));
+          if (metaLine) {
+            try {
+              originalMeta = JSON.parse(metaLine.trim().slice(META_PREFIX.length));
+              console.log('📦 Métadonnées originales trouvées:', originalMeta);
+            } catch (err) {
+              console.error('❌ Erreur parsing métadonnées:', err);
+            }
+          }
+        }
+
+        const itemMeta = originalMeta || {
+          type: 'equipment' as const,
+          quantity: gift.item_quantity || 1,
+          equipped: false,
+        };
+
+        itemMeta.quantity = gift.item_quantity || 1;
+        itemMeta.equipped = false;
+
+        console.log('📦 Métadonnées finales:', itemMeta);
+
+        const metaLine = `${META_PREFIX}${JSON.stringify(itemMeta)}`;
+        
+        const cleanDescription = gift.item_description
+          ? gift.item_description
+              .split('\n')
+              .filter(line => !line.trim().startsWith(META_PREFIX))
+              .join('\n')
+              .trim()
+          : '';
+
+        const finalDescription = cleanDescription
+          ? `${cleanDescription}\n${metaLine}`
+          : metaLine;
+
+        console.log('📦 Description finale:', finalDescription);
+
+        // ✅ 1. CLAIM D'ABORD (avant l'insert)
+        try {
+          await campaignService.claimGift(gift.id, player.id, {
+            quantity: gift.item_quantity || 1,
+          });
+          console.log('✅ Gift claimed successfully');
+        } catch (claimError: any) {
+          console.error('❌ Claim error:', claimError);
+          if (claimError.message?.includes('déjà récupéré')) {
+            toast.error('Cet objet a déjà été récupéré');
+            return;
+          }
+          throw claimError;
+        }
+
+        // ✅ 2. ENSUITE INSERT
+        const { data: insertedItem, error } = await supabase
+          .from('inventory_items')
+          .insert({
+            player_id: player.id,
+            name: gift.item_name || 'Objet',
+            description: finalDescription,
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('❌ Insert error:', error);
+          throw error;
+        }
+
+        console.log('✅ Item inserted:', insertedItem);
+
+        // ✅ 3. DISPATCH EVENT
+        window.dispatchEvent(new CustomEvent('inventory:refresh', { 
+          detail: { playerId: player.id } 
+        }));
+
+        // ✅ 4. TOAST DE SUCCÈS
+        const typeLabel = 
+          itemMeta.type === 'armor' ? 'Armure' :
+          itemMeta.type === 'shield' ? 'Bouclier' :
+          itemMeta.type === 'weapon' ? 'Arme' :
+          'Objet';
+        
+        toast.success(`${typeLabel} "${gift.item_name}" ajouté${itemMeta.type === 'armor' ? 'e' : ''} à votre inventaire !`);
+
+        setTimeout(() => {
+          onClose();
+        }, 800);
+
+      } else {
+        // ✅ ARGENT: même logique (claim puis update)
+        try {
+          await campaignService.claimGift(gift.id, player.id, {
+            gold: gift.gold,
+            silver: gift.silver,
+            copper: gift.copper,
+          });
+        } catch (claimError: any) {
+          if (claimError.message?.includes('déjà récupéré')) {
+            toast.error('Cet argent a déjà été récupéré');
+            return;
+          }
+          throw claimError;
+        }
+
+        const { error } = await supabase.from('players').update({
+          gold: (player.gold || 0) + (gift.gold || 0),
+          silver: (player.silver || 0) + (gift.silver || 0),
+          copper: (player.copper || 0) + (gift.copper || 0),
+        }).eq('id', player.id);
+
+        if (error) throw error;
+
+        const amounts = [];
+        if (gift.gold > 0) amounts.push(`${gift.gold} po`);
+        if (gift.silver > 0) amounts.push(`${gift.silver} pa`);
+        if (gift.copper > 0) amounts.push(`${gift.copper} pc`);
+
+        toast.success(`${amounts.join(', ')} ajouté à votre argent !`);
+
+        onUpdate({
+          ...player,
+          gold: (player.gold || 0) + (gift.gold || 0),
+          silver: (player.silver || 0) + (gift.silver || 0),
+          copper: (player.copper || 0) + (gift.copper || 0),
+        });
+
+        setTimeout(() => {
+          onClose();
+        }, 800);
+      }
+
+      loadData();
+
+    } catch (error) {
+      console.error('💥 Claim error:', error);
+      toast.error('Erreur lors de la récupération');
+    } finally {
+      setClaiming(false);
+    }
+  };
 
   if (!open) return null;
 
@@ -930,7 +916,6 @@ setTimeout(() => {
                     const campaignMembers = membersByCampaign[gift.campaign_id] || [];
                     const memberCount = campaignMembers.length;
 
-                    // Calculer l'aperçu de la distribution
                     const previewDistribution = memberCount > 0 ? {
                       gold: Math.floor((gift.gold || 0) / memberCount),
                       silver: Math.floor((gift.silver || 0) / memberCount),
@@ -1028,10 +1013,9 @@ setTimeout(() => {
                           </div>
                         </div>
 
-                        {/* Boutons conditionnels */}
+                        {/* Boutons */}
                         {isCurrencyShared ? (
                           <div className="space-y-2">
-                            {/* Info sur la distribution */}
                             {memberCount > 0 && previewDistribution && (
                               <div className="bg-gray-800/60 border border-gray-700/50 rounded-lg p-3">
                                 <div className="flex items-center justify-between mb-2">
@@ -1041,7 +1025,6 @@ setTimeout(() => {
                                   </div>
                                 </div>
                                 
-                                {/* Aperçu de la part par joueur */}
                                 <div className="text-sm">
                                   <div className="text-gray-400 mb-1">Distribution équitable :</div>
                                   <div className="flex gap-3 text-xs flex-wrap">
@@ -1068,10 +1051,15 @@ setTimeout(() => {
                             <div className="flex gap-2">
                               <button
                                 onClick={() => handleClaimGift(gift)}
-                                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm"
+                                disabled={claiming}
+                                className={`flex-1 px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm ${
+                                  claiming 
+                                    ? 'bg-gray-600 cursor-not-allowed' 
+                                    : 'bg-purple-600 hover:bg-purple-700'
+                                } text-white`}
                               >
                                 <Gift size={16} />
-                                Tout prendre
+                                {claiming ? 'En cours...' : 'Tout prendre'}
                               </button>
                               
                               <button
@@ -1080,7 +1068,8 @@ setTimeout(() => {
                                   setSelectedGiftForDistribution(gift);
                                   setShowDistributionModal(true);
                                 }}
-                                className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm"
+                                disabled={claiming}
+                                className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm disabled:opacity-50"
                               >
                                 <Users size={16} />
                                 Distribuer
@@ -1088,18 +1077,18 @@ setTimeout(() => {
                             </div>
                           </div>
                         ) : (
-<button
-  onClick={() => handleClaimGift(gift)}
-  disabled={claiming} // ✅ AJOUTE
-  className={`w-full px-4 py-2 rounded-lg flex items-center justify-center gap-2 ${
-    claiming 
-      ? 'bg-gray-600 cursor-not-allowed' 
-      : 'bg-purple-600 hover:bg-purple-700'
-  } text-white`}
->
-  <Gift size={18} />
-  {claiming ? 'Récupération...' : 'Récupérer'}
-</button>
+                          <button
+                            onClick={() => handleClaimGift(gift)}
+                            disabled={claiming}
+                            className={`w-full px-4 py-2 rounded-lg flex items-center justify-center gap-2 ${
+                              claiming 
+                                ? 'bg-gray-600 cursor-not-allowed' 
+                                : 'bg-purple-600 hover:bg-purple-700'
+                            } text-white`}
+                          >
+                            <Gift size={18} />
+                            {claiming ? 'En cours...' : 'Récupérer'}
+                          </button>
                         )}
                       </div>
                     );
