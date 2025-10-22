@@ -470,12 +470,13 @@ export function CampaignPlayerModal({
           removePendingGiftLocal();
 
           // prefer item returned by RPC
-          if (item) {
-            setInventory((prev) => [item, ...prev]);
-            toast.success('Cadeau récupéré !');
-            setTimeout(() => onClose(), 700);
-            return;
-          }
+if (item) {
+  setInventory((prev) => [item, ...prev]); // état local modal
+  onInventoryAdd?.(item);                    // NOTIFIE le parent (GamePage)
+  toast.success('Cadeau récupéré !');
+  setTimeout(() => onClose(), 700);
+  return;
+}
 
           // fallback: fetch the newest inventory row for this player (in case RPC didn't return item)
           try {
