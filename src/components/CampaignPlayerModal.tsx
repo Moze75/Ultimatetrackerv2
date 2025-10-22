@@ -87,27 +87,43 @@ export function CampaignPlayerModal({
         setMyCampaigns(campaigns || []);
 
         // Charger les cadeaux en attente
-        const { data: gifts } = await supabase
-          .from('campaign_gifts')
-          .select('*')
-          .in('campaign_id', campaignIds)
-          .eq('status', 'pending')
-          .order('sent_at', { ascending: false });
+const { data: gifts } = await supabase
+  .from('campaign_gifts')
+  .select('*')
+  .in('campaign_id', campaignIds)
+  .eq('status', 'pending')
+  .order('sent_at', { ascending: false });
 
-        // Filtrer les cadeaux non encore récupérés
-        const giftsWithClaims = await Promise.all(
-          (gifts || []).map(async (gift) => {
-            const claims = await campaignService.getGiftClaims(gift.id);
-            const alreadyClaimed = claims.some(c => c.user_id === user.id);
-            return { gift, alreadyClaimed };
-          })
-        );
+// ✅ CORRECTION : Filtrer les cadeaux selon le mode de distribution
+const filteredGifts = (gifts || []).filter((gift) => {
+  // Les cadeaux partagés sont visibles par tous
+  if (gift.distribution_mode === 'shared') {
+    return true;
+  }
+  
+  // Les cadeaux individuels ne sont visibles que pour les destinataires spécifiques
+  if (gift.distribution_mode === 'individual' && gift.recipient_ids) {
+    return gift.recipient_ids.includes(user.id);
+  }
+  
+  // Par défaut, ne pas afficher
+  return false;
+});
 
-        setPendingGifts(
-          giftsWithClaims
-            .filter(g => !g.alreadyClaimed)
-            .map(g => g.gift)
-        );
+// Filtrer les cadeaux non encore récupérés
+const giftsWithClaims = await Promise.all(
+  filteredGifts.map(async (gift) => {
+    const claims = await campaignService.getGiftClaims(gift.id);
+    const alreadyClaimed = claims.some(c => c.user_id === user.id);
+    return { gift, alreadyClaimed };
+  })
+);
+
+setPendingGifts(
+  giftsWithClaims
+    .filter(g => !g.alreadyClaimed)
+    .map(g => g.gift)
+);
       }
     } catch (error) {
       console.error('Erreur chargement campagnes:', error);
