@@ -11,10 +11,10 @@ import {
 } from '../types/campaign';
 
 // helper RPC — placez-le au niveau du module, avant l'objet `campaignService`
-async function callRpc(fnName: string, params: any) {
-  const res = await supabase.rpc(fnName, params);
-  if (res.error) throw res.error;
-  return res.data;
+async function callRpc(fnName: string, params: any): Promise<any> {
+  const { data, error } = await supabase.rpc(fnName, params);
+  if (error) throw error;
+  return data;
 }
 
 
