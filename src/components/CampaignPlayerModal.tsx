@@ -199,26 +199,29 @@ export function CampaignPlayerModal({
   if (gift.gift_type === 'item') {
     // 1) Attempt to claim atomically via service (will mark gift as 'distributed' server-side)
     try {
-      const { claim, item } = await campaignService.claimGift(gift.id, player.id, {
-        quantity: gift.item_quantity || 1,
-        // retirer le gift localement
-setPendingGifts(prev => prev.filter(g => g.id !== gift.id));
+try {
+  const { claim, item } = await campaignService.claimGift(gift.id, player.id, {
+    quantity: gift.item_quantity || 1,
+  });
 
-// ajouter l'item si présent
-if (item) setInventory(prev => [item, ...prev]);
-// sinon : loadData() ou loadInventory();
-      });
+  // retirer le gift de la liste locale
+  setPendingGifts(prev => prev.filter(p => p.id !== gift.id));
 
-      console.log('Claim result', claim, item);
+  // ajouter l'item si présent, sinon recharger si tu n'as pas de setter d'inventaire
+  if (item) {
+    setInventory(prev => [item, ...prev]);
+  } else {
+    // optionnel : recharger l'inventaire ou les gifts
+    await loadData();
+  }
 
-      // 1a) Retirer le gift de la liste locale (si vous stockez pendingGifts en state)
-      try {
-        if (typeof setPendingGifts === 'function') {
-          setPendingGifts((prev: CampaignGift[]) => prev.filter(g => g.id !== gift.id));
-        } else {
-          // fallback : reload si on n'a pas de setter local
-          loadData();
-        }
+  toast.success('Cadeau récupéré !');
+} catch (err: any) {
+  console.error('Erreur lors du claim:', err);
+  toast.error(err?.message || 'Impossible de récupérer l\'objet (probablement déjà récupéré).');
+  // rafraîchir l'état si besoin
+  loadData();
+}
       } catch (e) {
         console.warn('Erreur mise à jour état local pending gifts, reload:', e);
         loadData();
