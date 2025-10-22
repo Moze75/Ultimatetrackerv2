@@ -307,10 +307,33 @@ export const campaignService = {
       inventoryItemId?: string; // facultatif : id du campaign_inventory à décrémenter/supprimer
     }
   ): Promise<CampaignGift> {
+
+try {
+    const rpcRes = await callRpc('rpc_send_gift', {
+      _campaign_id: campaignId,
+      _gift_type: giftType,
+      _item_name: data.itemName ?? null,
+      _item_description: data.itemDescription ?? null,
+      _item_quantity: data.itemQuantity ?? null,
+      _gold: data.gold ?? 0,
+      _silver: data.silver ?? 0,
+      _copper: data.copper ?? 0,
+      _distribution_mode: data.distributionMode,
+      _recipient_ids: data.recipientIds ?? null,
+      _message: data.message ?? null,
+      _inventory_item_id: data.inventoryItemId ?? null
+    });
+
+    // Normaliser le retour (rpc peut renvoyer array ou objet)
+    const gift = Array.isArray(rpcRes) ? rpcRes[0] : rpcRes;
+    return gift as CampaignGift;
+  } catch (err) {
+    // Fallback non-transactionnel si RPC indisponible / error
+    console.warn('rpc_send_gift failed, falling back to JS implementation:', err);
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Non authentifié');
 
-    // Insère le gift (status = 'pending')
     const { data: gift, error } = await supabase
       .from('campaign_gifts')
       .insert({
@@ -327,15 +350,15 @@ export const campaignService = {
         message: data.message ?? null,
         sent_by: user.id,
         status: 'pending',
-        sent_at: new Date().toISOString()
+        sent_at: new Date().toISOString(),
+        inventory_item_id: data.inventoryItemId ?? null
       })
       .select()
       .single();
 
     if (error) throw error;
 
-    // Optionnel : décrémenter / supprimer l'item dans l'inventaire de campagne
-    // NOTE: ceci n'est pas atomique avec la création du gift. Pour atomicité, créez un RPC PL/pgSQL.
+    // Best-effort : décrémenter inventaire de campagne si demandé
     if (data.inventoryItemId && data.itemQuantity && data.itemQuantity > 0) {
       try {
         const { data: invRow, error: invErr } = await supabase
@@ -344,80 +367,62 @@ export const campaignService = {
           .eq('id', data.inventoryItemId)
           .single();
 
-        if (invErr) {
-          console.warn('Impossible de lire l\'inventaire pour décrémentation', invErr);
-        } else {
+        if (!invErr && invRow) {
           const newQty = (invRow.quantity || 0) - (data.itemQuantity || 0);
           if (newQty > 0) {
-            const { error: qErr } = await supabase
+            await supabase
               .from('campaign_inventory')
               .update({ quantity: newQty })
               .eq('id', data.inventoryItemId);
-            if (qErr) console.warn('Erreur mise à jour quantité inventaire:', qErr);
           } else {
-            const { error: delErr } = await supabase
+            await supabase
               .from('campaign_inventory')
               .delete()
               .eq('id', data.inventoryItemId);
-            if (delErr) console.warn('Erreur suppression inventaire:', delErr);
           }
         }
-      } catch (err) {
-        console.warn('Erreur lors de la décrémentation d\'inventaire après envoi du gift:', err);
+      } catch (e) {
+        console.warn('Erreur décrémentation inventaire en fallback:', e);
       }
     }
 
-    return gift;
-  },
+    return gift as CampaignGift;
+  }
+},
 
-  async getCampaignGifts(campaignId: string): Promise<CampaignGift[]> {
-    const { data, error } = await supabase
-      .from('campaign_gifts')
-      .select('*')
-      .eq('campaign_id', campaignId)
-      .order('sent_at', { ascending: false });
+async claimGift(
+  giftId: string,
+  playerId: string,
+  claimed: {
+    quantity?: number;
+    gold?: number;
+    silver?: number;
+    copper?: number;
+  }
+): Promise<CampaignGiftClaim> {
+  // Essayer la RPC transactionnelle qui fait : verrous, update gift status, insert claim,
+  // création d'item joueur et update inventaire campagne / joueurs en une transaction.
+  try {
+    const rpcRes = await callRpc('rpc_claim_gift', {
+      _gift_id: giftId,
+      _player_id: playerId,
+      _claimed: JSON.stringify(claimed)
+    });
 
-    if (error) throw error;
-    return data || [];
-  },
-
-  async claimGift(
-    giftId: string,
-    playerId: string,
-    claimed: {
-      quantity?: number;
-      gold?: number;
-      silver?: number;
-      copper?: number;
+    // rpc_claim_gift renvoie un JSON { claim: ..., item: ... } selon la migration proposée.
+    const parsed = Array.isArray(rpcRes) ? rpcRes[0] : rpcRes;
+    if (parsed && parsed.claim) {
+      return parsed.claim as CampaignGiftClaim;
     }
-  ): Promise<CampaignGiftClaim> {
+    throw new Error('rpc_claim_gift returned unexpected shape');
+  } catch (err) {
+    // Fallback non-transactionnel
+    console.warn('rpc_claim_gift failed, falling back to non-transactional flow:', err);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Non authentifié');
 
-    // 1) Tentative atomique : marquer le gift comme 'claimed' seulement si status = 'pending'
-    const { data: updatedGift, error: updateErr } = await supabase
-      .from('campaign_gifts')
-      .update({
-        status: 'claimed',
-        claimed_by: user.id,
-        claimed_at: new Date().toISOString()
-      })
-      .eq('id', giftId)
-      .eq('status', 'pending')
-      .select()
-      .single();
-
-    if (updateErr) {
-      console.error('Erreur mise à jour gift:', updateErr);
-      throw new Error('Impossible de marquer le cadeau comme récupéré (déjà récupéré ou introuvable).');
-    }
-
-    if (!updatedGift) {
-      throw new Error('Cadeau déjà récupéré ou non disponible.');
-    }
-
-    // 2) Insérer l'enregistrement du claim
-    const { data: claimRow, error: claimErr } = await supabase
+    // Insérer le claim
+    const { data, error } = await supabase
       .from('campaign_gift_claims')
       .insert({
         gift_id: giftId,
@@ -427,18 +432,28 @@ export const campaignService = {
         claimed_gold: claimed.gold ?? 0,
         claimed_silver: claimed.silver ?? 0,
         claimed_copper: claimed.copper ?? 0,
-        claimed_at: new Date().toISOString()
+        claimed_at: new Date().toISOString(),
+        details: claimed
       })
       .select()
       .single();
 
-    if (claimErr) {
-      console.error('Erreur insertion claim:', claimErr);
-      throw claimErr;
+    if (error) throw error;
+
+    // Best-effort : marquer gift comme claimed si il était pending
+    try {
+      await supabase
+        .from('campaign_gifts')
+        .update({ status: 'claimed', claimed_by: user.id, claimed_at: new Date().toISOString() })
+        .eq('id', giftId)
+        .eq('status', 'pending');
+    } catch (e) {
+      console.warn('Erreur marquage gift claimed en fallback:', e);
     }
 
-    return claimRow;
-  },
+    return data as CampaignGiftClaim;
+  }
+},
 
   async getGiftClaims(giftId: string): Promise<CampaignGiftClaim[]> {
     const { data, error } = await supabase
