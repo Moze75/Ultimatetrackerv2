@@ -94,6 +94,69 @@ export function GamePage({
   const [inventory, setInventory] = useState<any[]>([]);
   const [classSections, setClassSections] = useState<any[] | null>(null);
 
+// --- START: Realtime subscription for inventory_items (GamePage) ---
+const invChannelRef = useRef<any>(null);
+
+useEffect(() => {
+  // cleanup previous channel if any
+  if (invChannelRef.current) {
+    if (typeof supabase.removeChannel === 'function') {
+      supabase.removeChannel(invChannelRef.current);
+    } else {
+      invChannelRef.current.unsubscribe?.();
+    }
+    invChannelRef.current = null;
+  }
+
+  if (!currentPlayer?.id) return; // use the currentPlayer state you declared
+
+  console.log('GamePage: subscribe inventory_items realtime for player', currentPlayer.id);
+
+  const ch = supabase
+    .channel(`inv-player-${currentPlayer.id}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'inventory_items',
+        filter: `player_id=eq.${currentPlayer.id}`,
+      },
+      (payload: any) => {
+        console.log('[Realtime] inventory_items INSERT payload:', payload);
+        const rec = payload?.record ?? payload?.new;
+        if (!rec) return;
+
+        // update local inventory and notify parent in a single atomic step
+        setInventory((prev) => {
+          const next = [rec, ...prev];
+          try {
+            // notify parent with the new array (onInventoryUpdate is expected to accept the full array)
+            onInventoryUpdate?.(next);
+          } catch (e) {
+            console.warn('onInventoryUpdate failed', e);
+          }
+          return next;
+        });
+      }
+    )
+    .subscribe();
+
+  invChannelRef.current = ch;
+
+  return () => {
+    if (invChannelRef.current) {
+      if (typeof supabase.removeChannel === 'function') {
+        supabase.removeChannel(invChannelRef.current);
+      } else {
+        invChannelRef.current.unsubscribe?.();
+      }
+      invChannelRef.current = null;
+    }
+  };
+}, [currentPlayer?.id, onInventoryUpdate]);
+// --- END
+  
   // Onglet initial
   const initialTab: TabKey = (() => {
     try {
