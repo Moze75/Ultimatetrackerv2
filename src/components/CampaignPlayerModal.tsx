@@ -554,150 +554,162 @@ setTimeout(() => {
   };
 
 const handleClaimGift = async (gift: CampaignGift) => {
-  // ✅ AJOUTE CE GUARD au tout début
+  // Guard contre double-clic
   if (claiming) {
     console.log('⏳ Claim déjà en cours, ignoré');
     return;
   }
 
   try {
-    setClaiming(true); // ✅ AJOUTE
+    setClaiming(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
     console.log('🎁 Claiming gift:', gift);
 
-      if (gift.gift_type === 'item') {
-        let originalMeta = null;
-        
-        if (gift.item_description) {
-          const lines = gift.item_description.split('\n');
-          const metaLine = lines.find(l => l.trim().startsWith(META_PREFIX));
-          if (metaLine) {
-            try {
-              originalMeta = JSON.parse(metaLine.trim().slice(META_PREFIX.length));
-              console.log('📦 Métadonnées originales trouvées:', originalMeta);
-            } catch (err) {
-              console.error('❌ Erreur parsing métadonnées:', err);
-            }
+    if (gift.gift_type === 'item') {
+      // 1. Parser les méta
+      let originalMeta = null;
+      if (gift.item_description) {
+        const lines = gift.item_description.split('\n');
+        const metaLine = lines.find(l => l.trim().startsWith(META_PREFIX));
+        if (metaLine) {
+          try {
+            originalMeta = JSON.parse(metaLine.trim().slice(META_PREFIX.length));
+            console.log('📦 Métadonnées originales trouvées:', originalMeta);
+          } catch (err) {
+            console.error('❌ Erreur parsing métadonnées:', err);
           }
         }
+      }
 
-        const itemMeta = originalMeta || {
-          type: 'equipment' as const,
-          quantity: gift.item_quantity || 1,
-          equipped: false,
-        };
+      const itemMeta = originalMeta || {
+        type: 'equipment' as const,
+        quantity: gift.item_quantity || 1,
+        equipped: false,
+      };
 
-        itemMeta.quantity = gift.item_quantity || 1;
-        itemMeta.equipped = false;
+      itemMeta.quantity = gift.item_quantity || 1;
+      itemMeta.equipped = false;
 
-        console.log('📦 Métadonnées finales:', itemMeta);
+      console.log('📦 Métadonnées finales:', itemMeta);
 
-        const metaLine = `${META_PREFIX}${JSON.stringify(itemMeta)}`;
-        
-        const cleanDescription = gift.item_description
-          ? gift.item_description
-              .split('\n')
-              .filter(line => !line.trim().startsWith(META_PREFIX))
-              .join('\n')
-              .trim()
-          : '';
+      const metaLine = `${META_PREFIX}${JSON.stringify(itemMeta)}`;
+      const cleanDescription = gift.item_description
+        ? gift.item_description
+            .split('\n')
+            .filter(line => !line.trim().startsWith(META_PREFIX))
+            .join('\n')
+            .trim()
+        : '';
 
-        const finalDescription = cleanDescription
-          ? `${cleanDescription}\n${metaLine}`
-          : metaLine;
+      const finalDescription = cleanDescription
+        ? `${cleanDescription}\n${metaLine}`
+        : metaLine;
 
-        console.log('📦 Description finale:', finalDescription);
+      console.log('📦 Description finale:', finalDescription);
 
-        const { data: insertedItem, error } = await supabase
-          .from('inventory_items')
-          .insert({
-            player_id: player.id,
-            name: gift.item_name || 'Objet',
-            description: finalDescription,
-          })
-          .select()
-          .single();
-
-        if (error) {
-          console.error('❌ Insert error:', error);
-          throw error;
-        }
-
-        console.log('✅ Item inserted:', insertedItem);
-
-
-// ✅ AJOUTE CES 3 LIGNES
-window.dispatchEvent(new CustomEvent('inventory:refresh', { 
-  detail: { playerId: player.id } 
-}));
-
-await campaignService.claimGift(gift.id, player.id, {
-  quantity: gift.item_quantity || 1,
-});
-        
-        
+      // 2. Claim d'abord (met le gift en "claimed")
+      try {
         await campaignService.claimGift(gift.id, player.id, {
           quantity: gift.item_quantity || 1,
         });
+        console.log('✅ Gift claimed successfully');
+      } catch (claimError: any) {
+        console.error('❌ Claim error:', claimError);
+        // Si le gift est déjà claim, on arrête tout
+        if (claimError.message?.includes('déjà récupéré')) {
+          toast.error('Cet objet a déjà été récupéré');
+          return;
+        }
+        throw claimError;
+      }
 
-        const typeLabel = 
-          itemMeta.type === 'armor' ? 'Armure' :
-          itemMeta.type === 'shield' ? 'Bouclier' :
-          itemMeta.type === 'weapon' ? 'Arme' :
-          'Objet';
-        
-        toast.success(`${typeLabel} "${gift.item_name}" ajouté${itemMeta.type === 'armor' ? 'e' : ''} à votre inventaire !`);
+      // 3. Ensuite insert l'item
+      const { data: insertedItem, error } = await supabase
+        .from('inventory_items')
+        .insert({
+          player_id: player.id,
+          name: gift.item_name || 'Objet',
+          description: finalDescription,
+        })
+        .select()
+        .single();
 
-// ✅ APRÈS
-setTimeout(() => {
-  onClose();
-  // Le polling s'occupera de la mise à jour
-}, 800);
+      if (error) {
+        console.error('❌ Insert error:', error);
+        throw error;
+      }
 
-      } else {
-        // Code argent
-        const { error } = await supabase.from('players').update({
-          gold: (player.gold || 0) + (gift.gold || 0),
-          silver: (player.silver || 0) + (gift.silver || 0),
-          copper: (player.copper || 0) + (gift.copper || 0),
-        }).eq('id', player.id);
+      console.log('✅ Item inserted:', insertedItem);
 
-        if (error) throw error;
+      // 4. Dispatch event pour le polling
+      window.dispatchEvent(new CustomEvent('inventory:refresh', { 
+        detail: { playerId: player.id } 
+      }));
 
+      const typeLabel = 
+        itemMeta.type === 'armor' ? 'Armure' :
+        itemMeta.type === 'shield' ? 'Bouclier' :
+        itemMeta.type === 'weapon' ? 'Arme' :
+        'Objet';
+      
+      toast.success(`${typeLabel} "${gift.item_name}" ajouté${itemMeta.type === 'armor' ? 'e' : ''} à votre inventaire !`);
+
+      setTimeout(() => {
+        onClose();
+      }, 800);
+
+    } else {
+      // ARGENT (même logique: claim d'abord, puis update)
+      try {
         await campaignService.claimGift(gift.id, player.id, {
           gold: gift.gold,
           silver: gift.silver,
           copper: gift.copper,
         });
-
-        const amounts = [];
-        if (gift.gold > 0) amounts.push(`${gift.gold} po`);
-        if (gift.silver > 0) amounts.push(`${gift.silver} pa`);
-        if (gift.copper > 0) amounts.push(`${gift.copper} pc`);
-
-        toast.success(`${amounts.join(', ')} ajouté à votre argent !`);
-
-        onUpdate({
-          ...player,
-          gold: (player.gold || 0) + (gift.gold || 0),
-          silver: (player.silver || 0) + (gift.silver || 0),
-          copper: (player.copper || 0) + (gift.copper || 0),
-        });
-
-// ✅ APRÈS
-setTimeout(() => {
-  onClose();
-}, 800);
+      } catch (claimError: any) {
+        if (claimError.message?.includes('déjà récupéré')) {
+          toast.error('Cet argent a déjà été récupéré');
+          return;
+        }
+        throw claimError;
       }
 
-      loadData();
+      const { error } = await supabase.from('players').update({
+        gold: (player.gold || 0) + (gift.gold || 0),
+        silver: (player.silver || 0) + (gift.silver || 0),
+        copper: (player.copper || 0) + (gift.copper || 0),
+      }).eq('id', player.id);
+
+      if (error) throw error;
+
+      const amounts = [];
+      if (gift.gold > 0) amounts.push(`${gift.gold} po`);
+      if (gift.silver > 0) amounts.push(`${gift.silver} pa`);
+      if (gift.copper > 0) amounts.push(`${gift.copper} pc`);
+
+      toast.success(`${amounts.join(', ')} ajouté à votre argent !`);
+
+      onUpdate({
+        ...player,
+        gold: (player.gold || 0) + (gift.gold || 0),
+        silver: (player.silver || 0) + (gift.silver || 0),
+        copper: (player.copper || 0) + (gift.copper || 0),
+      });
+
+      setTimeout(() => {
+        onClose();
+      }, 800);
+    }
+
+    loadData(); // Refresh la liste des loots
+
   } catch (error) {
     console.error('💥 Claim error:', error);
     toast.error('Erreur lors de la récupération');
   } finally {
-    setClaiming(false); // ✅ AJOUTE pour libérer
+    setClaiming(false);
   }
 };
 
