@@ -386,7 +386,7 @@ export async function sendGift(
   }
 
   return insertedGift;
-}
+},
 
 /**
  * claimGift : marque un gift comme "claimed" de façon conditionnelle (update WHERE status='pending')
