@@ -95,106 +95,74 @@ export function GamePage({
   const [classSections, setClassSections] = useState<any[] | null>(null);
 
   // --- START: Realtime subscription for inventory_items (GamePage) ---
-const invChannelRef = useRef<any>(null);
+const lastInventoryCheckRef = useRef<string | null>(null);
+const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
 useEffect(() => {
-  // Cleanup previous channel
-  if (invChannelRef.current) {
-    supabase.removeChannel(invChannelRef.current);
-    invChannelRef.current = null;
-  }
-
   if (!currentPlayer?.id) return;
 
-  console.log('🔥 GamePage: Subscribing to inventory_items for player', currentPlayer.id);
+  console.log('🔄 Mode polling activé pour player:', currentPlayer.id);
 
-  const channel = supabase
-    .channel(`inventory-player-${currentPlayer.id}`)
-    .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'inventory_items',
-        filter: `player_id=eq.${currentPlayer.id}`,
-      },
-      async (payload: any) => {
-        console.log('✅ [Realtime GamePage] INSERT detected:', payload);
-        const newItem = payload?.new || payload?.record;
-        
-        if (!newItem) {
-          console.warn('⚠️ No record in payload');
-          return;
+  const checkForNewItems = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .select('*')
+        .eq('player_id', currentPlayer.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ Erreur fetch inventory:', error);
+        return;
+      }
+
+      if (!data) return;
+
+      // Générer un hash simple pour détecter les changements
+      const currentHash = data.map(i => i.id).sort().join(',');
+      
+      if (lastInventoryCheckRef.current !== currentHash) {
+        const prevHash = lastInventoryCheckRef.current;
+        lastInventoryCheckRef.current = currentHash;
+
+        // Détecter les nouveaux items
+        if (prevHash) {
+          const prevIds = new Set(inventory.map(i => i.id));
+          const newItems = data.filter(item => !prevIds.has(item.id));
+          
+          if (newItems.length > 0) {
+            console.log('🆕 Nouveaux items détectés:', newItems.map(i => i.name));
+            // Afficher un toast pour chaque nouvel item
+            newItems.forEach(item => {
+              toast.success(`Nouvel objet reçu : ${item.name}`, { duration: 3000 });
+            });
+          }
         }
 
-        // Ajouter à l'état existant (optimiste)
-        setInventory((prev) => {
-          // Éviter les doublons
-          if (prev.some((i) => i.id === newItem.id)) {
-            console.log('Item already in inventory, skipping');
-            return prev;
-          }
-          console.log('🎯 Adding new item to inventory:', newItem.name);
-          return [newItem, ...prev];
-        });
+        setInventory(data);
+        console.log('📦 Inventaire mis à jour:', data.length, 'items');
       }
-    )
-    .on(
-      'postgres_changes',
-      {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'inventory_items',
-        filter: `player_id=eq.${currentPlayer.id}`,
-      },
-      (payload: any) => {
-        console.log('✅ [Realtime GamePage] UPDATE detected:', payload);
-        const updatedItem = payload?.new || payload?.record;
-        
-        if (!updatedItem) return;
-
-        setInventory((prev) =>
-          prev.map((item) =>
-            item.id === updatedItem.id ? updatedItem : item
-          )
-        );
-      }
-    )
-    .on(
-      'postgres_changes',
-      {
-        event: 'DELETE',
-        schema: 'public',
-        table: 'inventory_items',
-        filter: `player_id=eq.${currentPlayer.id}`,
-      },
-      (payload: any) => {
-        console.log('✅ [Realtime GamePage] DELETE detected:', payload);
-        const deletedItem = payload?.old || payload?.record;
-        
-        if (!deletedItem) return;
-
-        setInventory((prev) =>
-          prev.filter((item) => item.id !== deletedItem.id)
-        );
-      }
-    )
-    .subscribe((status) => {
-      console.log('📡 Realtime subscription status:', status);
-    });
-
-  invChannelRef.current = channel;
-
-  return () => {
-    console.log('🧹 Cleaning up inventory subscription');
-    if (invChannelRef.current) {
-      supabase.removeChannel(invChannelRef.current);
-      invChannelRef.current = null;
+    } catch (err) {
+      console.error('💥 Erreur polling:', err);
     }
   };
-}, [currentPlayer?.id]);
 
-// ✅ DEBUG: Track inventory changes (TEMPORAIRE - pour debug)
+  // Premier check immédiat
+  checkForNewItems();
+
+  // Puis check toutes les 2 secondes
+  pollingIntervalRef.current = setInterval(checkForNewItems, 2000);
+
+  return () => {
+    console.log('🧹 Arrêt du polling');
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+  };
+}, [currentPlayer?.id]); // On ne met PAS inventory dans les deps pour éviter les loops
+
+// DEBUG: Track inventory changes
 useEffect(() => {
   console.log('🔥 INVENTORY STATE CHANGED:', inventory.length, 'items');
   if (inventory.length > 0) {
