@@ -320,6 +320,8 @@ export function CampaignPlayerModal({
   const [activeTab, setActiveTab] = useState<'invitations' | 'gifts'>('gifts');
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [invitationCode, setInvitationCode] = useState('');
+
+const [membersByCampaign, setMembersByCampaign] = useState<Record<string, CampaignMember[]>>({});
   
   // ✅ NOUVEAUX états pour la distribution
   const [showDistributionModal, setShowDistributionModal] = useState(false);
