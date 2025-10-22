@@ -1,14 +1,14 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Gift, Users, Check, Package, Coins } from 'lucide-react';
 import { Player } from '../types/dnd';
 import { supabase } from '../lib/supabase';
 import { campaignService } from '../services/campaignService';
 import {
-  CampaignInvitation,
+  CampaignInvitation, 
   CampaignGift,
   CampaignMember,
   Campaign,
-  CampaignGiftClaim,
+  CampaignGiftClaim
 } from '../types/campaign';
 import toast from 'react-hot-toast';
 
@@ -17,14 +17,13 @@ interface CampaignPlayerModalProps {
   onClose: () => void;
   player: Player;
   onUpdate: (player: Player) => void;
-  onInventoryAdd?: (item: any) => void; // <-- ajout
 }
 
 export function CampaignPlayerModal({
   open,
   onClose,
   player,
-  onUpdate,
+  onUpdate
 }: CampaignPlayerModalProps) {
   const [invitations, setInvitations] = useState<CampaignInvitation[]>([]);
   const [myCampaigns, setMyCampaigns] = useState<Campaign[]>([]);
@@ -33,14 +32,9 @@ export function CampaignPlayerModal({
   const [activeTab, setActiveTab] = useState<'invitations' | 'gifts'>('gifts');
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [invitationCode, setInvitationCode] = useState('');
+  // local inventory state (items already owned by the player)
   const [inventory, setInventory] = useState<any[]>([]);
   const [isClaiming, setIsClaiming] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-
-  // refs for cleanup
-  const invChannelRef = useRef<any>(null);
-  const giftChannelsRef = useRef<any[]>([]);
-  const claimChannelRef = useRef<any>(null);
 
   // Utilitaires méta
   const META_PREFIX = '#meta:';
@@ -48,14 +42,14 @@ export function CampaignPlayerModal({
     if (!description) return '';
     return description
       .split('\n')
-      .filter((line) => !line.trim().startsWith(META_PREFIX))
+      .filter(line => !line.trim().startsWith(META_PREFIX))
       .join('\n')
       .trim();
   };
   const parseMeta = (description: string | null | undefined) => {
     if (!description) return null;
-    const lines = description.split('\n').map((l) => l.trim());
-    const metaLine = [...lines].reverse().find((l) => l.startsWith(META_PREFIX));
+    const lines = description.split('\n').map(l => l.trim());
+    const metaLine = [...lines].reverse().find(l => l.startsWith(META_PREFIX));
     if (!metaLine) return null;
     try {
       return JSON.parse(metaLine.slice(META_PREFIX.length));
@@ -64,229 +58,33 @@ export function CampaignPlayerModal({
     }
   };
 
-  // subscribe to inventory_items INSERT for this player (realtime)
+  // Realtime subscription: update inventory when new items are inserted for this player
   useEffect(() => {
-    // cleanup existing channel if any
-    if (invChannelRef.current) {
-      if (typeof supabase.removeChannel === 'function') {
-        supabase.removeChannel(invChannelRef.current);
-      } else {
-        invChannelRef.current.unsubscribe?.();
-      }
-      invChannelRef.current = null;
-    }
-
     if (!open || !player?.id) return;
 
     const channel = supabase
       .channel(`inv-player-${player.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'inventory_items',
-          filter: `player_id=eq.${player.id}`,
-        },
-        (payload: any) => {
-          console.log('[Realtime] inventory_items payload:', payload);
-          const rec = payload?.record ?? payload?.new;
-          if (!rec) return;
-          setInventory((prev) => [rec, ...prev]);
-        }
-      )
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'inventory_items',
+        filter: `player_id=eq.${player.id}`,
+      }, (payload) => {
+        if (!payload?.record) return;
+        setInventory((prev: any[]) => [payload.record, ...prev]);
+      })
       .subscribe();
 
-    invChannelRef.current = channel;
-
     return () => {
-      if (invChannelRef.current) {
-        if (typeof supabase.removeChannel === 'function') {
-          supabase.removeChannel(invChannelRef.current);
-        } else {
-          invChannelRef.current.unsubscribe?.();
-        }
-        invChannelRef.current = null;
+      if (typeof supabase.removeChannel === 'function') {
+        supabase.removeChannel(channel);
+      } else {
+        channel.unsubscribe?.();
       }
     };
-    // depend on open and player id
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, player?.id]);
 
-  // subscribe to campaign_gifts (INSERT/UPDATE/DELETE) for campaigns the user is member of
-  useEffect(() => {
-    // cleanup any existing gift channels
-    if (giftChannelsRef.current.length > 0) {
-      giftChannelsRef.current.forEach((ch) => {
-        if (typeof supabase.removeChannel === 'function') {
-          supabase.removeChannel(ch);
-        } else {
-          ch.unsubscribe?.();
-        }
-      });
-      giftChannelsRef.current = [];
-    }
-
-    if (!open || !myCampaigns?.length) return;
-
-    const campaignIds = myCampaigns.map((c) => c.id).filter(Boolean);
-    if (campaignIds.length === 0) return;
-
-    const channels: any[] = [];
-
-    campaignIds.forEach((cid) => {
-      const ch = supabase
-        .channel(`campaign-gifts-${cid}`)
-        // INSERT
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'campaign_gifts',
-            filter: `campaign_id=eq.${cid}`,
-          },
-          (payload: any) => {
-            console.log('[Realtime] campaign_gifts INSERT:', payload);
-            const rec = payload?.record ?? payload?.new;
-            if (!rec) return;
-            if (rec.status !== 'pending') return;
-            const uId = currentUserId;
-            if (!uId) return;
-            if (
-              !rec.distribution_mode ||
-              rec.distribution_mode === 'shared' ||
-              (rec.distribution_mode === 'individual' &&
-                Array.isArray(rec.recipient_ids) &&
-                rec.recipient_ids.includes(uId))
-            ) {
-              setPendingGifts((prev) => {
-                if (prev.some((g) => g.id === rec.id)) return prev;
-                return [rec, ...prev];
-              });
-            }
-          }
-        )
-        // UPDATE
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'campaign_gifts',
-            filter: `campaign_id=eq.${cid}`,
-          },
-          (payload: any) => {
-            console.log('[Realtime] campaign_gifts UPDATE:', payload);
-            const rec = payload?.record ?? payload?.new;
-            const old = payload?.old;
-            if (!rec && !old) return;
-            const status = rec?.status ?? old?.status;
-            const id = rec?.id ?? old?.id;
-            if (!id) return;
-            if (status && status !== 'pending') {
-              setPendingGifts((prev) => prev.filter((g) => g.id !== id));
-            } else if (rec && status === 'pending') {
-              const uId = currentUserId;
-              if (!uId) return;
-              if (
-                !rec.distribution_mode ||
-                rec.distribution_mode === 'shared' ||
-                (rec.distribution_mode === 'individual' &&
-                  Array.isArray(rec.recipient_ids) &&
-                  rec.recipient_ids.includes(uId))
-              ) {
-                setPendingGifts((prev) => {
-                  if (prev.some((g) => g.id === rec.id)) return prev;
-                  return [rec, ...prev];
-                });
-              }
-            }
-          }
-        )
-        // DELETE
-        .on(
-          'postgres_changes',
-          {
-            event: 'DELETE',
-            schema: 'public',
-            table: 'campaign_gifts',
-            filter: `campaign_id=eq.${cid}`,
-          },
-          (payload: any) => {
-            console.log('[Realtime] campaign_gifts DELETE:', payload);
-            const oldRec = payload?.old;
-            if (!oldRec) return;
-            setPendingGifts((prev) => prev.filter((g) => g.id !== oldRec.id));
-          }
-        )
-        .subscribe();
-
-      channels.push(ch);
-    });
-
-    giftChannelsRef.current = channels;
-
-    return () => {
-      if (giftChannelsRef.current.length > 0) {
-        giftChannelsRef.current.forEach((ch) => {
-          if (typeof supabase.removeChannel === 'function') {
-            supabase.removeChannel(ch);
-          } else {
-            ch.unsubscribe?.();
-          }
-        });
-        giftChannelsRef.current = [];
-      }
-    };
-    // depend on open and myCampaigns
-  }, [open, myCampaigns, currentUserId]);
-
-  // subscribe to campaign_gift_claims INSERT - remove pending gifts locally when claims are created
-  useEffect(() => {
-    if (claimChannelRef.current) {
-      if (typeof supabase.removeChannel === 'function') {
-        supabase.removeChannel(claimChannelRef.current);
-      } else {
-        claimChannelRef.current.unsubscribe?.();
-      }
-      claimChannelRef.current = null;
-    }
-
-    if (!open) return;
-
-    const ch = supabase
-      .channel('campaign-gift-claims')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'campaign_gift_claims',
-        },
-        (payload: any) => {
-          console.log('[Realtime] campaign_gift_claims INSERT:', payload);
-          const rec = payload?.record ?? payload?.new;
-          if (!rec || !rec.gift_id) return;
-          setPendingGifts((prev) => prev.filter((g) => g.id !== rec.gift_id));
-        }
-      )
-      .subscribe();
-
-    claimChannelRef.current = ch;
-
-    return () => {
-      if (claimChannelRef.current) {
-        if (typeof supabase.removeChannel === 'function') {
-          supabase.removeChannel(claimChannelRef.current);
-        } else {
-          claimChannelRef.current.unsubscribe?.();
-        }
-        claimChannelRef.current = null;
-      }
-    };
-  }, [open]);
-
-  // load data when modal opens
   useEffect(() => {
     if (open) {
       loadData();
@@ -297,20 +95,14 @@ export function CampaignPlayerModal({
   const loadData = async () => {
     try {
       setLoading(true);
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        setCurrentUserId(null);
-        return;
-      }
-      setCurrentUserId(user.id);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-      // invitations
+      // Charger les invitations
       const invites = await campaignService.getMyInvitations();
-      setInvitations(invites || []);
+      setInvitations(invites);
 
-      // get campaigns where user is member
+      // Charger mes campagnes
       const { data: members } = await supabase
         .from('campaign_members')
         .select('campaign_id')
@@ -326,7 +118,7 @@ export function CampaignPlayerModal({
 
         setMyCampaigns(campaigns || []);
 
-        // pending gifts
+        // Charger les cadeaux en attente POUR ces campagnes
         const { data: gifts } = await supabase
           .from('campaign_gifts')
           .select('*')
@@ -336,8 +128,8 @@ export function CampaignPlayerModal({
 
         const giftsList: CampaignGift[] = gifts || [];
 
-        // fetch claims by this user for those gifts
-        const giftIds = giftsList.map((g) => g.id).filter(Boolean) as string[];
+        // Récupérer les claims faits par l'utilisateur pour ces gifts (pour filtrer)
+        const giftIds = giftsList.map(g => g.id).filter(Boolean) as string[];
         let userClaims: { gift_id: string }[] = [];
         if (giftIds.length > 0) {
           const { data: claims } = await supabase
@@ -347,25 +139,28 @@ export function CampaignPlayerModal({
             .eq('user_id', user.id);
           userClaims = claims || [];
         }
-        const claimedSet = new Set(userClaims.map((c) => c.gift_id));
+        const claimedSet = new Set(userClaims.map(c => c.gift_id));
 
-        // filter visible gifts
+        // Filtrer les gifts visibles pour l'utilisateur :
         const visibleGifts = giftsList.filter((g) => {
           if (!g || !g.id) return false;
-          if (claimedSet.has(g.id)) return false;
+          if (claimedSet.has(g.id)) return false; // déjà récupéré par cet utilisateur
+          // shared -> visible to all
           if (!g.distribution_mode || g.distribution_mode === 'shared') return true;
+          // individual -> visible only to recipients
           if (g.distribution_mode === 'individual') {
             if (Array.isArray((g as any).recipient_ids) && (g as any).recipient_ids.includes(user.id)) {
               return true;
             }
             return false;
           }
+          // default: hide
           return false;
         });
 
         setPendingGifts(visibleGifts);
 
-        // load initial inventory for player
+        // --- START: load initial inventory for player
         const { data: invRows } = await supabase
           .from('inventory_items')
           .select('*')
@@ -373,7 +168,9 @@ export function CampaignPlayerModal({
           .order('created_at', { ascending: false });
 
         setInventory(invRows || []);
+        // --- END
       } else {
+        // Ensure empty when no campaigns
         setPendingGifts([]);
         setInventory([]);
         setMyCampaigns([]);
@@ -399,6 +196,7 @@ export function CampaignPlayerModal({
 
   const handleDeclineInvitation = async (invitationId: string) => {
     if (!confirm('Refuser cette invitation ?')) return;
+
     try {
       await campaignService.declineInvitation(invitationId);
       toast.success('Invitation refusée');
@@ -418,10 +216,12 @@ export function CampaignPlayerModal({
 
     try {
       const invitation = await campaignService.getInvitationsByCode(code);
+
       if (invitation.status !== 'pending') {
         toast.error('Cette invitation n\'est plus valide');
         return;
       }
+
       await handleAcceptInvitation(invitation.id);
       setShowCodeInput(false);
       setInvitationCode('');
@@ -435,25 +235,23 @@ export function CampaignPlayerModal({
     }
   };
 
-console.log('About to call RPC claimGift for gift', gift.id, 'player', player.id, 'invChannel:', !!invChannelRef?.current);
-  
   const handleClaimGift = async (gift: CampaignGift) => {
     if (isClaiming) return;
     setIsClaiming(true);
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast.error('Utilisateur non connecté');
         return;
       }
 
-      // local remove helper
+      console.log('🎁 Claiming gift:', gift);
+
+      // helper: remove gift from pending list (local)
       const removePendingGiftLocal = () => {
         try {
-          setPendingGifts((prev) => prev.filter((p) => p.id !== gift.id));
+          setPendingGifts((prev: CampaignGift[]) => prev.filter(p => p.id !== gift.id));
         } catch (e) {
           console.warn('Erreur mise à jour état local pending gifts, reload:', e);
         }
@@ -466,45 +264,29 @@ console.log('About to call RPC claimGift for gift', gift.id, 'player', player.id
             quantity: gift.item_quantity || 1,
           });
 
-          console.log('RPC claim result:', { claim, item });
+          console.log('Claim result', claim, item);
 
-          // remove locally first
+          // remove gift locally
           removePendingGiftLocal();
 
-          // prefer item returned by RPC
-if (item) {
-  setInventory((prev) => [item, ...prev]);
-  onInventoryAdd?.(item); // <-- notifier le parent
-  toast.success('Cadeau récupéré !');
-  setTimeout(() => onClose(), 700);
-  return;
-}
-
-          // fallback: fetch the newest inventory row for this player (in case RPC didn't return item)
-          try {
-            const { data: latestRows, error } = await supabase
-              .from('inventory_items')
-              .select('*')
-              .eq('player_id', player.id)
-              .order('created_at', { ascending: false })
-              .limit(1);
-
-            if (!error && latestRows && latestRows.length > 0) {
-              setInventory((prev) => [latestRows[0], ...prev]);
-              toast.success('Cadeau récupéré !');
-              setTimeout(() => onClose(), 700);
-              return;
+          // If RPC returned an item, update inventory local state
+          if (item) {
+            try {
+              setInventory((prev: any[]) => [item, ...prev]);
+            } catch (e) {
+              console.warn("Erreur ajout item à l'inventaire local:", e);
             }
-          } catch (err) {
-            console.warn('fallback fetch failed', err);
+            toast.success('Cadeau récupéré !');
+            setTimeout(() => onClose(), 700);
+            return;
           }
 
-          // ultimate fallback: try to create the inventory row client-side (rare)
+          // fallback: create inventory item client-side (should be rare)
           const metaPrefix = META_PREFIX;
           let originalMeta = null;
           if (gift.item_description) {
             const lines = gift.item_description.split('\n');
-            const metaLine = lines.find((l) => l.trim().startsWith(metaPrefix));
+            const metaLine = lines.find(l => l.trim().startsWith(metaPrefix));
             if (metaLine) {
               try {
                 originalMeta = JSON.parse(metaLine.trim().slice(metaPrefix.length));
@@ -520,17 +302,20 @@ if (item) {
             equipped: false,
           };
 
+          itemMeta.quantity = gift.item_quantity || 1;
+          itemMeta.equipped = false;
+
+          const metaLine = `${metaPrefix}${JSON.stringify(itemMeta)}`;
+
           const cleanDescription = gift.item_description
             ? gift.item_description
                 .split('\n')
-                .filter((line) => !line.trim().startsWith(metaPrefix))
+                .filter(line => !line.trim().startsWith(metaPrefix))
                 .join('\n')
                 .trim()
             : '';
 
-          const finalDescription = cleanDescription
-            ? `${cleanDescription}\n${metaPrefix}${JSON.stringify(itemMeta)}`
-            : `${metaPrefix}${JSON.stringify(itemMeta)}`;
+          const finalDescription = cleanDescription ? `${cleanDescription}\n${metaLine}` : metaLine;
 
           const { data: insertedItem, error: insertErr } = await supabase
             .from('inventory_items')
@@ -546,7 +331,7 @@ if (item) {
             console.error('❌ Insert error (fallback client insert):', insertErr);
             toast.error('Erreur lors de l\'ajout à votre inventaire');
           } else {
-            setInventory((prev) => [insertedItem, ...prev]);
+            setInventory((prev: any[]) => [insertedItem, ...prev]);
             const typeLabel =
               itemMeta.type === 'armor' ? 'Armure' :
               itemMeta.type === 'shield' ? 'Bouclier' :
@@ -567,11 +352,12 @@ if (item) {
 
       // CURRENCY flow
       try {
-        // optimistic update locally
+        // optimistic update in UI: inform player and update local player via onUpdate
         const newGold = (player.gold || 0) + (gift.gold || 0);
         const newSilver = (player.silver || 0) + (gift.silver || 0);
         const newCopper = (player.copper || 0) + (gift.copper || 0);
 
+        // apply update locally (UI)
         onUpdate({
           ...player,
           gold: newGold,
@@ -579,7 +365,7 @@ if (item) {
           copper: newCopper,
         });
 
-        // record the claim server-side
+        // record the claim via RPC
         await campaignService.claimGift(gift.id, player.id, {
           gold: gift.gold ?? 0,
           silver: gift.silver ?? 0,
@@ -850,8 +636,7 @@ if (item) {
 
                       <button
                         onClick={() => handleClaimGift(gift)}
-                        disabled={isClaiming}
-                        className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-60 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
+                        className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
                       >
                         <Gift size={18} />
                         Récupérer
