@@ -188,59 +188,27 @@ export function CampaignPlayerModal({
       }
     }
   };
-
+ 
   const handleClaimGift = async (gift: CampaignGift) => {
-try {
-  // Appel RPC / fallback — la service renvoie maintenant { claim, item }
-  const { claim, item } = await campaignService.claimGift(gift.id, player.id, {
-    quantity: gift.item_quantity || 1,
-  });
-
-  console.log('Claim result', claim, item);
-
-  // 1) Retirer le gift de la liste locale (si vous stockez pendingGifts en state)
-  // Remplacez `setPendingGifts` par le setter que vous utilisez si nécessaire.
-  try {
-    if (typeof setPendingGifts === 'function') {
-      setPendingGifts((prev: CampaignGift[]) => prev.filter(g => g.id !== gift.id));
-    } else {
-      // fallback : reload si on n'a pas de setter local
-      loadData();
-    }
-  } catch (e) {
-    // en cas d'erreur sur le state local, on force un reload
-    console.warn('Erreur mise à jour état local pending gifts, reload:', e);
-    loadData();
-  }
-
-  // 2) Ajouter l'item à l'inventaire local si la RPC en a créé un
-  // Remplacez `setInventory` par le setter / gestionnaire d'inventaire que vous utilisez.
-  if (item) {
     try {
-      if (typeof setInventory === 'function') {
-        setInventory((prev: any[]) => [item, ...prev]);
-      } else if (typeof addInventoryItem === 'function') {
-        addInventoryItem(item);
-      } else {
-        // fallback : reload si on ne sait pas mettre à jour localement
-        loadData();
-      }
-    } catch (e) {
-      console.warn('Erreur ajout item à l\'inventaire local, reload:', e);
-      loadData();
-    }
-  }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-  toast.success('Cadeau récupéré !');
-  return;
-} catch (err: any) {
-  console.error('Erreur lors du claim:', err);
-  const message = err?.message || (err?.error?.message) || 'Impossible de récupérer l\'objet (probablement déjà récupéré).';
-  toast.error(message);
-  // reload to refresh state if something went wrong
-  loadData();
-  return;
-}
+      console.log('🎁 Claiming gift:', gift);
+
+      if (gift.gift_type === 'item') {
+        // 1) Attempt to claim atomically via service (will mark gift as 'claimed' server-side)
+        try {
+          await campaignService.claimGift(gift.id, player.id, {
+            quantity: gift.item_quantity || 1,
+          });
+        } catch (err: any) {
+          console.error('Erreur lors du claim:', err);
+          toast.error(err?.message || 'Impossible de récupérer l\'objet (probablement déjà récupéré).');
+          // reload to refresh state
+          loadData();
+          return;
+        }
 
         // 2) If claim succeeded, insert the item into the player's inventory
         // Parse original meta if present
