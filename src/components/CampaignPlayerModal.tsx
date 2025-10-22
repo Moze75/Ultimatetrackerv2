@@ -607,58 +607,59 @@ const handleClaimGift = async (gift: CampaignGift) => {
         ? `${cleanDescription}\n${metaLine}`
         : metaLine;
 
-      console.log('📦 Description finale:', finalDescription);
+   console.log('📦 Description finale:', finalDescription);
 
-      // 2. Claim d'abord (met le gift en "claimed")
-      try {
-        await campaignService.claimGift(gift.id, player.id, {
-          quantity: gift.item_quantity || 1,
-        });
-        console.log('✅ Gift claimed successfully');
-      } catch (claimError: any) {
-        console.error('❌ Claim error:', claimError);
-        // Si le gift est déjà claim, on arrête tout
-        if (claimError.message?.includes('déjà récupéré')) {
-          toast.error('Cet objet a déjà été récupéré');
-          return;
-        }
-        throw claimError;
-      }
+// ✅ BON ORDRE : Claim d'abord
+try {
+  await campaignService.claimGift(gift.id, player.id, {
+    quantity: gift.item_quantity || 1,
+  });
+  console.log('✅ Gift claimed successfully');
+} catch (claimError: any) {
+  console.error('❌ Claim error:', claimError);
+  // Si déjà récupéré, on stop tout
+  if (claimError.message?.includes('déjà récupéré')) {
+    toast.error('Cet objet a déjà été récupéré');
+    return; // ← Important : on arrête ici
+  }
+  throw claimError;
+}
 
-      // 3. Ensuite insert l'item
-      const { data: insertedItem, error } = await supabase
-        .from('inventory_items')
-        .insert({
-          player_id: player.id,
-          name: gift.item_name || 'Objet',
-          description: finalDescription,
-        })
-        .select()
-        .single();
+// PUIS insert l'item
+const { data: insertedItem, error } = await supabase
+  .from('inventory_items')
+  .insert({
+    player_id: player.id,
+    name: gift.item_name || 'Objet',
+    description: finalDescription,
+  })
+  .select()
+  .single();
 
-      if (error) {
-        console.error('❌ Insert error:', error);
-        throw error;
-      }
+if (error) {
+  console.error('❌ Insert error:', error);
+  throw error;
+}
 
-      console.log('✅ Item inserted:', insertedItem);
+console.log('✅ Item inserted:', insertedItem);
 
-      // 4. Dispatch event pour le polling
-      window.dispatchEvent(new CustomEvent('inventory:refresh', { 
-        detail: { playerId: player.id } 
-      }));
+// Dispatch event
+window.dispatchEvent(new CustomEvent('inventory:refresh', { 
+  detail: { playerId: player.id } 
+}));
 
-      const typeLabel = 
-        itemMeta.type === 'armor' ? 'Armure' :
-        itemMeta.type === 'shield' ? 'Bouclier' :
-        itemMeta.type === 'weapon' ? 'Arme' :
-        'Objet';
-      
-      toast.success(`${typeLabel} "${gift.item_name}" ajouté${itemMeta.type === 'armor' ? 'e' : ''} à votre inventaire !`);
+// Toast de succès
+const typeLabel = 
+  itemMeta.type === 'armor' ? 'Armure' :
+  itemMeta.type === 'shield' ? 'Bouclier' :
+  itemMeta.type === 'weapon' ? 'Arme' :
+  'Objet';
 
-      setTimeout(() => {
-        onClose();
-      }, 800);
+toast.success(`${typeLabel} "${gift.item_name}" ajouté${itemMeta.type === 'armor' ? 'e' : ''} à votre inventaire !`);
+
+setTimeout(() => {
+  onClose();
+}, 800);
 
     } else {
       // ARGENT (même logique: claim d'abord, puis update)
