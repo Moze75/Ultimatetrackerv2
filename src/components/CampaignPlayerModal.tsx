@@ -137,6 +137,16 @@ export function CampaignPlayerModal({
     }
   };
 
+// --- coller IMMEDIATEMENT après setPendingGifts(visibleGifts);
+const { data: invRows } = await supabase
+  .from('inventory_items')
+  .select('*')
+  .eq('player_id', player.id)
+  .order('created_at', { ascending: false });
+
+setInventory(invRows || []);
+// --- fin insertion
+  
   const handleAcceptInvitation = async (invitationId: string) => {
     try {
       await campaignService.acceptInvitation(invitationId, player.id);
