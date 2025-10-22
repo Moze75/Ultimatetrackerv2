@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { X, Gift, Users, Check, Package, Coins } from 'lucide-react';
 import { Player } from '../types/dnd';
 import { supabase } from '../lib/supabase';
@@ -36,9 +36,10 @@ export function CampaignPlayerModal({
   const [isClaiming, setIsClaiming] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  // small ref to avoid stale closures in realtime handlers
-  const currentUserIdRef = useRef<string | null>(null);
-  currentUserIdRef.current = currentUserId;
+  // refs for cleanup
+  const invChannelRef = useRef<any>(null);
+  const giftChannelsRef = useRef<any[]>([]);
+  const claimChannelRef = useRef<any>(null);
 
   // Utilitaires méta
   const META_PREFIX = '#meta:';
@@ -62,11 +63,21 @@ export function CampaignPlayerModal({
     }
   };
 
-  // Realtime: inventory items for this player (INSERT)
+  // subscribe to inventory_items INSERT for this player (realtime)
   useEffect(() => {
+    // cleanup existing channel if any
+    if (invChannelRef.current) {
+      if (typeof supabase.removeChannel === 'function') {
+        supabase.removeChannel(invChannelRef.current);
+      } else {
+        invChannelRef.current.unsubscribe?.();
+      }
+      invChannelRef.current = null;
+    }
+
     if (!open || !player?.id) return;
 
-    const ch = supabase
+    const channel = supabase
       .channel(`inv-player-${player.id}`)
       .on(
         'postgres_changes',
@@ -77,6 +88,7 @@ export function CampaignPlayerModal({
           filter: `player_id=eq.${player.id}`,
         },
         (payload: any) => {
+          console.log('[Realtime] inventory_items payload:', payload);
           const rec = payload?.record ?? payload?.new;
           if (!rec) return;
           setInventory((prev) => [rec, ...prev]);
@@ -84,18 +96,35 @@ export function CampaignPlayerModal({
       )
       .subscribe();
 
+    invChannelRef.current = channel;
+
     return () => {
-      if (typeof supabase.removeChannel === 'function') {
-        supabase.removeChannel(ch);
-      } else {
-        ch.unsubscribe?.();
+      if (invChannelRef.current) {
+        if (typeof supabase.removeChannel === 'function') {
+          supabase.removeChannel(invChannelRef.current);
+        } else {
+          invChannelRef.current.unsubscribe?.();
+        }
+        invChannelRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // depend on open and player id
   }, [open, player?.id]);
 
-  // Realtime: campaign_gifts subscription so UI updates without refresh
+  // subscribe to campaign_gifts (INSERT/UPDATE/DELETE) for campaigns the user is member of
   useEffect(() => {
+    // cleanup any existing gift channels
+    if (giftChannelsRef.current.length > 0) {
+      giftChannelsRef.current.forEach((ch) => {
+        if (typeof supabase.removeChannel === 'function') {
+          supabase.removeChannel(ch);
+        } else {
+          ch.unsubscribe?.();
+        }
+      });
+      giftChannelsRef.current = [];
+    }
+
     if (!open || !myCampaigns?.length) return;
 
     const campaignIds = myCampaigns.map((c) => c.id).filter(Boolean);
@@ -116,11 +145,11 @@ export function CampaignPlayerModal({
             filter: `campaign_id=eq.${cid}`,
           },
           (payload: any) => {
+            console.log('[Realtime] campaign_gifts INSERT:', payload);
             const rec = payload?.record ?? payload?.new;
             if (!rec) return;
-            // Only show if pending and visible to this user
             if (rec.status !== 'pending') return;
-            const uId = currentUserIdRef.current;
+            const uId = currentUserId;
             if (!uId) return;
             if (
               !rec.distribution_mode ||
@@ -146,18 +175,17 @@ export function CampaignPlayerModal({
             filter: `campaign_id=eq.${cid}`,
           },
           (payload: any) => {
+            console.log('[Realtime] campaign_gifts UPDATE:', payload);
             const rec = payload?.record ?? payload?.new;
             const old = payload?.old;
             if (!rec && !old) return;
-            // If status changed to non-pending remove from pendingGifts
             const status = rec?.status ?? old?.status;
             const id = rec?.id ?? old?.id;
             if (!id) return;
             if (status && status !== 'pending') {
               setPendingGifts((prev) => prev.filter((g) => g.id !== id));
             } else if (rec && status === 'pending') {
-              // became pending: add if visible
-              const uId = currentUserIdRef.current;
+              const uId = currentUserId;
               if (!uId) return;
               if (
                 !rec.distribution_mode ||
@@ -184,6 +212,7 @@ export function CampaignPlayerModal({
             filter: `campaign_id=eq.${cid}`,
           },
           (payload: any) => {
+            console.log('[Realtime] campaign_gifts DELETE:', payload);
             const oldRec = payload?.old;
             if (!oldRec) return;
             setPendingGifts((prev) => prev.filter((g) => g.id !== oldRec.id));
@@ -194,24 +223,38 @@ export function CampaignPlayerModal({
       channels.push(ch);
     });
 
-    return () => {
-      channels.forEach((ch) => {
-        if (typeof supabase.removeChannel === 'function') {
-          supabase.removeChannel(ch);
-        } else {
-          ch.unsubscribe?.();
-        }
-      });
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, myCampaigns]);
+    giftChannelsRef.current = channels;
 
-  // Realtime: when a gift_claim is created remove the pending gift locally (useful if claim created by RPC)
+    return () => {
+      if (giftChannelsRef.current.length > 0) {
+        giftChannelsRef.current.forEach((ch) => {
+          if (typeof supabase.removeChannel === 'function') {
+            supabase.removeChannel(ch);
+          } else {
+            ch.unsubscribe?.();
+          }
+        });
+        giftChannelsRef.current = [];
+      }
+    };
+    // depend on open and myCampaigns
+  }, [open, myCampaigns, currentUserId]);
+
+  // subscribe to campaign_gift_claims INSERT - remove pending gifts locally when claims are created
   useEffect(() => {
-    if (!open || !myCampaigns?.length) return;
+    if (claimChannelRef.current) {
+      if (typeof supabase.removeChannel === 'function') {
+        supabase.removeChannel(claimChannelRef.current);
+      } else {
+        claimChannelRef.current.unsubscribe?.();
+      }
+      claimChannelRef.current = null;
+    }
+
+    if (!open) return;
 
     const ch = supabase
-      .channel(`campaign-gift-claims`)
+      .channel('campaign-gift-claims')
       .on(
         'postgres_changes',
         {
@@ -220,6 +263,7 @@ export function CampaignPlayerModal({
           table: 'campaign_gift_claims',
         },
         (payload: any) => {
+          console.log('[Realtime] campaign_gift_claims INSERT:', payload);
           const rec = payload?.record ?? payload?.new;
           if (!rec || !rec.gift_id) return;
           setPendingGifts((prev) => prev.filter((g) => g.id !== rec.gift_id));
@@ -227,16 +271,21 @@ export function CampaignPlayerModal({
       )
       .subscribe();
 
+    claimChannelRef.current = ch;
+
     return () => {
-      if (typeof supabase.removeChannel === 'function') {
-        supabase.removeChannel(ch);
-      } else {
-        ch.unsubscribe?.();
+      if (claimChannelRef.current) {
+        if (typeof supabase.removeChannel === 'function') {
+          supabase.removeChannel(claimChannelRef.current);
+        } else {
+          claimChannelRef.current.unsubscribe?.();
+        }
+        claimChannelRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, myCampaigns]);
+  }, [open]);
 
+  // load data when modal opens
   useEffect(() => {
     if (open) {
       loadData();
@@ -247,18 +296,20 @@ export function CampaignPlayerModal({
   const loadData = async () => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         setCurrentUserId(null);
         return;
       }
       setCurrentUserId(user.id);
 
-      // Charger les invitations
+      // invitations
       const invites = await campaignService.getMyInvitations();
       setInvitations(invites || []);
 
-      // Charger mes campagnes
+      // get campaigns where user is member
       const { data: members } = await supabase
         .from('campaign_members')
         .select('campaign_id')
@@ -274,7 +325,7 @@ export function CampaignPlayerModal({
 
         setMyCampaigns(campaigns || []);
 
-        // Charger les cadeaux en attente POUR ces campagnes
+        // pending gifts
         const { data: gifts } = await supabase
           .from('campaign_gifts')
           .select('*')
@@ -284,7 +335,7 @@ export function CampaignPlayerModal({
 
         const giftsList: CampaignGift[] = gifts || [];
 
-        // Récupérer les claims faits par l'utilisateur pour ces gifts (pour filtrer)
+        // fetch claims by this user for those gifts
         const giftIds = giftsList.map((g) => g.id).filter(Boolean) as string[];
         let userClaims: { gift_id: string }[] = [];
         if (giftIds.length > 0) {
@@ -297,20 +348,17 @@ export function CampaignPlayerModal({
         }
         const claimedSet = new Set(userClaims.map((c) => c.gift_id));
 
-        // Filtrer les gifts visibles pour l'utilisateur :
+        // filter visible gifts
         const visibleGifts = giftsList.filter((g) => {
           if (!g || !g.id) return false;
-          if (claimedSet.has(g.id)) return false; // déjà récupéré par cet utilisateur
-          // shared -> visible to all
+          if (claimedSet.has(g.id)) return false;
           if (!g.distribution_mode || g.distribution_mode === 'shared') return true;
-          // individual -> visible only to recipients
           if (g.distribution_mode === 'individual') {
             if (Array.isArray((g as any).recipient_ids) && (g as any).recipient_ids.includes(user.id)) {
               return true;
             }
             return false;
           }
-          // default: hide
           return false;
         });
 
@@ -325,7 +373,6 @@ export function CampaignPlayerModal({
 
         setInventory(invRows || []);
       } else {
-        // Ensure empty when no campaigns
         setPendingGifts([]);
         setInventory([]);
         setMyCampaigns([]);
@@ -351,7 +398,6 @@ export function CampaignPlayerModal({
 
   const handleDeclineInvitation = async (invitationId: string) => {
     if (!confirm('Refuser cette invitation ?')) return;
-
     try {
       await campaignService.declineInvitation(invitationId);
       toast.success('Invitation refusée');
@@ -371,12 +417,10 @@ export function CampaignPlayerModal({
 
     try {
       const invitation = await campaignService.getInvitationsByCode(code);
-
       if (invitation.status !== 'pending') {
         toast.error('Cette invitation n\'est plus valide');
         return;
       }
-
       await handleAcceptInvitation(invitation.id);
       setShowCodeInput(false);
       setInvitationCode('');
@@ -395,16 +439,18 @@ export function CampaignPlayerModal({
     setIsClaiming(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         toast.error('Utilisateur non connecté');
         return;
       }
 
-      // helper: remove gift from pending list (local)
+      // local remove helper
       const removePendingGiftLocal = () => {
         try {
-          setPendingGifts((prev: CampaignGift[]) => prev.filter((p) => p.id !== gift.id));
+          setPendingGifts((prev) => prev.filter((p) => p.id !== gift.id));
         } catch (e) {
           console.warn('Erreur mise à jour état local pending gifts, reload:', e);
         }
@@ -417,10 +463,12 @@ export function CampaignPlayerModal({
             quantity: gift.item_quantity || 1,
           });
 
-          // remove gift locally
+          console.log('RPC claim result:', { claim, item });
+
+          // remove locally first
           removePendingGiftLocal();
 
-          // If RPC returned an item, update inventory local state (optimistic)
+          // prefer item returned by RPC
           if (item) {
             setInventory((prev) => [item, ...prev]);
             toast.success('Cadeau récupéré !');
@@ -428,7 +476,26 @@ export function CampaignPlayerModal({
             return;
           }
 
-          // fallback: create inventory item client-side (rare)
+          // fallback: fetch the newest inventory row for this player (in case RPC didn't return item)
+          try {
+            const { data: latestRows, error } = await supabase
+              .from('inventory_items')
+              .select('*')
+              .eq('player_id', player.id)
+              .order('created_at', { ascending: false })
+              .limit(1);
+
+            if (!error && latestRows && latestRows.length > 0) {
+              setInventory((prev) => [latestRows[0], ...prev]);
+              toast.success('Cadeau récupéré !');
+              setTimeout(() => onClose(), 700);
+              return;
+            }
+          } catch (err) {
+            console.warn('fallback fetch failed', err);
+          }
+
+          // ultimate fallback: try to create the inventory row client-side (rare)
           const metaPrefix = META_PREFIX;
           let originalMeta = null;
           if (gift.item_description) {
@@ -449,11 +516,6 @@ export function CampaignPlayerModal({
             equipped: false,
           };
 
-          itemMeta.quantity = gift.item_quantity || 1;
-          itemMeta.equipped = false;
-
-          const metaLine = `${metaPrefix}${JSON.stringify(itemMeta)}`;
-
           const cleanDescription = gift.item_description
             ? gift.item_description
                 .split('\n')
@@ -462,7 +524,9 @@ export function CampaignPlayerModal({
                 .trim()
             : '';
 
-          const finalDescription = cleanDescription ? `${cleanDescription}\n${metaLine}` : metaLine;
+          const finalDescription = cleanDescription
+            ? `${cleanDescription}\n${metaPrefix}${JSON.stringify(itemMeta)}`
+            : `${metaPrefix}${JSON.stringify(itemMeta)}`;
 
           const { data: insertedItem, error: insertErr } = await supabase
             .from('inventory_items')
@@ -499,7 +563,7 @@ export function CampaignPlayerModal({
 
       // CURRENCY flow
       try {
-        // optimistic update in UI: inform player and update local player via onUpdate
+        // optimistic update locally
         const newGold = (player.gold || 0) + (gift.gold || 0);
         const newSilver = (player.silver || 0) + (gift.silver || 0);
         const newCopper = (player.copper || 0) + (gift.copper || 0);
@@ -511,7 +575,7 @@ export function CampaignPlayerModal({
           copper: newCopper,
         });
 
-        // record the claim via RPC
+        // record the claim server-side
         await campaignService.claimGift(gift.id, player.id, {
           gold: gift.gold ?? 0,
           silver: gift.silver ?? 0,
