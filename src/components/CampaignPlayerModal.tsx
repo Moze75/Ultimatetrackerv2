@@ -597,7 +597,7 @@ export function CampaignPlayerModal({
         console.log('📦 Description finale:', finalDescription);
 
         // ✅ 1. CLAIM D'ABORD (avant l'insert)
-     try {
+  try {
     await campaignService.claimGift(gift.id, player.id, {
       quantity: gift.item_quantity || 1,
     });
@@ -667,7 +667,6 @@ export function CampaignPlayerModal({
   setTimeout(() => {
     onClose();
   }, 800);
-}
 
       } else {
         // ✅ ARGENT: même logique (claim puis update)
