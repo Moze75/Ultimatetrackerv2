@@ -291,47 +291,40 @@ async addItemToCampaign(
   // ENVOIS (GIFTS)
   // =============================================
 
-// Remplacez les implémentations existantes de sendGift et claimGift par ce code.
-// Ces fonctions utilisent le client `supabase` déjà importé dans ce fichier.
-// Note : pour une atomicité parfaite (ex : insert gift + décrémenter inventory ou insert claim + marquer gift claimed)
-// il est recommandé d'implémenter une fonction PL/pgSQL (RPC) et l'appeler via supabase.rpc(...) — voir commentaires plus bas.
-
-type DistributionMode = 'individual' | 'shared';
-
-export async function sendGift(
+async sendGift(
   campaignId: string,
-  type: 'item' | 'currency',
-  payload: {
-    itemName?: string | null;
-    itemDescription?: string | null;
-    itemQuantity?: number | null;
-    gold?: number | null;
-    silver?: number | null;
-    copper?: number | null;
-    distributionMode?: DistributionMode | null;
-    recipientIds?: string[] | null;
-    message?: string | null;
-    inventoryItemId?: string | null; // facultatif : id du campaign_inventory à décrémenter/supprimer
+  giftType: GiftType,
+  data: {
+    itemName?: string;
+    itemDescription?: string;
+    itemQuantity?: number;
+    gold?: number;
+    silver?: number;
+    copper?: number;
+    distributionMode: DistributionMode;
+    message?: string;
+    recipientIds?: string[]; // destinataires explicites pour mode 'individual'
+    inventoryItemId?: string; // facultatif : id du campaign_inventory à décrémenter/supprimer
   }
-) {
+): Promise<CampaignGift> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Non authentifié');
 
-  // Créer le gift (status = 'pending')
-  const { data: insertedGift, error: insertErr } = await supabase
+  // Insère le gift (status = 'pending')
+  const { data: gift, error } = await supabase
     .from('campaign_gifts')
     .insert({
       campaign_id: campaignId,
-      gift_type: type,
-      item_name: payload.itemName ?? null,
-      item_description: payload.itemDescription ?? null,
-      item_quantity: payload.itemQuantity ?? null,
-      gold: payload.gold ?? null,
-      silver: payload.silver ?? null,
-      copper: payload.copper ?? null,
-      distribution_mode: payload.distributionMode ?? 'individual',
-      recipient_ids: payload.recipientIds ?? null,
-      message: payload.message ?? null,
+      gift_type: giftType,
+      item_name: data.itemName ?? null,
+      item_description: data.itemDescription ?? null,
+      item_quantity: data.itemQuantity ?? null,
+      gold: data.gold ?? 0,
+      silver: data.silver ?? 0,
+      copper: data.copper ?? 0,
+      distribution_mode: data.distributionMode,
+      recipient_ids: data.recipientIds ?? null,
+      message: data.message ?? null,
       sent_by: user.id,
       status: 'pending',
       sent_at: new Date().toISOString()
@@ -339,44 +332,33 @@ export async function sendGift(
     .select()
     .single();
 
-  if (insertErr) throw insertErr;
+  if (error) throw error;
 
   // Optionnel : décrémenter / supprimer l'item dans l'inventaire de campagne
-  // NOTE: cette étape n'est pas atomique avec la création du gift. Pour atomicité, créez un RPC côté serveur.
-  if (payload.inventoryItemId && payload.itemQuantity && payload.itemQuantity > 0) {
+  // NOTE: ceci n'est pas atomique avec la création du gift. Pour atomicité, créez un RPC PL/pgSQL.
+  if (data.inventoryItemId && data.itemQuantity && data.itemQuantity > 0) {
     try {
-      // Décrémenter la quantité
-      const { data: updatedInv, error: updErr } = await supabase
-        .from('campaign_inventory')
-        .update({
-          quantity: supabase.rpc ? undefined : (/* fallback, will use SQL below */ null)
-        })
-        // Using a raw SQL update pattern because supabase-js doesn't support column = column - value directly in update payload.
-        // We'll run a SQL RPC-like query via from().update with raw SQL via .eq + .filter? Simpler: fetch current quantity then update/delete.
-        .eq('id', payload.inventoryItemId);
-
-      // Fallback / portable approach: read current quantity then update or delete.
       const { data: invRow, error: invErr } = await supabase
         .from('campaign_inventory')
         .select('id, quantity')
-        .eq('id', payload.inventoryItemId)
+        .eq('id', data.inventoryItemId)
         .single();
 
       if (invErr) {
         console.warn('Impossible de lire l\'inventaire pour décrémentation', invErr);
       } else {
-        const newQty = (invRow.quantity || 0) - (payload.itemQuantity || 0);
+        const newQty = (invRow.quantity || 0) - (data.itemQuantity || 0);
         if (newQty > 0) {
           const { error: qErr } = await supabase
             .from('campaign_inventory')
             .update({ quantity: newQty })
-            .eq('id', payload.inventoryItemId);
+            .eq('id', data.inventoryItemId);
           if (qErr) console.warn('Erreur mise à jour quantité inventaire:', qErr);
         } else {
           const { error: delErr } = await supabase
             .from('campaign_inventory')
             .delete()
-            .eq('id', payload.inventoryItemId);
+            .eq('id', data.inventoryItemId);
           if (delErr) console.warn('Erreur suppression inventaire:', delErr);
         }
       }
@@ -385,7 +367,7 @@ export async function sendGift(
     }
   }
 
-  return insertedGift;
+  return gift;
 },
 
 /**
