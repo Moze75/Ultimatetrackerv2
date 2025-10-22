@@ -11,12 +11,13 @@ import {
   CampaignGiftClaim,
 } from '../types/campaign';
 
+// Ajoute la prop dans l'interface
 interface CampaignPlayerModalProps {
   open: boolean;
   onClose: () => void;
   player: Player;
   onUpdate: (player: Player) => void;
-  onInventoryAdd?: (item: any) => void;
+  onInventoryAdd?: (item: any) => void; // <-- nouveau
 }
 
 const META_PREFIX = '#meta:';
