@@ -807,7 +807,7 @@ useEffect(() => {
           toast.success('Armure équipée');
         }
       } else if (meta.type === 'shield') {
-        if (mode === 'unequip' and shield?.inventory_item_id === freshItem.id) {
+       if (mode === 'unequip' && shield?.inventory_item_id === freshItem.id) {
           await updateItemMetaComplete(freshItem, { ...meta, equipped: false });
           await saveEquipment('shield', null);
           toast.success('Bouclier déséquipé');
