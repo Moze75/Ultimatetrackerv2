@@ -201,6 +201,12 @@ export function CampaignPlayerModal({
     try {
       const { claim, item } = await campaignService.claimGift(gift.id, player.id, {
         quantity: gift.item_quantity || 1,
+        // retirer le gift localement
+setPendingGifts(prev => prev.filter(g => g.id !== gift.id));
+
+// ajouter l'item si présent
+if (item) setInventory(prev => [item, ...prev]);
+// sinon : loadData() ou loadInventory();
       });
 
       console.log('Claim result', claim, item);
