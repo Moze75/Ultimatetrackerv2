@@ -407,7 +407,7 @@ async claimGift(
     silver?: number;
     copper?: number;
   }
-): Promise<CampaignGiftClaim> {
+): Promise<{ claim: CampaignGiftClaim | null; item?: any | null }> {
   // Essayer la RPC transactionnelle
   try {
     const rpcRes = await callRpc('rpc_claim_gift', {
@@ -416,11 +416,18 @@ async claimGift(
       _claimed: claimed
     });
 
-    const parsed = Array.isArray(rpcRes) ? rpcRes[0] : rpcRes;
-    if (parsed && parsed.claim) {
-      return parsed.claim as CampaignGiftClaim;
-    }
-    throw new Error('rpc_claim_gift returned unexpected shape');
+    // --- Parsing robuste de la réponse RPC ---
+    // Supabase / Postgres peut renvoyer différentes formes :
+    // - un objet { claim: ..., item: ... }
+    // - un array [{ claim: ..., item: ... }]
+    // - un enveloppage { rpc_claim_gift: { claim:..., item:... } }
+    let payload: any = Array.isArray(rpcRes) ? rpcRes[0] : rpcRes;
+    if (payload && payload.rpc_claim_gift) payload = payload.rpc_claim_gift;
+
+    const claim = payload?.claim ?? null;
+    const item = payload?.item ?? null;
+
+    return { claim, item };
   } catch (err) {
     // Fallback non-transactionnel mais plus sûr : update conditionnel D'ABORD, puis insert claim
     console.warn('rpc_claim_gift failed, falling back to non-transactional flow:', err);
@@ -430,7 +437,6 @@ async claimGift(
     if (!user) throw new Error('Non authentifié');
 
     // 1) Tentative atomique : marquer le gift comme 'distributed' seulement si status = 'pending'
-    // Utiliser maybeSingle() pour éviter l'erreur PGRST116 si aucune ligne n'est retournée
     const { data: updatedGift, error: updateErr } = await supabase
       .from('campaign_gifts')
       .update({
@@ -475,7 +481,7 @@ async claimGift(
       throw claimErr;
     }
 
-    return claimRow as CampaignGiftClaim;
+    return { claim: claimRow as CampaignGiftClaim, item: null };
   }
 },
 
