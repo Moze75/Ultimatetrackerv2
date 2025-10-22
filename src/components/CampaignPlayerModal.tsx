@@ -499,15 +499,7 @@ if (item) {
   return;
 }
 
-          if (item) {
-  console.log('CampaignPlayerModal: RPC returned item', item.id);
-  setInventory((prev) => [item, ...prev]);
-  try {
-    onInventoryAdd?.(item);
-    console.log('CampaignPlayerModal: called onInventoryAdd for', item.id);
-  } catch (e) {
-    console.warn('CampaignPlayerModal: onInventoryAdd throw', e);
-  }
+           
           // fallback: fetch newest inventory row for player
           try {
             const { data: latestRows, error } = await supabase
