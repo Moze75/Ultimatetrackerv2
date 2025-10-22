@@ -10,6 +10,14 @@ import {
   DistributionMode
 } from '../types/campaign';
 
+// helper RPC — placez-le au niveau du module, avant l'objet `campaignService`
+async function callRpc(fnName: string, params: any) {
+  const res = await supabase.rpc(fnName, params);
+  if (res.error) throw res.error;
+  return res.data;
+}
+
+
 // ✅ Fonction pour générer un code d'invitation côté client
 function generateInvitationCode(): string {
   const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
