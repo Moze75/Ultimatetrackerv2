@@ -1,662 +1,891 @@
-import React, { useEffect, useState } from 'react';
-import { X, Gift, Users, Check, Package, Coins } from 'lucide-react';
-import { Player } from '../types/dnd';
-import { supabase } from '../lib/supabase';
-import { campaignService } from '../services/campaignService';
-import {
-  CampaignInvitation, 
-  CampaignGift,
-  CampaignMember,
-  Campaign,
-  CampaignGiftClaim
-} from '../types/campaign';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
+import { LogOut } from 'lucide-react';
 
-interface CampaignPlayerModalProps {
-  open: boolean;
-  onClose: () => void;
-  player: Player;
-  onUpdate: (player: Player) => void;
+import { testConnection, supabase } from '../lib/supabase';
+import { Player } from '../types/dnd';
+
+import { PlayerProfile } from '../components/PlayerProfile';
+import { TabNavigation } from '../components/TabNavigation';
+import CombatTab from '../components/CombatTab';
+import { EquipmentTab } from '../components/EquipmentTab';
+import { AbilitiesTab } from '../components/AbilitiesTab';
+import { StatsTab } from '../components/StatsTab';
+import { ClassesTab } from '../components/ClassesTab';
+import { PlayerContext } from '../contexts/PlayerContext';
+
+import { inventoryService } from '../services/inventoryService';
+import PlayerProfileProfileTab from '../components/PlayerProfileProfileTab';
+import { loadAbilitySections } from '../services/classesContent';
+
+import { PlayerProfileSettingsModal } from '../components/PlayerProfileSettingsModal';
+
+import '../styles/swipe.css';
+
+/* ===========================================================
+   Types & Constantes
+   =========================================================== */
+type TabKey = 'combat' | 'abilities' | 'stats' | 'equipment' | 'class' | 'profile';
+const TAB_ORDER: TabKey[] = ['combat', 'class', 'abilities', 'stats', 'equipment', 'profile'];
+
+const LAST_SELECTED_CHARACTER_SNAPSHOT = 'selectedCharacter';
+const SKIP_AUTO_RESUME_ONCE = 'ut:skipAutoResumeOnce';
+const lastTabKeyFor = (playerId: string) => `ut:lastActiveTab:${playerId}`;
+const isValidTab = (t: string | null): t is TabKey =>
+  t === 'combat' || t === 'abilities' || t === 'stats' || t === 'equipment' || t === 'class' || t === 'profile';
+
+type GamePageProps = {
+  session: any;
+  selectedCharacter: Player;
+  onBackToSelection: () => void;
+  onUpdateCharacter?: (p: Player) => void;
+};
+
+/* ===========================================================
+   Helpers Scroll (sécurisés)
+   =========================================================== */
+function reallyFreezeScroll(): number {
+  const y = window.scrollY || window.pageYOffset || 0;
+  const body = document.body;
+  (body as any).__scrollY = y;
+  body.style.position = 'fixed';
+  body.style.top = `-${y}px`;
+  body.style.left = '0';
+  body.style.right = '0';
+  body.style.width = '100%';
+  body.style.overflowY = 'scroll';
+  return y;
+}
+function reallyUnfreezeScroll() {
+  const body = document.body;
+  const y = (body as any).__scrollY || 0;
+  body.style.position = '';
+  body.style.top = '';
+  body.style.left = '';
+  body.style.right = '';
+  body.style.width = '';
+  body.style.overflowY = '';
+  window.scrollTo(0, y);
+  delete (body as any).__scrollY;
+}
+function stabilizeScroll(y: number, durationMs = 350) {
+  const start = performance.now();
+  const tick = (now: number) => {
+    window.scrollTo(0, y);
+    if (now - start < durationMs) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
 }
 
-export function CampaignPlayerModal({
-  open,
-  onClose,
-  player,
-  onUpdate
-}: CampaignPlayerModalProps) {
-  const [invitations, setInvitations] = useState<CampaignInvitation[]>([]);
-  const [myCampaigns, setMyCampaigns] = useState<Campaign[]>([]);
-  const [pendingGifts, setPendingGifts] = useState<CampaignGift[]>([]);
+/* ===========================================================
+   Composant principal
+   =========================================================== */
+export function GamePage({
+  session,
+  selectedCharacter,
+  onBackToSelection,
+  onUpdateCharacter,
+}: GamePageProps) {
+  /* ---------------- State principal ---------------- */
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'invitations' | 'gifts'>('gifts');
-  const [showCodeInput, setShowCodeInput] = useState(false);
-  const [invitationCode, setInvitationCode] = useState('');
-  // local inventory state (items already owned by the player)
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+
+  const [currentPlayer, setCurrentPlayer] = useState<Player | null>(selectedCharacter);
   const [inventory, setInventory] = useState<any[]>([]);
-  const [isClaiming, setIsClaiming] = useState(false);
+  const [classSections, setClassSections] = useState<any[] | null>(null);
 
-  // Utilitaires méta
-  const META_PREFIX = '#meta:';
-  const getVisibleDescription = (description: string | null | undefined): string => {
-    if (!description) return '';
-    return description
-      .split('\n')
-      .filter(line => !line.trim().startsWith(META_PREFIX))
-      .join('\n')
-      .trim();
-  };
-  const parseMeta = (description: string | null | undefined) => {
-    if (!description) return null;
-    const lines = description.split('\n').map(l => l.trim());
-    const metaLine = [...lines].reverse().find(l => l.startsWith(META_PREFIX));
-    if (!metaLine) return null;
-    try {
-      return JSON.parse(metaLine.slice(META_PREFIX.length));
-    } catch {
-      return null;
-    }
-  };
+  // --- START: Realtime subscription for inventory_items (GamePage) ---
+  const invChannelRef = useRef<any>(null);
 
-  // Realtime subscription: update inventory when new items are inserted for this player
   useEffect(() => {
-    if (!open || !player?.id) return;
+    // cleanup previous channel if any
+    if (invChannelRef.current) {
+      if (typeof supabase.removeChannel === 'function') {
+        supabase.removeChannel(invChannelRef.current);
+      } else {
+        invChannelRef.current.unsubscribe?.();
+      }
+      invChannelRef.current = null;
+    }
 
-    const channel = supabase
-      .channel(`inv-player-${player.id}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'inventory_items',
-        filter: `player_id=eq.${player.id}`,
-      }, (payload) => {
-        if (!payload?.record) return;
-        setInventory((prev: any[]) => [payload.record, ...prev]);
-      })
+    if (!currentPlayer?.id) return; // use the currentPlayer state you declared
+
+    console.log('GamePage: subscribe inventory_items realtime for player', currentPlayer.id);
+
+    const ch = supabase
+      .channel(`inv-player-${currentPlayer.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'inventory_items',
+          filter: `player_id=eq.${currentPlayer.id}`,
+        },
+        (payload: any) => {
+          console.log('[Realtime] inventory_items INSERT payload:', payload);
+          const rec = payload?.record ?? payload?.new;
+          if (!rec) return;
+
+          // update local inventory state (this will propagate as prop to EquipmentTab)
+          setInventory((prev) => {
+            // avoid duplicates if present
+            if (prev.some((i) => i.id === rec.id)) return prev;
+            return [rec, ...prev];
+          });
+        }
+      )
       .subscribe();
 
+    invChannelRef.current = ch;
+
     return () => {
-      if (typeof supabase.removeChannel === 'function') {
-        supabase.removeChannel(channel);
-      } else {
-        channel.unsubscribe?.();
+      if (invChannelRef.current) {
+        if (typeof supabase.removeChannel === 'function') {
+          supabase.removeChannel(invChannelRef.current);
+        } else {
+          invChannelRef.current.unsubscribe?.();
+        }
+        invChannelRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, player?.id]);
+  }, [currentPlayer?.id]);
+  // --- END
+
+  // Onglet initial
+  const initialTab: TabKey = (() => {
+    try {
+      const saved = localStorage.getItem(lastTabKeyFor(selectedCharacter.id));
+      return isValidTab(saved) ? saved : 'combat';
+    } catch {
+      return 'combat';
+    }
+  })();
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
+
+  // PRE-MONTAGE COMPLET
+  const [visitedTabs] = useState<Set<TabKey>>(
+    () => new Set<TabKey>(['combat', 'class', 'abilities', 'stats', 'equipment', 'profile'])
+  );
+
+  // État modal Paramètres
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsSlideFrom, setSettingsSlideFrom] = useState<'left' | 'right'>('left');
+
+  /* ---------------- Refs layout & swipe ---------------- */
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const widthRef = useRef<number>(0);
+  const paneRefs = useRef<Record<TabKey, HTMLDivElement | null>>({} as any);
+
+  // Geste
+  const startXRef = useRef<number | null>(null);
+  const startYRef = useRef<number | null>(null);
+  const dragStartScrollYRef = useRef<number>(0);
+
+  // Décision de direction
+  const gestureDirRef = useRef<'undetermined' | 'horizontal' | 'vertical'>('undetermined');
+
+  // Indique si le scroll est réellement gelé
+  const freezeActiveRef = useRef(false);
+  const freezeWatchdogRef = useRef<number | null>(null);
+  const hasStabilizedRef = useRef(false);
+
+  const [dragX, setDragX] = useState(0);
+  const [animating, setAnimating] = useState(false);
+  const [isInteracting, setIsInteracting] = useState(false);
+  const [containerH, setContainerH] = useState<number | undefined>(undefined);
+  const [heightLocking, setHeightLocking] = useState(false);
+  // Nouveau: historique récent des mouvements pour calculer la vitesse (flick)
+  const recentMovesRef = useRef<Array<{ x: number; t: number }>>([]);
+  // Nouveau: mémorise la direction du voisin affiché pendant le drag pour le garder monté pendant l’animation
+  const [latchedNeighbor, setLatchedNeighbor] = useState<'prev' | 'next' | null>(null);
+
+  const prevPlayerId = useRef<string | null>(selectedCharacter?.id ?? null);
+
+  /* ---------------- Scroll Freeze Safe API ---------------- */
+  const safeFreeze = useCallback(() => {
+    if (freezeActiveRef.current) return;
+    freezeActiveRef.current = true;
+    dragStartScrollYRef.current = reallyFreezeScroll();
+    // Watchdog : force unfreeze si rien ne libère après 1.2s
+    freezeWatchdogRef.current = window.setTimeout(() => {
+      if (freezeActiveRef.current) {
+        safeUnfreeze(true);
+      }
+    }, 1200);
+  }, []);
+
+  const safeUnfreeze = useCallback((forced = false) => {
+    if (!freezeActiveRef.current) return;
+    freezeActiveRef.current = false;
+    if (freezeWatchdogRef.current) {
+      clearTimeout(freezeWatchdogRef.current);
+      freezeWatchdogRef.current = null;
+    }
+    reallyUnfreezeScroll();
+    if (!forced) {
+      stabilizeScroll(dragStartScrollYRef.current, 320);
+    }
+  }, []);
+
+  const resetGestureState = useCallback(() => {
+    startXRef.current = null;
+    startYRef.current = null;
+    gestureDirRef.current = 'undetermined';
+    hasStabilizedRef.current = false;
+  }, []);
+
+  const fullAbortInteraction = useCallback(() => {
+    setIsInteracting(false);
+    setAnimating(false);
+    setDragX(0);
+    setLatchedNeighbor(null);
+    if (freezeActiveRef.current) safeUnfreeze();
+    resetGestureState();
+  }, [resetGestureState, safeUnfreeze]);
+
+  // Ouvrir/fermer la modale Paramètres
+  const openSettings = useCallback(
+    (dir: 'left' | 'right' = 'left') => {
+      if (freezeActiveRef.current) safeUnfreeze(true); // si le scroll a été gelé par le swipe de tabs
+      fullAbortInteraction(); // reset gestuelle des tabs en cours
+      setSettingsSlideFrom(dir);
+      setSettingsOpen(true);
+    },
+    [fullAbortInteraction, safeUnfreeze]
+  );
+
+  const closeSettings = useCallback(() => {
+    setSettingsOpen(false);
+  }, []);
+
+  /* ---------------- Update player ---------------- */
+  const applyPlayerUpdate = useCallback(
+    (updated: Player) => {
+      setCurrentPlayer(updated);
+      try { onUpdateCharacter?.(updated); } catch {}
+      try { localStorage.setItem(LAST_SELECTED_CHARACTER_SNAPSHOT, JSON.stringify(updated)); } catch {}
+    },
+    [onUpdateCharacter]
+  );
 
   useEffect(() => {
-    if (open) {
-      loadData();
+    if (currentPlayer) {
+      try { localStorage.setItem(LAST_SELECTED_CHARACTER_SNAPSHOT, JSON.stringify(currentPlayer)); } catch {}
+    }
+  }, [currentPlayer]);
+
+  /* ---------------- Persistance snapshot & tab ---------------- */
+  useEffect(() => {
+    const persist = () => {
+      if (!currentPlayer) return;
+      try {
+        localStorage.setItem(LAST_SELECTED_CHARACTER_SNAPSHOT, JSON.stringify(currentPlayer));
+        localStorage.setItem(lastTabKeyFor(selectedCharacter.id), activeTab);
+      } catch {}
+    };
+    window.addEventListener('visibilitychange', persist);
+    window.addEventListener('pagehide', persist);
+    return () => {
+      window.removeEventListener('visibilitychange', persist);
+      window.removeEventListener('pagehide', persist);
+    };
+  }, [currentPlayer, activeTab, selectedCharacter.id]);
+
+  useEffect(() => {
+    try { localStorage.setItem(lastTabKeyFor(selectedCharacter.id), activeTab); } catch {}
+  }, [activeTab, selectedCharacter.id]);
+
+  useEffect(() => {
+    const saved = (() => {
+      try {
+        const v = localStorage.getItem(lastTabKeyFor(selectedCharacter.id));
+        return isValidTab(v) ? v : 'combat';
+      } catch {
+        return 'combat';
+      }
+    })();
+    setActiveTab(saved);
+  }, [selectedCharacter.id]);
+
+  /* ---------------- Initialisation ---------------- */
+  useEffect(() => {
+    const initialize = async () => {
+      try {
+        setLoading(true);
+        setConnectionError(null);
+        const isConnected = await testConnection();
+        if (!isConnected.success) throw new Error('Impossible de se connecter à la base de données');
+
+        setCurrentPlayer((prev) =>
+          prev && prev.id === selectedCharacter.id ? prev : selectedCharacter
+        );
+        const inventoryData = await inventoryService.getPlayerInventory(selectedCharacter.id);
+        setInventory(inventoryData);
+        setLoading(false);
+      } catch (error: any) {
+        console.error('Erreur d\'initialisation:', error);
+        setConnectionError(error?.message ?? 'Erreur inconnue');
+        setLoading(false);
+      }
+    };
+
+    if (prevPlayerId.current !== selectedCharacter.id) {
+      prevPlayerId.current = selectedCharacter.id;
+      initialize();
+    } else if (loading) {
+      initialize();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, player?.id]);
+  }, [selectedCharacter.id]);
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Charger les invitations
-      const invites = await campaignService.getMyInvitations();
-      setInvitations(invites);
-
-      // Charger mes campagnes
-      const { data: members } = await supabase
-        .from('campaign_members')
-        .select('campaign_id')
-        .eq('user_id', user.id)
-        .eq('is_active', true);
-
-      if (members && members.length > 0) {
-        const campaignIds = members.map((m: any) => m.campaign_id);
-        const { data: campaigns } = await supabase
-          .from('campaigns')
-          .select('*')
-          .in('id', campaignIds);
-
-        setMyCampaigns(campaigns || []);
-
-        // Charger les cadeaux en attente POUR ces campagnes
-        const { data: gifts } = await supabase
-          .from('campaign_gifts')
-          .select('*')
-          .in('campaign_id', campaignIds)
-          .eq('status', 'pending')
-          .order('sent_at', { ascending: false });
-
-        const giftsList: CampaignGift[] = gifts || [];
-
-        // Récupérer les claims faits par l'utilisateur pour ces gifts (pour filtrer)
-        const giftIds = giftsList.map(g => g.id).filter(Boolean) as string[];
-        let userClaims: { gift_id: string }[] = [];
-        if (giftIds.length > 0) {
-          const { data: claims } = await supabase
-            .from('campaign_gift_claims')
-            .select('gift_id')
-            .in('gift_id', giftIds)
-            .eq('user_id', user.id);
-          userClaims = claims || [];
-        }
-        const claimedSet = new Set(userClaims.map(c => c.gift_id));
-
-        // Filtrer les gifts visibles pour l'utilisateur :
-        const visibleGifts = giftsList.filter((g) => {
-          if (!g || !g.id) return false;
-          if (claimedSet.has(g.id)) return false; // déjà récupéré par cet utilisateur
-          // shared -> visible to all
-          if (!g.distribution_mode || g.distribution_mode === 'shared') return true;
-          // individual -> visible only to recipients
-          if (g.distribution_mode === 'individual') {
-            if (Array.isArray((g as any).recipient_ids) && (g as any).recipient_ids.includes(user.id)) {
-              return true;
-            }
-            return false;
-          }
-          // default: hide
-          return false;
+  /* ---------------- Préchargement Sections Classe ---------------- */
+  useEffect(() => {
+    let cancelled = false;
+    setClassSections(null);
+    async function preloadClassContent() {
+      const cls = selectedCharacter?.class;
+      if (!cls) { setClassSections([]); return; }
+      try {
+        const res = await loadAbilitySections({
+          className: cls,
+          subclassName: (selectedCharacter as any)?.subclass ?? null,
+          characterLevel: selectedCharacter?.level ?? 1,
         });
-
-        setPendingGifts(visibleGifts);
-
-        // --- START: load initial inventory for player
-        const { data: invRows } = await supabase
-          .from('inventory_items')
-          .select('*')
-          .eq('player_id', player.id)
-          .order('created_at', { ascending: false });
-
-        setInventory(invRows || []);
-        // --- END
-      } else {
-        // Ensure empty when no campaigns
-        setPendingGifts([]);
-        setInventory([]);
-        setMyCampaigns([]);
+        if (!cancelled) setClassSections(res?.sections ?? []);
+      } catch {
+        if (!cancelled) setClassSections([]);
       }
-    } catch (error) {
-      console.error('Erreur chargement campagnes:', error);
-      toast.error('Erreur lors du chargement');
-    } finally {
-      setLoading(false);
     }
+    preloadClassContent();
+    return () => { cancelled = true; };
+  }, [selectedCharacter?.id, selectedCharacter?.class, (selectedCharacter as any)?.subclass, selectedCharacter?.level]);
+
+  /* ---------------- Voisins d'onglet ---------------- */
+  const activeIndex = TAB_ORDER.indexOf(activeTab);
+  const prevKey = activeIndex > 0 ? TAB_ORDER[activeIndex - 1] : null;
+  const nextKey = activeIndex < TAB_ORDER.length - 1 ? TAB_ORDER[activeIndex + 1] : null;
+
+  /* ---------------- Mesures ---------------- */
+  const measurePaneHeight = useCallback((key: TabKey | null | undefined) => {
+    if (!key) return 0;
+    const el = paneRefs.current[key];
+    return el?.offsetHeight ?? 0;
+  }, []);
+
+  const measureActiveHeight = useCallback(() => {
+    const h = measurePaneHeight(activeTab);
+    if (h) setContainerH(h);
+  }, [activeTab, measurePaneHeight]);
+
+  const measureDuringSwipe = useCallback(() => {
+    const ch = measurePaneHeight(activeTab);
+    const neighbor = dragX > 0 ? prevKey : dragX < 0 ? nextKey : null;
+    const nh = measurePaneHeight(neighbor as any);
+    const h = Math.max(ch, nh || 0);
+    if (h) setContainerH(h);
+  }, [activeTab, dragX, nextKey, prevKey, measurePaneHeight]);
+
+  useEffect(() => {
+    if (isInteracting || animating) return;
+    const id = window.requestAnimationFrame(measureActiveHeight);
+    return () => window.cancelAnimationFrame(id);
+  }, [activeTab, isInteracting, animating, measureActiveHeight]);
+
+  /* ---------------- Swipe tactile amélioré + sûreté ---------------- */
+  const HORIZONTAL_DECIDE_THRESHOLD = 10;   // déclenche un peu plus tôt
+  const HORIZONTAL_DOMINANCE_RATIO = 1.10;  // dominance horizontale légèrement moins stricte
+  // Nouveaux seuils "plus faciles"
+  const SWIPE_THRESHOLD_RATIO = 0.18;       // 18% de la largeur au lieu de 25%
+  const SWIPE_THRESHOLD_MIN_PX = 36;        // min 36px au lieu de 48px
+
+  // Flick: vitesse au-dessus de laquelle on valide même si la distance < seuil
+  // 0.35 px/ms = 350 px/s (ajuste si besoin entre 0.3 et 0.45)
+  const FLICK_VELOCITY_PX_PER_MS = 0.35;
+  const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    startXRef.current = t.clientX;
+    startYRef.current = t.clientY;
+    gestureDirRef.current = 'undetermined';
+    setAnimating(false);
+    setLatchedNeighbor(null);
+    // seed de l’historique pour le flick
+    recentMovesRef.current = [{ x: t.clientX, t: performance.now() }];
   };
 
-  const handleAcceptInvitation = async (invitationId: string) => {
-    try {
-      await campaignService.acceptInvitation(invitationId, player.id);
-      toast.success('Invitation acceptée !');
-      await loadData();
-    } catch (error) {
-      console.error(error);
-      toast.error('Erreur lors de l\'acceptation');
+  const onTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (startXRef.current == null || startYRef.current == null) return;
+
+    const t = e.touches[0];
+    const dx = t.clientX - startXRef.current;
+    const dy = t.clientY - startYRef.current;
+    const adx = Math.abs(dx);
+    const ady = Math.abs(dy);
+
+    // Décision
+    if (gestureDirRef.current === 'undetermined') {
+      if (adx >= HORIZONTAL_DECIDE_THRESHOLD || ady >= HORIZONTAL_DECIDE_THRESHOLD) {
+        if (adx > ady * HORIZONTAL_DOMINANCE_RATIO) {
+          gestureDirRef.current = 'horizontal';
+          setIsInteracting(true);
+          setContainerH(measurePaneHeight(activeTab));
+          safeFreeze();
+        } else {
+          gestureDirRef.current = 'vertical';
+          return; // Laisse le scroll natif
+        }
+      } else {
+        return; // Pas encore décidé, ne rien faire
+      }
     }
+
+    if (gestureDirRef.current !== 'horizontal') {
+      return; // Vertical : ne pas empêcher le scroll
+    }
+
+    // Horizontal confirmé
+    e.preventDefault();
+
+    let clamped = dx;
+    if (!prevKey && clamped > 0) clamped = 0;
+    if (!nextKey && clamped < 0) clamped = 0;
+
+    // Mémorise le voisin en vue pour le garder monté pendant l’animation
+    if (clamped > 0 && prevKey) {
+      if (latchedNeighbor !== 'prev') setLatchedNeighbor('prev');
+    } else if (clamped < 0 && nextKey) {
+      if (latchedNeighbor !== 'next') setLatchedNeighbor('next');
+    }
+
+    setDragX(clamped);
+    // Note: ce return n’annule pas le rAF (dans un handler React), on garde simple ici
+    requestAnimationFrame(measureDuringSwipe);
+    // Historique pour la vitesse (garde ~120ms de data)
+    const now = performance.now();
+    recentMovesRef.current.push({ x: t.clientX, t: now });
+    const cutoff = now - 120;
+    while (recentMovesRef.current.length > 2 && recentMovesRef.current[0].t < cutoff) {
+      recentMovesRef.current.shift();
+    }
+
   };
 
-  const handleDeclineInvitation = async (invitationId: string) => {
-    if (!confirm('Refuser cette invitation ?')) return;
-
-    try {
-      await campaignService.declineInvitation(invitationId);
-      toast.success('Invitation refusée');
-      await loadData();
-    } catch (error) {
-      console.error(error);
-      toast.error('Erreur');
-    }
+  // Déclenche la transition proprement: active d’abord l’anim, puis change le transform dans le frame suivant
+  const animateTo = (toPx: number, cb?: () => void) => {
+    setAnimating(true);
+    requestAnimationFrame(() => {
+      setDragX(toPx);
+      window.setTimeout(() => {
+        setAnimating(false);
+        cb?.();
+        setLatchedNeighbor(null); // libère le voisin verrouillé à la fin
+      }, 310);
+    });
   };
 
-  const handleJoinWithCode = async () => {
-    const code = invitationCode.trim().toUpperCase();
-    if (!code) {
-      toast.error('Entrez un code d\'invitation');
+  const finishInteract = () => {
+    setIsInteracting(false);
+    setDragX(0);
+    requestAnimationFrame(measureActiveHeight);
+  };
+
+  const onTouchEnd = () => {
+    // Geste non démarré
+    if (startXRef.current == null || startYRef.current == null) {
+      resetGestureState();
       return;
     }
 
-    try {
-      const invitation = await campaignService.getInvitationsByCode(code);
-
-      if (invitation.status !== 'pending') {
-        toast.error('Cette invitation n\'est plus valide');
-        return;
-      }
-
-      await handleAcceptInvitation(invitation.id);
-      setShowCodeInput(false);
-      setInvitationCode('');
-    } catch (error: any) {
-      console.error(error);
-      if (error.message?.includes('not found')) {
-        toast.error('Code d\'invitation invalide');
-      } else {
-        toast.error('Erreur lors de la vérification du code');
-      }
+    if (gestureDirRef.current !== 'horizontal') {
+      // Si on avait gelé par erreur (théoriquement non), on libère
+      if (freezeActiveRef.current) safeUnfreeze();
+      resetGestureState();
+      return;
     }
+
+    // Horizontal
+    const width = widthRef.current || (stageRef.current?.clientWidth ?? 0);
+    const threshold = Math.max(SWIPE_THRESHOLD_MIN_PX, width * SWIPE_THRESHOLD_RATIO);
+
+    // Vitesse pour flick (px/ms) sur la fenêtre ~120ms
+    let vx = 0;
+    const moves = recentMovesRef.current;
+    if (moves.length >= 2) {
+      const first = moves[0];
+      const last = moves[moves.length - 1];
+      const dt = Math.max(1, last.t - first.t);
+      vx = (last.x - first.x) / dt; // >0 vers la droite, <0 vers la gauche
+    }
+
+    const commit = (dir: -1 | 1) => {
+      const toPx = dir === 1 ? -width : width;
+      animateTo(toPx, () => {
+        const next = dir === 1 ? nextKey : prevKey;
+        if (next) {
+          setActiveTab(next);
+          try { localStorage.setItem(lastTabKeyFor(selectedCharacter.id), next); } catch {}
+        }
+        if (freezeActiveRef.current) safeUnfreeze();
+        finishInteract();
+        resetGestureState();
+      });
+    };
+
+    const cancel = () => {
+      animateTo(0, () => {
+        if (freezeActiveRef.current) safeUnfreeze();
+        finishInteract();
+        resetGestureState();
+      });
+    };
+
+    if (dragX <= -threshold && nextKey) commit(1);
+    else if (dragX >= threshold && prevKey) commit(-1);
+    else if (vx <= -FLICK_VELOCITY_PX_PER_MS && nextKey) commit(1);
+    else if (vx >= FLICK_VELOCITY_PX_PER_MS && prevKey) commit(-1);
+    else cancel();
   };
 
-  const handleClaimGift = async (gift: CampaignGift) => {
-    if (isClaiming) return;
-    setIsClaiming(true);
+  // Sécurité: événements globaux qui doivent TOUJOURS libérer le scroll si gelé
+  useEffect(() => {
+    const safetyRelease = () => {
+      if (freezeActiveRef.current) safeUnfreeze(true);
+      fullAbortInteraction();
+    };
+    window.addEventListener('blur', safetyRelease);
+    window.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') safetyRelease();
+    });
+    window.addEventListener('orientationchange', safetyRelease);
+    window.addEventListener('resize', safetyRelease);
+    window.addEventListener('pagehide', safetyRelease);
+    return () => {
+      safetyRelease();
+      window.removeEventListener('blur', safetyRelease);
+      window.removeEventListener('visibilitychange', safetyRelease);
+      window.removeEventListener('orientationchange', safetyRelease);
+      window.removeEventListener('resize', safetyRelease);
+      window.removeEventListener('pagehide', safetyRelease);
+    };
+  }, [fullAbortInteraction, safeUnfreeze]);
 
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('Utilisateur non connecté');
-        return;
-      }
+  /* ---------------- Changement via clic nav ---------------- */
+  const handleTabClickChange = useCallback((tab: string) => {
+    if (!isValidTab(tab)) return;
 
-      console.log('🎁 Claiming gift:', gift);
+    // Si pour une raison quelconque l'UI était "bloquée", reset
+    if (freezeActiveRef.current) safeUnfreeze(true);
+    resetGestureState();
+    setIsInteracting(false);
+    setAnimating(false);
+    setDragX(0);
+    setLatchedNeighbor(null);
 
-      // helper: remove gift from pending list (local)
-      const removePendingGiftLocal = () => {
-        try {
-          setPendingGifts((prev: CampaignGift[]) => prev.filter(p => p.id !== gift.id));
-        } catch (e) {
-          console.warn('Erreur mise à jour état local pending gifts, reload:', e);
-        }
-      };
+    const fromH = measurePaneHeight(activeTab);
+    if (fromH > 0) {
+      setContainerH(fromH);
+      setHeightLocking(true);
+    }
+    setActiveTab(tab as TabKey);
 
-      // ITEM flow
-      if (gift.gift_type === 'item') {
-        try {
-          const { claim, item } = await campaignService.claimGift(gift.id, player.id, {
-            quantity: gift.item_quantity || 1,
-          });
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const toH = measurePaneHeight(tab as TabKey) || fromH;
+        if (toH > 0) setContainerH(toH);
+        setTimeout(() => {
+          setHeightLocking(false);
+          requestAnimationFrame(measureActiveHeight);
+        }, 280);
+      });
+    });
 
-          console.log('Claim result', claim, item);
+    try { localStorage.setItem(lastTabKeyFor(selectedCharacter.id), tab); } catch {}
+  }, [activeTab, selectedCharacter.id, measureActiveHeight, measurePaneHeight, resetGestureState, safeUnfreeze]);
 
-          // remove gift locally
-          removePendingGiftLocal();
+  /* ---------------- Bouton retour ---------------- */
+  const handleBackToSelection = () => {
+    if (freezeActiveRef.current) safeUnfreeze(true);
+    try { sessionStorage.setItem(SKIP_AUTO_RESUME_ONCE, '1'); } catch {}
+    onBackToSelection?.();
+    toast.success('Retour à la sélection des personnages');
+  };
 
-          // If RPC returned an item, update inventory local state
-          if (item) {
-            try {
-              setInventory((prev: any[]) => [item, ...prev]);
-            } catch (e) {
-              console.warn("Erreur ajout item à l'inventaire local:", e);
-            }
-            toast.success('Cadeau récupéré !');
-            setTimeout(() => onClose(), 700);
-            return;
-          }
-
-          // fallback: create inventory item client-side (should be rare)
-          const metaPrefix = META_PREFIX;
-          let originalMeta = null;
-          if (gift.item_description) {
-            const lines = gift.item_description.split('\n');
-            const metaLine = lines.find(l => l.trim().startsWith(metaPrefix));
-            if (metaLine) {
-              try {
-                originalMeta = JSON.parse(metaLine.trim().slice(metaPrefix.length));
-              } catch (err) {
-                console.error('Erreur parsing métadonnées:', err);
-              }
-            }
-          }
-
-          const itemMeta = originalMeta || {
-            type: 'equipment' as const,
-            quantity: gift.item_quantity || 1,
-            equipped: false,
-          };
-
-          itemMeta.quantity = gift.item_quantity || 1;
-          itemMeta.equipped = false;
-
-          const metaLine = `${metaPrefix}${JSON.stringify(itemMeta)}`;
-
-          const cleanDescription = gift.item_description
-            ? gift.item_description
-                .split('\n')
-                .filter(line => !line.trim().startsWith(metaPrefix))
-                .join('\n')
-                .trim()
-            : '';
-
-          const finalDescription = cleanDescription ? `${cleanDescription}\n${metaLine}` : metaLine;
-
-          const { data: insertedItem, error: insertErr } = await supabase
-            .from('inventory_items')
-            .insert({
-              player_id: player.id,
-              name: gift.item_name || 'Objet',
-              description: finalDescription,
-            })
-            .select()
-            .single();
-
-          if (insertErr) {
-            console.error('❌ Insert error (fallback client insert):', insertErr);
-            toast.error('Erreur lors de l\'ajout à votre inventaire');
-          } else {
-            setInventory((prev: any[]) => [insertedItem, ...prev]);
-            const typeLabel =
-              itemMeta.type === 'armor' ? 'Armure' :
-              itemMeta.type === 'shield' ? 'Bouclier' :
-              itemMeta.type === 'weapon' ? 'Arme' :
-              'Objet';
-            toast.success(`${typeLabel} "${gift.item_name}" ajoutée à votre inventaire !`);
-          }
-
-          setTimeout(() => onClose(), 700);
-          return;
-        } catch (err: any) {
-          console.error('Erreur lors du claim (item):', err);
-          toast.error(err?.message || 'Impossible de récupérer l\'objet (probablement déjà récupéré).');
-          await loadData();
-          return;
-        }
-      }
-
-      // CURRENCY flow
+  /* ---------------- Reload inventaire (sécurité) ---------------- */
+  useEffect(() => {
+    async function loadInventory() {
+      if (!selectedCharacter) return;
       try {
-        // optimistic update in UI: inform player and update local player via onUpdate
-        const newGold = (player.gold || 0) + (gift.gold || 0);
-        const newSilver = (player.silver || 0) + (gift.silver || 0);
-        const newCopper = (player.copper || 0) + (gift.copper || 0);
+        const items = await inventoryService.getPlayerInventory(selectedCharacter.id);
+        setInventory(items);
+      } catch {}
+    }
+    loadInventory();
+  }, [selectedCharacter?.id]);
 
-        // apply update locally (UI)
-        onUpdate({
-          ...player,
-          gold: newGold,
-          silver: newSilver,
-          copper: newCopper,
-        });
-
-        // record the claim via RPC
-        await campaignService.claimGift(gift.id, player.id, {
-          gold: gift.gold ?? 0,
-          silver: gift.silver ?? 0,
-          copper: gift.copper ?? 0,
-        });
-
-        const amounts = [];
-        if (gift.gold && gift.gold > 0) amounts.push(`${gift.gold} po`);
-        if (gift.silver && gift.silver > 0) amounts.push(`${gift.silver} pa`);
-        if (gift.copper && gift.copper > 0) amounts.push(`${gift.copper} pc`);
-
-        toast.success(`${amounts.join(', ')} ajouté à votre argent !`);
-        removePendingGiftLocal();
-        setTimeout(() => onClose(), 700);
-        await loadData();
-        return;
-      } catch (err: any) {
-        console.error('Erreur lors du claim (currency flow):', err);
-        toast.error('Erreur lors de la récupération');
-        await loadData();
-        return;
+  /* ---------------- Rendu d'un pane ---------------- */
+  const renderPane = (key: TabKey) => {
+    if (!currentPlayer) return null;
+    switch (key) {
+      case 'combat': {
+        // Wrapper pour capturer swipe GAUCHE -> ouvrir paramètres (sans déclencher le swipe de tabs)
+        return (
+          <div
+            onTouchStart={(e) => {
+              const t = e.touches[0];
+              (e.currentTarget as any).__sx = t.clientX;
+              (e.currentTarget as any).__sy = t.clientY;
+            }}
+            onTouchMove={(e) => {
+              const sx = (e.currentTarget as any).__sx ?? null;
+              const sy = (e.currentTarget as any).__sy ?? null;
+              if (sx == null || sy == null) return;
+              const t = e.touches[0];
+              const dx = t.clientX - sx;
+              const dy = t.clientY - sy;
+              // Seuils: dominance horizontale et mouvement vers la DROITE
+              if (Math.abs(dx) > Math.abs(dy) * 1.15 && dx > 64) {
+                e.stopPropagation();
+                e.preventDefault();
+                openSettings('left'); // au lieu de 'right' -> la modale entre depuis la GAUCHE
+              }
+            }}
+            onTouchEnd={(e) => {
+              (e.currentTarget as any).__sx = null;
+              (e.currentTarget as any).__sy = null;
+            }}
+          >
+            <CombatTab player={currentPlayer} onUpdate={applyPlayerUpdate} />
+          </div>
+        );
       }
-    } finally {
-      setIsClaiming(false);
+      case 'class': return <ClassesTab player={currentPlayer} onUpdate={applyPlayerUpdate} sections={classSections} />;
+      case 'abilities': return <AbilitiesTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
+      case 'stats': return <StatsTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
+      case 'equipment':
+        return (
+          <EquipmentTab
+            player={currentPlayer}
+            inventory={inventory}
+            onPlayerUpdate={applyPlayerUpdate}
+            onInventoryUpdate={setInventory}
+          />
+        );
+      case 'profile': return <PlayerProfileProfileTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
+      default: return null;
     }
   };
 
-  if (!open) return null;
-
-  return (
-    <div className="fixed inset-0 z-[11000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
-      <div className="fixed inset-0 sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[min(42rem,95vw)] sm:max-h-[90vh] sm:rounded-xl overflow-hidden bg-gray-900 border-0 sm:border sm:border-gray-700 rounded-none">
-        {/* Header */}
-        <div className="bg-gray-800/60 border-b border-gray-700 px-4 py-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <Users className="w-6 h-6 text-purple-400" />
-              Mes Campagnes
-            </h2>
-            <button
-              onClick={onClose}
-              className="p-2 text-gray-400 hover:bg-gray-700/50 rounded-lg"
-            >
-              <X size={20} />
-            </button>
-          </div>
-
-          {/* Tabs */}
-          <div className="flex gap-4 mt-3">
-            <button
-              onClick={() => setActiveTab('invitations')}
-              className={`pb-2 px-1 border-b-2 transition-colors ${
-                activeTab === 'invitations'
-                  ? 'border-purple-500 text-purple-400'
-                  : 'border-transparent text-gray-400 hover:text-gray-300'
-              }`}
-            >
-              Invitations ({invitations.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('gifts')}
-              className={`pb-2 px-1 border-b-2 transition-colors ${
-                activeTab === 'gifts'
-                  ? 'border-purple-500 text-purple-400'
-                  : 'border-transparent text-gray-400 hover:text-gray-300'
-              }`}
-            >
-              Loots ({pendingGifts.length})
-            </button>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="p-4 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 140px)' }}>
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4" />
-              <p className="text-gray-400">Chargement...</p>
-            </div>
-          ) : activeTab === 'invitations' ? (
-            <div className="space-y-4">
-              {!showCodeInput ? (
-                <button
-                  onClick={() => setShowCodeInput(true)}
-                  className="w-full btn-primary px-4 py-3 rounded-lg flex items-center justify-center gap-2"
-                >
-                  <Check size={20} />
-                  Rejoindre avec un code
-                </button>
-              ) : (
-                <div className="bg-gray-800/40 rounded-lg p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-white">Code d'invitation</h3>
-                    <button
-                      onClick={() => {
-                        setShowCodeInput(false);
-                        setInvitationCode('');
-                      }}
-                      className="text-gray-400 hover:text-white"
-                    >
-                      <X size={18} />
-                    </button>
-                  </div>
-                  <input
-                    type="text"
-                    value={invitationCode}
-                    onChange={(e) => setInvitationCode(e.target.value.toUpperCase())}
-                    className="input-dark w-full px-4 py-2 rounded-lg text-center font-mono text-lg tracking-wider"
-                    placeholder="ABCD1234"
-                    maxLength={8}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleJoinWithCode();
-                    }}
-                  />
-                  <button
-                    onClick={handleJoinWithCode}
-                    className="w-full btn-primary px-4 py-2 rounded-lg"
-                  >
-                    Rejoindre la campagne
-                  </button>
-                </div>
-              )}
-
-              {/* Invitations list */}
-              {invitations.length > 0 ? (
-                invitations.map((invitation) => (
-                  <div key={invitation.id} className="bg-gray-800/40 border border-purple-500/30 rounded-lg p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-white mb-1">
-                          Nouvelle invitation à une campagne
-                        </h3>
-                        <p className="text-sm text-gray-400">
-                          Vous avez été invité à rejoindre une campagne par le Maître du Jeu
-                        </p>
-                        <details className="mt-2">
-                          <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-400">
-                            Code d'invitation (optionnel)
-                          </summary>
-                          <p className="text-xs text-gray-400 mt-1">
-                            Code : <span className="font-mono text-purple-400">{invitation.invitation_code}</span>
-                          </p>
-                        </details>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleAcceptInvitation(invitation.id)}
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 font-medium"
-                      >
-                        <Check size={18} />
-                        Accepter et rejoindre
-                      </button>
-                      <button
-                        onClick={() => handleDeclineInvitation(invitation.id)}
-                        className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
-                      >
-                        Refuser
-                      </button>
-                    </div>
-                  </div>
-                ))
-              ) : !showCodeInput ? (
-                <div className="text-center py-12">
-                  <Users className="w-16 h-16 mx-auto mb-4 opacity-50 text-gray-600" />
-                  <h3 className="text-lg font-semibold text-gray-300 mb-2">
-                    Aucune invitation en attente
-                  </h3>
-                  <p className="text-sm text-gray-500 mb-4">
-                    Demandez à votre Maître du Jeu de vous inviter à une campagne
-                  </p>
-                  <button
-                    onClick={() => setShowCodeInput(true)}
-                    className="text-sm text-purple-400 hover:text-purple-300 underline"
-                  >
-                    Ou entrez un code d'invitation manuellement
-                  </button>
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {pendingGifts.length > 0 ? (
-                pendingGifts.map((gift) => {
-                  const meta = parseMeta(gift.item_description);
-
-                  return (
-                    <div
-                      key={gift.id}
-                      className="bg-gray-800/40 border border-purple-500/30 rounded-lg p-4"
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center">
-                            {gift.gift_type === 'item' ? (
-                              <Package className="w-5 h-5 text-purple-400" />
-                            ) : (
-                              <Coins className="w-5 h-5 text-yellow-400" />
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-semibold text-white">
-                                {gift.gift_type === 'item'
-                                  ? `${gift.item_name}${gift.item_quantity && gift.item_quantity > 1 ? ` x${gift.item_quantity}` : ''}`
-                                  : 'Argent'
-                                }
-                              </h3>
-
-                              {/* BADGE TYPE */}
-                              {meta?.type === 'armor' && (
-                                <span className="text-xs px-2 py-0.5 rounded bg-purple-900/30 text-purple-300 border border-purple-500/30 ml-2">
-                                  Armure
-                                </span>
-                              )}
-                              {meta?.type === 'shield' && (
-                                <span className="text-xs px-2 py-0.5 rounded bg-blue-900/30 text-blue-300 border border-blue-500/30 ml-2">
-                                  Bouclier
-                                </span>
-                              )}
-                              {meta?.type === 'weapon' && (
-                                <span className="text-xs px-2 py-0.5 rounded bg-red-900/30 text-red-300 border border-red-500/30 ml-2">
-                                  Arme
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Propriétés lisibles extraites des méta */}
-                            {meta && (
-                              <div className="mb-2 mt-2 text-xs text-gray-300">
-                                {meta.type === 'armor' && meta.armor && (
-                                  <div className="text-purple-300 flex items-center gap-2">
-                                    <span className="text-sm">🛡️ CA: {meta.armor.label}</span>
-                                  </div>
-                                )}
-                                {meta.type === 'shield' && meta.shield && (
-                                  <div className="text-blue-300">🛡️ Bonus: +{meta.shield.bonus}</div>
-                                )}
-                                {meta.type === 'weapon' && meta.weapon && (
-                                  <div className="text-red-300">
-                                    ⚔️ {meta.weapon.damageDice} {meta.weapon.damageType}
-                                    {meta.weapon.properties && ` • ${meta.weapon.properties}`}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-
-                            {/* Description visible (sans #meta:) */}
-                            {getVisibleDescription(gift.item_description) && (
-                              <p className="text-sm text-gray-400 mt-2">
-                                {getVisibleDescription(gift.item_description)}
-                              </p>
-                            )}
-
-                            {gift.message && (
-                              <div className="mt-2 text-sm text-gray-300 italic border-l-2 border-purple-500/40 pl-3">
-                                "{gift.message}"
-                              </div>
-                            )}
-                            <p className="text-xs text-gray-500 mt-2">
-                              Envoyé le {new Date(gift.sent_at).toLocaleDateString('fr-FR')}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => handleClaimGift(gift)}
-                        className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
-                      >
-                        <Gift size={18} />
-                        Récupérer
-                      </button>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="text-center py-12 text-gray-500">
-                  <Gift className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                  <p>Aucun loot en attente</p>
-                  <p className="text-sm mt-2">Les objets et argent envoyés par votre MJ apparaîtront ici</p>
-                </div>
-              )}
-            </div>
-          )}
+  /* ---------------- Loading / Error ---------------- */
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <img
+            src="/icons/wmremove-transformed.png"
+            alt="Chargement..."
+            className="animate-spin rounded-full h-12 w-12 mx-auto object-cover"
+          />
+          <p className="text-gray-400">Chargement en cours...</p>
         </div>
       </div>
+    );
+  }
+  if (connectionError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="max-w-md w-full space-y-4 stat-card p-6">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-red-500 mb-4">Erreur de connexion</h2>
+            <p className="text-gray-300 mb-4">{connectionError}</p>
+            <p className="text-sm text-gray-400 mb-4">
+              Vérifiez votre connexion Internet et réessayez.
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              setConnectionError(null);
+              setLoading(true);
+              (async () => {
+                try {
+                  const isConnected = await testConnection();
+                  if (!isConnected.success) throw new Error('Impossible de se connecter');
+                  const inventoryData = await inventoryService.getPlayerInventory(selectedCharacter.id);
+                  setInventory(inventoryData);
+                  setCurrentPlayer(selectedCharacter);
+                  setLoading(false);
+                } catch (e: any) {
+                  console.error(e);
+                  setConnectionError(e?.message ?? 'Erreur inconnue');
+                  setLoading(false);
+                }
+              })();
+            }}
+            className="w-full btn-primary px-4 py-2 rounded-lg"
+          >
+            Réessayer
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ---------------- Swipe transforms ---------------- */
+  const neighborTypeRaw: 'prev' | 'next' | null = (() => {
+    if (dragX > 0 && prevKey) return 'prev';
+    if (dragX < 0 && nextKey) return 'next';
+    return null;
+  })();
+  // Pendant l’animation, garde le voisin verrouillé si dragX est revenu à 0
+  const neighborType: 'prev' | 'next' | null =
+    neighborTypeRaw ?? (animating ? latchedNeighbor : null);
+
+  const currentTransform = `translate3d(${dragX}px, 0, 0)`;
+  const neighborTransform =
+    neighborType === 'next'
+      ? `translate3d(calc(100% + ${dragX}px), 0, 0)`
+      : neighborType === 'prev'
+      ? `translate3d(calc(-100% + ${dragX}px), 0, 0)`
+      : undefined;
+  const showAsStatic = !isInteracting && !animating;
+
+  /* ---------------- Rendu principal ---------------- */
+  return (
+    <div className="min-h-screen p-2 sm:p-4 md:p-6 no-overflow-anchor">
+      {/* Zone de capture de SWIPE au bord gauche (ouvre la modale depuis la gauche) */}
+      {!settingsOpen && (
+        <div
+          className="fixed inset-y-0 left-0 w-4 sm:w-5 z-50"
+          onTouchStart={(e) => {
+            const t = e.touches[0];
+            (e.currentTarget as any).__sx = t.clientX;
+            (e.currentTarget as any).__sy = t.clientY;
+            (e.currentTarget as any).__edge = t.clientX <= 16;
+          }}
+          onTouchMove={(e) => {
+            const sx = (e.currentTarget as any).__sx ?? null;
+            const sy = (e.currentTarget as any).__sy ?? null;
+            const edge = (e.currentTarget as any).__edge ?? false;
+            if (!edge || sx == null || sy == null) return;
+            const t = e.touches[0];
+            const dx = t.clientX - sx;
+            const dy = t.clientY - sy;
+            if (Math.abs(dx) < 14) return;
+            if (Math.abs(dx) > Math.abs(dy) * 1.15 && dx > 48) {
+              e.stopPropagation();
+              e.preventDefault();
+              openSettings('left'); // ouverture depuis la gauche
+            }
+          }}
+          onTouchEnd={(e) => {
+            (e.currentTarget as any).__sx = null;
+            (e.currentTarget as any).__sy = null;
+            (e.currentTarget as any).__edge = false;
+          }}
+        >
+          <div className="w-full h-full" aria-hidden />
+        </div>
+      )}
+
+      <div className="w-full max-w-6xl mx-auto space-y-4 sm:space-y-6">
+        {currentPlayer && (
+          <PlayerContext.Provider value={currentPlayer}>
+            <PlayerProfile player={currentPlayer} onUpdate={applyPlayerUpdate} />
+            <TabNavigation activeTab={activeTab} onTabChange={handleTabClickChange} />
+
+            <div
+              ref={stageRef}
+              className="relative"
+              onTouchStart={onTouchStart}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+              onTouchCancel={() => {
+                // En cas de cancel, on abort proprement
+                fullAbortInteraction();
+              }}
+              style={{
+                touchAction: 'pan-y',
+                height: (isInteracting || animating || heightLocking) ? containerH : undefined,
+                transition: heightLocking ? 'height 280ms ease' : undefined,
+              }}
+            >
+              {Array.from(visitedTabs).map((key) => {
+                const isActive = key === activeTab;
+                const isNeighbor =
+                  (neighborType === 'next' && key === nextKey) ||
+                  (neighborType === 'prev' && key === prevKey);
+
+                if (showAsStatic) {
+                  return (
+                    <div
+                      key={key}
+                      ref={(el) => { paneRefs.current[key] = el; }}
+                      data-tab={key}
+                      style={{
+                        display: isActive ? 'block' : 'none',
+                        position: 'relative',
+                        transform: 'none'
+                      }}
+                    >
+                      {key === 'class' && classSections === null
+                        ? <div className="py-12 text-center text-white/70">Chargement des aptitudes…</div>
+                        : renderPane(key)}
+                    </div>
+                  );
+                }
+
+                const display = isActive || isNeighbor ? 'block' : 'none';
+                let transform = 'translate3d(0,0,0)';
+                if (isActive) transform = currentTransform;
+                if (isNeighbor && neighborTransform) transform = neighborTransform;
+
+                return (
+                  <div
+                    key={key}
+                    ref={(el) => { paneRefs.current[key] = el; }}
+                    data-tab={key}
+                    className={animating ? 'sv-anim' : undefined}
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      display,
+                      transform,
+                      willChange: isActive || isNeighbor ? 'transform' : undefined
+                    }}
+                  >
+                    {key === 'class' && classSections === null
+                      ? <div className="py-12 text-center text-white/70">Chargement des aptitudes…</div>
+                      : renderPane(key)}
+                  </div>
+                );
+              })}
+            </div>
+          </PlayerContext.Provider>
+        )}
+      </div>
+
+      <div className="w-full max-w-md mx-auto mt-6 px-4">
+        <button
+          onClick={handleBackToSelection}
+          className="w-full btn-secondary px-4 py-2 rounded-lg flex items-center justify-center gap-2"
+        >
+          <LogOut size={20} />
+          Retour aux personnages
+        </button>
+      </div>
+
+      {/* Modale Paramètres (fond opaque, couvre tout) */}
+      {currentPlayer && (
+        <PlayerProfileSettingsModal
+          open={settingsOpen}
+          onClose={closeSettings}
+          player={currentPlayer}
+          onUpdate={applyPlayerUpdate}
+          slideFrom={settingsSlideFrom}
+        />
+      )}
     </div>
   );
 }
 
-export default CampaignPlayerModal;
+export default GamePage;
