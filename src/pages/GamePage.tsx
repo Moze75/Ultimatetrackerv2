@@ -95,62 +95,112 @@ export function GamePage({
   const [classSections, setClassSections] = useState<any[] | null>(null);
 
   // --- START: Realtime subscription for inventory_items (GamePage) ---
-  const invChannelRef = useRef<any>(null);
-  
+const invChannelRef = useRef<any>(null);
 
-  useEffect(() => {
-    // cleanup previous channel if any
-    if (invChannelRef.current) {
-      if (typeof supabase.removeChannel === 'function') {
-        supabase.removeChannel(invChannelRef.current);
-      } else {
-        invChannelRef.current.unsubscribe?.();
+useEffect(() => {
+  // Cleanup previous channel
+  if (invChannelRef.current) {
+    supabase.removeChannel(invChannelRef.current);
+    invChannelRef.current = null;
+  }
+
+  if (!currentPlayer?.id) return;
+
+  console.log('🔥 GamePage: Subscribing to inventory_items for player', currentPlayer.id);
+
+  const channel = supabase
+    .channel(`inventory-player-${currentPlayer.id}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'inventory_items',
+        filter: `player_id=eq.${currentPlayer.id}`,
+      },
+      async (payload: any) => {
+        console.log('✅ [Realtime GamePage] INSERT detected:', payload);
+        const newItem = payload?.new || payload?.record;
+        
+        if (!newItem) {
+          console.warn('⚠️ No record in payload');
+          return;
+        }
+
+        // Ajouter à l'état existant (optimiste)
+        setInventory((prev) => {
+          // Éviter les doublons
+          if (prev.some((i) => i.id === newItem.id)) {
+            console.log('Item already in inventory, skipping');
+            return prev;
+          }
+          console.log('🎯 Adding new item to inventory:', newItem.name);
+          return [newItem, ...prev];
+        });
       }
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'inventory_items',
+        filter: `player_id=eq.${currentPlayer.id}`,
+      },
+      (payload: any) => {
+        console.log('✅ [Realtime GamePage] UPDATE detected:', payload);
+        const updatedItem = payload?.new || payload?.record;
+        
+        if (!updatedItem) return;
+
+        setInventory((prev) =>
+          prev.map((item) =>
+            item.id === updatedItem.id ? updatedItem : item
+          )
+        );
+      }
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'inventory_items',
+        filter: `player_id=eq.${currentPlayer.id}`,
+      },
+      (payload: any) => {
+        console.log('✅ [Realtime GamePage] DELETE detected:', payload);
+        const deletedItem = payload?.old || payload?.record;
+        
+        if (!deletedItem) return;
+
+        setInventory((prev) =>
+          prev.filter((item) => item.id !== deletedItem.id)
+        );
+      }
+    )
+    .subscribe((status) => {
+      console.log('📡 Realtime subscription status:', status);
+    });
+
+  invChannelRef.current = channel;
+
+  return () => {
+    console.log('🧹 Cleaning up inventory subscription');
+    if (invChannelRef.current) {
+      supabase.removeChannel(invChannelRef.current);
       invChannelRef.current = null;
     }
+  };
+}, [currentPlayer?.id]);
 
-    if (!currentPlayer?.id) return; // use the currentPlayer state you declared
-
-    console.log('GamePage: subscribe inventory_items realtime for player', currentPlayer.id);
-
-    const ch = supabase
-      .channel(`inv-player-${currentPlayer.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'inventory_items',
-          filter: `player_id=eq.${currentPlayer.id}`,
-        },
-        (payload: any) => {
-          console.log('[Realtime] inventory_items INSERT payload:', payload);
-          const rec = payload?.record ?? payload?.new;
-          if (!rec) return;
-
-          // update local inventory state (this will propagate as prop to EquipmentTab)
-          setInventory((prev) => {
-            // avoid duplicates if present
-            if (prev.some((i) => i.id === rec.id)) return prev;
-            return [rec, ...prev];
-          });
-        }
-      )
-      .subscribe();
-
-    invChannelRef.current = ch;
-
-    return () => {
-      if (invChannelRef.current) {
-        if (typeof supabase.removeChannel === 'function') {
-          supabase.removeChannel(invChannelRef.current);
-        } else {
-          invChannelRef.current.unsubscribe?.();
-        }
-        invChannelRef.current = null;
-      }
-    };
-  }, [currentPlayer?.id]);
+// ✅ DEBUG: Track inventory changes (TEMPORAIRE - pour debug)
+useEffect(() => {
+  console.log('🔥 INVENTORY STATE CHANGED:', inventory.length, 'items');
+  if (inventory.length > 0) {
+    console.log('Last 3 items:', inventory.slice(0, 3).map(i => i.name));
+  }
+}, [inventory]);
   // --- END
 
   // Onglet initial
