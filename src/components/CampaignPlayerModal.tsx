@@ -320,13 +320,12 @@ export function CampaignPlayerModal({
   const [activeTab, setActiveTab] = useState<'invitations' | 'gifts'>('gifts');
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [invitationCode, setInvitationCode] = useState('');
-
-const [membersByCampaign, setMembersByCampaign] = useState<Record<string, CampaignMember[]>>({});
   
-  // ✅ NOUVEAUX états pour la distribution
+  // États pour la distribution
   const [showDistributionModal, setShowDistributionModal] = useState(false);
   const [selectedGiftForDistribution, setSelectedGiftForDistribution] = useState<CampaignGift | null>(null);
   const [campaignMembersForDistribution, setCampaignMembersForDistribution] = useState<CampaignMember[]>([]);
+  const [membersByCampaign, setMembersByCampaign] = useState<Record<string, CampaignMember[]>>({});
 
   // Utilitaires pour cacher / parser les méta
   const META_PREFIX = '#meta:';
@@ -356,11 +355,22 @@ const [membersByCampaign, setMembersByCampaign] = useState<Record<string, Campai
     }
   }, [open]);
 
-const loadData = async () => {
-  try {
-    setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return; 
+  // Fonction pour charger les membres d'une campagne
+  const loadCampaignMembers = async (campaignId: string) => {
+    try {
+      const members = await campaignService.getCampaignMembers(campaignId);
+      return members;
+    } catch (error) {
+      console.error('Erreur chargement membres:', error);
+      return [];
+    }
+  };
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
       // Charger les invitations
       const invites = await campaignService.getMyInvitations();
@@ -383,6 +393,16 @@ const loadData = async () => {
         setMyCampaigns(campaigns || []);
         setActiveCampaigns(campaigns || []);
 
+        // ✅ Charger les membres de chaque campagne
+        const membersMap: Record<string, CampaignMember[]> = {};
+        await Promise.all(
+          campaignIds.map(async (campaignId) => {
+            const campaignMembers = await loadCampaignMembers(campaignId);
+            membersMap[campaignId] = campaignMembers;
+          })
+        );
+        setMembersByCampaign(membersMap);
+
         // Charger les cadeaux en attente
         const { data: gifts } = await supabase
           .from('campaign_gifts')
@@ -391,7 +411,7 @@ const loadData = async () => {
           .eq('status', 'pending')
           .order('sent_at', { ascending: false });
 
-        // ✅ CORRECTION : Filtrer les cadeaux selon le mode de distribution
+        // Filtrer les cadeaux selon le mode de distribution
         const filteredGifts = (gifts || []).filter((gift) => {
           if (gift.distribution_mode === 'shared') {
             return true;
@@ -425,18 +445,7 @@ const loadData = async () => {
     }
   };
 
-  // ✅ Fonction pour charger les membres d'une campagne
-  const loadCampaignMembers = async (campaignId: string) => {
-    try {
-      const members = await campaignService.getCampaignMembers(campaignId);
-      return members;
-    } catch (error) {
-      console.error('Erreur chargement membres:', error);
-      return [];
-    }
-  };
-
-  // ✅ Fonction pour gérer la distribution
+  // Fonction pour gérer la distribution
   const handleDistributeCurrency = async (distribution: { userId: string; playerId: string; gold: number; silver: number; copper: number }[]) => {
     if (!selectedGiftForDistribution) return;
 
@@ -627,7 +636,7 @@ const loadData = async () => {
         }, 1500);
 
       } else {
-        // Code argent (inchangé)
+        // Code argent
         const { error } = await supabase.from('players').update({
           gold: (player.gold || 0) + (gift.gold || 0),
           silver: (player.silver || 0) + (gift.silver || 0),
@@ -685,7 +694,6 @@ const loadData = async () => {
                   Mes Campagnes
                 </h2>
                 
-                {/* Afficher les campagnes actives */}
                 {activeCampaigns.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-2">
                     {activeCampaigns.map((camp) => (
@@ -708,7 +716,6 @@ const loadData = async () => {
               </button>
             </div>
 
-            {/* Tabs avec badge de loots */}
             <div className="flex gap-4 mt-3">
               <button
                 onClick={() => setActiveTab('invitations')}
@@ -861,7 +868,6 @@ const loadData = async () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {/* Message d'accueil contextuel */}
                 {activeCampaigns.length > 0 && pendingGifts.length > 0 && (
                   <div className="bg-gradient-to-r from-purple-900/40 to-blue-900/40 border border-purple-500/30 rounded-lg p-4">
                     <div className="flex items-start gap-3">
@@ -881,13 +887,19 @@ const loadData = async () => {
                   </div>
                 )}
 
-                {/* Liste des cadeaux */}
                 {pendingGifts.length > 0 ? (
-                {pendingGifts.map((gift) => {
-  const meta = parseMeta(gift.item_description);
-  const isCurrencyShared = gift.gift_type === 'currency' && gift.distribution_mode === 'shared';
-  const campaignMembers = membersByCampaign[gift.campaign_id] || [];
-  const memberCount = campaignMembers.length;
+                  pendingGifts.map((gift) => {
+                    const meta = parseMeta(gift.item_description);
+                    const isCurrencyShared = gift.gift_type === 'currency' && gift.distribution_mode === 'shared';
+                    const campaignMembers = membersByCampaign[gift.campaign_id] || [];
+                    const memberCount = campaignMembers.length;
+
+                    // Calculer l'aperçu de la distribution
+                    const previewDistribution = memberCount > 0 ? {
+                      gold: Math.floor((gift.gold || 0) / memberCount),
+                      silver: Math.floor((gift.silver || 0) / memberCount),
+                      copper: Math.floor((gift.copper || 0) / memberCount),
+                    } : null;
 
                     return (
                       <div
@@ -895,16 +907,16 @@ const loadData = async () => {
                         className="bg-gray-800/40 border border-purple-500/30 rounded-lg p-4"
                       >
                         <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center">
+                          <div className="flex items-start gap-3 flex-1">
+                            <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center flex-shrink-0">
                               {gift.gift_type === 'item' ? (
                                 <Package className="w-5 h-5 text-purple-400" />
                               ) : (
                                 <Coins className="w-5 h-5 text-yellow-400" />
                               )}
                             </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <h3 className="font-semibold text-white">
                                   {gift.gift_type === 'item' 
                                     ? `${gift.item_name}${gift.item_quantity && gift.item_quantity > 1 ? ` x${gift.item_quantity}` : ''}`
@@ -912,25 +924,23 @@ const loadData = async () => {
                                   }
                                 </h3>
 
-                                {/* BADGE TYPE */}
                                 {meta?.type === 'armor' && (
-                                  <span className="text-xs px-2 py-0.5 rounded bg-purple-900/30 text-purple-300 border border-purple-500/30 ml-2">
+                                  <span className="text-xs px-2 py-0.5 rounded bg-purple-900/30 text-purple-300 border border-purple-500/30">
                                     Armure
                                   </span>
                                 )}
                                 {meta?.type === 'shield' && (
-                                  <span className="text-xs px-2 py-0.5 rounded bg-blue-900/30 text-blue-300 border border-blue-500/30 ml-2">
+                                  <span className="text-xs px-2 py-0.5 rounded bg-blue-900/30 text-blue-300 border border-blue-500/30">
                                     Bouclier
                                   </span>
                                 )}
                                 {meta?.type === 'weapon' && (
-                                  <span className="text-xs px-2 py-0.5 rounded bg-red-900/30 text-red-300 border border-red-500/30 ml-2">
+                                  <span className="text-xs px-2 py-0.5 rounded bg-red-900/30 text-red-300 border border-red-500/30">
                                     Arme
                                   </span>
                                 )}
                               </div>
 
-                              {/* Propriétés lisibles extraites des méta */}
                               {meta && (
                                 <div className="mb-2 mt-2 text-xs text-gray-300">
                                   {meta.type === 'armor' && meta.armor && (
@@ -950,14 +960,12 @@ const loadData = async () => {
                                 </div>
                               )}
 
-                              {/* Description visible (sans #meta:) */}
                               {getVisibleDescription(gift.item_description) && (
                                 <p className="text-sm text-gray-400 mt-2">
                                   {getVisibleDescription(gift.item_description)}
                                 </p>
                               )}
 
-                              {/* Afficher le montant pour l'argent */}
                               {gift.gift_type === 'currency' && (
                                 <div className="flex gap-3 mt-2 text-sm">
                                   {gift.gold > 0 && (
@@ -984,42 +992,74 @@ const loadData = async () => {
                           </div>
                         </div>
 
-                        {/* ✅ Bouton conditionnel selon le type */}
-                      {isCurrencyShared ? (
-  <div className="flex gap-2">
-    {/* Bouton pour récupérer tout l'argent */}
-    <button
-      onClick={() => handleClaimGift(gift)}
-      className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
-    >
-      <Gift size={18} />
-      Récupérer
-    </button>
-    
-    {/* Bouton pour distribuer équitablement */}
-    <button
-      onClick={async () => {
-        const members = await loadCampaignMembers(gift.campaign_id);
-        setCampaignMembersForDistribution(members);
-        setSelectedGiftForDistribution(gift);
-        setShowDistributionModal(true);
-      }}
-      className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
-    >
-      <Users size={18} />
-      Distribuer
-    </button>
-  </div>
-) : (
-  <button
-    onClick={() => handleClaimGift(gift)}
-    className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
-  >
-    <Gift size={18} />
-    Récupérer
-  </button>
-)}
-                        
+                        {/* Boutons conditionnels */}
+                        {isCurrencyShared ? (
+                          <div className="space-y-2">
+                            {/* Info sur la distribution */}
+                            {memberCount > 0 && previewDistribution && (
+                              <div className="bg-gray-800/60 border border-gray-700/50 rounded-lg p-3">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                                    <Users size={14} />
+                                    <span>{memberCount} joueur{memberCount > 1 ? 's' : ''} dans la campagne</span>
+                                  </div>
+                                </div>
+                                
+                                {/* Aperçu de la part par joueur */}
+                                <div className="text-sm">
+                                  <div className="text-gray-400 mb-1">Distribution équitable :</div>
+                                  <div className="flex gap-3 text-xs flex-wrap">
+                                    {previewDistribution.gold > 0 && (
+                                      <span className="text-yellow-400">
+                                        ~{previewDistribution.gold} po / joueur
+                                      </span>
+                                    )}
+                                    {previewDistribution.silver > 0 && (
+                                      <span className="text-gray-300">
+                                        ~{previewDistribution.silver} pa / joueur
+                                      </span>
+                                    )}
+                                    {previewDistribution.copper > 0 && (
+                                      <span className="text-orange-400">
+                                        ~{previewDistribution.copper} pc / joueur
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleClaimGift(gift)}
+                                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm"
+                              >
+                                <Gift size={16} />
+                                Tout prendre
+                              </button>
+                              
+                              <button
+                                onClick={() => {
+                                  setCampaignMembersForDistribution(campaignMembers);
+                                  setSelectedGiftForDistribution(gift);
+                                  setShowDistributionModal(true);
+                                }}
+                                className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm"
+                              >
+                                <Users size={16} />
+                                Distribuer
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleClaimGift(gift)}
+                            className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
+                          >
+                            <Gift size={18} />
+                            Récupérer
+                          </button>
+                        )}
                       </div>
                     );
                   })
@@ -1048,7 +1088,7 @@ const loadData = async () => {
         </div>
       </div>
 
-      {/* ✅ Modal de distribution (z-index plus élevé) */}
+      {/* Modal de distribution */}
       {showDistributionModal && selectedGiftForDistribution && (
         <CurrencyDistributionModal
           gift={selectedGiftForDistribution}
