@@ -492,12 +492,14 @@ export function CampaignPlayerModal({
           removePendingGiftLocal();
 
 if (item) {
-  setInventory(prev => [item, ...prev]);   // état local modal
-  onInventoryAdd?.(item);                  // NOTIFIER le parent (GamePage)
-  toast.success('Cadeau récupéré !');
-  setTimeout(() => onClose(), 700);
-  return;
-}
+  console.log('CampaignPlayerModal: RPC returned item', item.id);
+  setInventory((prev) => [item, ...prev]);
+  try {
+    onInventoryAdd?.(item);
+    console.log('CampaignPlayerModal: called onInventoryAdd for', item.id);
+  } catch (e) {
+    console.warn('CampaignPlayerModal: onInventoryAdd throw', e);
+  }
 
            
           // fallback: fetch newest inventory row for player
