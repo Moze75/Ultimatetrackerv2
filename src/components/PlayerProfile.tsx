@@ -11,7 +11,7 @@ import {
   Sword,
   Sparkles,
   Menu,
-   Scroll, // ✅ AJOUTER ICI
+  Scroll,
 } from 'lucide-react';
 import { Player, PlayerStats } from '../types/dnd';
 import { supabase } from '../lib/supabase';
@@ -20,8 +20,13 @@ import { Avatar } from './Avatar';
 import { CONDITIONS } from './ConditionsSection';
 import { PlayerProfileSettingsModal } from './PlayerProfileSettingsModal';
 import { SwipeNavigator } from './SwipeNavigator';
-import { CampaignPlayerModal } from './CampaignPlayerModal'; // ✅ NOUVEAU
+import { CampaignPlayerModal } from './CampaignPlayerModal';
 
+export interface PlayerProfileProps {
+  player: Player;
+  onUpdate: (player: Player) => void;
+  onInventoryAdd?: (item: any) => void; // NEW optional callback to notify parent when modal yields an item
+}
 
 /* ============================ Helpers ============================ */
 
@@ -33,11 +38,6 @@ const getProficiencyBonusForLevel = (level: number): number => {
   return 2;
 };
 
-export interface PlayerProfileProps {
-  player: Player;
-  onUpdate: (player: Player) => void;
-}
-
 const getDexModFromPlayer = (player: Player): number => {
   const abilities: any = (player as any).abilities;
   const fromArray = Array.isArray(abilities) ? abilities.find((a: any) => a?.name === 'Dextérité') : undefined;
@@ -46,12 +46,9 @@ const getDexModFromPlayer = (player: Player): number => {
   return 0;
 };
 
-// ✅ AJOUTER CETTE FONCTION ICI
 const getWisModFromPlayer = (player: Player): number => {
   const abilities: any = (player as any).abilities;
-  const fromArray = Array.isArray(abilities) 
-    ? abilities.find((a: any) => a?.name === 'Sagesse') 
-    : undefined;
+  const fromArray = Array.isArray(abilities) ? abilities.find((a: any) => a?.name === 'Sagesse') : undefined;
   if (fromArray?.modifier != null) return fromArray.modifier;
   if (fromArray?.score != null) return Math.floor((fromArray.score - 10) / 2);
   return 0;
@@ -70,19 +67,19 @@ function computeArmorAC(armor_formula: {
   return base + applied;
 }
 
-export function PlayerProfile({ player, onUpdate }: PlayerProfileProps) {
+export function PlayerProfile({ player, onUpdate, onInventoryAdd }: PlayerProfileProps) {
   const [editing, setEditing] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<'ac' | 'speed' | 'initiative' | 'proficiency' | null>(null);
-   const [showCampaignModal, setShowCampaignModal] = useState(false); // ✅ AJOUTEZ CETTE LIGNE
+  const [showCampaignModal, setShowCampaignModal] = useState(false);
 
-const calculatedProficiencyBonus = getProficiencyBonusForLevel(player.level);
-const stats: PlayerStats = player.stats || {
-  armor_class: 10,
-  initiative: 0,
-  speed: 30,
-  proficiency_bonus: calculatedProficiencyBonus,
-  inspirations: player.stats?.inspirations || 0,
-};
+  const calculatedProficiencyBonus = getProficiencyBonusForLevel(player.level);
+  const stats: PlayerStats = player.stats || {
+    armor_class: 10,
+    initiative: 0,
+    speed: 30,
+    proficiency_bonus: calculatedProficiencyBonus,
+    inspirations: player.stats?.inspirations || 0,
+  };
 
   const toNumber = (v: unknown): number => {
     if (typeof v === 'number') return v;
@@ -104,37 +101,23 @@ const stats: PlayerStats = player.stats || {
 
   const speedNum = toNumber(stats.speed);
 
-// ✅ NOUVELLE FONCTION : Récupérer le modificateur de Sagesse
-const getWisModFromPlayer = (player: Player): number => {
-  const abilities: any = (player as any).abilities;
-  const fromArray = Array.isArray(abilities) 
-    ? abilities.find((a: any) => a?.name === 'Sagesse') 
-    : undefined;
-  if (fromArray?.modifier != null) return fromArray.modifier;
-  if (fromArray?.score != null) return Math.floor((fromArray.score - 10) / 2);
-  return 0;
-};
-  
-// Calcul CA:
-const dexMod = getDexModFromPlayer(player);
-const wisMod = getWisModFromPlayer(player);
-const armorFormula = (player as any)?.equipment?.armor?.armor_formula || null;
-const shieldBonus = Number((player as any)?.equipment?.shield?.shield_bonus ?? 0) || 0;
+  const dexMod = getDexModFromPlayer(player);
+  const wisMod = getWisModFromPlayer(player);
+  const armorFormula = (player as any)?.equipment?.armor?.armor_formula || null;
+  const shieldBonus = Number((player as any)?.equipment?.shield?.shield_bonus ?? 0) || 0;
 
-const baseACFromStats = Number(stats.armor_class || 0);
+  const baseACFromStats = Number(stats.armor_class || 0);
 
-// Défense sans armure du Moine
-const monkUnarmoredDefense = player.class === 'Moine' && !armorFormula 
-  ? 10 + dexMod + wisMod 
-  : 0;
+  const monkUnarmoredDefense = player.class === 'Moine' && !armorFormula
+    ? 10 + dexMod + wisMod
+    : 0;
 
-// Prendre le meilleur entre CA de base, Défense sans armure, ou armure équipée
-const armorAC = armorFormula 
-  ? computeArmorAC(armorFormula, dexMod) 
-  : Math.max(baseACFromStats, monkUnarmoredDefense);
+  const armorAC = armorFormula
+    ? computeArmorAC(armorFormula, dexMod)
+    : Math.max(baseACFromStats, monkUnarmoredDefense);
 
-const acBonus = Number((stats as any).ac_bonus || 0);
-const totalAC = armorAC + shieldBonus + acBonus;
+  const acBonus = Number((stats as any).ac_bonus || 0);
+  const totalAC = armorAC + shieldBonus + acBonus;
 
   /* ============================ Repos court / long (inchangé) ============================ */
 
@@ -343,7 +326,7 @@ const totalAC = armorAC + shieldBonus + acBonus;
               <div className="relative w-full min-w-0 aspect-[7/10] sm:aspect-[2/3] rounded-lg overflow-hidden bg-gray-800/50 flex items-center justify-center">
                 <button
                   onClick={() => setEditing(true)}
-                  className="absolute top-2 left-2 w-9 h-9 rounded-full bg-gray-900/40 backdrop-blur-sm text-white hover:bg-gray-800/50 hover:text-white flex items-center justify-center z-10 transition-colors"
+                  className="absolute top-2 left-2 w-9 h-9 rounded-full bg-gray-900/40 backdrop-blur-sm text-white hover:bg-gray-800/50 hover:text-white flex items-center justify-center z-10 transition"
                   title="Profil et caractéristiques"
                 >
                   <Menu className="w-5 h-5" />
@@ -376,7 +359,7 @@ const totalAC = armorAC + shieldBonus + acBonus;
               {/* ✅ NOUVEAU : Bouton Campagnes */}
                 <button
                   onClick={() => setShowCampaignModal(true)}
-                  className="w-32 h-9 rounded text-sm bg-gradient-to-r from-purple-600/20 to-blue-600/20 border border-purple-500/40 text-purple-300 hover:from-purple-600/30 hover:to-blue-600/30 flex items-center justify-between px-3 transition-all"
+                  className="w-32 h-9 rounded text-sm bg-gradient-to-r from-purple-600/20 to-blue-600/20 border border-purple-500/40 text-purple-300 hover:from-purple-600/30 hover:to-blue-600/30 flex items-center px-2"
                 >
                   <span className="ml-1.5 flex-1 text-left">Campagnes</span>
                   <Scroll className="w-4 h-4" />
@@ -525,7 +508,7 @@ const totalAC = armorAC + shieldBonus + acBonus;
               {activeTooltip === 'ac' && (
                 <>
                   <div className="fixed inset-0" onClick={() => setActiveTooltip(null)} />
-                  <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 bg-gray-900/95 backdrop-blur-sm text-sm text-gray-300 rounded-lg max-w-sm w-[90vw] shadow-xl border border-gray-700/60">
+                  <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 bg-gray-900/95 backdrop-blur-sm text-sm text-gray-300 rounded-lg max-w-sm w-[90vw] shadow-xl border border-gray-800">
                     <h4 className="font-semibold text-gray-100 mb-1">Classe d'Armure</h4>
                     <p className="mb-2">Détermine la difficulté pour vous toucher en combat.</p>
                     <p className="text-gray-400">Calcul actuel :</p>
@@ -560,7 +543,7 @@ const totalAC = armorAC + shieldBonus + acBonus;
               {activeTooltip === 'speed' && (
                 <>
                   <div className="fixed inset-0" onClick={() => setActiveTooltip(null)} />
-                  <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 bg-gray-900/95 backdrop-blur-sm text-sm text-gray-300 rounded-lg max-w-sm w-[90vw] shadow-xl border border-gray-700/60">
+                  <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 bg-gray-900/95 backdrop-blur-sm text-sm text-gray-300 rounded-lg max-w-sm w-[90vw] shadow-xl border border-gray-800">
                     <h4 className="font-semibold text-gray-100 mb-1">Vitesse</h4>
                     <p className="mb-2">Distance que vous pouvez parcourir en un tour.</p>
                     <div className="text-gray-400">
@@ -618,6 +601,7 @@ const totalAC = armorAC + shieldBonus + acBonus;
         onClose={() => setShowCampaignModal(false)}
         player={player}
         onUpdate={onUpdate}
+        onInventoryAdd={onInventoryAdd} // pass through to notify GamePage when an item is created
       />
     </>
   );
