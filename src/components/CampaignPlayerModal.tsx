@@ -188,7 +188,44 @@ export function CampaignPlayerModal({
       }
     }
   };
- 
+
+// state local pour l'inventaire (coller JUSTE après setInvitationCode)
+const [inventory, setInventory] = useState<any[]>([]);
+
+// Realtime : subscribe aux INSERT sur inventory_items pour ce player
+useEffect(() => {
+  // Ne pas s'abonner si la modal est fermée ou si on n'a pas de player.id
+  if (!open || !player?.id) return;
+
+  const channel = supabase
+    .channel(`inv-player-${player.id}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'inventory_items',
+        filter: `player_id=eq.${player.id}`,
+      },
+      (payload) => {
+        if (!payload?.record) return;
+        // Ajoute l'item reçu en tête de l'inventaire local
+        setInventory((prev: any[]) => [payload.record, ...prev]);
+      }
+    )
+    .subscribe();
+
+  // cleanup à l'unmount / quand player.id ou open change
+  return () => {
+    if (typeof supabase.removeChannel === 'function') {
+      supabase.removeChannel(channel);
+    } else {
+      channel.unsubscribe?.();
+    }
+  };
+}, [open, player?.id]);
+
+  
 const handleClaimGift = async (gift: CampaignGift) => {
   // Prevent double clicks while an operation is in progress
   if ((window as any).__isClaiming) return;
