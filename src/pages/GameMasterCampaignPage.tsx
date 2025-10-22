@@ -1082,10 +1082,124 @@ function EditCampaignItemModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [name, setName] = useState(item.name);
-  const [description, setDescription] = useState(item.description || '');
-  const [quantity, setQuantity] = useState(item.quantity);
+  const META_PREFIX = '#meta:';
+
+  // États de base
+  const [name, setName] = useState(item.name || '');
+  const [visibleDescription, setVisibleDescription] = useState('');
+  const [quantity, setQuantity] = useState<number>(item.quantity || 1);
   const [saving, setSaving] = useState(false);
+
+  // Méta spécifiques
+  const [type, setType] = useState<string | null>(null); // 'armor' | 'weapon' | 'shield' | null
+  // armor
+  const [armorBase, setArmorBase] = useState<number | null>(null);
+  const [armorAddDex, setArmorAddDex] = useState<boolean>(true);
+  const [armorDexCap, setArmorDexCap] = useState<number | null>(null);
+  // weapon
+  const [weaponDamageDice, setWeaponDamageDice] = useState<string>('');
+  const [weaponDamageType, setWeaponDamageType] = useState<string>('');
+  const [weaponProperties, setWeaponProperties] = useState<string>('');
+  const [weaponRange, setWeaponRange] = useState<string>('');
+  const [weaponCategory, setWeaponCategory] = useState<string>('');
+  // shield
+  const [shieldBonus, setShieldBonus] = useState<number | null>(null);
+
+  // Helpers pour parser la description
+  const parseMeta = (description: string | null | undefined) => {
+    if (!description) return null;
+    const lines = description.split('\n').map(l => l.trim());
+    const metaLine = [...lines].reverse().find(l => l.startsWith(META_PREFIX));
+    if (!metaLine) return null;
+    try {
+      return JSON.parse(metaLine.slice(META_PREFIX.length));
+    } catch {
+      return null;
+    }
+  };
+
+  const stripMetaFromDescription = (description: string | null | undefined) => {
+    if (!description) return '';
+    return description
+      .split('\n')
+      .filter(line => !line.trim().startsWith(META_PREFIX))
+      .join('\n')
+      .trim();
+  };
+
+  // Initialisation : extraire description visible et métadonnées existantes
+  useEffect(() => {
+    const vis = stripMetaFromDescription(item.description);
+    setVisibleDescription(vis);
+    const meta = parseMeta(item.description);
+
+    if (meta) {
+      setType(meta.type || null);
+      setQuantity(meta.quantity ?? item.quantity ?? 1);
+      // Armor
+      if (meta.type === 'armor' && meta.armor) {
+        setArmorBase(meta.armor.base ?? null);
+        setArmorAddDex(meta.armor.addDex ?? true);
+        setArmorDexCap(meta.armor.dexCap ?? null);
+      }
+      // Weapon
+      if (meta.type === 'weapon' && meta.weapon) {
+        setWeaponDamageDice(meta.weapon.damageDice ?? '');
+        setWeaponDamageType(meta.weapon.damageType ?? '');
+        setWeaponProperties(meta.weapon.properties ?? '');
+        setWeaponRange(meta.weapon.range ?? '');
+        setWeaponCategory(meta.weapon.category ?? '');
+      }
+      // Shield
+      if (meta.type === 'shield' && meta.shield) {
+        setShieldBonus(meta.shield.bonus ?? null);
+      }
+    } else {
+      // Pas de méta : on peut laisser type null (objet générique)
+      setType(null);
+      setQuantity(item.quantity || 1);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item]);
+
+  // Construire l'objet meta à partir des champs
+  const buildMeta = () => {
+    if (!type) return null;
+    const baseMeta: any = {
+      type,
+      quantity: quantity || 1,
+      equipped: false,
+    };
+
+    if (type === 'armor') {
+      baseMeta.armor = {
+        base: armorBase ?? 0,
+        addDex: armorAddDex,
+        dexCap: armorDexCap ?? null,
+        label: (() => {
+          const base = armorBase ?? 0;
+          let label = `${base}`;
+          if (armorAddDex) label += ' + modificateur de Dex';
+          if (armorDexCap != null) label += ` (max ${armorDexCap})`;
+          return label;
+        })()
+      };
+    } else if (type === 'weapon') {
+      baseMeta.weapon = {
+        damageDice: weaponDamageDice || '',
+        damageType: weaponDamageType || '',
+        properties: weaponProperties || '',
+        range: weaponRange || '',
+        category: weaponCategory || ''
+      };
+    } else if (type === 'shield') {
+      baseMeta.shield = {
+        bonus: shieldBonus ?? 0
+      };
+    }
+
+    return baseMeta;
+  };
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -1093,18 +1207,26 @@ function EditCampaignItemModal({
       return;
     }
 
+    setSaving(true);
     try {
-      setSaving(true);
+      const metaObj = buildMeta();
+      const metaLine = metaObj ? `${META_PREFIX}${JSON.stringify(metaObj)}` : null;
+      const cleanVisible = (visibleDescription || '').trim();
+      const finalDescription = metaLine
+        ? (cleanVisible ? `${cleanVisible}\n${metaLine}` : metaLine)
+        : cleanVisible;
+
       await campaignService.updateCampaignItem(item.id, {
         name: name.trim(),
-        description: description.trim(),
-        quantity,
+        description: finalDescription,
+        quantity: quantity,
       });
-      toast.success('Objet modifié');
+
+      toast.success('Objet mis à jour');
       onSaved();
-    } catch (error) {
-      console.error(error);
-      toast.error('Erreur lors de la modification');
+    } catch (err) {
+      console.error('Erreur save item:', err);
+      toast.error('Erreur lors de la sauvegarde');
     } finally {
       setSaving(false);
     }
@@ -1130,29 +1252,108 @@ function EditCampaignItemModal({
               onChange={(e) => setName(e.target.value)}
               className="input-dark w-full px-4 py-2 rounded-lg"
               placeholder="Nom de l'objet"
+              autoFocus
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Quantité</label>
-            <input
-              type="number"
-              min="1"
-              value={quantity}
-              onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-              className="input-dark w-full px-4 py-2 rounded-lg"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Quantité</label>
+              <input
+                type="number"
+                min="1"
+                value={quantity}
+                onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                className="input-dark w-full px-4 py-2 rounded-lg"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Type (méta)</label>
+              <select
+                value={type || ''}
+                onChange={(e) => setType(e.target.value || null)}
+                className="input-dark w-full px-4 py-2 rounded-lg"
+              >
+                <option value="">Aucun (objet générique)</option>
+                <option value="armor">Armure</option>
+                <option value="shield">Bouclier</option>
+                <option value="weapon">Arme</option>
+              </select>
+            </div>
           </div>
 
+          {/* Champs pour armure */}
+          {type === 'armor' && (
+            <div className="space-y-2 bg-gray-800/30 p-3 rounded">
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="text-xs text-gray-400">Base</label>
+                  <input type="number" className="input-dark w-full px-2 py-1 rounded" value={armorBase ?? ''} onChange={(e) => setArmorBase(e.target.value ? parseInt(e.target.value) : null)} />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400">Add Dex</label>
+                  <select className="input-dark w-full px-2 py-1 rounded" value={armorAddDex ? 'true' : 'false'} onChange={(e) => setArmorAddDex(e.target.value === 'true')}>
+                    <option value="true">Oui</option>
+                    <option value="false">Non</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400">Dex cap (optionnel)</label>
+                  <input type="number" className="input-dark w-full px-2 py-1 rounded" value={armorDexCap ?? ''} onChange={(e) => setArmorDexCap(e.target.value ? parseInt(e.target.value) : null)} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Champs pour arme */}
+          {type === 'weapon' && (
+            <div className="space-y-2 bg-gray-800/30 p-3 rounded">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-gray-400">Dégâts (ex: 1d6)</label>
+                  <input className="input-dark w-full px-2 py-1 rounded" value={weaponDamageDice} onChange={(e) => setWeaponDamageDice(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400">Type de dégâts</label>
+                  <input className="input-dark w-full px-2 py-1 rounded" value={weaponDamageType} onChange={(e) => setWeaponDamageType(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400">Propriétés</label>
+                  <input className="input-dark w-full px-2 py-1 rounded" value={weaponProperties} onChange={(e) => setWeaponProperties(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400">Portée</label>
+                  <input className="input-dark w-full px-2 py-1 rounded" value={weaponRange} onChange={(e) => setWeaponRange(e.target.value)} />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs text-gray-400">Catégorie</label>
+                  <input className="input-dark w-full px-2 py-1 rounded" value={weaponCategory} onChange={(e) => setWeaponCategory(e.target.value)} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Champs pour bouclier */}
+          {type === 'shield' && (
+            <div className="space-y-2 bg-gray-800/30 p-3 rounded">
+              <div>
+                <label className="text-xs text-gray-400">Bonus</label>
+                <input type="number" className="input-dark w-full px-2 py-1 rounded" value={shieldBonus ?? ''} onChange={(e) => setShieldBonus(e.target.value ? parseInt(e.target.value) : null)} />
+              </div>
+            </div>
+          )}
+
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Description</label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Description (visible)</label>
             <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              value={visibleDescription}
+              onChange={(e) => setVisibleDescription(e.target.value)}
               className="input-dark w-full px-4 py-2 rounded-lg"
               rows={4}
-              placeholder="Description de l'objet"
+              placeholder="Description que verront les joueurs (les méta sont cachées ici)"
             />
+            <p className="text-xs text-gray-500 mt-1">Les propriétés techniques sont gérées séparément et ne s'affichent pas en brut dans la description.</p>
           </div>
         </div>
 
@@ -1176,6 +1377,7 @@ function EditCampaignItemModal({
     </div>
   );
 }
+
 
 // =============================================
 // Onglet Envois - IMPLÉMENTATION COMPLÈTE
