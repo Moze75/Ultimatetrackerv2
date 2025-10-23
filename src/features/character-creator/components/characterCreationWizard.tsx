@@ -47,15 +47,11 @@ type CreatorModalProps = {
   initialSnapshot?: any;
 };
 
-// ✅ MODIFICATION OPTION 1 BIS : Ne plus démonter le composant
 function CreatorModal({ open, onClose, onComplete, initialSnapshot }: CreatorModalProps) {
-  // ❌ AVANT : if (!open) return null;
-  
-  // ✅ APRÈS : Toujours monté, juste caché avec display
   return (
     <div 
       className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm"
-      style={{ display: open ? 'block' : 'none' }} // 🎯 SEULE MODIFICATION
+      style={{ display: open ? 'block' : 'none' }}
     >
       <div className="w-screen h-screen relative">
         <button
@@ -86,14 +82,11 @@ type WelcomeModalProps = {
   onContinue: () => void;
 };
 
-// ✅ BONUS : Appliquer la même logique au WelcomeModal
 function WelcomeModal({ open, characterName, onContinue }: WelcomeModalProps) {
-  // ❌ AVANT : if (!open) return null;
-  
   return (
     <div 
       className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
-      style={{ display: open ? 'flex' : 'none' }} // display: flex pour le centering
+      style={{ display: open ? 'flex' : 'none' }}
     >
       <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border border-purple-500/30 rounded-xl max-w-md w-full p-8 shadow-2xl">
         <div className="text-center space-y-6">
@@ -147,7 +140,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
   useEffect(() => {
     fetchPlayers();
     loadSubscription();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
   useEffect(() => {
@@ -439,8 +431,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
             <h1
               className="text-4xl font-bold text-white"
               style={{
-                textShadow:
-                  '0 0 15px rgba(255,255,255,.9),0 0 20px rgba(255,255,255,.6),0 0 30px rgba(255,255,255,.4),0 0 40px rgba(255,255,255,.2)',
+                textShadow: '0 0 15px rgba(255,255,255,.9),0 0 20px rgba(255,255,255,.6),0 0 30px rgba(255,255,255,.4),0 0 40px rgba(255,255,255,.2)',
               }}
             >
               Mes Personnages
@@ -451,9 +442,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
               style={{ textShadow: '0 0 10px rgba(255,255,255,.3)' }}
             >
               {players.length > 0
-                ? `${players.length} personnage${players.length > 1 ? 's' : ''} créé${
-                    players.length > 1 ? 's' : ''
-                  }`
+                ? `${players.length} personnage${players.length > 1 ? 's' : ''} créé${players.length > 1 ? 's' : ''}`
                 : 'Aucun personnage créé'}
             </p>
 
@@ -502,8 +491,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
                       ⚠️ Attention : Cette action est irréversible !
                     </p>
                     <p className="text-gray-300 text-sm">
-                      Toutes les données du personnage (inventaire, attaques, statistiques) seront
-                      définitivement supprimées.
+                      Toutes les données du personnage (inventaire, attaques, statistiques) seront définitivement supprimées.
                     </p>
                   </div>
 
@@ -551,8 +539,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
                 const maxHp = Math.max(0, Number(player.max_hp || 0));
                 const currHp = Math.max(0, Number(player.current_hp || 0));
                 const tempHp = Math.max(0, Number(player.temporary_hp || 0));
-                const ratio =
-                  maxHp > 0 ? Math.min(100, Math.max(0, ((currHp + tempHp) / maxHp) * 100)) : 0;
+                const ratio = maxHp > 0 ? Math.min(100, Math.max(0, ((currHp + tempHp) / maxHp) * 100)) : 0;
 
                 return (
                   <div
@@ -661,7 +648,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
         </div>
       </div>
 
-      {/* ✅ MODIFICATION OPTION 1 BIS APPLIQUÉE ICI */}
       <CreatorModal
         open={showCreator}
         onClose={() => {
