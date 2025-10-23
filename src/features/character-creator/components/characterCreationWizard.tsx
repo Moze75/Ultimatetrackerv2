@@ -213,6 +213,35 @@ export default function CharacterCreationWizard({ onFinish, onCancel, initialSna
     [selectedBackground]
   );
 
+ // ✅ AJOUTER ICI - NOUVEAU useEffect pour sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem('ut:wizardActive', 'true');
+    console.log('[Wizard] 🔒 Wizard marqué comme actif');
+    
+    return () => {
+      sessionStorage.removeItem('ut:wizardActive');
+      console.log('[Wizard] 🔓 Wizard marqué comme inactif');
+    };
+  }, []);
+
+  // ✅ AJOUTER ICI - NOUVEAU useEffect pour visibilité
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      const nowVisible = !document.hidden;
+      setIsTabVisible(nowVisible);
+      
+      if (nowVisible) {
+        lastVisibilityChangeRef.current = Date.now();
+        console.log('[Wizard] 👁️ Onglet redevenu visible - pause sauvegarde temporaire');
+      } else {
+        console.log('[Wizard] 👁️ Onglet masqué');
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+  
   // ✅ PHASE 3: Validation de la restauration
   useEffect(() => {
     if (restoredSnapshot && !hasRestoredRef.current) {
