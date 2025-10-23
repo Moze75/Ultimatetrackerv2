@@ -48,10 +48,8 @@ type CreatorModalProps = {
 };
 
 function CreatorModal({ open, onClose, onComplete, initialSnapshot }: CreatorModalProps) {
-  // ❌ AVANT : if (!open) return null;
-  // ✅ APRÈS : Modification ligne 51-52
   return (
-    <div 
+    <div
       className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm"
       style={{ display: open ? 'block' : 'none' }}
     >
@@ -66,8 +64,8 @@ function CreatorModal({ open, onClose, onComplete, initialSnapshot }: CreatorMod
 
         <div className="w-full h-full bg-gray-900 flex flex-col">
           <div className="flex-1 min-h-0 overflow-y-auto">
-            <CharacterCreationWizard 
-              onFinish={onComplete} 
+            <CharacterCreationWizard
+              onFinish={onComplete}
               onCancel={onClose}
               initialSnapshot={initialSnapshot}
             />
@@ -84,11 +82,10 @@ type WelcomeModalProps = {
   onContinue: () => void;
 };
 
+// Option 1bis aussi pour la modale de bienvenue
 function WelcomeModal({ open, characterName, onContinue }: WelcomeModalProps) {
-  // ❌ AVANT : if (!open) return null;
-  // ✅ APRÈS : Modification ligne 84-86
   return (
-    <div 
+    <div
       className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
       style={{ display: open ? 'flex' : 'none' }}
     >
@@ -97,24 +94,20 @@ function WelcomeModal({ open, characterName, onContinue }: WelcomeModalProps) {
           <div className="w-16 h-16 mx-auto bg-purple-500/20 rounded-full flex items-center justify-center">
             <Dices className="w-8 h-8 text-purple-400" />
           </div>
-          
+
           <div className="space-y-3">
-            <h2 className="text-2xl font-bold text-red-400">
-              Bienvenue {characterName}
-            </h2>
+            <h2 className="text-2xl font-bold text-red-400">Bienvenue {characterName}</h2>
             <div className="flex items-center justify-center gap-2">
-              <p 
+              <p
                 className="text-lg text-gray-200 font-medium"
-                style={{
-                  textShadow: '0 0 10px rgba(255,255,255,0.3)'
-                }}
+                style={{ textShadow: '0 0 10px rgba(255,255,255,0.3)' }}
               >
                 L'aventure commence ici
               </p>
               <Dices className="w-6 h-6 text-purple-400" />
             </div>
           </div>
-          
+
           <button
             onClick={onContinue}
             className="w-full bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105"
