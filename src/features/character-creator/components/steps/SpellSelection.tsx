@@ -107,7 +107,7 @@ const SpellSelection: React.FC<SpellSelectionProps> = ({
     sections.forEach((section) => {
       const lines = section.split('\n');
       const spell: Partial<Spell> = {
-        id: crypto.randomUUID(),
+        id: '', // Sera rempli après avoir lu le nom
         classes: [],
         components: { V: false, S: false, M: null },
         level: 0,
