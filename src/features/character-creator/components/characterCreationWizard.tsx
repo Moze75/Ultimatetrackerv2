@@ -382,38 +382,62 @@ export default function CharacterCreationWizard({ onFinish, onCancel, initialSna
   // ✅ Sauvegarde IMMÉDIATE pour les choix critiques (step, race, classe, sorts, équipement)
   useEffect(() => {
     // Ne pas sauvegarder pendant la restauration initiale
-    if (isRestoringFromSnapshot && !hasRestoredRef.current) {
-      return;
-    }
-    saveSnapshot();
-  }, [
-    currentStep,
-    selectedRace,
-    selectedClass,
-    selectedBackground,
-    backgroundEquipmentOption,
-    selectedClassSkills,
-    selectedEquipmentOption,
-    selectedCantrips,
-    selectedLevel1Spells,
-  ]);
+   if (isRestoringFromSnapshot && !hasRestoredRef.current) {
+    console.log('[Wizard] ⏭️ Sauvegarde immédiate ignorée (restauration en cours)');
+    return;
+  }
 
-  // ✅ Sauvegarde AVEC DEBOUNCE pour les champs de texte et abilities
-  useEffect(() => {
-    if (isRestoringFromSnapshot && !hasRestoredRef.current) {
-      return;
-    }
-    debouncedSave();
-  }, [
-    characterName,
-    age,
-    gender,
-    characterHistory,
-    selectedAlignment,
-    selectedLanguages,
-    abilities,
-    effectiveAbilities,
-  ]);
+  // ⚠️ NOUVEAU : Ne pas sauvegarder si changement de visibilité récent
+  const timeSinceVisibilityChange = Date.now() - lastVisibilityChangeRef.current;
+  if (timeSinceVisibilityChange < 2000) {
+    console.log('[Wizard] ⏸️ Sauvegarde immédiate ignorée (retour onglet récent)', {
+      timeSince: timeSinceVisibilityChange + 'ms'
+    });
+    return;
+  }
+
+  saveSnapshot();
+}, [
+  currentStep,
+  selectedRace,
+  selectedClass,
+  selectedBackground,
+  backgroundEquipmentOption,
+  selectedClassSkills,
+  selectedEquipmentOption,
+  selectedCantrips,
+  selectedLevel1Spells,
+  saveSnapshot, // ✅ Ajouter saveSnapshot dans les dépendances
+]);
+
+// ✅ Sauvegarde AVEC DEBOUNCE pour les champs de texte et abilities
+useEffect(() => {
+  if (isRestoringFromSnapshot && !hasRestoredRef.current) {
+    console.log('[Wizard] ⏭️ Sauvegarde debounce ignorée (restauration en cours)');
+    return;
+  }
+
+  // ⚠️ NOUVEAU : Ne pas sauvegarder si changement de visibilité récent
+  const timeSinceVisibilityChange = Date.now() - lastVisibilityChangeRef.current;
+  if (timeSinceVisibilityChange < 2000) {
+    console.log('[Wizard] ⏸️ Sauvegarde debounce ignorée (retour onglet récent)', {
+      timeSince: timeSinceVisibilityChange + 'ms'
+    });
+    return;
+  }
+
+  debouncedSave();
+}, [
+  characterName,
+  age,
+  gender,
+  characterHistory,
+  selectedAlignment,
+  selectedLanguages,
+  abilities,
+  effectiveAbilities,
+  debouncedSave, // ✅ Ajouter debouncedSave dans les dépendances
+]);
 
   // Classes qui ne lancent pas de sorts au niveau 1
   const nonCasterClasses: DndClass[] = ['Guerrier', 'Roublard', 'Barbare', 'Moine'];
