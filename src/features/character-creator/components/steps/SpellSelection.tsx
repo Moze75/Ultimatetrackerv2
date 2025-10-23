@@ -107,7 +107,7 @@ const SpellSelection: React.FC<SpellSelectionProps> = ({
     sections.forEach((section) => {
       const lines = section.split('\n');
       const spell: Partial<Spell> = {
-        id: '', // Sera rempli après avoir lu le nom
+        id: crypto.randomUUID(),
         classes: [],
         components: { V: false, S: false, M: null },
         level: 0,
@@ -252,16 +252,8 @@ const SpellSelection: React.FC<SpellSelectionProps> = ({
         }
       }
 
-  if (spell.name) {
-  // ✅ Générer un ID stable basé sur le nom du sort (slugify)
-  spell.id = spell.name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Enlever les accents
-    .replace(/[^a-z0-9]+/g, '-') // Remplacer les espaces par des tirets
-    .replace(/^-+|-+$/g, ''); // Enlever les tirets en début/fin
-  
-  let cleanDescription = descriptionLines.join('\n').trim();
+      if (spell.name) {
+        let cleanDescription = descriptionLines.join('\n').trim();
         const descriptionParts = cleanDescription.split('\n').filter(line => {
           const trimmed = line.trim().toLowerCase();
           return !trimmed.match(/^[a-zà-ÿ\s]+\s+de\s+niveau\s+\d+/i) &&
