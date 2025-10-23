@@ -48,6 +48,8 @@ type CreatorModalProps = {
 };
 
 function CreatorModal({ open, onClose, onComplete, initialSnapshot }: CreatorModalProps) {
+  // ❌ AVANT : if (!open) return null;
+  // ✅ APRÈS : Modification ligne 51-52
   return (
     <div 
       className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm"
@@ -83,6 +85,8 @@ type WelcomeModalProps = {
 };
 
 function WelcomeModal({ open, characterName, onContinue }: WelcomeModalProps) {
+  // ❌ AVANT : if (!open) return null;
+  // ✅ APRÈS : Modification ligne 84-86
   return (
     <div 
       className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
@@ -140,6 +144,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
   useEffect(() => {
     fetchPlayers();
     loadSubscription();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
   useEffect(() => {
@@ -351,6 +356,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
 
   const displayClassName = (cls?: string | null) => (cls === 'Sorcier' ? 'Occultiste' : cls || '');
 
+  // ✅ Fonction pour obtenir le texte du niveau de compte (sans badge)
   const getSubscriptionText = () => {
     if (!currentSubscription) return null;
 
@@ -419,6 +425,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
     >
       <div className="min-h-screen py-8 bg-transparent">
         <div className="w-full max-w-6xl mx-auto px-4">
+          {/* ✅ NOUVEAU : Niveau de compte discret en haut */}
           {currentSubscription && (
             <div className="text-center mb-4">
               <p className="text-xs text-gray-400">
@@ -427,25 +434,32 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
             </div>
           )}
 
+          {/* Header */}
           <div className="text-center mb-8 sm:mb-12 space-y-4">
+            {/* Titre */}
             <h1
               className="text-4xl font-bold text-white"
               style={{
-                textShadow: '0 0 15px rgba(255,255,255,.9),0 0 20px rgba(255,255,255,.6),0 0 30px rgba(255,255,255,.4),0 0 40px rgba(255,255,255,.2)',
+                textShadow:
+                  '0 0 15px rgba(255,255,255,.9),0 0 20px rgba(255,255,255,.6),0 0 30px rgba(255,255,255,.4),0 0 40px rgba(255,255,255,.2)',
               }}
             >
               Mes Personnages
             </h1>
             
+            {/* Nombre de personnages */}
             <p
               className="text-xl text-gray-200"
               style={{ textShadow: '0 0 10px rgba(255,255,255,.3)' }}
             >
               {players.length > 0
-                ? `${players.length} personnage${players.length > 1 ? 's' : ''} créé${players.length > 1 ? 's' : ''}`
+                ? `${players.length} personnage${players.length > 1 ? 's' : ''} créé${
+                    players.length > 1 ? 's' : ''
+                  }`
                 : 'Aucun personnage créé'}
             </p>
 
+            {/* Boutons d'action */}
             <div className="flex justify-center gap-3 pt-2 flex-wrap">
               <button
                 onClick={() => setShowSubscription(true)}
@@ -470,6 +484,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
             </div>
           </div>
 
+          {/* Le reste du code reste identique... */}
           {deletingCharacter && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
               <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full border border-red-500/20">
@@ -491,7 +506,8 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
                       ⚠️ Attention : Cette action est irréversible !
                     </p>
                     <p className="text-gray-300 text-sm">
-                      Toutes les données du personnage (inventaire, attaques, statistiques) seront définitivement supprimées.
+                      Toutes les données du personnage (inventaire, attaques, statistiques) seront
+                      définitivement supprimées.
                     </p>
                   </div>
 
@@ -533,13 +549,15 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
             </div>
           )}
 
+          {/* Characters Grid */}
           <div className="flex justify-center mb-8 sm:mb-16">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl">
               {players.map((player) => {
                 const maxHp = Math.max(0, Number(player.max_hp || 0));
                 const currHp = Math.max(0, Number(player.current_hp || 0));
                 const tempHp = Math.max(0, Number(player.temporary_hp || 0));
-                const ratio = maxHp > 0 ? Math.min(100, Math.max(0, ((currHp + tempHp) / maxHp) * 100)) : 0;
+                const ratio =
+                  maxHp > 0 ? Math.min(100, Math.max(0, ((currHp + tempHp) / maxHp) * 100)) : 0;
 
                 return (
                   <div
