@@ -48,9 +48,13 @@ type CreatorModalProps = {
 };
 
 function CreatorModal({ open, onClose, onComplete, initialSnapshot }: CreatorModalProps) {
-  if (!open) return null;
+  // ❌ AVANT : if (!open) return null;
+  // ✅ APRÈS : Modification ligne 51-52
   return (
-    <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm">
+    <div 
+      className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm"
+      style={{ display: open ? 'block' : 'none' }}
+    >
       <div className="w-screen h-screen relative">
         <button
           onClick={onClose}
@@ -81,10 +85,13 @@ type WelcomeModalProps = {
 };
 
 function WelcomeModal({ open, characterName, onContinue }: WelcomeModalProps) {
-  if (!open) return null;
-  
+  // ❌ AVANT : if (!open) return null;
+  // ✅ APRÈS : Modification ligne 84-86
   return (
-    <div className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div 
+      className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+      style={{ display: open ? 'flex' : 'none' }}
+    >
       <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border border-purple-500/30 rounded-xl max-w-md w-full p-8 shadow-2xl">
         <div className="text-center space-y-6">
           <div className="w-16 h-16 mx-auto bg-purple-500/20 rounded-full flex items-center justify-center">
