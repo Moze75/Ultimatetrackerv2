@@ -144,5 +144,5 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({
         </div>
       </div>
     </div>
-  );
+  ); 
 };
