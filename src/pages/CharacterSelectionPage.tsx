@@ -133,23 +133,37 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
   const [currentSubscription, setCurrentSubscription] = useState<UserSubscription | null>(null);
   const [remainingTrialDays, setRemainingTrialDays] = useState<number | null>(null);
 
-  // ✅ FIX 1 : Protection contre les réouvertures intempestives du wizard
- useEffect(() => {
-  fetchPlayers();
-  loadSubscription();
-  
-  // ✅ Vérifier le snapshot AU PREMIER CHARGEMENT uniquement
-  const wizardSnapshot = appContextService.getWizardSnapshot();
-  if (wizardSnapshot && !showCreator) {
-    console.log('[CharacterSelection] 📋 Snapshot wizard détecté, restauration automatique:', wizardSnapshot);
-    setShowCreator(true);
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [session]); // ⚠️ Se déclenche uniquement quand la session change
+  // ✅ Protection contre les rechargements multiples
+  const hasInitializedRef = useRef(false);
+  const playersLoadedRef = useRef(false);
+
+  useEffect(() => {
+    // ✅ Ne charger qu'UNE SEULE FOIS par session
+    if (hasInitializedRef.current) {
+      console.log('[CharacterSelection] ⏭️ Déjà initialisé, skip');
+      return;
+    }
+
+    console.log('[CharacterSelection] 🚀 Initialisation...');
+    hasInitializedRef.current = true;
+
+    // Vérifier le snapshot wizard
+    const wizardSnapshot = appContextService.getWizardSnapshot();
+    if (wizardSnapshot) {
+      console.log('[CharacterSelection] 📋 Snapshot wizard détecté:', wizardSnapshot);
+      setShowCreator(true);
+    }
+
+    // Charger les personnages et l'abonnement
+    fetchPlayers();
+    loadSubscription();
+    
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // ⚠️ Tableau vide = s'exécute UNE SEULE FOIS
 
   const loadSubscription = async () => {
     try {
-      const sub = await subscriptionServiazce.getCurrentSubscription(session.user.id);
+      const sub = await subscriptionService.getCurrentSubscription(session.user.id);
       setCurrentSubscription(sub);
 
       if (sub?.tier === 'free' && sub?.status === 'trial') {
@@ -162,8 +176,17 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
   };
 
   const fetchPlayers = async () => {
+    // ✅ Éviter de recharger si déjà chargé
+    if (playersLoadedRef.current) {
+      console.log('[CharacterSelection] ⏭️ Personnages déjà chargés, skip');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
+      console.log('[CharacterSelection] 📥 Chargement des personnages...');
+      
       const { data, error } = await supabase
         .from('players')
         .select('*')
@@ -171,7 +194,10 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
         .order('created_at', { ascending: true });
 
       if (error) throw error;
+      
       setPlayers(data || []);
+      playersLoadedRef.current = true;
+      console.log('[CharacterSelection] ✅ Personnages chargés:', data?.length || 0);
     } catch (error: any) {
       console.error('Erreur lors de la récupération des personnages:', error);
       toast.error('Erreur lors de la récupération des personnages');
