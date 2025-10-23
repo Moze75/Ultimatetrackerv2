@@ -1,963 +1,698 @@
-import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
-import { Toaster, toast } from 'react-hot-toast';
+import React, { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
+import toast from 'react-hot-toast';
+import { appContextService } from '../services/appContextService';
+import { Player } from '../types/dnd';
+import {
+  LogOut,
+  Plus,
+  User,
+  Sword,
+  Shield,
+  Sparkles,
+  Trash2,
+  Dices,
+  Crown,
+  Star,
+  Clock,
+  Scroll,
+} from 'lucide-react';
+import { Avatar } from '../components/Avatar';
+import { authService } from '../services/authService';
+import { subscriptionService } from '../services/subscriptionService';
+import { SubscriptionPage } from './SubscriptionPage';
+import { GameMasterCampaignPage } from './GameMasterCampaignPage';
+import { UserSubscription, SUBSCRIPTION_PLANS } from '../types/subscription';
 
-import ProgressBar, { stopWizardMusic } from './ui/ProgressBar';
-import RaceSelection from './steps/RaceSelection';
-import ClassSelection from './steps/ClassSelection';
-import SpellSelection from './steps/SpellSelection';
-import BackgroundSelection from './steps/BackgroundSelection';
-import ProfileSelection from './steps/ProfileSelection';
-import AbilityScores from './steps/AbilityScores';
-import CharacterSummary from './steps/CharacterSummary';
+// Intégration Character Creator (wizard)
+import { CharacterExportPayload } from '../types/characterCreator';
+import { createCharacterFromCreatorPayload } from '../services/characterCreationIntegration';
+import CharacterCreationWizard from '../features/character-creator/components/characterCreationWizard';
 
-import { DndClass } from '../types/character';
-import type { CharacterExportPayload } from '../types/CharacterExport';
-import { supabase } from '../../../lib/supabase';
-import { calculateArmorClass, calculateHitPoints, calculateModifier } from '../utils/dndCalculations';
-
-import { races } from '../data/races';
-import { classes } from '../data/classes';
-import { backgrounds } from '../data/backgrounds';
-import { enrichEquipmentList, determineAutoEquip } from '../../../services/equipmentLookupService';
-import { appContextService } from '../../../services/appContextService';
-
-/* ===========================================================
-   Utilitaires
-   =========================================================== */
-
-// Convertit ft -> m en arrondissant au 0,5 m (30 ft → 9 m)
-const feetToMeters = (ft?: number) => {
-  const n = Number(ft);
-  if (!Number.isFinite(n)) return 9;
-  return Math.round(n * 0.3048 * 2) / 2;
-};
-
-// Mappe une classe vers une image publique placée dans /public/*.png
-function getClassImageUrlLocal(className: DndClass | string | undefined | null): string | null {
-  if (!className) return null;
-  switch (className) {
-    case 'Guerrier': return '/Guerrier.png';
-    case 'Magicien': return '/Magicien.png';
-    case 'Roublard': return '/Voleur.png';
-    case 'Clerc': return '/Clerc.png';
-    case 'Rôdeur': return '/Rodeur.png';
-    case 'Barbare': return '/Barbare.png';
-    case 'Barde': return '/Barde.png';
-    case 'Druide': return '/Druide.png';
-    case 'Moine': return '/Moine.png';
-    case 'Paladin': return '/Paladin.png';
-    case 'Ensorceleur': return '/Ensorceleur.png';
-    case 'Occultiste': return '/Occultiste.png';
-    default:
-      return null;
-  }
+interface CharacterSelectionPageProps {
+  session: any;
+  onCharacterSelect: (player: Player) => void;
 }
 
-// Normalise le don d'historique pour coller à la liste attendue par l'app
-function normalizeBackgroundFeat(feat?: string | null): string | undefined {
-  if (!feat) return undefined;
-  const trimmed = feat.trim();
-  if (trimmed.toLowerCase().startsWith('initié à la magie')) {
-    return 'Initié à la magie';
-  }
-  return trimmed;
-}
+const LAST_SELECTED_CHARACTER_SNAPSHOT = 'lastSelectedCharacterSnapshot';
 
-// Parse l'or ("X po") dans la liste d'items d'équipement
-function parseGoldFromItems(items?: string[]): number | undefined {
-  if (!Array.isArray(items)) return undefined;
-  let total = 0;
-  for (const it of items) {
-    const m = String(it).match(/(\d+)\s*po\b/i);
-    if (m) total += parseInt(m[1], 10);
-  }
-  return total > 0 ? total : undefined;
-}
+const BG_URL =
+  (import.meta as any)?.env?.VITE_SELECTION_BG_URL ||
+  'https://yumzqyyogwzrmlcpvnky.supabase.co/storage/v1/object/public/static/tmpoofee5sh.png';
 
-// Tente d'uploader une image dans le bucket Supabase "avatars"
-async function tryUploadAvatarFromUrl(playerId: string, url: string): Promise<string | null> {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const blob = await res.blob();
-
-    const contentType = blob.type || 'image/png';
-    const ext = (() => {
-      const t = contentType.split('/')[1]?.toLowerCase();
-      if (t === 'jpeg') return 'jpg';
-      return t || 'png';
-    })();
-
-    const fileName = `class-${Date.now()}.${ext}`;
-    const filePath = `${playerId}/${fileName}`;
-
-    const { error: uploadErr } = await supabase.storage
-      .from('avatars')
-      .upload(filePath, blob, { upsert: true, contentType });
-
-    if (uploadErr) throw uploadErr;
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('avatars')
-      .getPublicUrl(filePath);
-
-    return publicUrl || null;
-  } catch (e) {
-    console.warn('Upload avatar depuis URL impossible:', e);
-    return null;
-  }
-}
-
-// Notifie le parent qu'un personnage a été créé
-type CreatedEvent = {
-  type: 'creator:character_created';
-  payload: { playerId: string; player?: any };
-};
-
-const notifyParentCreated = (playerId: string, player?: any) => {
-  const msg: CreatedEvent = { type: 'creator:character_created', payload: { playerId, player } };
-  try { window.parent?.postMessage(msg, '*'); } catch {}
-  try { (window as any).opener?.postMessage(msg, '*'); } catch {}
-  try { window.postMessage(msg, '*'); } catch {}
-};
-
-/* ===========================================================
-   Étapes
-   =========================================================== */
-
-const steps = ['Race', 'Classe', 'Sorts', 'Historique', 'Profil', 'Caractéristiques', 'Résumé'];
-
-interface WizardProps {
-  onFinish?: (payload: CharacterExportPayload) => void;
-  onCancel?: () => void;
+type CreatorModalProps = {
+  open: boolean;
+  onClose: () => void;
+  onComplete: (payload: CharacterExportPayload) => void;
   initialSnapshot?: any;
+};
+
+// ✅ MODIFICATION OPTION 1 BIS : Ne plus démonter le composant
+function CreatorModal({ open, onClose, onComplete, initialSnapshot }: CreatorModalProps) {
+  // ❌ AVANT : if (!open) return null;
+  
+  // ✅ APRÈS : Toujours monté, juste caché avec display
+  return (
+    <div 
+      className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm"
+      style={{ display: open ? 'block' : 'none' }} // 🎯 SEULE MODIFICATION
+    >
+      <div className="w-screen h-screen relative">
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 z-10 bg-gray-800/80 hover:bg-gray-700 text-white px-3 py-1 rounded"
+          aria-label="Fermer"
+        >
+          Fermer
+        </button>
+
+        <div className="w-full h-full bg-gray-900 flex flex-col">
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <CharacterCreationWizard 
+              onFinish={onComplete} 
+              onCancel={onClose}
+              initialSnapshot={initialSnapshot}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-export default function CharacterCreationWizard({ onFinish, onCancel, initialSnapshot }: WizardProps) {
-  // ✅ PHASE 1: Restauration automatique depuis localStorage
-  // Cette restauration se fait AVANT tous les useState pour garantir la disponibilité
-  const restoredSnapshot = useMemo(() => {
-    // Priorité: prop initialSnapshot, sinon localStorage
-    const snapshot = initialSnapshot || appContextService.getWizardSnapshot();
-    
-    if (snapshot) {
-      console.log('[Wizard] 🔄 RESTAURATION AUTOMATIQUE depuis:', initialSnapshot ? 'props' : 'localStorage', {
-        step: snapshot.currentStep,
-        race: snapshot.selectedRace,
-        class: snapshot.selectedClass,
-        cantrips: snapshot.selectedCantrips?.length || 0,
-        level1Spells: snapshot.selectedLevel1Spells?.length || 0,
-        equipment: snapshot.selectedEquipmentOption,
-        backgroundEquipment: snapshot.backgroundEquipmentOption,
-        skills: snapshot.selectedClassSkills?.length || 0,
-      });
-    } else {
-      console.log('[Wizard] ℹ️ Aucun snapshot à restaurer, démarrage nouveau wizard');
-    }
-    
-    return snapshot;
-  }, []); // ⚠️ CRITIQUE: [] vide pour n'exécuter qu'UNE SEULE FOIS au montage
+type WelcomeModalProps = {
+  open: boolean;
+  characterName: string;
+  onContinue: () => void;
+};
 
-  // ✅ PHASE 2: Flag de protection contre les resets
-  const [isRestoringFromSnapshot, setIsRestoringFromSnapshot] = useState(!!restoredSnapshot);
-  const hasRestoredRef = useRef(false);
-
-  // ✅ Initialiser TOUS les états depuis restoredSnapshot
-  const [currentStep, setCurrentStep] = useState(restoredSnapshot?.currentStep ?? 0);
-  const [loadingEquipment, setLoadingEquipment] = useState(false);
-  const [characterName, setCharacterName] = useState(restoredSnapshot?.characterName ?? '');
-  const [selectedRace, setSelectedRace] = useState(restoredSnapshot?.selectedRace ?? '');
-  const [selectedClass, setSelectedClass] = useState<DndClass | ''>(restoredSnapshot?.selectedClass ?? '');
-  const [selectedBackground, setSelectedBackground] = useState(restoredSnapshot?.selectedBackground ?? '');
-  const [backgroundEquipmentOption, setBackgroundEquipmentOption] = useState<'A' | 'B' | ''>(restoredSnapshot?.backgroundEquipmentOption ?? '');
-  const [selectedClassSkills, setSelectedClassSkills] = useState<string[]>(restoredSnapshot?.selectedClassSkills ?? []);
-  const [selectedEquipmentOption, setSelectedEquipmentOption] = useState<string>(restoredSnapshot?.selectedEquipmentOption ?? '');
-  const [selectedCantrips, setSelectedCantrips] = useState<any[]>(restoredSnapshot?.selectedCantrips ?? []);
-  const [selectedLevel1Spells, setSelectedLevel1Spells] = useState<any[]>(restoredSnapshot?.selectedLevel1Spells ?? []);
-  const [selectedAlignment, setSelectedAlignment] = useState(restoredSnapshot?.selectedAlignment ?? '');
-  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(restoredSnapshot?.selectedLanguages ?? []);
-  const [age, setAge] = useState(restoredSnapshot?.age ?? '');
-  const [gender, setGender] = useState(restoredSnapshot?.gender ?? '');
-  const [characterHistory, setCharacterHistory] = useState(restoredSnapshot?.characterHistory ?? '');
-  const [abilities, setAbilities] = useState<Record<string, number>>(restoredSnapshot?.abilities ?? {
-    'Force': 8,
-    'Dextérité': 8,
-    'Constitution': 8,
-    'Intelligence': 8,
-    'Sagesse': 8,
-    'Charisme': 8,
-  });
-  const [effectiveAbilities, setEffectiveAbilities] = useState<Record<string, number>>(
-    restoredSnapshot?.effectiveAbilities ?? restoredSnapshot?.abilities ?? {
-      'Force': 8,
-      'Dextérité': 8,
-      'Constitution': 8,
-      'Intelligence': 8,
-      'Sagesse': 8,
-      'Charisme': 8,
-    }
+// ✅ BONUS : Appliquer la même logique au WelcomeModal
+function WelcomeModal({ open, characterName, onContinue }: WelcomeModalProps) {
+  // ❌ AVANT : if (!open) return null;
+  
+  return (
+    <div 
+      className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+      style={{ display: open ? 'flex' : 'none' }} // display: flex pour le centering
+    >
+      <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border border-purple-500/30 rounded-xl max-w-md w-full p-8 shadow-2xl">
+        <div className="text-center space-y-6">
+          <div className="w-16 h-16 mx-auto bg-purple-500/20 rounded-full flex items-center justify-center">
+            <Dices className="w-8 h-8 text-purple-400" />
+          </div>
+          
+          <div className="space-y-3">
+            <h2 className="text-2xl font-bold text-red-400">
+              Bienvenue {characterName}
+            </h2>
+            <div className="flex items-center justify-center gap-2">
+              <p 
+                className="text-lg text-gray-200 font-medium"
+                style={{
+                  textShadow: '0 0 10px rgba(255,255,255,0.3)'
+                }}
+              >
+                L'aventure commence ici
+              </p>
+              <Dices className="w-6 h-6 text-purple-400" />
+            </div>
+          </div>
+          
+          <button
+            onClick={onContinue}
+            className="w-full bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105"
+          >
+            Continuer
+          </button>
+        </div>
+      </div>
+    </div>
   );
+}
 
-  // ✅ États pour l'indicateur de sauvegarde
-  const [isSaving, setIsSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-
-  // Objet d'historique sélectionné
-  const selectedBackgroundObj = useMemo(
-    () => backgrounds.find((b) => b.name === selectedBackground) || null,
-    [selectedBackground]
-  );
-
-  // ✅ PHASE 3: Validation de la restauration
-  useEffect(() => {
-    if (restoredSnapshot && !hasRestoredRef.current) {
-      hasRestoredRef.current = true;
-      
-      console.log('[Wizard] ✅ VALIDATION de la restauration:', {
-        step: currentStep,
-        race: selectedRace,
-        class: selectedClass,
-        cantrips: selectedCantrips.length,
-        level1Spells: selectedLevel1Spells.length,
-        classSkills: selectedClassSkills.length,
-        equipment: selectedEquipmentOption,
-        backgroundEquipment: backgroundEquipmentOption,
-      });
-
-      // Désactiver le flag de restauration après 500ms pour permettre les resets futurs
-      setTimeout(() => {
-        setIsRestoringFromSnapshot(false);
-        console.log('[Wizard] 🔓 Protection contre les resets désactivée');
-      }, 500);
-    }
-  }, [restoredSnapshot]);
-
-  // ✅ PHASE 2 (suite): Resets PROTÉGÉS contre l'écrasement lors de la restauration
-  useEffect(() => {
-    // ⚠️ NE PAS reset si on est en train de restaurer depuis un snapshot
-    if (isRestoringFromSnapshot) {
-      console.log('[Wizard] 🛡️ RESET ÉVITÉ pendant la restauration (selectedClass)');
-      return;
-    }
-
-    // Reset normal uniquement lors d'un changement MANUEL de classe
-    console.log('[Wizard] 🔄 Reset des sélections suite au changement de classe:', selectedClass);
-    setSelectedClassSkills([]);
-    setSelectedEquipmentOption('');
-    setSelectedCantrips([]);
-    setSelectedLevel1Spells([]);
-  }, [selectedClass, isRestoringFromSnapshot]);
+export function CharacterSelectionPage({ session, onCharacterSelect }: CharacterSelectionPageProps) {
+  const [loading, setLoading] = useState(true);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [creating, setCreating] = useState(false);
+  const [deletingCharacter, setDeletingCharacter] = useState<Player | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [showCreator, setShowCreator] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [newCharacter, setNewCharacter] = useState<Player | null>(null);
+  const [showSubscription, setShowSubscription] = useState(false);
+  const [showCampaigns, setShowCampaigns] = useState(false);
+  const [currentSubscription, setCurrentSubscription] = useState<UserSubscription | null>(null);
+  const [remainingTrialDays, setRemainingTrialDays] = useState<number | null>(null);
 
   useEffect(() => {
-    // ⚠️ NE PAS reset si on est en train de restaurer
-    if (isRestoringFromSnapshot) {
-      console.log('[Wizard] 🛡️ RESET ÉVITÉ pendant la restauration (selectedBackground)');
-      return;
-    }
+    fetchPlayers();
+    loadSubscription();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session]);
 
-    console.log('[Wizard] 🔄 Reset de l\'équipement d\'historique suite au changement:', selectedBackground);
-    setBackgroundEquipmentOption('');
-  }, [selectedBackground, isRestoringFromSnapshot]);
-
-  // ✅ Fonction de sauvegarde centralisée avec indicateur visuel
-  const saveSnapshot = useCallback(() => {
-    const snapshot = {
-      currentStep,
-      characterName,
-      selectedRace,
-      selectedClass,
-      selectedBackground,
-      selectedAlignment,
-      selectedLanguages,
-      age,
-      gender,
-      characterHistory,
-      backgroundEquipmentOption,
-      selectedClassSkills,
-      selectedEquipmentOption,
-      selectedCantrips,
-      selectedLevel1Spells,
-      abilities,
-      effectiveAbilities,
-    };
-
-    setIsSaving(true);
-    appContextService.saveWizardSnapshot(snapshot);
-    setLastSaved(new Date());
-    
-    console.log('[Wizard] 💾 Snapshot sauvegardé:', {
-      step: currentStep,
-      cantrips: selectedCantrips.length,
-      level1Spells: selectedLevel1Spells.length,
-      equipment: selectedEquipmentOption,
-      backgroundEquipment: backgroundEquipmentOption,
-      skills: selectedClassSkills.length,
-    });
-
-    // Animation de confirmation
-    setTimeout(() => setIsSaving(false), 500);
-  }, [
-    currentStep,
-    characterName,
-    selectedRace,
-    selectedClass,
-    selectedBackground,
-    selectedAlignment,
-    selectedLanguages,
-    age,
-    gender,
-    characterHistory,
-    backgroundEquipmentOption,
-    selectedClassSkills,
-    selectedEquipmentOption,
-    selectedCantrips,
-    selectedLevel1Spells,
-    abilities,
-    effectiveAbilities,
-  ]);
-
-  // ✅ Hook de debounce personnalisé pour les champs de texte
-  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
-  const debouncedSave = useCallback(() => {
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
-    
-    debounceTimeoutRef.current = setTimeout(() => {
-      saveSnapshot();
-    }, 1500); // 1.5 secondes après la dernière frappe
-  }, [saveSnapshot]);
-
-  // ✅ Nettoyage du timeout au démontage
   useEffect(() => {
-    return () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-    };
+    const wizardSnapshot = appContextService.getWizardSnapshot();
+    if (wizardSnapshot) {
+      console.log('[CharacterSelection] Snapshot wizard détecté, restauration automatique:', wizardSnapshot);
+      setShowCreator(true);
+    }
   }, []);
 
-  // ✅ Sauvegarde IMMÉDIATE pour les choix critiques (step, race, classe, sorts, équipement)
-  useEffect(() => {
-    // Ne pas sauvegarder pendant la restauration initiale
-    if (isRestoringFromSnapshot && !hasRestoredRef.current) {
-      return;
-    }
-    saveSnapshot();
-  }, [
-    currentStep,
-    selectedRace,
-    selectedClass,
-    selectedBackground,
-    backgroundEquipmentOption,
-    selectedClassSkills,
-    selectedEquipmentOption,
-    selectedCantrips,
-    selectedLevel1Spells,
-  ]);
-
-  // ✅ Sauvegarde AVEC DEBOUNCE pour les champs de texte et abilities
-  useEffect(() => {
-    if (isRestoringFromSnapshot && !hasRestoredRef.current) {
-      return;
-    }
-    debouncedSave();
-  }, [
-    characterName,
-    age,
-    gender,
-    characterHistory,
-    selectedAlignment,
-    selectedLanguages,
-    abilities,
-    effectiveAbilities,
-  ]);
-
-  // Classes qui ne lancent pas de sorts au niveau 1
-  const nonCasterClasses: DndClass[] = ['Guerrier', 'Roublard', 'Barbare', 'Moine'];
-  const isNonCaster = selectedClass && nonCasterClasses.includes(selectedClass as DndClass);
-
-  // Navigation
-  const nextStep = () => {
-    const next = currentStep + 1;
-    if (next === 2 && isNonCaster) {
-      setCurrentStep(3);
-    } else {
-      setCurrentStep(Math.min(next, steps.length - 1));
-    }
-  };
-
-  const previousStep = () => {
-    const prev = currentStep - 1;
-    if (prev === 2 && isNonCaster) {
-      setCurrentStep(1);
-    } else {
-      setCurrentStep(Math.max(prev, 0));
-    }
-  };
-
-  // ✅ PHASE 4: Finalisation avec protection et fallback
-  const handleFinish = async () => {
+  const loadSubscription = async () => {
     try {
-      stopWizardMusic();
+      const sub = await subscriptionService.getCurrentSubscription(session.user.id);
+      setCurrentSubscription(sub);
 
-      // ✅ PROTECTION: Récupérer le snapshot le plus récent au cas où
-      const latestSnapshot = appContextService.getWizardSnapshot();
-
-      // ✅ Utiliser les données de l'état SAUF si vides, alors utiliser le snapshot
-      const finalCantrips = selectedCantrips.length > 0 
-        ? selectedCantrips 
-        : (latestSnapshot?.selectedCantrips ?? []);
-      
-      const finalLevel1Spells = selectedLevel1Spells.length > 0 
-        ? selectedLevel1Spells 
-        : (latestSnapshot?.selectedLevel1Spells ?? []);
-
-      const finalEquipmentOption = selectedEquipmentOption || latestSnapshot?.selectedEquipmentOption || '';
-      const finalBackgroundEquipment = backgroundEquipmentOption || latestSnapshot?.backgroundEquipmentOption || '';
-      const finalClassSkills = selectedClassSkills.length > 0 
-        ? selectedClassSkills 
-        : (latestSnapshot?.selectedClassSkills ?? []);
-
-      console.log('[Wizard] 🛡️ PROTECTION EXPORT - Comparaison état vs snapshot:', {
-        cantrips: {
-          fromState: selectedCantrips.length,
-          fromSnapshot: latestSnapshot?.selectedCantrips?.length ?? 0,
-          final: finalCantrips.length,
-        },
-        level1Spells: {
-          fromState: selectedLevel1Spells.length,
-          fromSnapshot: latestSnapshot?.selectedLevel1Spells?.length ?? 0,
-          final: finalLevel1Spells.length,
-        },
-        equipment: {
-          fromState: selectedEquipmentOption,
-          fromSnapshot: latestSnapshot?.selectedEquipmentOption,
-          final: finalEquipmentOption,
-        },
-        backgroundEquipment: {
-          fromState: backgroundEquipmentOption,
-          fromSnapshot: latestSnapshot?.backgroundEquipmentOption,
-          final: finalBackgroundEquipment,
-        },
-        skills: {
-          fromState: selectedClassSkills.length,
-          fromSnapshot: latestSnapshot?.selectedClassSkills?.length ?? 0,
-          final: finalClassSkills.length,
-        },
-      });
-
-      const raceData = races.find((r) => r.name === selectedRace);
-      const classData = classes.find((c) => c.name === selectedClass);
-
-      // Abilities finales
-      const finalAbilities = { ...effectiveAbilities };
-      if (raceData?.abilityScoreIncrease) {
-        Object.entries(raceData.abilityScoreIncrease).forEach(([ability, bonus]) => {
-          if (finalAbilities[ability] != null) {
-            finalAbilities[ability] += bonus;
-          }
-        });
+      if (sub?.tier === 'free' && sub?.status === 'trial') {
+        const days = await subscriptionService.getRemainingTrialDays(session.user.id);
+        setRemainingTrialDays(days);
       }
+    } catch (error) {
+      console.error('Erreur lors du chargement de l\'abonnement:', error);
+    }
+  };
 
-      // Dérivés de combat
-      const hitPoints = calculateHitPoints(finalAbilities['Constitution'] || 10, selectedClass as DndClass);
-      const armorClass = calculateArmorClass(finalAbilities['Dextérité'] || 10);
-      const initiative = calculateModifier(finalAbilities['Dextérité'] || 10);
-      const speedFeet = raceData?.speed || 30;
-
-      // ✅ Utiliser finalEquipmentOption au lieu de selectedEquipmentOption
-      const classEquipment = finalEquipmentOption && classData?.equipmentOptions
-        ? classData.equipmentOptions.find(opt => opt.label === finalEquipmentOption)?.items || []
-        : classData?.equipment || [];
-
-      // ✅ Utiliser finalBackgroundEquipment
-      const bgEquip =
-        finalBackgroundEquipment === 'A'
-          ? selectedBackgroundObj?.equipmentOptions?.optionA ?? []
-          : finalBackgroundEquipment === 'B'
-            ? selectedBackgroundObj?.equipmentOptions?.optionB ?? []
-            : [];
-
-      console.log('[Wizard] 🎒 Équipement récupéré:', {
-        classEquipment: classEquipment.length,
-        classEquipmentItems: classEquipment,
-        bgEquip: bgEquip.length,
-        bgEquipItems: bgEquip,
-      });
-
-      // Compétences maîtrisées - ✅ Utiliser finalClassSkills
-      const backgroundSkills = selectedBackgroundObj?.skillProficiencies ?? [];
-      const proficientSkills = Array.from(new Set([...finalClassSkills, ...backgroundSkills]));
-
-      // Équipement combiné
-      const equipment = [...classEquipment, ...bgEquip];
-
-      // Don d'historique
-      const backgroundFeat = normalizeBackgroundFeat(selectedBackgroundObj?.feat);
-
-      // Or initial
-      const goldFromClassEquipment = parseGoldFromItems(classEquipment);
-      const goldFromA = parseGoldFromItems(selectedBackgroundObj?.equipmentOptions?.optionA);
-      const goldFromB = parseGoldFromItems(selectedBackgroundObj?.equipmentOptions?.optionB);
-      
-      const backgroundGold = finalBackgroundEquipment === 'A'
-        ? goldFromA
-        : finalBackgroundEquipment === 'B'
-        ? goldFromB
-        : undefined;
-
-      const gold = (goldFromClassEquipment || 0) + (backgroundGold || 0);
-
-      // Image de classe
-      const avatarImageUrl = getClassImageUrlLocal(selectedClass) ?? undefined;
-
-      // Combiner les langues raciales et sélectionnées
-      const racialLanguages = raceData?.languages || [];
-      const allLanguages = Array.from(new Set([...racialLanguages, ...selectedLanguages]));
-
-      // MODE INTÉGRÉ
-      if (typeof onFinish === 'function') {
-        setLoadingEquipment(true);
-
-        let equipmentDetails;
-        try {
-          const enriched = await enrichEquipmentList(equipment);
-          equipmentDetails = determineAutoEquip(enriched);
-        } catch (error) {
-          console.error('Erreur lors de l\'enrichissement des équipements:', error);
-          toast.error('Impossible de charger les équipements. Création sans équipement.');
-          equipmentDetails = [];
-        } finally {
-          setLoadingEquipment(false);
-        }
-
-        const payload: CharacterExportPayload = {
-          characterName: characterName.trim() || 'Héros sans nom',
-          selectedRace: selectedRace || '',
-          selectedClass: (selectedClass as string) || '',
-          selectedBackground: selectedBackground || '',
-          level: 1,
-          finalAbilities,
-          proficientSkills,
-          equipment,
-          selectedBackgroundEquipmentOption: finalBackgroundEquipment || '',
-          selectedEquipmentOption: finalEquipmentOption || '',
-          hitPoints,
-          armorClass,
-          initiative,
-          speed: speedFeet,
-          backgroundFeat,
-          gold: gold > 0 ? gold : undefined,
-          weaponProficiencies: classData?.weaponProficiencies || [],
-          equipmentDetails,
-          armorProficiencies: classData?.armorProficiencies || [],
-          toolProficiencies: classData?.toolProficiencies || [],
-          racialTraits: raceData?.traits || [],
-          classFeatures: classData?.features || [],
-          backgroundFeature: selectedBackgroundObj?.feature || '',
-          savingThrows: classData?.savingThrows || [],
-          languages: allLanguages,
-          hitDice: {
-            die: (selectedClass === 'Magicien' || selectedClass === 'Ensorceleur') ? 'd6'
-               : (selectedClass === 'Barde' || selectedClass === 'Clerc' || selectedClass === 'Druide' || selectedClass === 'Moine' || selectedClass === 'Rôdeur' || selectedClass === 'Roublard' || selectedClass === 'Occultiste') ? 'd8'
-               : (selectedClass === 'Guerrier' || selectedClass === 'Paladin') ? 'd10'
-               : 'd12',
-            total: 1,
-            used: 0,
-          },
-          avatarImageUrl,
-          selectedCantrips: finalCantrips, // ✅ Utiliser finalCantrips
-          selectedLevel1Spells: finalLevel1Spells, // ✅ Utiliser finalLevel1Spells
-          selectedAlignment: selectedAlignment || undefined,
-          selectedLanguages: allLanguages,
-          age: age.trim() || undefined,
-          gender: gender.trim() || undefined,
-          characterHistory: characterHistory.trim() || undefined,
-        };
-
-        console.log('[Wizard] 📦 PAYLOAD FINAL:', {
-          spells: {
-            cantrips: payload.selectedCantrips.length,
-            cantripsDetails: payload.selectedCantrips.map(s => s.name),
-            level1: payload.selectedLevel1Spells.length,
-            level1Details: payload.selectedLevel1Spells.map(s => s.name),
-          },
-          equipment: {
-            total: payload.equipment.length,
-            items: payload.equipment,
-            details: payload.equipmentDetails?.length || 0,
-          },
-          skills: payload.proficientSkills,
-        });
-
-        // ✅ Nettoyer le snapshot et marquer le contexte "game"
-        appContextService.clearWizardSnapshot();
-        appContextService.setContext('game');
-        console.log('[Wizard] ✅ Snapshot nettoyé, contexte = game');
-
-        onFinish(payload);
-        return;
-      }
-
-      // FALLBACK AUTONOME
-      const { data: auth, error: authErr } = await supabase.auth.getUser();
-      if (authErr) throw authErr;
-      const user = auth?.user;
-      if (!user) {
-        toast.error('Vous devez être connecté pour créer un personnage');
-        return;
-      }
-
-      const featsData: any = {};
-      if (backgroundFeat) {
-        featsData.origins = [backgroundFeat];
-        featsData.origin = backgroundFeat;
-      }
-
-      const initialGold = gold > 0 ? gold : 0;
-
-      const characterData: any = {
-        user_id: user.id,
-        name: characterName.trim(),
-        adventurer_name: characterName.trim(),
-        level: 1,
-        current_hp: hitPoints,
-        max_hp: hitPoints,
-        class: selectedClass || null,
-        subclass: null,
-        race: selectedRace || null,
-        background: selectedBackground || null,
-        alignment: selectedAlignment || null,
-        languages: allLanguages,
-        age: age.trim() || null,
-        gender: gender.trim() || null,
-        character_history: characterHistory.trim() || null,
-        stats: {
-          armor_class: armorClass,
-          initiative: initiative,
-          speed: feetToMeters(speedFeet),
-          proficiency_bonus: 2,
-          inspirations: 0,
-          feats: featsData,
-          coins: { gp: initialGold, sp: 0, cp: 0 },
-          gold: initialGold,
-          creator_meta: {
-            class_skills: finalClassSkills,
-            class_equipment_option: finalEquipmentOption || null,
-            class_equipment_items: classEquipment,
-            background_skillProficiencies: backgroundSkills,
-            background_equipment_option: finalBackgroundEquipment || null,
-            background_equipment_items: bgEquip,
-            weapon_proficiencies: classData?.weaponProficiencies || [],
-            armor_proficiencies: classData?.armorProficiencies || [],
-            tool_proficiencies: classData?.toolProficiencies || [],
-          },
-        },
-        abilities: null,
-        gold: initialGold,
-        silver: 0,
-        copper: 0,
-        created_at: new Date().toISOString(),
-      };
-
-      const { data: inserted, error } = await supabase
+  const fetchPlayers = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
         .from('players')
-        .insert([characterData])
         .select('*')
-        .single();
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: true });
 
-      if (error) {
-        console.error('Error creating character:', error);
-        toast.error('Erreur lors de la création du personnage');
-        return;
-      }
+      if (error) throw error;
+      setPlayers(data || []);
+    } catch (error: any) {
+      console.error('Erreur lors de la récupération des personnages:', error);
+      toast.error('Erreur lors de la récupération des personnages');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      // ✅ Save spells to Supabase - Utiliser finalCantrips et finalLevel1Spells
-      if (inserted?.id && (finalCantrips.length > 0 || finalLevel1Spells.length > 0)) {
-        try {
-          const allSpells = [...finalCantrips, ...finalLevel1Spells];
-          console.log(`[Wizard] 🔮 Sauvegarde de ${allSpells.length} sorts pour le personnage ${inserted.id}:`, 
-            allSpells.map(s => s.name));
+  const handleCreatorComplete = async (payload: CharacterExportPayload) => {
+    if (creating) return;
 
-          const spellsToInsert = allSpells.map(spell => ({
-            id: spell.id,
-            name: spell.name,
-            level: spell.level,
-            school: spell.school,
-            casting_time: spell.casting_time,
-            range: spell.range,
-            components: spell.components,
-            duration: spell.duration,
-            description: spell.description,
-            higher_levels: spell.higher_levels || null,
-          }));
-
-          await supabase.from('spells').upsert(spellsToInsert, {
-            onConflict: 'id',
-            ignoreDuplicates: true
-          });
-
-          const playerSpellsLinks = allSpells.map(spell => ({
-            player_id: inserted.id,
-            spell_id: spell.id,
-            is_prepared: true,
-          }));
-
-          await supabase.from('player_spells').upsert(playerSpellsLinks, {
-            onConflict: 'player_id,spell_id',
-            ignoreDuplicates: true,
-          });
-
-          console.log(`[Wizard] ✅ ${allSpells.length} sorts sauvegardés avec succès`);
-        } catch (spellErr) {
-          console.error('[Wizard] ❌ Erreur lors de la sauvegarde des sorts:', spellErr);
-        }
+    const canCreate = await subscriptionService.canCreateCharacter(session.user.id, players.length);
+    if (!canCreate) {
+      const limit = await subscriptionService.getCharacterLimit(session.user.id);
+      const isExpired = await subscriptionService.isTrialExpired(session.user.id);
+      
+      if (isExpired) {
+        toast.error(
+          'Votre période d\'essai de 15 jours est terminée. Choisissez un plan pour continuer.',
+          { duration: 5000 }
+        );
       } else {
-        console.log('[Wizard] ℹ️ Aucun sort à sauvegarder');
+        toast.error(
+          `Vous avez atteint la limite de ${limit} personnage${limit > 1 ? 's' : ''}. Mettez à niveau votre abonnement pour en créer plus.`,
+          { duration: 5000 }
+        );
       }
+      
+      setShowCreator(false);
+      setShowSubscription(true);
+      return;
+    }
 
-      // Upload avatar
-      let finalPlayer = inserted;
-      if (inserted?.id && avatarImageUrl) {
-        try {
-          const uploaded = await tryUploadAvatarFromUrl(inserted.id, avatarImageUrl);
-          const finalUrl = uploaded ?? avatarImageUrl;
+    try {
+      setCreating(true);
+      const newPlayer = await createCharacterFromCreatorPayload(session, payload);
+      setPlayers((prev) => [...prev, newPlayer]);
+      toast.success('Nouveau personnage créé !');
 
-          const { data: updatedPlayer, error: avatarErr } = await supabase
-            .from('players')
-            .update({ avatar_url: finalUrl })
-            .eq('id', inserted.id)
-            .select('*')
-            .single();
-
-          if (!avatarErr && updatedPlayer) {
-            finalPlayer = updatedPlayer;
-          }
-        } catch (e) {
-          console.warn('Echec avatar:', e);
-        }
-      }
-
-      if (inserted?.id) {
-        notifyParentCreated(inserted.id, finalPlayer);
-      }
-
-      // ✅ Nettoyer le snapshot après création réussie
       appContextService.clearWizardSnapshot();
       appContextService.setContext('game');
 
-      toast.success('Personnage créé avec succès !');
+      setNewCharacter(newPlayer);
+      setShowWelcome(true);
 
-      if (typeof onCancel === 'function') {
-        onCancel();
-        return;
+    } catch (error: any) {
+      console.error('Erreur création via assistant:', error);
+      if (error.message?.includes('Session invalide') || error.message?.includes('non authentifié')) {
+        toast.error('Session expirée. Veuillez vous reconnecter.');
+        await supabase.auth.signOut();
+      } else {
+        toast.error("Impossible de créer le personnage depuis l'assistant.");
+      }
+    } finally {
+      setCreating(false);
+      setShowCreator(false);
+    }
+  }; 
+
+  const handleWelcomeContinue = () => {
+    setShowWelcome(false);
+    if (newCharacter) {
+      onCharacterSelect(newCharacter);
+      setNewCharacter(null);
+    }
+  };
+
+  const clearServiceWorkerCache = async () => {
+    try {
+      console.log('[CharacterSelection] 🧹 Nettoyage du Service Worker...');
+      
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const registration of registrations) {
+          await registration.update();
+        }
+      }
+      
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        console.log('[CharacterSelection] 🗑️ Caches trouvés:', cacheNames);
+        
+        for (const name of cacheNames) {
+          if (name.includes('js-cache') || name.includes('workbox')) {
+            await caches.delete(name);
+            console.log('[CharacterSelection] ✅ Cache supprimé:', name);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[CharacterSelection] ❌ Erreur nettoyage cache:', error);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      console.log('[CharacterSelection] 🚪 Déconnexion en cours...');
+      
+      await clearServiceWorkerCache();
+      
+      const { error } = await authService.signOut();
+      if (error) throw error;
+
+      toast.success('Déconnexion réussie');
+
+      appContextService.clearContext();
+      appContextService.clearWizardSnapshot();
+      
+      try {
+        localStorage.removeItem(LAST_SELECTED_CHARACTER_SNAPSHOT);
+        sessionStorage.clear();
+      } catch {}
+
+      console.log('[CharacterSelection] 🔄 Rechargement...');
+      window.location.href = window.location.origin;
+      
+    } catch (error: any) {
+      console.error('❌ Erreur de déconnexion:', error);
+      toast.error('Erreur lors de la déconnexion');
+      
+      setTimeout(() => {
+        window.location.href = window.location.origin;
+      }, 1000);
+    }
+  };
+
+  const handleDeleteCharacter = async (character: Player) => {
+    if (deleteConfirmation !== 'Supprime') {
+      toast.error('Veuillez taper exactement "Supprime" pour confirmer');
+      return;
+    }
+
+    try {
+      let deleted = false;
+      try {
+        await supabase.rpc('delete_character_safely', { character_id: character.id });
+        deleted = true;
+      } catch {
+        deleted = false;
       }
 
-      // Reset
-      setCurrentStep(0);
-      setCharacterName('');
-      setSelectedRace('');
-      setSelectedClass('');
-      setSelectedBackground('');
-      setBackgroundEquipmentOption('');
-      setSelectedClassSkills([]);
-      setSelectedEquipmentOption('');
-      setSelectedCantrips([]);
-      setSelectedLevel1Spells([]);
-      setSelectedAlignment('');
-      setSelectedLanguages([]);
-      setAge('');
-      setGender('');
-      setCharacterHistory('');
-      setAbilities({
-        'Force': 8,
-        'Dextérité': 8,
-        'Constitution': 8,
-        'Intelligence': 8,
-        'Sagesse': 8,
-        'Charisme': 8,
-      });
-      setEffectiveAbilities({
-        'Force': 8,
-        'Dextérité': 8,
-        'Constitution': 8,
-        'Intelligence': 8,
-        'Sagesse': 8,
-        'Charisme': 8,
-      });
-    } catch (err) {
-      console.error('Error creating character:', err);
-      toast.error('Erreur lors de la création du personnage');
+      if (!deleted) {
+        const { error } = await supabase.from('players').delete().eq('id', character.id);
+        if (error) throw error;
+      }
+
+      setPlayers((prev) => prev.filter((p) => p.id !== character.id));
+      setDeletingCharacter(null);
+      setDeleteConfirmation('');
+
+      toast.success(`Personnage "${character.adventurer_name || character.name}" supprimé`);
+    } catch (error: any) {
+      console.error('Erreur lors de la suppression du personnage:', error);
+      toast.error('Erreur lors de la suppression du personnage');
     }
   };
 
-  // Rendu des étapes
-  const renderStep = () => {
-    switch (currentStep) {
-      case 0:
-        return (
-          <RaceSelection
-            selectedRace={selectedRace}
-            onRaceSelect={setSelectedRace}
-            onNext={nextStep}
-          />
-        );
-
-      case 1:
-        return (
-          <ClassSelection
-            selectedClass={selectedClass}
-            onClassSelect={setSelectedClass}
-            selectedSkills={selectedClassSkills}
-            onSelectedSkillsChange={setSelectedClassSkills}
-            selectedEquipmentOption={selectedEquipmentOption}
-            onSelectedEquipmentOptionChange={setSelectedEquipmentOption}
-            onNext={nextStep}
-            onPrevious={previousStep}
-          />
-        );
-
-      case 2:
-        return (
-          <SpellSelection
-            selectedClass={selectedClass}
-            selectedCantrips={selectedCantrips}
-            selectedLevel1Spells={selectedLevel1Spells}
-            onCantripsChange={setSelectedCantrips}
-            onLevel1SpellsChange={setSelectedLevel1Spells}
-            onNext={nextStep}
-            onPrevious={previousStep}
-          />
-        );
-
-      case 3:
-        return (
-          <BackgroundSelection
-            selectedBackground={selectedBackground}
-            onBackgroundSelect={setSelectedBackground}
-            selectedEquipmentOption={backgroundEquipmentOption}
-            onEquipmentOptionChange={setBackgroundEquipmentOption}
-            onNext={nextStep}
-            onPrevious={previousStep}
-          />
-        );
-
-      case 4:
-        return (
-          <ProfileSelection
-            selectedLanguages={selectedLanguages}
-            onLanguagesChange={setSelectedLanguages}
-            selectedAlignment={selectedAlignment}
-            onAlignmentChange={setSelectedAlignment}
-            characterHistory={characterHistory}
-            onCharacterHistoryChange={setCharacterHistory}
-            age={age}
-            onAgeChange={setAge}
-            gender={gender}
-            onGenderChange={setGender}
-            onNext={nextStep}
-            onPrevious={previousStep}
-          />
-        );
-
-      case 5:
-        return (
-          <AbilityScores
-            abilities={abilities}
-            onAbilitiesChange={setAbilities}
-            selectedBackground={selectedBackgroundObj}
-            onEffectiveAbilitiesChange={setEffectiveAbilities}
-            onNext={nextStep}
-            onPrevious={previousStep}
-          />
-        );
-
-      case 6:
-        return (
-          <CharacterSummary
-            characterName={characterName}
-            onCharacterNameChange={setCharacterName}
-            selectedRace={selectedRace}
-            selectedClass={selectedClass as DndClass}
-            selectedBackground={selectedBackground}
-            abilities={effectiveAbilities}
-            selectedClassSkills={selectedClassSkills}
-            selectedBackgroundEquipmentOption={backgroundEquipmentOption}
-            selectedEquipmentOption={selectedEquipmentOption}
-            selectedCantrips={selectedCantrips}
-            selectedLevel1Spells={selectedLevel1Spells}
-            selectedAlignment={selectedAlignment}
-            selectedLanguages={selectedLanguages}
-            age={age}
-            gender={gender}
-            onFinish={handleFinish}
-            onPrevious={previousStep}
-          />
-        );
-
+  const getClassIcon = (playerClass: string | null | undefined) => {
+    switch (playerClass) {
+      case 'Guerrier':
+      case 'Paladin':
+        return <Sword className="w-5 h-5 text-red-500" />;
+      case 'Magicien':
+      case 'Ensorceleur':
+      case 'Occultiste':
+        return <Sparkles className="w-5 h-5 text-purple-500" />;
+      case 'Clerc':
+      case 'Druide':
+        return <Shield className="w-5 h-5 text-yellow-500" />;
       default:
-        return null;
+        return <User className="w-5 h-5 text-gray-500" />;
     }
   };
 
-  return (
-    <div className="min-h-screen bg-fantasy relative">
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          className: 'bg-gray-800 text-white border border-gray-700',
-          duration: 4000,
-        }}
-      />
+  const displayClassName = (cls?: string | null) => (cls === 'Sorcier' ? 'Occultiste' : cls || '');
 
-      {/* ✅ Badge de sauvegarde automatique amélioré */}
-      <div className="fixed bottom-4 left-4 z-50">
-        {isSaving ? (
-          <div className="text-xs text-blue-400 bg-gray-900/90 backdrop-blur-sm px-3 py-2 rounded-lg border border-blue-500/50 flex items-center gap-2 shadow-lg">
-            <div className="w-2 h-2 bg-blue-400 rounded-full animate-ping"></div>
-            <span>💾 Sauvegarde...</span>
+  const getSubscriptionText = () => {
+    if (!currentSubscription) return null;
+
+    if (currentSubscription.tier === 'free' && currentSubscription.status === 'trial') {
+      const daysLeft = remainingTrialDays ?? 0;
+      return `Essai gratuit : ${daysLeft} jour${daysLeft > 1 ? 's' : ''} restant${daysLeft > 1 ? 's' : ''}`;
+    }
+
+    if (currentSubscription.status === 'expired') {
+      return 'Essai expiré';
+    }
+
+    if (currentSubscription.tier === 'hero') {
+      return 'Plan Héro';
+    }
+
+    if (currentSubscription.tier === 'game_master') {
+      return 'Plan Maître du Jeu';
+    }
+
+    return null;
+  };
+
+  if (showCampaigns) {
+    return <GameMasterCampaignPage session={session} onBack={() => setShowCampaigns(false)} />;
+  }
+
+  if (showSubscription) {
+    return <SubscriptionPage session={session} onBack={() => setShowSubscription(false)} />;
+  }
+
+  if (loading) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{
+          backgroundImage: `url(${BG_URL})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed',
+        }}
+      >
+        <div className="text-center space-y-4">
+          <img 
+            src="/icons/wmremove-transformed.png" 
+            alt="Chargement..." 
+            className="animate-spin h-12 w-12 mx-auto object-contain"
+            style={{ backgroundColor: 'transparent' }}
+          />
+          <p className="text-gray-200">Chargement des personnages...</p>
+        </div>
+      </div>
+    );
+  }
+ 
+  return (
+    <div
+      className="character-selection-page min-h-screen"
+      style={{
+        backgroundImage: `url(${BG_URL})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
+        backgroundColor: 'transparent',
+      }}
+    >
+      <div className="min-h-screen py-8 bg-transparent">
+        <div className="w-full max-w-6xl mx-auto px-4">
+          {currentSubscription && (
+            <div className="text-center mb-4">
+              <p className="text-xs text-gray-400">
+                {getSubscriptionText()}
+              </p>
+            </div>
+          )}
+
+          <div className="text-center mb-8 sm:mb-12 space-y-4">
+            <h1
+              className="text-4xl font-bold text-white"
+              style={{
+                textShadow:
+                  '0 0 15px rgba(255,255,255,.9),0 0 20px rgba(255,255,255,.6),0 0 30px rgba(255,255,255,.4),0 0 40px rgba(255,255,255,.2)',
+              }}
+            >
+              Mes Personnages
+            </h1>
+            
+            <p
+              className="text-xl text-gray-200"
+              style={{ textShadow: '0 0 10px rgba(255,255,255,.3)' }}
+            >
+              {players.length > 0
+                ? `${players.length} personnage${players.length > 1 ? 's' : ''} créé${
+                    players.length > 1 ? 's' : ''
+                  }`
+                : 'Aucun personnage créé'}
+            </p>
+
+            <div className="flex justify-center gap-3 pt-2 flex-wrap">
+              <button
+                onClick={() => setShowSubscription(true)}
+                className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:scale-105"
+              >
+                <Crown size={20} />
+                {currentSubscription?.status === 'expired' || currentSubscription?.status === 'trial' 
+                  ? 'Passer à un plan payant'
+                  : 'Gérer mon abonnement'
+                }
+              </button>
+
+              {currentSubscription?.tier === 'game_master' && (
+                <button
+                  onClick={() => setShowCampaigns(true)}
+                  className="flex items-center gap-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:scale-105"
+                >
+                  <Scroll size={20} />
+                  Mes Campagnes
+                </button>
+              )}
+            </div>
           </div>
-        ) : lastSaved ? (
-          <div className="text-xs text-green-400 bg-gray-900/90 backdrop-blur-sm px-3 py-2 rounded-lg border border-green-500/50 flex items-center gap-2 shadow-lg">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span>✓ Sauvegardé {lastSaved.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+
+          {deletingCharacter && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full border border-red-500/20">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
+                    <Trash2 className="w-6 h-6 text-red-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-100">Supprimer le personnage</h3>
+                    <p className="text-sm text-gray-400">
+                      {deletingCharacter.adventurer_name || deletingCharacter.name}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
+                    <p className="text-red-300 text-sm font-medium mb-2">
+                      ⚠️ Attention : Cette action est irréversible !
+                    </p>
+                    <p className="text-gray-300 text-sm">
+                      Toutes les données du personnage (inventaire, attaques, statistiques) seront
+                      définitivement supprimées.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Pour confirmer, tapez exactement:{' '}
+                      <span className="text-red-400 font-bold">Supprime</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={deleteConfirmation}
+                      onChange={(e) => setDeleteConfirmation(e.target.value)}
+                      className="input-dark w-full px-3 py-2 rounded-md"
+                      placeholder="Tapez 'Supprime' pour confirmer"
+                      autoFocus
+                    />
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <button
+                      onClick={() => handleDeleteCharacter(deletingCharacter)}
+                      disabled={deleteConfirmation !== 'Supprime'}
+                      className="bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg flex-1 transition-colors"
+                    >
+                      Supprimer définitivement
+                    </button>
+                    <button
+                      onClick={() => {
+                        setDeletingCharacter(null);
+                        setDeleteConfirmation('');
+                      }}
+                      className="btn-secondary px-4 py-2 rounded-lg"
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-center mb-8 sm:mb-16">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl">
+              {players.map((player) => {
+                const maxHp = Math.max(0, Number(player.max_hp || 0));
+                const currHp = Math.max(0, Number(player.current_hp || 0));
+                const tempHp = Math.max(0, Number(player.temporary_hp || 0));
+                const ratio =
+                  maxHp > 0 ? Math.min(100, Math.max(0, ((currHp + tempHp) / maxHp) * 100)) : 0;
+
+                return (
+                  <div
+                    key={player.id}
+                    className="w-full max-w-sm relative group bg-slate-800/60 backdrop-blur-sm border border-slate-600/40 rounded-xl shadow-lg overflow-hidden hover:bg-slate-700/70 transition-all duration-200"
+                  >
+                    <button
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setDeletingCharacter(player);
+                      }}
+                      className="absolute top-3 right-3 w-8 h-8 bg-red-600/80 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition z-20"
+                      title="Supprimer le personnage"
+                      aria-label="Supprimer le personnage"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+
+                    <div
+                      className="p-6 cursor-pointer hover:scale-[1.02] transition-all duration-200 relative z-10"
+                      onClick={() => onCharacterSelect(player)}
+                    >
+                      <div className="flex items-center gap-6">
+                        <div className="w-20 h-28 flex-shrink-0 rounded-lg overflow-hidden bg-white/10">
+                          <Avatar
+                            url={player.avatar_url}
+                            playerId={player.id}
+                            size="md"
+                            editable={false}
+                            onAvatarUpdate={() => {}}
+                          />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="mb-3">
+                            <h3 className="text-lg font-bold text-gray-100 mb-1 truncate">
+                              {player.adventurer_name || player.name}
+                            </h3>
+
+                            {player.class ? (
+                              <div className="flex items-center gap-2 mb-2">
+                                {getClassIcon(player.class)}
+                                <span className="text-sm text-slate-200">
+                                  {displayClassName(player.class)} niveau {player.level}
+                                </span>
+                              </div>
+                            ) : (
+                              <p className="text-sm text-slate-300 mb-2">Personnage non configuré</p>
+                            )}
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="w-full bg-slate-700/50 rounded-full h-3">
+                              <div
+                                className="bg-gradient-to-r from-red-500 to-red-400 h-3 rounded-full transition-all duration-300"
+                                style={{ width: `${ratio}%` }}
+                              />
+                            </div>
+                            <p className="text-xs text-slate-200">
+                              {currHp} / {maxHp} PV
+                              {tempHp > 0 && <span className="text-blue-300 ml-1">(+{tempHp})</span>}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              <div
+                onClick={() => setShowCreator(true)}
+                className="w-full max-w-sm cursor-pointer hover:scale-[1.02] transition-all duration-200 bg-slate-800/40 backdrop-blur-sm border-dashed border-2 border-slate-600/50 hover:border-green-500/50 hover:bg-slate-700/40 rounded-xl"
+              >
+                <div className="p-6 flex items-center justify-center gap-6 min-h-[140px]">
+                  <div className="w-16 h-16 bg-green-400/20 rounded-full flex items-center justify-center">
+                    <Plus className="w-8 h-8 text-green-500" />
+                  </div>
+                  <div className="text-center">
+                    <h3 className="text-lg font-bold text-gray-100 mb-2">Nouveau Personnage</h3>
+                    <p className="text-sm text-slate-200">
+                      Créez un nouveau personnage pour vos aventures
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        ) : (
-          <div className="text-xs text-gray-400 bg-gray-900/80 backdrop-blur-sm px-3 py-2 rounded-lg border border-gray-700/50 flex items-center gap-2">
-            <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-            <span>Sauvegarde auto</span>
-          </div>
-        )}
+        </div>
       </div>
 
-      {loadingEquipment && (
-        <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center">
-          <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 text-center">
+      <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+        <div className="w-full max-w-md mx-auto px-4">
+          <button
+            onClick={handleSignOut}
+            className="w-full btn-secondary px-4 py-3 rounded-lg flex items-center justify-center gap-2 shadow-lg"
+          >
+            <LogOut size={20} />
+            Déconnexion
+          </button>
+        </div>
+      </div>
+
+      {/* ✅ MODIFICATION OPTION 1 BIS APPLIQUÉE ICI */}
+      <CreatorModal
+        open={showCreator}
+        onClose={() => {
+          setShowCreator(false);
+          appContextService.clearWizardSnapshot();
+          appContextService.setContext('selection');
+        }}
+        onComplete={handleCreatorComplete}
+        initialSnapshot={appContextService.getWizardSnapshot()}
+      />
+
+      {creating && (
+        <div className="fixed inset-0 z-[150] bg-black/90 flex items-center justify-center">
+          <div className="bg-gray-900 border border-gray-700 rounded-lg p-8 text-center max-w-md">
             <img 
               src="/icons/wmremove-transformed.png" 
               alt="Chargement..." 
-              className="animate-spin h-12 w-12 mx-auto mb-4 object-contain"
+              className="animate-spin h-16 w-16 mx-auto mb-6 object-contain"
               style={{ backgroundColor: 'transparent' }}
             />
-            <p className="text-gray-200">Préparation de l'équipement...</p>
+            <p className="text-xl text-gray-200 mb-2">Création du personnage...</p>
+            <p className="text-sm text-gray-400">Veuillez patienter</p>
           </div>
         </div>
       )}
 
-      <div className="container mx-auto px-4 pt-0 pb-8">
-        <div className="max-w-6xl mx-auto">
-          <ProgressBar
-            currentStep={currentStep}
-            totalSteps={steps.length - 1}
-            steps={steps}
-          />
-
-          <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-6 md:p-8">
-            {renderStep()}
-          </div>
-        </div>
-      </div>
+      <WelcomeModal
+        open={showWelcome}
+        characterName={newCharacter?.adventurer_name || newCharacter?.name || 'Aventurier'}
+        onContinue={handleWelcomeContinue}
+      />
     </div>
   );
 }
