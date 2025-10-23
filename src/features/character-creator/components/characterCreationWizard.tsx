@@ -295,6 +295,15 @@ export default function CharacterCreationWizard({ onFinish, onCancel, initialSna
 
   // ✅ Fonction de sauvegarde centralisée avec indicateur visuel
   const saveSnapshot = useCallback(() => {
+    // ⚠️ NOUVEAU - Ne pas sauvegarder juste après un changement de visibilité
+    const timeSinceVisibilityChange = Date.now() - lastVisibilityChangeRef.current;
+    if (timeSinceVisibilityChange < 1000) {
+      console.log('[Wizard] ⏸️ Sauvegarde ignorée (changement visibilité récent)', {
+        timeSince: timeSinceVisibilityChange + 'ms'
+      });
+      return;
+    }
+
     const snapshot = {
       currentStep,
       characterName,
@@ -328,7 +337,6 @@ export default function CharacterCreationWizard({ onFinish, onCancel, initialSna
       skills: selectedClassSkills.length,
     });
 
-    // Animation de confirmation
     setTimeout(() => setIsSaving(false), 500);
   }, [
     currentStep,
