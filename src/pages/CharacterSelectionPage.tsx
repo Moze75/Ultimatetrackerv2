@@ -149,7 +149,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
 
   const loadSubscription = async () => {
     try {
-      const sub = await subscriptionService.getCurrentSubscription(session.user.id);
+      const sub = await subscriptionServiazce.getCurrentSubscription(session.user.id);
       setCurrentSubscription(sub);
 
       if (sub?.tier === 'free' && sub?.status === 'trial') {
