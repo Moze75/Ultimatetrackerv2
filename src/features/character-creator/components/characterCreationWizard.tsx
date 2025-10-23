@@ -135,6 +135,11 @@ interface WizardProps {
 
 export default function CharacterCreationWizard({ onFinish, onCancel, initialSnapshot }: WizardProps) { 
   // ✅ PHASE 1: Restauration automatique depuis localStorage
+    const [isTabVisible, setIsTabVisible] = useState(true);
+  const lastVisibilityChangeRef = useRef<number>(Date.now());
+  const isActualRefreshRef = useRef(
+    sessionStorage.getItem('ut:wizardActive') !== 'true'
+  );
   // Cette restauration se fait AVANT tous les useState pour garantir la disponibilité
   const restoredSnapshot = useMemo(() => {
     // Priorité: prop initialSnapshot, sinon localStorage
