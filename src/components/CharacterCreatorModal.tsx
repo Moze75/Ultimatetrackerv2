@@ -31,7 +31,10 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({
   const [enter, setEnter] = useState(false);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
-
+// Ajouter après les autres useState
+const [isTabVisible, setIsTabVisible] = useState(true);
+const lastVisibilityChangeRef = useRef<number>(Date.now());
+  
   // Animate + focus + ESC + body scroll lock
   useEffect(() => {
     if (!open) return;
