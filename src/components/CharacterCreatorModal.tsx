@@ -34,6 +34,23 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({
 // Ajouter après les autres useState
 const [isTabVisible, setIsTabVisible] = useState(true);
 const lastVisibilityChangeRef = useRef<number>(Date.now());
+
+  // Ajouter ce useEffect après les autres
+useEffect(() => {
+  const handleVisibilityChange = () => {
+    const nowVisible = !document.hidden;
+    setIsTabVisible(nowVisible);
+    
+    if (nowVisible) {
+      // Empêcher les sauvegardes pendant 500ms après le retour
+      lastVisibilityChangeRef.current = Date.now();
+      console.log('[Wizard] 👁️ Onglet redevenu visible - pause sauvegarde temporaire');
+    }
+  };
+
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+}, []);
   
   // Animate + focus + ESC + body scroll lock
   useEffect(() => {
