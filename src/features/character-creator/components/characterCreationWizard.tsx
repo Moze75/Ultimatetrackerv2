@@ -235,32 +235,18 @@ export default function CharacterCreationWizard({ onFinish, onCancel, initialSna
   // ✅ PHASE 2 (suite): Resets PROTÉGÉS contre l'écrasement lors de la restauration
   useEffect(() => {
     // ⚠️ NE PAS reset si on est en train de restaurer depuis un snapshot
-// ✅ FIX 2 : Référence pour éviter les resets intempestifs après restauration
-const selectedClassRef = useRef<DndClass | ''>(restoredSnapshot?.selectedClass ?? '');
+    if (isRestoringFromSnapshot) {
+      console.log('[Wizard] 🛡️ RESET ÉVITÉ pendant la restauration (selectedClass)');
+      return;
+    }
 
-useEffect(() => {
-  // ⚠️ NE PAS reset si on est en train de restaurer depuis un snapshot
-  if (isRestoringFromSnapshot) {
-    console.log('[Wizard] 🛡️ RESET ÉVITÉ pendant la restauration (selectedClass)');
-    selectedClassRef.current = selectedClass;
-    return;
-  }
-
-  // ⚠️ NE PAS reset si la classe n'a PAS VRAIMENT changé (évite les faux positifs)
-  if (selectedClassRef.current === selectedClass) {
-    console.log('[Wizard] ℹ️ Classe identique, pas de reset nécessaire');
-    return;
-  }
-
-  // ✅ Reset normal uniquement lors d'un changement MANUEL de classe
-  console.log('[Wizard] 🔄 Reset des sélections suite au changement de classe:', selectedClassRef.current, '->', selectedClass);
-  setSelectedClassSkills([]);
-  setSelectedEquipmentOption('');
-  setSelectedCantrips([]);
-  setSelectedLevel1Spells([]);
-  
-  selectedClassRef.current = selectedClass;
-}, [selectedClass, isRestoringFromSnapshot]);
+    // Reset normal uniquement lors d'un changement MANUEL de classe
+    console.log('[Wizard] 🔄 Reset des sélections suite au changement de classe:', selectedClass);
+    setSelectedClassSkills([]);
+    setSelectedEquipmentOption('');
+    setSelectedCantrips([]);
+    setSelectedLevel1Spells([]);
+  }, [selectedClass, isRestoringFromSnapshot]);
 
   useEffect(() => {
     // ⚠️ NE PAS reset si on est en train de restaurer
@@ -859,7 +845,7 @@ useEffect(() => {
 
       case 4:
         return (
-          <ProfileSelection
+          <ProfileSelection 
             selectedLanguages={selectedLanguages}
             onLanguagesChange={setSelectedLanguages}
             selectedAlignment={selectedAlignment}
