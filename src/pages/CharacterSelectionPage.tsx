@@ -134,31 +134,18 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
   const [remainingTrialDays, setRemainingTrialDays] = useState<number | null>(null);
 
   // ✅ FIX 1 : Protection contre les réouvertures intempestives du wizard
-  const hasCheckedSnapshotRef = useRef(false);
-
-  useEffect(() => {
-    fetchPlayers();
-    loadSubscription();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session]);
-
-  // ✅ FIX 1 : Vérifier le snapshot UNE SEULE FOIS au montage initial
-  useEffect(() => {
-    if (hasCheckedSnapshotRef.current) {
-      console.log('[CharacterSelection] ⏭️ Vérification snapshot déjà effectuée, skip');
-      return;
-    }
-
-    const wizardSnapshot = appContextService.getWizardSnapshot();
-    if (wizardSnapshot) {
-      console.log('[CharacterSelection] 📋 Snapshot wizard détecté, restauration automatique:', wizardSnapshot);
-      setShowCreator(true);
-    } else {
-      console.log('[CharacterSelection] ℹ️ Aucun snapshot à restaurer');
-    }
-
-    hasCheckedSnapshotRef.current = true;
-  }, []); // ⚠️ Dépendances vides = s'exécute UNE SEULE FOIS
+ useEffect(() => {
+  fetchPlayers();
+  loadSubscription();
+  
+  // ✅ Vérifier le snapshot AU PREMIER CHARGEMENT uniquement
+  const wizardSnapshot = appContextService.getWizardSnapshot();
+  if (wizardSnapshot && !showCreator) {
+    console.log('[CharacterSelection] 📋 Snapshot wizard détecté, restauration automatique:', wizardSnapshot);
+    setShowCreator(true);
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [session]); // ⚠️ Se déclenche uniquement quand la session change
 
   const loadSubscription = async () => {
     try {
