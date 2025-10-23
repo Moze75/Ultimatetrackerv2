@@ -2,6 +2,7 @@ import React, { Suspense, useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { CharacterExportPayload } from '../types/characterCreator';
 
+// IMPORTANT: adaptez la casse au fichier réel (characterCreationWizard.tsx vs CharacterCreationWizard.tsx)
 const CharacterCreationWizard = React.lazy(() =>
   import('../features/character-creator/components/characterCreationWizard').then((m: any) => ({
     default: m.default ?? m.CharacterCreationWizard,
@@ -15,6 +16,12 @@ export interface CharacterCreatorModalProps {
   title?: string;
 }
 
+/**
+ * Modal plein écran hébergeant le wizard de création de personnage.
+ * - Overlay avec blur, fermable par clic à l’extérieur et touche ESC
+ * - Contenu scrollable, body scroll-lock quand ouvert
+ * - Animation d’apparition/disparition
+ */
 export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({
   open,
   onClose,
@@ -24,13 +31,17 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({
   const [enter, setEnter] = useState(false);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
+  
+  // ✅ AJOUTER : Garder le wizard monté même quand invisible
+  const [hasBeenOpened, setHasBeenOpened] = useState(false);
 
-  // Gère l'anim, le focus, l'ESC et le scroll lock quand open = true
+  // ✅ MODIFIER l'useEffect d'animation
   useEffect(() => {
     if (!open) return;
+    
+    setHasBeenOpened(true); // ✅ Marquer comme ouvert au moins une fois
 
     const id = window.setTimeout(() => setEnter(true), 15);
-
     const prevActive = document.activeElement as HTMLElement | null;
     panelRef.current?.focus?.();
 
@@ -54,6 +65,9 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({
     };
   }, [open]);
 
+  // ✅ MODIFIER : Ne pas faire de return null, juste cacher avec CSS
+  // if (!open) return null; // ❌ SUPPRIMER CETTE LIGNE
+
   const handleClose = () => {
     setEnter(false);
     window.setTimeout(() => onClose(), 180);
@@ -65,14 +79,16 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({
     }
   };
 
-  // Option 1bis: on garde monté, on masque avec display
   return (
     <div
       className="fixed inset-0 z-[100]"
       role="dialog"
       aria-modal="true"
       aria-label={title}
-      style={{ display: open ? 'block' : 'none' }}
+      style={{ 
+        display: open ? 'block' : 'none', // ✅ Cacher avec display au lieu de unmount
+        pointerEvents: open ? 'auto' : 'none' 
+      }}
     >
       {/* Overlay */}
       <div
@@ -102,7 +118,6 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({
                 onClick={handleClose}
                 className="p-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
                 aria-label="Fermer"
-                title="Fermer"
               >
                 <X size={20} />
               </button>
@@ -111,23 +126,23 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({
             {/* Content */}
             <div className="h-[80vh] md:h-[85vh] flex flex-col">
               <div className="flex-1 min-h-0 overflow-y-auto">
-                <Suspense
-                  fallback={
-                    <div className="w-full h-full flex items-center justify-center text-gray-300 p-8">
-                      Chargement de l’assistant de création...
-                    </div>
-                  }
-                >
-                  <CharacterCreationWizard onFinish={onComplete} onCancel={handleClose} />
-                </Suspense>
+                {/* ✅ Toujours rendre le Suspense une fois ouvert */}
+                {hasBeenOpened && (
+                  <Suspense
+                    fallback={
+                      <div className="w-full h-full flex items-center justify-center text-gray-300 p-8">
+                        Chargement de l'assistant de création...
+                      </div>
+                    }
+                  >
+                    <CharacterCreationWizard onFinish={onComplete} onCancel={handleClose} />
+                  </Suspense>
+                )}
               </div>
             </div>
           </div>
-          {/* /Panel */}
         </div>
       </div>
     </div>
-  );
-};
-
-export default CharacterCreatorModal;
+  ); 
+}; 
