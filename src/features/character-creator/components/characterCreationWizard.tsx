@@ -133,14 +133,7 @@ interface WizardProps {
   initialSnapshot?: any;
 }
 
-export default function CharacterCreationWizard({ onFinish, onCancel, initialSnapshot }: WizardProps) {
-  // ✅ AJOUTER CES 3 LIGNES JUSTE ICI (AVANT le useMemo de restoredSnapshot) :
-  const [isTabVisible, setIsTabVisible] = useState(true);
-  const lastVisibilityChangeRef = useRef<number>(Date.now());
-  const isActualRefreshRef = useRef(sessionStorage.getItem('ut:wizardActive') !== 'true');
-
-  // ✅ PHASE 1: Restauration automatique depuis localStorage
-  const restoredSnapshot = useMemo(() => {
+export default function CharacterCreationWizard({ onFinish, onCancel, initialSnapshot }: WizardProps) { 
   // ✅ PHASE 1: Restauration automatique depuis localStorage
   // Cette restauration se fait AVANT tous les useState pour garantir la disponibilité
   const restoredSnapshot = useMemo(() => {
