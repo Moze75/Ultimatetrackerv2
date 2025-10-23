@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { appContextService } from '../services/appContextService';
@@ -82,7 +82,6 @@ type WelcomeModalProps = {
   onContinue: () => void;
 };
 
-// Option 1bis aussi pour la modale de bienvenue
 function WelcomeModal({ open, characterName, onContinue }: WelcomeModalProps) {
   return (
     <div
@@ -134,19 +133,32 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
   const [currentSubscription, setCurrentSubscription] = useState<UserSubscription | null>(null);
   const [remainingTrialDays, setRemainingTrialDays] = useState<number | null>(null);
 
+  // ✅ FIX 1 : Protection contre les réouvertures intempestives du wizard
+  const hasCheckedSnapshotRef = useRef(false);
+
   useEffect(() => {
     fetchPlayers();
     loadSubscription();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
+  // ✅ FIX 1 : Vérifier le snapshot UNE SEULE FOIS au montage initial
   useEffect(() => {
+    if (hasCheckedSnapshotRef.current) {
+      console.log('[CharacterSelection] ⏭️ Vérification snapshot déjà effectuée, skip');
+      return;
+    }
+
     const wizardSnapshot = appContextService.getWizardSnapshot();
     if (wizardSnapshot) {
-      console.log('[CharacterSelection] Snapshot wizard détecté, restauration automatique:', wizardSnapshot);
+      console.log('[CharacterSelection] 📋 Snapshot wizard détecté, restauration automatique:', wizardSnapshot);
       setShowCreator(true);
+    } else {
+      console.log('[CharacterSelection] ℹ️ Aucun snapshot à restaurer');
     }
-  }, []);
+
+    hasCheckedSnapshotRef.current = true;
+  }, []); // ⚠️ Dépendances vides = s'exécute UNE SEULE FOIS
 
   const loadSubscription = async () => {
     try {
@@ -349,7 +361,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
 
   const displayClassName = (cls?: string | null) => (cls === 'Sorcier' ? 'Occultiste' : cls || '');
 
-  // ✅ Fonction pour obtenir le texte du niveau de compte (sans badge)
   const getSubscriptionText = () => {
     if (!currentSubscription) return null;
 
@@ -418,7 +429,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
     >
       <div className="min-h-screen py-8 bg-transparent">
         <div className="w-full max-w-6xl mx-auto px-4">
-          {/* ✅ NOUVEAU : Niveau de compte discret en haut */}
           {currentSubscription && (
             <div className="text-center mb-4">
               <p className="text-xs text-gray-400">
@@ -427,9 +437,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
             </div>
           )}
 
-          {/* Header */}
           <div className="text-center mb-8 sm:mb-12 space-y-4">
-            {/* Titre */}
             <h1
               className="text-4xl font-bold text-white"
               style={{
@@ -440,7 +448,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
               Mes Personnages
             </h1>
             
-            {/* Nombre de personnages */}
             <p
               className="text-xl text-gray-200"
               style={{ textShadow: '0 0 10px rgba(255,255,255,.3)' }}
@@ -452,11 +459,10 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
                 : 'Aucun personnage créé'}
             </p>
 
-            {/* Boutons d'action */}
             <div className="flex justify-center gap-3 pt-2 flex-wrap">
               <button
                 onClick={() => setShowSubscription(true)}
-                className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:scale-105"
+                className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105"
               >
                 <Crown size={20} />
                 {currentSubscription?.status === 'expired' || currentSubscription?.status === 'trial' 
@@ -468,7 +474,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
               {currentSubscription?.tier === 'game_master' && (
                 <button
                   onClick={() => setShowCampaigns(true)}
-                  className="flex items-center gap-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:scale-105"
+                  className="flex items-center gap-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105"
                 >
                   <Scroll size={20} />
                   Mes Campagnes
@@ -477,7 +483,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
             </div>
           </div>
 
-          {/* Le reste du code reste identique... */}
           {deletingCharacter && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
               <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full border border-red-500/20">
@@ -542,7 +547,6 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
             </div>
           )}
 
-          {/* Characters Grid */}
           <div className="flex justify-center mb-8 sm:mb-16">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl">
               {players.map((player) => {
@@ -628,7 +632,7 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
 
               <div
                 onClick={() => setShowCreator(true)}
-                className="w-full max-w-sm cursor-pointer hover:scale-[1.02] transition-all duration-200 bg-slate-800/40 backdrop-blur-sm border-dashed border-2 border-slate-600/50 hover:border-green-500/50 hover:bg-slate-700/40 rounded-xl"
+                className="w-full max-w-sm cursor-pointer hover:scale-[1.02] transition-all duration-200 bg-slate-800/40 backdrop-blur-sm border-dashed border-2 border-slate-600/50 hover:border-green-500/70 rounded-xl shadow-lg"
               >
                 <div className="p-6 flex items-center justify-center gap-6 min-h-[140px]">
                   <div className="w-16 h-16 bg-green-400/20 rounded-full flex items-center justify-center">
