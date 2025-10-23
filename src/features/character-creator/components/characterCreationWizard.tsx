@@ -696,3 +696,5 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
     </div>
   );
 }
+
+export default CharacterSelectionPage;
