@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
 
-import ProgressBar, { stopWizardMusic } from './ui/ProgressBar'; // ✅ Import de la fonction
+import ProgressBar, { stopWizardMusic } from './ui/ProgressBar';
 import RaceSelection from './steps/RaceSelection';
 import ClassSelection from './steps/ClassSelection';
 import SpellSelection from './steps/SpellSelection';
@@ -19,7 +19,7 @@ import { races } from '../data/races';
 import { classes } from '../data/classes';
 import { backgrounds } from '../data/backgrounds';
 import { enrichEquipmentList, determineAutoEquip } from '../../../services/equipmentLookupService';
-import { appContextService } from '../../../services/appContextService'; // ✅ IMPORT
+import { appContextService } from '../../../services/appContextService';
 
 /* ===========================================================
    Utilitaires
@@ -27,7 +27,7 @@ import { appContextService } from '../../../services/appContextService'; // ✅ 
 
 // Convertit ft -> m en arrondissant au 0,5 m (30 ft → 9 m)
 const feetToMeters = (ft?: number) => {
-  const n = Number(ft); 
+  const n = Number(ft);
   if (!Number.isFinite(n)) return 9;
   return Math.round(n * 0.3048 * 2) / 2;
 };
@@ -130,28 +130,56 @@ const steps = ['Race', 'Classe', 'Sorts', 'Historique', 'Profil', 'Caractéristi
 interface WizardProps {
   onFinish?: (payload: CharacterExportPayload) => void;
   onCancel?: () => void;
-  initialSnapshot?: any; // ✅ NOUVEAU PROP
+  initialSnapshot?: any;
 }
 
 export default function CharacterCreationWizard({ onFinish, onCancel, initialSnapshot }: WizardProps) {
-  // ✅ Initialiser depuis le snapshot si présent
-  const [currentStep, setCurrentStep] = useState(initialSnapshot?.currentStep ?? 0);
+  // ✅ PHASE 1: Restauration automatique depuis localStorage
+  // Cette restauration se fait AVANT tous les useState pour garantir la disponibilité
+  const restoredSnapshot = useMemo(() => {
+    // Priorité: prop initialSnapshot, sinon localStorage
+    const snapshot = initialSnapshot || appContextService.getWizardSnapshot();
+    
+    if (snapshot) {
+      console.log('[Wizard] 🔄 RESTAURATION AUTOMATIQUE depuis:', initialSnapshot ? 'props' : 'localStorage', {
+        step: snapshot.currentStep,
+        race: snapshot.selectedRace,
+        class: snapshot.selectedClass,
+        cantrips: snapshot.selectedCantrips?.length || 0,
+        level1Spells: snapshot.selectedLevel1Spells?.length || 0,
+        equipment: snapshot.selectedEquipmentOption,
+        backgroundEquipment: snapshot.backgroundEquipmentOption,
+        skills: snapshot.selectedClassSkills?.length || 0,
+      });
+    } else {
+      console.log('[Wizard] ℹ️ Aucun snapshot à restaurer, démarrage nouveau wizard');
+    }
+    
+    return snapshot;
+  }, []); // ⚠️ CRITIQUE: [] vide pour n'exécuter qu'UNE SEULE FOIS au montage
+
+  // ✅ PHASE 2: Flag de protection contre les resets
+  const [isRestoringFromSnapshot, setIsRestoringFromSnapshot] = useState(!!restoredSnapshot);
+  const hasRestoredRef = useRef(false);
+
+  // ✅ Initialiser TOUS les états depuis restoredSnapshot
+  const [currentStep, setCurrentStep] = useState(restoredSnapshot?.currentStep ?? 0);
   const [loadingEquipment, setLoadingEquipment] = useState(false);
-  const [characterName, setCharacterName] = useState(initialSnapshot?.characterName ?? '');
-  const [selectedRace, setSelectedRace] = useState(initialSnapshot?.selectedRace ?? '');
-  const [selectedClass, setSelectedClass] = useState<DndClass | ''>(initialSnapshot?.selectedClass ?? '');
-  const [selectedBackground, setSelectedBackground] = useState(initialSnapshot?.selectedBackground ?? '');
-  const [backgroundEquipmentOption, setBackgroundEquipmentOption] = useState<'A' | 'B' | ''>(initialSnapshot?.backgroundEquipmentOption ?? '');
-  const [selectedClassSkills, setSelectedClassSkills] = useState<string[]>(initialSnapshot?.selectedClassSkills ?? []);
-  const [selectedEquipmentOption, setSelectedEquipmentOption] = useState<string>(initialSnapshot?.selectedEquipmentOption ?? '');
-  const [selectedCantrips, setSelectedCantrips] = useState<any[]>(initialSnapshot?.selectedCantrips ?? []);
-  const [selectedLevel1Spells, setSelectedLevel1Spells] = useState<any[]>(initialSnapshot?.selectedLevel1Spells ?? []);
-  const [selectedAlignment, setSelectedAlignment] = useState(initialSnapshot?.selectedAlignment ?? '');
-  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(initialSnapshot?.selectedLanguages ?? []);
-  const [age, setAge] = useState(initialSnapshot?.age ?? '');
-  const [gender, setGender] = useState(initialSnapshot?.gender ?? '');
-  const [characterHistory, setCharacterHistory] = useState(initialSnapshot?.characterHistory ?? '');
-  const [abilities, setAbilities] = useState<Record<string, number>>(initialSnapshot?.abilities ?? {
+  const [characterName, setCharacterName] = useState(restoredSnapshot?.characterName ?? '');
+  const [selectedRace, setSelectedRace] = useState(restoredSnapshot?.selectedRace ?? '');
+  const [selectedClass, setSelectedClass] = useState<DndClass | ''>(restoredSnapshot?.selectedClass ?? '');
+  const [selectedBackground, setSelectedBackground] = useState(restoredSnapshot?.selectedBackground ?? '');
+  const [backgroundEquipmentOption, setBackgroundEquipmentOption] = useState<'A' | 'B' | ''>(restoredSnapshot?.backgroundEquipmentOption ?? '');
+  const [selectedClassSkills, setSelectedClassSkills] = useState<string[]>(restoredSnapshot?.selectedClassSkills ?? []);
+  const [selectedEquipmentOption, setSelectedEquipmentOption] = useState<string>(restoredSnapshot?.selectedEquipmentOption ?? '');
+  const [selectedCantrips, setSelectedCantrips] = useState<any[]>(restoredSnapshot?.selectedCantrips ?? []);
+  const [selectedLevel1Spells, setSelectedLevel1Spells] = useState<any[]>(restoredSnapshot?.selectedLevel1Spells ?? []);
+  const [selectedAlignment, setSelectedAlignment] = useState(restoredSnapshot?.selectedAlignment ?? '');
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(restoredSnapshot?.selectedLanguages ?? []);
+  const [age, setAge] = useState(restoredSnapshot?.age ?? '');
+  const [gender, setGender] = useState(restoredSnapshot?.gender ?? '');
+  const [characterHistory, setCharacterHistory] = useState(restoredSnapshot?.characterHistory ?? '');
+  const [abilities, setAbilities] = useState<Record<string, number>>(restoredSnapshot?.abilities ?? {
     'Force': 8,
     'Dextérité': 8,
     'Constitution': 8,
@@ -159,9 +187,20 @@ export default function CharacterCreationWizard({ onFinish, onCancel, initialSna
     'Sagesse': 8,
     'Charisme': 8,
   });
-  const [effectiveAbilities, setEffectiveAbilities] = useState<Record<string, number>>(initialSnapshot?.effectiveAbilities ?? abilities);
+  const [effectiveAbilities, setEffectiveAbilities] = useState<Record<string, number>>(
+    restoredSnapshot?.effectiveAbilities ?? restoredSnapshot?.abilities ?? {
+      'Force': 8,
+      'Dextérité': 8,
+      'Constitution': 8,
+      'Intelligence': 8,
+      'Sagesse': 8,
+      'Charisme': 8,
+    }
+  );
 
-
+  // ✅ États pour l'indicateur de sauvegarde
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
   // Objet d'historique sélectionné
   const selectedBackgroundObj = useMemo(
@@ -169,21 +208,95 @@ export default function CharacterCreationWizard({ onFinish, onCancel, initialSna
     [selectedBackground]
   );
 
-  // Resets cohérents
+  // ✅ PHASE 3: Validation de la restauration
   useEffect(() => {
+    if (restoredSnapshot && !hasRestoredRef.current) {
+      hasRestoredRef.current = true;
+      
+      console.log('[Wizard] ✅ VALIDATION de la restauration:', {
+        step: currentStep,
+        race: selectedRace,
+        class: selectedClass,
+        cantrips: selectedCantrips.length,
+        level1Spells: selectedLevel1Spells.length,
+        classSkills: selectedClassSkills.length,
+        equipment: selectedEquipmentOption,
+        backgroundEquipment: backgroundEquipmentOption,
+      });
+
+      // Désactiver le flag de restauration après 500ms pour permettre les resets futurs
+      setTimeout(() => {
+        setIsRestoringFromSnapshot(false);
+        console.log('[Wizard] 🔓 Protection contre les resets désactivée');
+      }, 500);
+    }
+  }, [restoredSnapshot]);
+
+  // ✅ PHASE 2 (suite): Resets PROTÉGÉS contre l'écrasement lors de la restauration
+  useEffect(() => {
+    // ⚠️ NE PAS reset si on est en train de restaurer depuis un snapshot
+    if (isRestoringFromSnapshot) {
+      console.log('[Wizard] 🛡️ RESET ÉVITÉ pendant la restauration (selectedClass)');
+      return;
+    }
+
+    // Reset normal uniquement lors d'un changement MANUEL de classe
+    console.log('[Wizard] 🔄 Reset des sélections suite au changement de classe:', selectedClass);
     setSelectedClassSkills([]);
     setSelectedEquipmentOption('');
     setSelectedCantrips([]);
     setSelectedLevel1Spells([]);
-  }, [selectedClass]);
+  }, [selectedClass, isRestoringFromSnapshot]);
 
   useEffect(() => {
-    setBackgroundEquipmentOption('');
-  }, [selectedBackground]);
+    // ⚠️ NE PAS reset si on est en train de restaurer
+    if (isRestoringFromSnapshot) {
+      console.log('[Wizard] 🛡️ RESET ÉVITÉ pendant la restauration (selectedBackground)');
+      return;
+    }
 
-// ✅ NOUVEAU: Sauvegarder uniquement lors du changement de step
-useEffect(() => {
-  const snapshot = {
+    console.log('[Wizard] 🔄 Reset de l\'équipement d\'historique suite au changement:', selectedBackground);
+    setBackgroundEquipmentOption('');
+  }, [selectedBackground, isRestoringFromSnapshot]);
+
+  // ✅ Fonction de sauvegarde centralisée avec indicateur visuel
+  const saveSnapshot = useCallback(() => {
+    const snapshot = {
+      currentStep,
+      characterName,
+      selectedRace,
+      selectedClass,
+      selectedBackground,
+      selectedAlignment,
+      selectedLanguages,
+      age,
+      gender,
+      characterHistory,
+      backgroundEquipmentOption,
+      selectedClassSkills,
+      selectedEquipmentOption,
+      selectedCantrips,
+      selectedLevel1Spells,
+      abilities,
+      effectiveAbilities,
+    };
+
+    setIsSaving(true);
+    appContextService.saveWizardSnapshot(snapshot);
+    setLastSaved(new Date());
+    
+    console.log('[Wizard] 💾 Snapshot sauvegardé:', {
+      step: currentStep,
+      cantrips: selectedCantrips.length,
+      level1Spells: selectedLevel1Spells.length,
+      equipment: selectedEquipmentOption,
+      backgroundEquipment: backgroundEquipmentOption,
+      skills: selectedClassSkills.length,
+    });
+
+    // Animation de confirmation
+    setTimeout(() => setIsSaving(false), 500);
+  }, [
     currentStep,
     characterName,
     selectedRace,
@@ -201,11 +314,64 @@ useEffect(() => {
     selectedLevel1Spells,
     abilities,
     effectiveAbilities,
-  };
-  
-  appContextService.saveWizardSnapshot(snapshot);
-  console.log('[Wizard] Snapshot sauvegardé au step', currentStep);
-}, [currentStep]); // ✅ UNIQUEMENT currentStep comme dépendance
+  ]);
+
+  // ✅ Hook de debounce personnalisé pour les champs de texte
+  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
+  const debouncedSave = useCallback(() => {
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    
+    debounceTimeoutRef.current = setTimeout(() => {
+      saveSnapshot();
+    }, 1500); // 1.5 secondes après la dernière frappe
+  }, [saveSnapshot]);
+
+  // ✅ Nettoyage du timeout au démontage
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // ✅ Sauvegarde IMMÉDIATE pour les choix critiques (step, race, classe, sorts, équipement)
+  useEffect(() => {
+    // Ne pas sauvegarder pendant la restauration initiale
+    if (isRestoringFromSnapshot && !hasRestoredRef.current) {
+      return;
+    }
+    saveSnapshot();
+  }, [
+    currentStep,
+    selectedRace,
+    selectedClass,
+    selectedBackground,
+    backgroundEquipmentOption,
+    selectedClassSkills,
+    selectedEquipmentOption,
+    selectedCantrips,
+    selectedLevel1Spells,
+  ]);
+
+  // ✅ Sauvegarde AVEC DEBOUNCE pour les champs de texte et abilities
+  useEffect(() => {
+    if (isRestoringFromSnapshot && !hasRestoredRef.current) {
+      return;
+    }
+    debouncedSave();
+  }, [
+    characterName,
+    age,
+    gender,
+    characterHistory,
+    selectedAlignment,
+    selectedLanguages,
+    abilities,
+    effectiveAbilities,
+  ]);
 
   // Classes qui ne lancent pas de sorts au niveau 1
   const nonCasterClasses: DndClass[] = ['Guerrier', 'Roublard', 'Barbare', 'Moine'];
@@ -230,10 +396,56 @@ useEffect(() => {
     }
   };
 
-  // Finalisation
+  // ✅ PHASE 4: Finalisation avec protection et fallback
   const handleFinish = async () => {
     try {
-       stopWizardMusic();
+      stopWizardMusic();
+
+      // ✅ PROTECTION: Récupérer le snapshot le plus récent au cas où
+      const latestSnapshot = appContextService.getWizardSnapshot();
+
+      // ✅ Utiliser les données de l'état SAUF si vides, alors utiliser le snapshot
+      const finalCantrips = selectedCantrips.length > 0 
+        ? selectedCantrips 
+        : (latestSnapshot?.selectedCantrips ?? []);
+      
+      const finalLevel1Spells = selectedLevel1Spells.length > 0 
+        ? selectedLevel1Spells 
+        : (latestSnapshot?.selectedLevel1Spells ?? []);
+
+      const finalEquipmentOption = selectedEquipmentOption || latestSnapshot?.selectedEquipmentOption || '';
+      const finalBackgroundEquipment = backgroundEquipmentOption || latestSnapshot?.backgroundEquipmentOption || '';
+      const finalClassSkills = selectedClassSkills.length > 0 
+        ? selectedClassSkills 
+        : (latestSnapshot?.selectedClassSkills ?? []);
+
+      console.log('[Wizard] 🛡️ PROTECTION EXPORT - Comparaison état vs snapshot:', {
+        cantrips: {
+          fromState: selectedCantrips.length,
+          fromSnapshot: latestSnapshot?.selectedCantrips?.length ?? 0,
+          final: finalCantrips.length,
+        },
+        level1Spells: {
+          fromState: selectedLevel1Spells.length,
+          fromSnapshot: latestSnapshot?.selectedLevel1Spells?.length ?? 0,
+          final: finalLevel1Spells.length,
+        },
+        equipment: {
+          fromState: selectedEquipmentOption,
+          fromSnapshot: latestSnapshot?.selectedEquipmentOption,
+          final: finalEquipmentOption,
+        },
+        backgroundEquipment: {
+          fromState: backgroundEquipmentOption,
+          fromSnapshot: latestSnapshot?.backgroundEquipmentOption,
+          final: finalBackgroundEquipment,
+        },
+        skills: {
+          fromState: selectedClassSkills.length,
+          fromSnapshot: latestSnapshot?.selectedClassSkills?.length ?? 0,
+          final: finalClassSkills.length,
+        },
+      });
 
       const raceData = races.find((r) => r.name === selectedRace);
       const classData = classes.find((c) => c.name === selectedClass);
@@ -254,22 +466,29 @@ useEffect(() => {
       const initiative = calculateModifier(finalAbilities['Dextérité'] || 10);
       const speedFeet = raceData?.speed || 30;
 
-      // Équipement de classe selon l'option sélectionnée
-      const classEquipment = selectedEquipmentOption && classData?.equipmentOptions
-        ? classData.equipmentOptions.find(opt => opt.label === selectedEquipmentOption)?.items || []
+      // ✅ Utiliser finalEquipmentOption au lieu de selectedEquipmentOption
+      const classEquipment = finalEquipmentOption && classData?.equipmentOptions
+        ? classData.equipmentOptions.find(opt => opt.label === finalEquipmentOption)?.items || []
         : classData?.equipment || [];
 
-      // Équipement d'historique
+      // ✅ Utiliser finalBackgroundEquipment
       const bgEquip =
-        backgroundEquipmentOption === 'A'
+        finalBackgroundEquipment === 'A'
           ? selectedBackgroundObj?.equipmentOptions?.optionA ?? []
-          : backgroundEquipmentOption === 'B'
+          : finalBackgroundEquipment === 'B'
             ? selectedBackgroundObj?.equipmentOptions?.optionB ?? []
             : [];
 
-      // Compétences maîtrisées
+      console.log('[Wizard] 🎒 Équipement récupéré:', {
+        classEquipment: classEquipment.length,
+        classEquipmentItems: classEquipment,
+        bgEquip: bgEquip.length,
+        bgEquipItems: bgEquip,
+      });
+
+      // Compétences maîtrisées - ✅ Utiliser finalClassSkills
       const backgroundSkills = selectedBackgroundObj?.skillProficiencies ?? [];
-      const proficientSkills = Array.from(new Set([...(selectedClassSkills || []), ...backgroundSkills]));
+      const proficientSkills = Array.from(new Set([...finalClassSkills, ...backgroundSkills]));
 
       // Équipement combiné
       const equipment = [...classEquipment, ...bgEquip];
@@ -282,9 +501,9 @@ useEffect(() => {
       const goldFromA = parseGoldFromItems(selectedBackgroundObj?.equipmentOptions?.optionA);
       const goldFromB = parseGoldFromItems(selectedBackgroundObj?.equipmentOptions?.optionB);
       
-      const backgroundGold = backgroundEquipmentOption === 'A'
+      const backgroundGold = finalBackgroundEquipment === 'A'
         ? goldFromA
-        : backgroundEquipmentOption === 'B'
+        : finalBackgroundEquipment === 'B'
         ? goldFromB
         : undefined;
 
@@ -322,8 +541,8 @@ useEffect(() => {
           finalAbilities,
           proficientSkills,
           equipment,
-          selectedBackgroundEquipmentOption: backgroundEquipmentOption || '',
-          selectedEquipmentOption: selectedEquipmentOption || '',
+          selectedBackgroundEquipmentOption: finalBackgroundEquipment || '',
+          selectedEquipmentOption: finalEquipmentOption || '',
           hitPoints,
           armorClass,
           initiative,
@@ -348,8 +567,8 @@ useEffect(() => {
             used: 0,
           },
           avatarImageUrl,
-          selectedCantrips,
-          selectedLevel1Spells,
+          selectedCantrips: finalCantrips, // ✅ Utiliser finalCantrips
+          selectedLevel1Spells: finalLevel1Spells, // ✅ Utiliser finalLevel1Spells
           selectedAlignment: selectedAlignment || undefined,
           selectedLanguages: allLanguages,
           age: age.trim() || undefined,
@@ -357,10 +576,25 @@ useEffect(() => {
           characterHistory: characterHistory.trim() || undefined,
         };
 
+        console.log('[Wizard] 📦 PAYLOAD FINAL:', {
+          spells: {
+            cantrips: payload.selectedCantrips.length,
+            cantripsDetails: payload.selectedCantrips.map(s => s.name),
+            level1: payload.selectedLevel1Spells.length,
+            level1Details: payload.selectedLevel1Spells.map(s => s.name),
+          },
+          equipment: {
+            total: payload.equipment.length,
+            items: payload.equipment,
+            details: payload.equipmentDetails?.length || 0,
+          },
+          skills: payload.proficientSkills,
+        });
+
         // ✅ Nettoyer le snapshot et marquer le contexte "game"
         appContextService.clearWizardSnapshot();
         appContextService.setContext('game');
-        console.log('[Wizard] Snapshot nettoyé, contexte = game');
+        console.log('[Wizard] ✅ Snapshot nettoyé, contexte = game');
 
         onFinish(payload);
         return;
@@ -409,11 +643,11 @@ useEffect(() => {
           coins: { gp: initialGold, sp: 0, cp: 0 },
           gold: initialGold,
           creator_meta: {
-            class_skills: selectedClassSkills,
-            class_equipment_option: selectedEquipmentOption || null,
+            class_skills: finalClassSkills,
+            class_equipment_option: finalEquipmentOption || null,
             class_equipment_items: classEquipment,
             background_skillProficiencies: backgroundSkills,
-            background_equipment_option: backgroundEquipmentOption || null,
+            background_equipment_option: finalBackgroundEquipment || null,
             background_equipment_items: bgEquip,
             weapon_proficiencies: classData?.weaponProficiencies || [],
             armor_proficiencies: classData?.armorProficiencies || [],
@@ -439,10 +673,12 @@ useEffect(() => {
         return;
       }
 
-      // Save spells to Supabase
-      if (inserted?.id && (selectedCantrips.length > 0 || selectedLevel1Spells.length > 0)) {
+      // ✅ Save spells to Supabase - Utiliser finalCantrips et finalLevel1Spells
+      if (inserted?.id && (finalCantrips.length > 0 || finalLevel1Spells.length > 0)) {
         try {
-          const allSpells = [...selectedCantrips, ...selectedLevel1Spells];
+          const allSpells = [...finalCantrips, ...finalLevel1Spells];
+          console.log(`[Wizard] 🔮 Sauvegarde de ${allSpells.length} sorts pour le personnage ${inserted.id}:`, 
+            allSpells.map(s => s.name));
 
           const spellsToInsert = allSpells.map(spell => ({
             id: spell.id,
@@ -473,10 +709,12 @@ useEffect(() => {
             ignoreDuplicates: true,
           });
 
-          console.log(`Saved ${allSpells.length} spells for new character`);
+          console.log(`[Wizard] ✅ ${allSpells.length} sorts sauvegardés avec succès`);
         } catch (spellErr) {
-          console.error('Error saving spells:', spellErr);
+          console.error('[Wizard] ❌ Erreur lors de la sauvegarde des sorts:', spellErr);
         }
+      } else {
+        console.log('[Wizard] ℹ️ Aucun sort à sauvegarder');
       }
 
       // Upload avatar
@@ -673,10 +911,24 @@ useEffect(() => {
         }}
       />
 
-      {/* ✅ Badge de sauvegarde automatique */}
-      <div className="fixed bottom-4 left-4 z-50 text-xs text-gray-400 bg-gray-900/80 backdrop-blur-sm px-3 py-2 rounded-lg border border-gray-700/50 flex items-center gap-2">
-        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-        Sauvegarde auto
+      {/* ✅ Badge de sauvegarde automatique amélioré */}
+      <div className="fixed bottom-4 left-4 z-50">
+        {isSaving ? (
+          <div className="text-xs text-blue-400 bg-gray-900/90 backdrop-blur-sm px-3 py-2 rounded-lg border border-blue-500/50 flex items-center gap-2 shadow-lg">
+            <div className="w-2 h-2 bg-blue-400 rounded-full animate-ping"></div>
+            <span>💾 Sauvegarde...</span>
+          </div>
+        ) : lastSaved ? (
+          <div className="text-xs text-green-400 bg-gray-900/90 backdrop-blur-sm px-3 py-2 rounded-lg border border-green-500/50 flex items-center gap-2 shadow-lg">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span>✓ Sauvegardé {lastSaved.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+          </div>
+        ) : (
+          <div className="text-xs text-gray-400 bg-gray-900/80 backdrop-blur-sm px-3 py-2 rounded-lg border border-gray-700/50 flex items-center gap-2">
+            <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
+            <span>Sauvegarde auto</span>
+          </div>
+        )}
       </div>
 
       {loadingEquipment && (
