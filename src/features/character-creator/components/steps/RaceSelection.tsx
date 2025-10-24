@@ -1,39 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { races } from '../../data/races';
 import Card, { CardContent, CardHeader } from '../ui/Card';
 import Button from '../ui/Button';
-import { Users, Zap, Shield, Star, ChevronDown, Eye, Heart, Settings } from 'lucide-react';
-import CustomRaceModal from '../CustomRaceModal';
+import { Users, Zap, Shield, Star, ChevronDown, Eye, Heart } from 'lucide-react';
 
 interface RaceSelectionProps {
   selectedRace: string;
   onRaceSelect: (race: string) => void;
   onNext: () => void;
-  // ✅ NOUVEAU: Pour stocker la race personnalisée
-  customRaceData?: DndRace | null;
-  onCustomRaceDataChange?: (race: DndRace | null) => void;
 }
 
-export default function RaceSelection({ 
-  selectedRace, 
-  onRaceSelect, 
-  onNext,
-  customRaceData,
-  onCustomRaceDataChange 
-}: RaceSelectionProps) {
+export default function RaceSelection({ selectedRace, onRaceSelect, onNext }: RaceSelectionProps) {
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [showCustomModal, setShowCustomModal] = useState(false);
 
-  // ✅ NOUVEAU: Combiner les races standards et la race personnalisée
-const allRaces = customRaceData 
-  ? [...races, customRaceData] 
-  : races;
-
-  useEffect(() => {
-    console.log('[RaceSelection] customRaceData mis à jour:', customRaceData);
-    console.log('[RaceSelection] allRaces:', allRaces);
-  }, [customRaceData]);
-  
   // Conversion pieds -> mètres (les données sont en pieds)
   const feetToMeters = (ft?: number) => {
     if (!ft && ft !== 0) return '';
@@ -44,31 +23,7 @@ const allRaces = customRaceData
     onRaceSelect(raceName);
     setExpanded((prev) => (prev === raceName ? null : raceName));
   };
-
-  // ✅ NOUVEAU: Gérer la sauvegarde de la race personnalisée
-// ✅ Dans RaceSelection.tsx
-const handleSaveCustomRace = (race: DndRace) => {
-  console.log('[RaceSelection] Race reçue:', race);
-  
-  // 1. Sauvegarder la race personnalisée
-  if (onCustomRaceDataChange) {
-    onCustomRaceDataChange(race);
-  }
-  
-  // 2. Sélectionner la race
-  onRaceSelect(race.name);
-  console.log('[RaceSelection] Race sélectionnée:', race.name);
-  
-  // 3. Fermer le modal
-  setShowCustomModal(false);
-  
-  // ✅ 4. NOUVEAU: Passer automatiquement au step suivant
-  setTimeout(() => {
-    onNext();
-    console.log('[RaceSelection] Passage au step suivant');
-  }, 100);
-};
-
+ 
   const getRaceIcon = (raceName: string) => {
     if (raceName === 'Elfe' || raceName === 'Demi-Elfe') {
       return <Star className="w-5 h-5 text-green-400" />;
@@ -107,27 +62,6 @@ const handleSaveCustomRace = (race: DndRace) => {
     return traits.some(trait => trait.includes('Vision dans le noir'));
   };
 
-// Au début du composant RaceSelection, après les imports
-const RACE_IMAGE_MAPPING: Record<string, string> = {
-  'Haut-Elfe': 'Haut-elfe.png',
-  'Elfe sylvestre': 'Elfe-Sylvestre.png',
-  'Drow': 'Drow.png',
-  // Ajoutez ici les autres races si nécessaire
-};
-
-  // ✅ Vérifier d'abord le mapping
-  const mappedImage = RACE_IMAGE_MAPPING[raceName];
-  if (mappedImage) {
-    return (
-      <img
-        src={base + mappedImage}
-        alt={raceName}
-        className="w-full h-auto object-contain rounded-md shadow-sm"
-        loading="lazy"
-      />
-    );
-  }
-  
   // Image de race (public/Races/...) avec fallback de noms
   function RaceImage({ raceName }: { raceName: string }) {
     const toASCII = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -282,51 +216,19 @@ const RACE_IMAGE_MAPPING: Record<string, string> = {
               </CardContent>
             </Card>
           );
-        })} 
-
-        
-        {/* ✅ NOUVEAU: Carte pour créer une race personnalisée */}
-        <Card 
-          className="h-full border-2 border-dashed border-purple-500/50 hover:border-purple-400/70 transition-colors cursor-pointer"
-          onClick={() => setShowCustomModal(true)}
-        >
-          <CardHeader>
-            <div className="flex items-center justify-center">
-              <Settings className="w-6 h-6 text-purple-400 mr-2" />
-              <h3 className="text-lg font-semibold text-purple-300">Espèce personnalisée</h3>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8">
-              <p className="text-gray-400 text-sm mb-4">
-                Créez votre propre espèce avec des traits uniques
-              </p>
-              <Button variant="secondary" size="sm" onClick={() => setShowCustomModal(true)}>
-                <Settings className="w-4 h-4 mr-2" />
-                Configurer
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        })}
       </div>
 
       <div className="flex justify-center pt-6">
-<Button
-  onClick={onNext}
-  disabled={!selectedRace} // ✅ Le bouton doit être activé si selectedRace est défini
-  size="lg"
-  className="min-w-[200px]"
->
-  Continuer
-</Button>
+        <Button
+          onClick={onNext}
+          disabled={!selectedRace}
+          size="lg"
+          className="min-w-[200px]"
+        >
+          Continuer
+        </Button>
       </div>
-
-      {/* ✅ NOUVEAU: Modal de configuration */}
-      <CustomRaceModal
-        open={showCustomModal}
-        onClose={() => setShowCustomModal(false)}
-        onSave={handleSaveCustomRace}
-      />
     </div>
   );
 }
