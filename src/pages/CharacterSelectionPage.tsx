@@ -137,29 +137,40 @@ export function CharacterSelectionPage({ session, onCharacterSelect }: Character
   const hasInitializedRef = useRef(false);
   const playersLoadedRef = useRef(false);
 
-  useEffect(() => {
-    // ✅ Ne charger qu'UNE SEULE FOIS par session
-    if (hasInitializedRef.current) {
-      console.log('[CharacterSelection] ⏭️ Déjà initialisé, skip');
-      return;
-    }
+useEffect(() => {
+  if (hasInitializedRef.current) {
+    console.log('[CharacterSelection] ⏭️ Déjà initialisé, skip');
+    return;
+  }
 
-    console.log('[CharacterSelection] 🚀 Initialisation...');
-    hasInitializedRef.current = true;
+  console.log('[CharacterSelection] 🚀 Initialisation...');
+  hasInitializedRef.current = true;
 
-    // Vérifier le snapshot wizard
-    const wizardSnapshot = appContextService.getWizardSnapshot();
-    if (wizardSnapshot) {
-      console.log('[CharacterSelection] 📋 Snapshot wizard détecté:', wizardSnapshot);
-      setShowCreator(true);
-    }
+  // ✅ Vérifier le snapshot wizard UNIQUEMENT si le contexte est "wizard"
+  const context = appContextService.getContext();
+  const wizardSnapshot = appContextService.getWizardSnapshot();
+  
+  if (context === 'wizard' && wizardSnapshot) {
+    console.log('[CharacterSelection] 📋 Snapshot wizard détecté avec contexte wizard:', wizardSnapshot);
+    setShowCreator(true);
+  } else if (wizardSnapshot && context !== 'wizard') {
+    console.log('[CharacterSelection] 🗑️ Snapshot orphelin détecté (contexte:', context, '), nettoyage');
+    appContextService.clearWizardSnapshot();
+  } else {
+    console.log('[CharacterSelection] ℹ️ Pas de snapshot ou contexte différent');
+  }
 
-    // Charger les personnages et l'abonnement
-    fetchPlayers();
-    loadSubscription();
-    
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // ⚠️ Tableau vide = s'exécute UNE SEULE FOIS
+  // S'assurer que le contexte est "selection" si on est sur cette page
+  if (context !== 'wizard') {
+    appContextService.setContext('selection');
+  }
+
+  // Charger les personnages et l'abonnement
+  fetchPlayers();
+  loadSubscription();
+  
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
   const loadSubscription = async () => {
     try {
