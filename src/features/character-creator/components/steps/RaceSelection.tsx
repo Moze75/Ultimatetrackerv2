@@ -28,6 +28,11 @@ export default function RaceSelection({
 const allRaces = customRaceData 
   ? [...races, customRaceData] 
   : races;
+
+  useEffect(() => {
+    console.log('[RaceSelection] customRaceData mis à jour:', customRaceData);
+    console.log('[RaceSelection] allRaces:', allRaces);
+  }, [customRaceData]);
   
   // Conversion pieds -> mètres (les données sont en pieds)
   const feetToMeters = (ft?: number) => {
