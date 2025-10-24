@@ -1,30 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { 
+  initWizardMusic, 
+  startWizardMusic, 
+  pauseWizardMusic, 
+  resumeWizardMusic, 
+  isWizardMusicPlaying 
+} from './musicControl';
 
 interface ProgressBarProps {
   currentStep: number;
   totalSteps: number;
   steps: string[];
-}
-
-// ✅ Audio global en dehors du composant React
-const MUSIC_SRC = '/Music/Skyrim8bits.mp3';
-let globalAudio: HTMLAudioElement | null = null;
-let globalIsPlaying = false;
-
-// ✅ Fonction globale pour arrêter la musique
-export function stopWizardMusic() {
-  if (globalAudio) {
-    try {
-      globalAudio.pause();
-      globalAudio.currentTime = 0; // Remettre au début
-      globalIsPlaying = false;
-      console.log('[ProgressBar] 🔇 Musique arrêtée');
-    } catch (e) {
-      console.warn('[ProgressBar] ⚠️ Erreur lors de l\'arrêt de la musique:', e);
-    }
-  } else {
-    console.log('[ProgressBar] ℹ️ Aucune musique à arrêter');
-  }
 }
 
 export default function ProgressBar({ currentStep, totalSteps, steps }: ProgressBarProps) {
@@ -38,16 +24,11 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
 
   // ✅ Initialiser l'audio global une seule fois
   useEffect(() => {
-    if (!globalAudio) {
-      globalAudio = new Audio(MUSIC_SRC);
-      globalAudio.loop = true;
-      globalAudio.volume = 0.35;
-      console.log('[ProgressBar] Audio global initialisé');
-    }
-
+    initWizardMusic();
+    
     // ✅ Au montage, synchroniser l'état avec l'audio global
-    setIsPlaying(globalIsPlaying);
-    console.log('[ProgressBar] 🎵 État initial de la musique:', globalIsPlaying ? 'en lecture' : 'arrêtée');
+    setIsPlaying(isWizardMusicPlaying());
+    console.log('[ProgressBar] 🎵 État initial de la musique:', isWizardMusicPlaying() ? 'en lecture' : 'arrêtée');
 
     // ✅ Cleanup au démontage du composant
     return () => {
@@ -58,33 +39,22 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
 
   // ✅ Autoplay dès le montage du wizard (ouverture du creator)
   useEffect(() => {
-    if (hasTriedAutoStartRef.current || !globalAudio) return;
+    if (hasTriedAutoStartRef.current) return;
 
     hasTriedAutoStartRef.current = true;
     
     // ✅ Ajouter un petit délai pour s'assurer que le modal est bien visible
-    const autoplayTimer = setTimeout(() => {
+    const autoplayTimer = setTimeout(async () => {
       if (!isMountedRef.current) return;
 
       console.log('[ProgressBar] 🎬 Tentative de démarrage automatique de la musique au lancement du wizard');
       
-      globalAudio!.play()
-        .then(() => {
-          if (isMountedRef.current) {
-            globalIsPlaying = true;
-            setIsPlaying(true);
-            setAutoPlayBlocked(false);
-            console.log('[ProgressBar] ✅ Musique démarrée automatiquement');
-          }
-        })
-        .catch(() => {
-          if (isMountedRef.current) {
-            globalIsPlaying = false;
-            setIsPlaying(false);
-            setAutoPlayBlocked(true);
-            console.log('[ProgressBar] ⚠️ Autoplay bloqué par le navigateur');
-          }
-        });
+      const success = await startWizardMusic();
+      
+      if (isMountedRef.current) {
+        setIsPlaying(success);
+        setAutoPlayBlocked(!success);
+      }
     }, 300);
 
     return () => {
@@ -95,30 +65,20 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
   // ✅ Synchroniser l'état local avec l'état global à chaque changement d'étape
   useEffect(() => {
     if (isMountedRef.current) {
-      setIsPlaying(globalIsPlaying);
-      console.log('[ProgressBar] 🔄 Synchronisation état musique (step', currentStep, '):', globalIsPlaying);
+      const playing = isWizardMusicPlaying();
+      setIsPlaying(playing);
+      console.log('[ProgressBar] 🔄 Synchronisation état musique (step', currentStep, '):', playing);
     }
   }, [currentStep]);
 
   const togglePlayback = async () => {
-    if (!globalAudio) return;
-
-    if (globalIsPlaying) {
-      globalAudio.pause();
-      globalIsPlaying = false;
+    if (isPlaying) {
+      pauseWizardMusic();
       setIsPlaying(false);
-      console.log('[ProgressBar] ⏸️ Musique mise en pause');
     } else {
-      try {
-        await globalAudio.play();
-        globalIsPlaying = true;
-        setIsPlaying(true);
-        setAutoPlayBlocked(false);
-        console.log('[ProgressBar] ▶️ Musique reprise');
-      } catch {
-        setAutoPlayBlocked(true);
-        console.log('[ProgressBar] ❌ Impossible de lire la musique');
-      }
+      const success = await resumeWizardMusic();
+      setIsPlaying(success);
+      setAutoPlayBlocked(!success);
     }
   };
 
