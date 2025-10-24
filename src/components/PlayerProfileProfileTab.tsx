@@ -288,6 +288,19 @@ export default function PlayerProfileProfileTab({ player, onUpdate }: PlayerProf
 
   // Sélections
   const race = player.race || '';
+   // ✅ NOUVEAU : Récupérer la race personnalisée depuis creator_meta
+  const customRace = useMemo(() => {
+    if (!player.stats || typeof player.stats !== 'object') return null;
+    const stats = player.stats as any;
+    const creatorMeta = stats.creator_meta || {};
+    const customRaceData = creatorMeta.custom_race;
+    
+    // Vérifier que c'est bien la race personnalisée qui est sélectionnée
+    if (customRaceData && customRaceData.name === race) {
+      return customRaceData;
+    }
+    return null;
+  }, [player.stats, race]);
   const historique = (player.background as string) || '';
   const characterHistoryProp = (player as any)?.character_history || '';
 
