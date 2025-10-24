@@ -522,52 +522,55 @@ export function PlayerProfileSettingsModal({
     setDirty(true);
   };
 
-  const handleSave = async () => {
-    try {
-      const dexMod = getDexModFromPlayer(player);
-      const profAuto = getProficiencyBonusForLevel(level);
+ const handleSave = async () => {
+  try {
+    const dexMod = getDexModFromPlayer(player);
+    const profAuto = getProficiencyBonusForLevel(level);
 
-      const acVal = parseInt(acField, 10);
-      const initVal = parseInt(initField, 10);
-      const speedVal = parseDecimal(speedField);
-      const profVal = parseInt(profField, 10);
+    const acVal = parseInt(acField, 10);
+    const initVal = parseInt(initField, 10);
+    const speedVal = parseDecimal(speedField);
+    const profVal = parseInt(profField, 10);
 
-      const normOrigins = originFeats
-        .filter((v) => v && ALLOWED_ORIGIN_FEATS.has(v))
-        .filter((v, i, arr) => arr.indexOf(v) === i);
+    const normOrigins = originFeats
+      .filter((v) => v && ALLOWED_ORIGIN_FEATS.has(v))
+      .filter((v, i, arr) => arr.indexOf(v) === i);
 
-      const normGenerals = generalFeats
-        .filter((v) => v && ALLOWED_GENERAL_FEATS.has(v))
-        .filter((v, i, arr) => arr.indexOf(v) === i);
+    const normGenerals = generalFeats
+      .filter((v) => v && ALLOWED_GENERAL_FEATS.has(v))
+      .filter((v, i, arr) => arr.indexOf(v) === i);
 
-      const normStyles = fightingStyles
-        .filter((v) => v && ALLOWED_FIGHTING_STYLES.has(v))
-        .filter((v, i, arr) => arr.indexOf(v) === i);
+    const normStyles = fightingStyles
+      .filter((v) => v && ALLOWED_FIGHTING_STYLES.has(v))
+      .filter((v, i, arr) => arr.indexOf(v) === i);
 
-      const featsData: any = {
-        origin: normOrigins.length > 0 ? normOrigins[0] : null,
-        origins: normOrigins,
-        generals: normGenerals,
-        styles: normStyles,
-      };
+    const featsData: any = {
+      origin: normOrigins.length > 0 ? normOrigins[0] : null,
+      origins: normOrigins,
+      generals: normGenerals,
+      styles: normStyles,
+    };
 
-      const currentStats = (player.stats as any) || {};
-      const finalizedStats: any = {
-        ...currentStats,
-        armor_class: Number.isFinite(acVal) && acVal > 0 ? acVal : 10 + dexMod,
-        initiative: Number.isFinite(initVal) ? initVal : dexMod,
-        speed: Number.isFinite(speedVal) && speedVal > 0 ? speedVal : 9,
-        proficiency_bonus: profAuto,
-        ac_bonus: acBonus,
-        feats: featsData,
-        creator_meta: {
-          ...currentStats.creator_meta,
-          weapon_proficiencies: weaponProficiencies,
-          armor_proficiencies: armorProficiencies,
-        },
+    const currentStats = (player.stats as any) || {};
+    
+    // ✅ COLLER ICI - Remplacer tout le bloc finalizedStats
+    const finalizedStats: any = {
+      ...currentStats,
+      armor_class: Number.isFinite(acVal) && acVal > 0 ? acVal : 10 + dexMod,
+      initiative: Number.isFinite(initVal) ? initVal : dexMod,
+      speed: Number.isFinite(speedVal) && speedVal > 0 ? speedVal : 9,
+      proficiency_bonus: profAuto,
+      ac_bonus: acBonus,
+      feats: featsData,
+      creator_meta: {
+        ...currentStats.creator_meta,
         weapon_proficiencies: weaponProficiencies,
         armor_proficiencies: armorProficiencies,
-      };
+        custom_race: customRaceData || null, // ✅ NOUVEAU
+      },
+      weapon_proficiencies: weaponProficiencies,
+      armor_proficiencies: armorProficiencies,
+    };
 
       const updateData = {
         adventurer_name: adventurerName.trim() || null,
