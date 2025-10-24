@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
 
-import ProgressBar, { stopWizardMusic } from './ui/ProgressBar'; // ✅ Import de la fonction
+import ProgressBar from './ui/ProgressBar';
+import { stopWizardMusic } from './ui/musicControl';
 import RaceSelection from './steps/RaceSelection';
 import ClassSelection from './steps/ClassSelection';
 import SpellSelection from './steps/SpellSelection';
