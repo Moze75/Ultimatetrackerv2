@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
-import { DndClass, DndRace } from '../types/character';
+ 
 import ProgressBar from './ui/ProgressBar';
 import { stopWizardMusic } from './ui/musicControl';
 import RaceSelection from './steps/RaceSelection';
