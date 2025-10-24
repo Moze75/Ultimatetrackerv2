@@ -39,7 +39,10 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
 
 // ✅ Autoplay dès le montage du wizard (ouverture du creator)
 useEffect(() => {
-  if (hasTriedAutoStartRef.current) return;
+  if (hasTriedAutoStartRef.current) {
+    console.log('[ProgressBar] ⚠️ Autoplay déjà tenté, skip');
+    return;
+  }
 
   hasTriedAutoStartRef.current = true;
   
@@ -58,10 +61,13 @@ useEffect(() => {
     }
   }, 300);
 
+  // ✅ IMPORTANT : Réinitialiser le flag au démontage pour permettre l'autoplay à la prochaine ouverture
   return () => {
     clearTimeout(autoplayTimer);
+    hasTriedAutoStartRef.current = false; // ← AJOUT CRITIQUE
+    console.log('[ProgressBar] 🔄 Flag autoplay réinitialisé pour la prochaine ouverture');
   };
-}, []); // ⚠️ IMPORTANT : Dépendances vides pour s'exécuter UNE SEULE FOIS
+}, []);
 
   // ✅ Synchroniser l'état local avec l'état global à chaque changement d'étape
   useEffect(() => {
