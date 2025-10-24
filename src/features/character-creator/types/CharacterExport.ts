@@ -20,6 +20,8 @@ interface ShieldMeta {
   bonus: number;
 }
 
+export interface CharacterExportPayload {
+
 export interface ItemMeta {
   type: MetaType;
   quantity?: number;
