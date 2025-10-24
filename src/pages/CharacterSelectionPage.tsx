@@ -221,9 +221,9 @@ useEffect(() => {
   const handleCreatorComplete = async (payload: CharacterExportPayload) => {
     if (creating) return;
 
-     // ✅ Arrêter la musique immédiatement
+  // ✅ Arrêter et détruire la musique immédiatement
   try {
-    const { stopWizardMusic } = await import('../features/character-creator/components/ui/ProgressBar');
+    const { stopWizardMusic } = await import('../features/character-creator/components/ui/musicControl');
     stopWizardMusic();
   } catch (e) {
     console.warn('[CharacterSelection] Impossible d\'arrêter la musique:', e);
