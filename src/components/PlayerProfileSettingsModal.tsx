@@ -397,12 +397,24 @@ export function PlayerProfileSettingsModal({
       setWeaponProficiencies(weaponProfs);
       setArmorProficiencies(armorProfs);
     
-    
-    } else {
-      setWeaponProficiencies([]);
-      setArmorProficiencies([]);
-      setCustomRaceName(null);
-    }
+  // ✅ VÉRIFIER si la race personnalisée est détectée
+  const customRace = stats.creator_meta?.custom_race;
+  console.log('[PlayerProfileSettingsModal] Race du player:', player.race);
+  console.log('[PlayerProfileSettingsModal] Custom race data:', customRace);
+  console.log('[PlayerProfileSettingsModal] Match:', customRace && customRace.name === player.race);
+  
+  if (customRace && customRace.name === player.race) {
+    setCustomRaceName(player.race);
+    console.log('[PlayerProfileSettingsModal] ✅ Custom race name défini:', player.race);
+  } else {
+    setCustomRaceName(null);
+    console.log('[PlayerProfileSettingsModal] ❌ Pas de custom race');
+  }
+} else {
+  setWeaponProficiencies([]);
+  setArmorProficiencies([]);
+  setCustomRaceName(null);
+}
   }, [
     open,
     player,
