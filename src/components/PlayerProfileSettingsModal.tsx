@@ -399,6 +399,7 @@ export function PlayerProfileSettingsModal({
     } else {
       setWeaponProficiencies([]);
       setArmorProficiencies([]);
+      setCustomRaceName(null);
     }
   }, [
     open,
