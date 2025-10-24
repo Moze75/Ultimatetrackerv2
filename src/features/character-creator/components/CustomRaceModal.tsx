@@ -194,12 +194,13 @@ return (
               </div>
 
               <Input
-                label="Vitesse (pieds)"
+                label="Vitesse (mètres)"
                 type="number"
                 value={speed}
                 onChange={(e) => setSpeed(Number(e.target.value))}
                 min={0}
-                step={5}
+                step={1.5}
+                placeholder="Ex: 9"
               />
 
               <Input
@@ -215,176 +216,49 @@ return (
           </CardContent>
         </Card>
 
-        {/* Bonus de caractéristiques */}
+        {/* Traits raciaux */}
         <Card>
           <CardHeader>
-            <h4 className="text-white font-semibold">Bonus de caractéristiques</h4>
-            <p className="text-xs text-gray-400 mt-1">Laissez à 0 pour ne pas appliquer de bonus</p>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {abilities.map((ability) => (
-                <div key={ability}>
-                  <label className="block text-sm text-gray-300 mb-1">{ability}</label>
-                  <input
-                    type="number"
-                    value={abilityBonuses[ability] || 0}
-                    onChange={(e) => handleAbilityBonusChange(ability, Number(e.target.value))}
-                    className="input-dark w-full"
-                    min={0}
-                    max={3}
-                  />
-                </div>
-              ))}
+            <div className="flex items-center justify-between">
+              <h4 className="text-white font-semibold">Traits raciaux *</h4>
+              <Button onClick={handleAddTrait} variant="secondary" size="sm">
+                <Plus className="w-4 h-4 mr-1" />
+                Ajouter un trait
+              </Button>
             </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {traits.map((trait, index) => (
+              <div key={index} className="flex gap-2">
+                <textarea
+                  value={trait}
+                  onChange={(e) => handleTraitChange(index, e.target.value)}
+                  placeholder="Décrivez le trait racial..."
+                  className="input-dark w-full min-h-[60px] resize-y"
+                />
+                {traits.length > 1 && (
+                  <button
+                    onClick={() => handleRemoveTrait(index)}
+                    className="text-red-400 hover:text-red-300 p-2"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+            ))}
           </CardContent>
         </Card>
+      </div>
 
-          {/* Bonus de caractéristiques */}
-          <Card>
-            <CardHeader>
-              <h4 className="text-white font-semibold">Bonus de caractéristiques</h4>
-              <p className="text-xs text-gray-400 mt-1">Laissez à 0 pour ne pas appliquer de bonus</p>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {abilities.map((ability) => (
-                  <div key={ability}>
-                    <label className="block text-sm text-gray-300 mb-1">{ability}</label>
-                    <input
-                      type="number"
-                      value={abilityBonuses[ability] || 0}
-                      onChange={(e) => handleAbilityBonusChange(ability, Number(e.target.value))}
-                      className="input-dark w-full"
-                      min={0}
-                      max={3}
-                    />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Langues */}
-          <Card>
-            <CardHeader>
-              <h4 className="text-white font-semibold">Langues maîtrisées</h4>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex flex-wrap gap-2">
-                {languages.map((lang, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2 px-3 py-1 bg-blue-500/20 text-blue-200 rounded-full border border-blue-500/30"
-                  >
-                    <span className="text-sm">{lang}</span>
-                    {lang !== 'Commun' && (
-                      <button
-                        onClick={() => handleRemoveLanguage(index)}
-                        className="text-blue-300 hover:text-blue-100"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              
-              <div className="flex gap-2">
-                <Input
-                  value={newLanguage}
-                  onChange={(e) => setNewLanguage(e.target.value)}
-                  placeholder="Ajouter une langue..."
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddLanguage()}
-                />
-                <Button onClick={handleAddLanguage} variant="secondary" size="sm">
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Maîtrises */}
-          <Card>
-            <CardHeader>
-              <h4 className="text-white font-semibold">Maîtrises de compétences</h4>
-              <p className="text-xs text-gray-400 mt-1">Compétences, armes ou outils maîtrisés</p>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex flex-wrap gap-2">
-                {proficiencies.map((prof, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2 px-3 py-1 bg-green-500/20 text-green-200 rounded-full border border-green-500/30"
-                  >
-                    <span className="text-sm">{prof}</span>
-                    <button
-                      onClick={() => handleRemoveProficiency(index)}
-                      className="text-green-300 hover:text-green-100"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              
-              <div className="flex gap-2">
-                <Input
-                  value={newProficiency}
-                  onChange={(e) => setNewProficiency(e.target.value)}
-                  placeholder="Ex: Perception, Arc long..."
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddProficiency()}
-                />
-                <Button onClick={handleAddProficiency} variant="secondary" size="sm">
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Traits raciaux */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <h4 className="text-white font-semibold">Traits raciaux *</h4>
-                <Button onClick={handleAddTrait} variant="secondary" size="sm">
-                  <Plus className="w-4 h-4 mr-1" />
-                  Ajouter un trait
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {traits.map((trait, index) => (
-                <div key={index} className="flex gap-2">
-                  <textarea
-                    value={trait}
-                    onChange={(e) => handleTraitChange(index, e.target.value)}
-                    placeholder="Décrivez le trait racial..."
-                    className="input-dark w-full min-h-[60px] resize-y"
-                  />
-                  {traits.length > 1 && (
-                    <button
-                      onClick={() => handleRemoveTrait(index)}
-                      className="text-red-400 hover:text-red-300 p-2"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="flex items-center justify-between gap-3 p-4 border-t border-gray-800">
-          <Button variant="secondary" onClick={handleCancel}>
-            Annuler
-          </Button>
-          <Button onClick={handleSave} className="min-w-[200px]">
-            Créer l'espèce
-          </Button>
-        </div>
+      {/* Footer - FIXE */}
+      <div className="flex items-center justify-between gap-3 p-4 border-t border-gray-800 flex-shrink-0">
+        <Button variant="secondary" onClick={handleCancel}>
+          Annuler
+        </Button>
+        <Button onClick={handleSave} className="min-w-[200px]">
+          Créer l'espèce
+        </Button>
       </div>
     </div>
-  );
-}
+  </div>
+);
