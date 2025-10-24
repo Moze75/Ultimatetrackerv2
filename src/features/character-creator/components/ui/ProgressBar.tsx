@@ -37,30 +37,31 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
     };
   }, []);
 
-  // ✅ Autoplay dès le montage du wizard (ouverture du creator)
-  useEffect(() => {
-    if (hasTriedAutoStartRef.current) return;
+// ✅ Autoplay dès le montage du wizard (ouverture du creator)
+useEffect(() => {
+  if (hasTriedAutoStartRef.current) return;
 
-    hasTriedAutoStartRef.current = true;
+  hasTriedAutoStartRef.current = true;
+  
+  // ✅ Ajouter un petit délai pour s'assurer que le modal est bien visible
+  const autoplayTimer = setTimeout(async () => {
+    if (!isMountedRef.current) return;
+
+    console.log('[ProgressBar] 🎬 Tentative de démarrage automatique de la musique au lancement du wizard');
     
-    // ✅ Ajouter un petit délai pour s'assurer que le modal est bien visible
-    const autoplayTimer = setTimeout(async () => {
-      if (!isMountedRef.current) return;
+    const success = await startWizardMusic();
+    
+    if (isMountedRef.current) {
+      setIsPlaying(success);
+      setAutoPlayBlocked(!success);
+      console.log('[ProgressBar] Résultat autoplay:', success ? 'succès' : 'bloqué');
+    }
+  }, 300);
 
-      console.log('[ProgressBar] 🎬 Tentative de démarrage automatique de la musique au lancement du wizard');
-      
-      const success = await startWizardMusic();
-      
-      if (isMountedRef.current) {
-        setIsPlaying(success);
-        setAutoPlayBlocked(!success);
-      }
-    }, 300);
-
-    return () => {
-      clearTimeout(autoplayTimer);
-    };
-  }, []);
+  return () => {
+    clearTimeout(autoplayTimer);
+  };
+}, []); // ⚠️ IMPORTANT : Dépendances vides pour s'exécuter UNE SEULE FOIS
 
   // ✅ Synchroniser l'état local avec l'état global à chaque changement d'étape
   useEffect(() => {
