@@ -124,6 +124,6 @@ export interface CharacterExportPayload {
   // ✅ AJOUT : Sorts sélectionnés
   selectedCantrips?: SpellData[];      // Sorts mineurs (tours de magie)
   selectedLevel1Spells?: SpellData[];  // Sorts de niveau 1
-}
+
     customRaceData?: DndRace; // ✅ AJOUTER cette ligne à la fin
 }
