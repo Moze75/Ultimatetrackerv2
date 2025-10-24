@@ -1043,24 +1043,33 @@ export function PlayerProfileSettingsModal({
           
           {/* Classe et Espèce */}
           <CollapsibleCard title="Classe et Espèce" defaultCollapsed>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Espèce</label>
-                <select
-                  value={selectedRace}
-                  onChange={(e) => {
-                    setSelectedRace(e.target.value);
-                    setDirty(true);
-                  }}
-                  className="input-dark w-full px-3 py-2 rounded-md"
-                >
-                  {DND_RACES.map((race) => (
-                    <option key={race} value={race}>
-                      {race || 'Sélectionnez une espèce'}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div>
+  <label className="block text-sm font-medium text-gray-300 mb-2">Espèce</label>
+  <select
+    value={selectedRace}
+    onChange={(e) => {
+      setSelectedRace(e.target.value);
+      setDirty(true);
+    }}
+    className="input-dark w-full px-3 py-2 rounded-md"
+  >
+    {/* ✅ NOUVEAU : Afficher la race personnalisée en premier si elle existe */}
+    {customRaceName && (
+      <optgroup label="Espèce personnalisée">
+        <option value={customRaceName}>{customRaceName} (personnalisée)</option>
+      </optgroup>
+    )}
+    
+    <optgroup label="Espèces standards">
+      {DND_RACES.map((race) => (
+        <option key={race} value={race}>
+          {race || 'Sélectionnez une espèce'}
+        </option>
+      ))}
+    </optgroup>
+  </select>
+</div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Classe</label>
