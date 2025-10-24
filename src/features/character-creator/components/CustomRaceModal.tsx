@@ -130,88 +130,115 @@ export default function CustomRaceModal({ open, onClose, onSave }: CustomRaceMod
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl max-h-[90vh] overflow-hidden bg-gray-900 border border-gray-800 rounded-xl shadow-xl">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
-          <div className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-purple-400" />
-            <h3 className="text-lg font-semibold text-white">Créer une espèce personnalisée</h3>
-          </div>
-          <button
-            onClick={handleCancel}
-            className="text-gray-400 hover:text-gray-200 px-2 py-1 rounded hover:bg-gray-800"
-            aria-label="Fermer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+return (
+  <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="w-full max-w-4xl max-h-[85vh] overflow-hidden bg-gray-900 border border-gray-800 rounded-xl shadow-xl flex flex-col">
+      {/* Header - FIXE */}
+      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <Users className="w-5 h-5 text-purple-400" />
+          <h3 className="text-lg font-semibold text-white">Créer une espèce personnalisée</h3>
         </div>
+        <button
+          onClick={handleCancel}
+          className="text-gray-400 hover:text-gray-200 px-2 py-1 rounded hover:bg-gray-800"
+          aria-label="Fermer"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
 
-        <div className="p-5 overflow-y-auto max-h-[calc(90vh-120px)] space-y-6">
-          {/* Informations de base */}
-          <Card>
-            <CardHeader>
-              <h4 className="text-white font-semibold">Informations de base</h4>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Input
-                label="Nom de l'espèce *"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ex: Elfe des étoiles"
+      {/* Contenu - SCROLLABLE */}
+      <div className="p-5 overflow-y-auto flex-1 space-y-6">
+        {/* Informations de base */}
+        <Card>
+          <CardHeader>
+            <h4 className="text-white font-semibold">Informations de base</h4>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Input
+              label="Nom de l'espèce *"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ex: Elfe des étoiles"
+            />
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Description
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Courte description de votre espèce..."
+                className="input-dark w-full min-h-[80px] resize-y"
               />
-              
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Description
+                  Taille
                 </label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Courte description de votre espèce..."
-                  className="input-dark w-full min-h-[80px] resize-y"
-                />
+                <select
+                  value={size}
+                  onChange={(e) => setSize(e.target.value)}
+                  className="input-dark w-full"
+                >
+                  <option value="Très petit">Très petit (TP)</option>
+                  <option value="Petit">Petit (P)</option>
+                  <option value="Moyen">Moyen (M)</option>
+                  <option value="Grand">Grand (G)</option>
+                  <option value="Moyen ou Petit">Moyen ou Petit</option>
+                </select>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
-                    Taille
-                  </label>
-                  <select
-                    value={size}
-                    onChange={(e) => setSize(e.target.value)}
+              <Input
+                label="Vitesse (pieds)"
+                type="number"
+                value={speed}
+                onChange={(e) => setSpeed(Number(e.target.value))}
+                min={0}
+                step={5}
+              />
+
+              <Input
+                label="Vision dans le noir (m)"
+                type="number"
+                value={darkvision}
+                onChange={(e) => setDarkvision(Number(e.target.value))}
+                min={0}
+                step={9}
+                placeholder="0 = pas de vision"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Bonus de caractéristiques */}
+        <Card>
+          <CardHeader>
+            <h4 className="text-white font-semibold">Bonus de caractéristiques</h4>
+            <p className="text-xs text-gray-400 mt-1">Laissez à 0 pour ne pas appliquer de bonus</p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {abilities.map((ability) => (
+                <div key={ability}>
+                  <label className="block text-sm text-gray-300 mb-1">{ability}</label>
+                  <input
+                    type="number"
+                    value={abilityBonuses[ability] || 0}
+                    onChange={(e) => handleAbilityBonusChange(ability, Number(e.target.value))}
                     className="input-dark w-full"
-                  >
-                    <option value="Très petit">Très petit (TP)</option>
-                    <option value="Petit">Petit (P)</option>
-                    <option value="Moyen">Moyen (M)</option>
-                    <option value="Grand">Grand (G)</option>
-                    <option value="Moyen ou Petit">Moyen ou Petit</option>
-                  </select>
+                    min={0}
+                    max={3}
+                  />
                 </div>
-
-                <Input
-                  label="Vitesse (pieds)"
-                  type="number"
-                  value={speed}
-                  onChange={(e) => setSpeed(Number(e.target.value))}
-                  min={0}
-                  step={5}
-                />
-
-                <Input
-                  label="Vision dans le noir (m)"
-                  type="number"
-                  value={darkvision}
-                  onChange={(e) => setDarkvision(Number(e.target.value))}
-                  min={0}
-                  step={9}
-                  placeholder="0 = pas de vision"
-                />
-              </div>
-            </CardContent>
-          </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
           {/* Bonus de caractéristiques */}
           <Card>
