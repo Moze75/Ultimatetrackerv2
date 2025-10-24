@@ -523,6 +523,7 @@ useEffect(() => {
       setCurrentStep(0);
       setCharacterName('');
       setSelectedRace('');
+      setCustomRaceData(null); // ← NOUVEAU : réinitialiser la race personnalisée
       setSelectedClass('');
       setSelectedBackground('');
       setBackgroundEquipmentOption('');
