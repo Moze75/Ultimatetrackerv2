@@ -701,15 +701,7 @@ useEffect(() => {
   onClose={() => {
     console.log('[CharacterSelection] 🚪 Fermeture du wizard');
 
-// ✅ Arrêter et détruire la musique
-  import('../features/character-creator/components/ui/musicControl').then(({ stopWizardMusic }) => {
-    stopWizardMusic();
-  });
-  
-  setShowCreator(false);
-  appContextService.clearWizardSnapshot();
-  appContextService.setContext('selection');
-}}
+ 
     
     // ✅ Arrêter la musique de façon synchrone
     try {
