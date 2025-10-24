@@ -43,15 +43,21 @@ const allRaces = customRaceData
   // ✅ NOUVEAU: Gérer la sauvegarde de la race personnalisée
 // ✅ Dans RaceSelection.tsx
 const handleSaveCustomRace = (race: DndRace) => {
-  console.log('[RaceSelection] Race reçue:', race); // ✅ DEBUG
+  console.log('[RaceSelection] Race reçue:', race);
   
+  // ✅ 1. Sauvegarder la race personnalisée AVANT de la sélectionner
   if (onCustomRaceDataChange) {
-    onCustomRaceDataChange(race); // Sauvegarder la race personnalisée
+    onCustomRaceDataChange(race);
   }
-  onRaceSelect(race.name); // Sélectionner la race
-  setShowCustomModal(false); // Fermer le modal
   
-  console.log('[RaceSelection] Race sélectionnée:', race.name); // ✅ DEBUG
+  // ✅ 2. Petit délai pour s'assurer que le state est mis à jour
+  setTimeout(() => {
+    onRaceSelect(race.name); // Sélectionner la race
+    console.log('[RaceSelection] Race sélectionnée:', race.name);
+  }, 0);
+  
+  // ✅ 3. Fermer le modal
+  setShowCustomModal(false);
 };
 
   const getRaceIcon = (raceName: string) => {
