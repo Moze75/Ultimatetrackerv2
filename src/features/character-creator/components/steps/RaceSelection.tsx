@@ -107,6 +107,15 @@ const handleSaveCustomRace = (race: DndRace) => {
     return traits.some(trait => trait.includes('Vision dans le noir'));
   };
 
+// Au début du composant RaceSelection, après les imports
+const RACE_IMAGE_MAPPING: Record<string, string> = {
+  'Haut-Elfe': 'Haut-elfe.png',
+  'Elfe sylvestre': 'Elfe-Sylvestre.png',
+  'Drow': 'Drow.png',
+  // Ajoutez ici les autres races si nécessaire
+};
+
+  
   // Image de race (public/Races/...) avec fallback de noms
   function RaceImage({ raceName }: { raceName: string }) {
     const toASCII = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
