@@ -234,12 +234,18 @@ useEffect(() => {
   };
 
   // Finalisation
-  const handleFinish = async () => {
-    try {
-       stopWizardMusic();
+ const handleFinish = async () => {
+  try {
+    stopWizardMusic();
 
-      const raceData = races.find((r) => r.name === selectedRace);
-      const classData = classes.find((c) => c.name === selectedClass);
+    // ✅ Utiliser customRaceData si la race sélectionnée est personnalisée
+    const raceData = customRaceData && customRaceData.name === selectedRace
+      ? customRaceData
+      : races.find((r) => r.name === selectedRace);
+
+    const classData = classes.find((c) => c.name === selectedClass);
+
+  
 
       // Abilities finales
       const finalAbilities = { ...effectiveAbilities };
