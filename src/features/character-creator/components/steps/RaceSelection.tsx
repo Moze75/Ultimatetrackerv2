@@ -64,29 +64,6 @@ export default function RaceSelection({ selectedRace, onRaceSelect, onNext }: Ra
 
   // Image de race (public/Races/...) avec fallback de noms
   function RaceImage({ raceName }: { raceName: string }) {
-    // ✅ Mapping explicite pour les races avec images spécifiques
-    const RACE_IMAGE_MAPPING: Record<string, string> = {
-      'Haut-Elfe': 'Haut-elfe.png',
-      'Elfe sylvestre': 'Elfe-Sylvestre.png',
-      'Drow': 'Drow.png',
-    };
-
-    const base = '/Races/';
-    
-    // ✅ Vérifier d'abord le mapping
-    const mappedImage = RACE_IMAGE_MAPPING[raceName];
-    if (mappedImage) {
-      return (
-        <img
-          src={base + mappedImage}
-          alt={raceName}
-          className="w-full h-auto object-contain rounded-md shadow-sm"
-          loading="lazy"
-        />
-      );
-    }
-
-    // Sinon, utiliser la logique de fallback comme avant
     const toASCII = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const slug = (s: string) =>
       toASCII(s)
@@ -95,6 +72,7 @@ export default function RaceSelection({ selectedRace, onRaceSelect, onNext }: Ra
         .replace(/^-+|-+$/g, '');
     const ascii = toASCII(raceName);
     const noSpaces = ascii.replace(/\s+/g, '');
+    const base = '/Races/';
 
     const candidates = [
       `${raceName}.png`,
@@ -250,7 +228,7 @@ export default function RaceSelection({ selectedRace, onRaceSelect, onNext }: Ra
         >
           Continuer
         </Button>
-      </div>
+      </div> 
     </div>
   );
 }
