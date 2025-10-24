@@ -322,49 +322,50 @@ useEffect(() => {
           setLoadingEquipment(false);
         }
 
-        const payload: CharacterExportPayload = {
-          characterName: characterName.trim() || 'Héros sans nom',
-          selectedRace: selectedRace || '',
-          selectedClass: (selectedClass as string) || '',
-          selectedBackground: selectedBackground || '',
-          level: 1,
-          finalAbilities,
-          proficientSkills,
-          equipment,
-          selectedBackgroundEquipmentOption: backgroundEquipmentOption || '',
-          selectedEquipmentOption: selectedEquipmentOption || '',
-          hitPoints,
-          armorClass,
-          initiative,
-          speed: speedFeet,
-          backgroundFeat,
-          gold: gold > 0 ? gold : undefined,
-          weaponProficiencies: classData?.weaponProficiencies || [],
-          equipmentDetails,
-          armorProficiencies: classData?.armorProficiencies || [],
-          toolProficiencies: classData?.toolProficiencies || [],
-          racialTraits: raceData?.traits || [],
-          classFeatures: classData?.features || [],
-          backgroundFeature: selectedBackgroundObj?.feature || '',
-          savingThrows: classData?.savingThrows || [],
-          languages: allLanguages,
-          hitDice: {
-            die: (selectedClass === 'Magicien' || selectedClass === 'Ensorceleur') ? 'd6'
-               : (selectedClass === 'Barde' || selectedClass === 'Clerc' || selectedClass === 'Druide' || selectedClass === 'Moine' || selectedClass === 'Rôdeur' || selectedClass === 'Roublard' || selectedClass === 'Occultiste') ? 'd8'
-               : (selectedClass === 'Guerrier' || selectedClass === 'Paladin') ? 'd10'
-               : 'd12',
-            total: 1,
-            used: 0,
-          },
-          avatarImageUrl,
-          selectedCantrips,
-          selectedLevel1Spells,
-          selectedAlignment: selectedAlignment || undefined,
-          selectedLanguages: allLanguages,
-          age: age.trim() || undefined,
-          gender: gender.trim() || undefined,
-          characterHistory: characterHistory.trim() || undefined,
-        };
+const payload: CharacterExportPayload = {
+  characterName: characterName.trim() || 'Héros sans nom',
+  selectedRace: selectedRace || '',
+  selectedClass: (selectedClass as string) || '',
+  selectedBackground: selectedBackground || '',
+  level: 1,
+  finalAbilities,
+  proficientSkills,
+  equipment,
+  selectedBackgroundEquipmentOption: backgroundEquipmentOption || '',
+  selectedEquipmentOption: selectedEquipmentOption || '',
+  hitPoints,
+  armorClass,
+  initiative,
+  speed: speedFeet,
+  backgroundFeat,
+  gold: gold > 0 ? gold : undefined,
+  weaponProficiencies: classData?.weaponProficiencies || [],
+  equipmentDetails,
+  armorProficiencies: classData?.armorProficiencies || [],
+  toolProficiencies: classData?.toolProficiencies || [],
+  racialTraits: raceData?.traits || [],
+  classFeatures: classData?.features || [],
+  backgroundFeature: selectedBackgroundObj?.feature || '',
+  savingThrows: classData?.savingThrows || [],
+  languages: allLanguages,
+  hitDice: {
+    die: (selectedClass === 'Magicien' || selectedClass === 'Ensorceleur') ? 'd6'
+       : (selectedClass === 'Barde' || selectedClass === 'Clerc' || selectedClass === 'Druide' || selectedClass === 'Moine' || selectedClass === 'Rôdeur' || selectedClass === 'Roublard' || selectedClass === 'Occultiste') ? 'd8'
+       : (selectedClass === 'Guerrier' || selectedClass === 'Paladin') ? 'd10'
+       : 'd12',
+    total: 1,
+    used: 0,
+  },
+  avatarImageUrl,
+  selectedCantrips,
+  selectedLevel1Spells,
+  selectedAlignment: selectedAlignment || undefined,
+  selectedLanguages: allLanguages,
+  age: age.trim() || undefined,
+  gender: gender.trim() || undefined,
+  characterHistory: characterHistory.trim() || undefined,
+  customRaceData: customRaceData || undefined, // ✅ AJOUTER CETTE LIGNE
+};
 
         // ✅ Nettoyer le snapshot et marquer le contexte "game"
         appContextService.clearWizardSnapshot();
