@@ -140,8 +140,9 @@ export default function CharacterCreationWizard({ onFinish, onCancel, initialSna
   const [currentStep, setCurrentStep] = useState(initialSnapshot?.currentStep ?? 0);
   const [loadingEquipment, setLoadingEquipment] = useState(false);
   const [characterName, setCharacterName] = useState(initialSnapshot?.characterName ?? '');
-  const [selectedRace, setSelectedRace] = useState(initialSnapshot?.selectedRace ?? '');
-  const [selectedClass, setSelectedClass] = useState<DndClass | ''>(initialSnapshot?.selectedClass ?? '');
+  const [selectedRace, setSelectedRace] = useState('');
+const [customRaceData, setCustomRaceData] = useState<DndRace | null>(null); // ← NOUVEAU
+const [selectedClass, setSelectedClass] = useState<DndClass | ''>('');
   const [selectedBackground, setSelectedBackground] = useState(initialSnapshot?.selectedBackground ?? '');
   const [backgroundEquipmentOption, setBackgroundEquipmentOption] = useState<'A' | 'B' | ''>(initialSnapshot?.backgroundEquipmentOption ?? '');
   const [selectedClassSkills, setSelectedClassSkills] = useState<string[]>(initialSnapshot?.selectedClassSkills ?? []);
