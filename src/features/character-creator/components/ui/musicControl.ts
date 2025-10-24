@@ -15,14 +15,17 @@ export function initWizardMusic() {
   return globalAudio;
 }
 
-// ✅ Fonction pour arrêter la musique
+// ✅ Fonction pour arrêter ET DÉTRUIRE la musique
 export function stopWizardMusic() {
   if (globalAudio) {
     try {
       globalAudio.pause();
       globalAudio.currentTime = 0;
+      globalAudio.src = ''; // ✅ VIDER LA SOURCE
+      globalAudio.load(); // ✅ FORCER LE RECHARGEMENT
+      globalAudio = null; // ✅ DÉTRUIRE LA RÉFÉRENCE
       globalIsPlaying = false;
-      console.log('[MusicControl] 🔇 Musique arrêtée');
+      console.log('[MusicControl] 🔇 Musique arrêtée et détruite');
     } catch (e) {
       console.warn('[MusicControl] ⚠️ Erreur lors de l\'arrêt de la musique:', e);
     }
@@ -38,6 +41,12 @@ export async function startWizardMusic(): Promise<boolean> {
   }
   
   if (!globalAudio) return false;
+
+  // ✅ Ne pas démarrer si déjà en lecture
+  if (globalIsPlaying) {
+    console.log('[MusicControl] ℹ️ Musique déjà en lecture');
+    return true;
+  }
 
   try {
     await globalAudio.play();
@@ -62,7 +71,10 @@ export function pauseWizardMusic() {
 
 // ✅ Fonction pour reprendre
 export async function resumeWizardMusic(): Promise<boolean> {
-  if (!globalAudio) return false;
+  if (!globalAudio) {
+    // Réinitialiser si l'audio a été détruit
+    return await startWizardMusic();
+  }
 
   try {
     await globalAudio.play();
@@ -77,7 +89,7 @@ export async function resumeWizardMusic(): Promise<boolean> {
 
 // ✅ Getter pour savoir si la musique est en lecture
 export function isWizardMusicPlaying(): boolean {
-  return globalIsPlaying;
+  return globalIsPlaying && globalAudio !== null;
 }
 
 // ✅ Getter pour l'instance audio (si besoin)
