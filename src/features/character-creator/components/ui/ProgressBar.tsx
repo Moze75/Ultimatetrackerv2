@@ -13,11 +13,17 @@ let globalIsPlaying = false;
 
 // ✅ AJOUTER : Fonction globale pour arrêter la musique
 export function stopWizardMusic() {
-  if (globalAudio && globalIsPlaying) {
-    globalAudio.pause();
-    globalAudio.currentTime = 0; // Remettre au début
-    globalIsPlaying = false;
-    console.log('[ProgressBar] Musique arrêtée');
+  if (globalAudio) {
+    try {
+      globalAudio.pause();
+      globalAudio.currentTime = 0; // Remettre au début
+      globalIsPlaying = false;
+      console.log('[ProgressBar] 🔇 Musique arrêtée');
+    } catch (e) {
+      console.warn('[ProgressBar] ⚠️ Erreur lors de l\'arrêt de la musique:', e);
+    }
+  } else {
+    console.log('[ProgressBar] ℹ️ Aucune musique à arrêter');
   }
 }
 
