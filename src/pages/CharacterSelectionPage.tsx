@@ -146,24 +146,25 @@ useEffect(() => {
   console.log('[CharacterSelection] 🚀 Initialisation...');
   hasInitializedRef.current = true;
 
-  // ✅ Vérifier le snapshot wizard UNIQUEMENT si le contexte est "wizard"
+  // ✅ Vérifier le snapshot wizard mais NE PAS le rouvrir automatiquement
   const context = appContextService.getContext();
   const wizardSnapshot = appContextService.getWizardSnapshot();
   
-  if (context === 'wizard' && wizardSnapshot) {
-    console.log('[CharacterSelection] 📋 Snapshot wizard détecté avec contexte wizard:', wizardSnapshot);
-    setShowCreator(true);
-  } else if (wizardSnapshot && context !== 'wizard') {
-    console.log('[CharacterSelection] 🗑️ Snapshot orphelin détecté (contexte:', context, '), nettoyage');
-    appContextService.clearWizardSnapshot();
+  if (wizardSnapshot) {
+    if (context === 'wizard') {
+      console.log('[CharacterSelection] 📋 Snapshot wizard détecté avec contexte wizard, mais pas de réouverture auto');
+      // ❌ NE PLUS FAIRE : setShowCreator(true);
+      // L'utilisateur devra cliquer sur "Nouveau Personnage" pour reprendre
+    } else {
+      console.log('[CharacterSelection] 🗑️ Snapshot orphelin détecté (contexte:', context, '), nettoyage');
+      appContextService.clearWizardSnapshot();
+    }
   } else {
-    console.log('[CharacterSelection] ℹ️ Pas de snapshot ou contexte différent');
+    console.log('[CharacterSelection] ℹ️ Pas de snapshot détecté');
   }
 
   // S'assurer que le contexte est "selection" si on est sur cette page
-  if (context !== 'wizard') {
-    appContextService.setContext('selection');
-  }
+  appContextService.setContext('selection');
 
   // Charger les personnages et l'abonnement
   fetchPlayers();
