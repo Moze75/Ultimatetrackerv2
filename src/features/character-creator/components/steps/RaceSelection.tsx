@@ -243,6 +243,29 @@ export default function RaceSelection({
         })} 
 
         
+        {/* ✅ NOUVEAU: Carte pour créer une race personnalisée */}
+        <Card 
+          className="h-full border-2 border-dashed border-purple-500/50 hover:border-purple-400/70 transition-colors cursor-pointer"
+          onClick={() => setShowCustomModal(true)}
+        >
+          <CardHeader>
+            <div className="flex items-center justify-center">
+              <Settings className="w-6 h-6 text-purple-400 mr-2" />
+              <h3 className="text-lg font-semibold text-purple-300">Espèce personnalisée</h3>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8">
+              <p className="text-gray-400 text-sm mb-4">
+                Créez votre propre espèce avec des traits uniques
+              </p>
+              <Button variant="secondary" size="sm" onClick={() => setShowCustomModal(true)}>
+                <Settings className="w-4 h-4 mr-2" />
+                Configurer
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="flex justify-center pt-6">
@@ -255,6 +278,13 @@ export default function RaceSelection({
           Continuer
         </Button>
       </div>
+
+      {/* ✅ NOUVEAU: Modal de configuration */}
+      <CustomRaceModal
+        open={showCustomModal}
+        onClose={() => setShowCustomModal(false)}
+        onSave={handleSaveCustomRace}
+      />
     </div>
   );
 }
