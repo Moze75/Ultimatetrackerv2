@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   initWizardMusic, 
   startWizardMusic, 
@@ -14,90 +14,58 @@ interface ProgressBarProps {
 }
 
 export default function ProgressBar({ currentStep, totalSteps, steps }: ProgressBarProps) {
-  console.log('[ProgressBar] 🎨 RENDER - currentStep:', currentStep); // ← LOG CRITIQUE
+  console.log('[ProgressBar] 🎨 RENDER - currentStep:', currentStep);
   
   const total = Math.max(1, steps.length - 1);
   const percent = Math.max(0, Math.min(100, (currentStep / total) * 100));
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [autoPlayBlocked, setAutoPlayBlocked] = useState(false);
-  const hasTriedAutoStartRef = useRef(false);
-  const isMountedRef = useRef(true);
+  const [hasTriedAutoStart, setHasTriedAutoStart] = useState(false); // ✅ ÉTAT au lieu de REF
 
-  console.log('[ProgressBar] 📊 État - isPlaying:', isPlaying, 'hasTriedAutoStart:', hasTriedAutoStartRef.current); // ← LOG CRITIQUE
+  console.log('[ProgressBar] 📊 État - isPlaying:', isPlaying, 'hasTriedAutoStart:', hasTriedAutoStart);
 
-  // ✅ Initialiser l'audio global une seule fois
+  // ✅ Initialiser l'audio global + Autoplay en un seul useEffect
   useEffect(() => {
-    console.log('[ProgressBar] 🚀 USEEFFECT 1 - Initialisation'); // ← LOG CRITIQUE
-    initWizardMusic();
+    console.log('[ProgressBar] 🚀 USEEFFECT - Initialisation + Autoplay');
     
-    // ✅ Au montage, synchroniser l'état avec l'audio global
+    // Initialiser l'audio
+    initWizardMusic();
     setIsPlaying(isWizardMusicPlaying());
     console.log('[ProgressBar] 🎵 État initial de la musique:', isWizardMusicPlaying() ? 'en lecture' : 'arrêtée');
 
-    // ✅ Cleanup au démontage du composant
-    return () => {
-      isMountedRef.current = false;
-      console.log('[ProgressBar] 📤 Composant démonté');
-    };
-  }, []);
+    // ✅ Autoplay uniquement si pas encore tenté
+    if (!hasTriedAutoStart) {
+      console.log('[ProgressBar] ✅ Lancement autoplay');
+      setHasTriedAutoStart(true);
 
-  // ✅ Autoplay dès le montage du wizard (ouverture du creator)
-  useEffect(() => {
-    console.log('[ProgressBar] 🚀 USEEFFECT 2 - Autoplay, hasTriedAutoStart:', hasTriedAutoStartRef.current); // ← LOG CRITIQUE
-    
-    if (hasTriedAutoStartRef.current) {
-      console.log('[ProgressBar] ⚠️ Autoplay déjà tenté, skip');
-      return;
-    }
-
-    console.log('[ProgressBar] ✅ Autoplay va être tenté'); // ← LOG CRITIQUE
-    hasTriedAutoStartRef.current = true;
-    
-    // ✅ Ajouter un petit délai pour s'assurer que le modal est bien visible
-    const autoplayTimer = setTimeout(async () => {
-      console.log('[ProgressBar] ⏰ Timeout déclenché, isMounted:', isMountedRef.current); // ← LOG CRITIQUE
-      
-      if (!isMountedRef.current) {
-        console.log('[ProgressBar] ❌ Composant démonté, annulation autoplay');
-        return;
-      }
-
-      console.log('[ProgressBar] 🎬 Tentative de démarrage automatique de la musique au lancement du wizard');
-      
-      const success = await startWizardMusic();
-      
-      console.log('[ProgressBar] 📢 Résultat startWizardMusic:', success); // ← LOG CRITIQUE
-      
-      if (isMountedRef.current) {
+      const autoplayTimer = setTimeout(async () => {
+        console.log('[ProgressBar] ⏰ Timeout déclenché, tentative démarrage musique');
+        
+        const success = await startWizardMusic();
+        console.log('[ProgressBar] 📢 Résultat startWizardMusic:', success);
+        
         setIsPlaying(success);
         setAutoPlayBlocked(!success);
         console.log('[ProgressBar] Résultat autoplay:', success ? 'succès ✅' : 'bloqué ⚠️');
-      }
-    }, 300);
+      }, 500); // ✅ Augmenté à 500ms pour plus de sécurité
 
-    // ✅ IMPORTANT : Réinitialiser le flag au démontage pour permettre l'autoplay à la prochaine ouverture
-    return () => {
-      console.log('[ProgressBar] 🧹 Cleanup autoplay useEffect'); // ← LOG CRITIQUE
-      clearTimeout(autoplayTimer);
-      hasTriedAutoStartRef.current = false;
-      console.log('[ProgressBar] 🔄 Flag autoplay réinitialisé pour la prochaine ouverture');
-    };
-  }, []);
-
-  // ✅ Synchroniser l'état local avec l'état global à chaque changement d'étape
-  useEffect(() => {
-    console.log('[ProgressBar] 🚀 USEEFFECT 3 - Sync step', currentStep); // ← LOG CRITIQUE
-    
-    if (isMountedRef.current) {
-      const playing = isWizardMusicPlaying();
-      setIsPlaying(playing);
-      console.log('[ProgressBar] 🔄 Synchronisation état musique (step', currentStep, '):', playing);
+      return () => {
+        console.log('[ProgressBar] 🧹 Cleanup - annulation timeout');
+        clearTimeout(autoplayTimer);
+      };
     }
+  }, [hasTriedAutoStart]); // ✅ Dépendance sur l'état
+
+  // ✅ Synchroniser l'état avec la musique à chaque changement d'étape
+  useEffect(() => {
+    console.log('[ProgressBar] 🔄 Sync step', currentStep);
+    const playing = isWizardMusicPlaying();
+    setIsPlaying(playing);
   }, [currentStep]);
 
   const togglePlayback = async () => {
-    console.log('[ProgressBar] 🎵 Toggle playback, isPlaying:', isPlaying); // ← LOG CRITIQUE
+    console.log('[ProgressBar] 🎵 Toggle playback, isPlaying:', isPlaying);
     
     if (isPlaying) {
       pauseWizardMusic();
