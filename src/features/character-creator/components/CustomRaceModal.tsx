@@ -36,40 +36,46 @@ export default function CustomRaceModal({ open, onClose, onSave }: CustomRaceMod
     setTraits(newTraits);
   };
 
-  const handleSave = () => {
-    if (!name.trim()) {
-      alert('Le nom de la race est requis');
-      return;
-    }
+const handleSave = () => {
+  if (!name.trim()) {
+    alert('Le nom de la race est requis');
+    return;
+  }
 
-    const validTraits = traits.filter(t => t.trim() !== '');
-    if (validTraits.length === 0) {
-      alert('Au moins un trait racial est requis');
-      return;
-    }
+  const validTraits = traits.filter(t => t.trim() !== '');
+  if (validTraits.length === 0) {
+    alert('Au moins un trait racial est requis');
+    return;
+  }
 
-    let visionTrait = '';
-    if (darkvision > 0) {
-      visionTrait = `Vision dans le noir (${darkvision} m)`;
-    }
+  // Construction de la description vision
+  let visionTrait = '';
+  if (darkvision > 0) {
+    visionTrait = `Vision dans le noir (${darkvision} m)`;
+  }
 
-    const finalTraits = visionTrait ? [visionTrait, ...validTraits] : validTraits;
-    const speedInFeet = Math.round(speed / 0.3048);
+  const finalTraits = visionTrait ? [visionTrait, ...validTraits] : validTraits;
 
-    const customRace: DndRace = {
-      name: name.trim(),
-      description: description.trim() || 'Race personnalisée',
-      abilityScoreIncrease: {},
-      size,
-      speed: speedInFeet,
-      languages: ['Commun', 'Au choix'],
-      proficiencies: [],
-      traits: finalTraits,
-    };
+  // Convertir mètres en pieds pour la compatibilité avec le système
+  const speedInFeet = Math.round(speed / 0.3048);
 
-    onSave(customRace);
-    handleReset();
+  const customRace: DndRace = {
+    name: name.trim(),
+    description: description.trim() || 'Race personnalisée',
+    abilityScoreIncrease: {}, // Pas de bonus en 2024
+    size,
+    speed: speedInFeet, // Stocké en pieds pour compatibilité
+    languages: ['Commun', 'Au choix'], // Langues par défaut
+    proficiencies: [],
+    traits: finalTraits,
   };
+
+  console.log('[CustomRaceModal] Race créée:', customRace); // ✅ DEBUG
+  
+  onSave(customRace); // ✅ Appeler le callback
+  handleReset(); // ✅ Réinitialiser le formulaire
+  onClose(); // ✅ IMPORTANT: Fermer le modal après sauvegarde
+};
 
   const handleReset = () => {
     setName('');
