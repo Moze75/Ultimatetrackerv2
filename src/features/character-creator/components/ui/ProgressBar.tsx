@@ -43,14 +43,9 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
     };
 
     const timer = setTimeout(attemptAutoplay, 300);
-  // ✅ CLEANUP : Arrêter et détruire la musique au démontage du ProgressBar
-  return () => {
-    clearTimeout(timer);
-    console.log('[ProgressBar] 🧹 Démontage - Arrêt de la musique');
-    stopWizardMusic();
-  };
-}, []);
-  
+    return () => clearTimeout(timer);
+  }, []);
+
   // ✅ Synchroniser l'état avec la musique à chaque changement d'étape
   useEffect(() => {
     const playing = isWizardMusicPlaying();
