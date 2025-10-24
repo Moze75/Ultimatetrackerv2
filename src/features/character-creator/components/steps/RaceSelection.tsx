@@ -275,14 +275,14 @@ const handleSaveCustomRace = (race: DndRace) => {
       </div>
 
       <div className="flex justify-center pt-6">
-        <Button
-          onClick={onNext}
-          disabled={!selectedRace}
-          size="lg"
-          className="min-w-[200px]"
-        >
-          Continuer
-        </Button>
+<Button
+  onClick={onNext}
+  disabled={!selectedRace} // ✅ Le bouton doit être activé si selectedRace est défini
+  size="lg"
+  className="min-w-[200px]"
+>
+  Continuer
+</Button>
       </div>
 
       {/* ✅ NOUVEAU: Modal de configuration */}
