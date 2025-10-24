@@ -11,7 +11,7 @@ import ProfileSelection from './steps/ProfileSelection';
 import AbilityScores from './steps/AbilityScores';
 import CharacterSummary from './steps/CharacterSummary';
 
-import { DndClass } from '../types/character';
+import { DndClass, DndRace } from '../types/character';
 import type { CharacterExportPayload } from '../types/CharacterExport'; 
 import { supabase } from '../../../lib/supabase';
 import { calculateArmorClass, calculateHitPoints, calculateModifier } from '../utils/dndCalculations';
@@ -21,7 +21,7 @@ import { classes } from '../data/classes';
 import { backgrounds } from '../data/backgrounds';
 import { enrichEquipmentList, determineAutoEquip } from '../../../services/equipmentLookupService';
 import { appContextService } from '../../../services/appContextService'; // ✅ IMPORT
-import { DndClass, DndRace } from '../types/character';
+
 
 /* ===========================================================
    Utilitaires
