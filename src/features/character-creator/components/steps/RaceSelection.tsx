@@ -72,6 +72,14 @@ export default function RaceSelection({ selectedRace, onRaceSelect, onNext }: Ra
         .replace(/^-+|-+$/g, '');
     const ascii = toASCII(raceName);
     const noSpaces = ascii.replace(/\s+/g, '');
+    // Image de race (public/Races/...) avec fallback de noms
+function RaceImage({ raceName }: { raceName: string }) {
+  // ✅ Mapping explicite pour les races avec images spécifiques
+  const RACE_IMAGE_MAPPING: Record<string, string> = {
+    'Haut-Elfe': 'Haut-elfe.png',
+    'Elfe sylvestre': 'Elfe-Sylvestre.png',
+    'Drow': 'Drow.png',
+  };
     const base = '/Races/';
 
     const candidates = [
