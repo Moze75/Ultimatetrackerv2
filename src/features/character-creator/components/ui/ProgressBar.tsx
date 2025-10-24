@@ -6,18 +6,24 @@ interface ProgressBarProps {
   steps: string[];
 }
 
-// ✅ SOLUTION: Audio global en dehors du composant React
+// ✅ Audio global en dehors du composant React
 const MUSIC_SRC = '/Music/Skyrim8bits.mp3';
 let globalAudio: HTMLAudioElement | null = null;
-let globalIsPlaying = false; 
+let globalIsPlaying = false;
 
-// ✅ AJOUTER : Fonction globale pour arrêter la musique
+// ✅ Fonction globale pour arrêter la musique
 export function stopWizardMusic() {
-  if (globalAudio && globalIsPlaying) {
-    globalAudio.pause();
-    globalAudio.currentTime = 0; // Remettre au début
-    globalIsPlaying = false;
-    console.log('[ProgressBar] Musique arrêtée');
+  if (globalAudio) {
+    try {
+      globalAudio.pause();
+      globalAudio.currentTime = 0; // Remettre au début
+      globalIsPlaying = false;
+      console.log('[ProgressBar] 🔇 Musique arrêtée');
+    } catch (e) {
+      console.warn('[ProgressBar] ⚠️ Erreur lors de l\'arrêt de la musique:', e);
+    }
+  } else {
+    console.log('[ProgressBar] ℹ️ Aucune musique à arrêter');
   }
 }
 
@@ -25,9 +31,10 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
   const total = Math.max(1, steps.length - 1);
   const percent = Math.max(0, Math.min(100, (currentStep / total) * 100));
 
-  const [isPlaying, setIsPlaying] = useState(globalIsPlaying);
+  const [isPlaying, setIsPlaying] = useState(false); // ✅ Toujours démarrer à false
   const [autoPlayBlocked, setAutoPlayBlocked] = useState(false);
   const hasTriedAutoStartRef = useRef(false);
+  const isMountedRef = useRef(true);
 
   // Détecte l'étape "Race"
   const raceStepIndex = steps.findIndex((s) => {
@@ -45,6 +52,16 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
       globalAudio.volume = 0.35;
       console.log('[ProgressBar] Audio global initialisé');
     }
+
+    // ✅ Au montage, synchroniser l'état avec l'audio global
+    setIsPlaying(globalIsPlaying);
+    console.log('[ProgressBar] 🎵 État initial de la musique:', globalIsPlaying ? 'en lecture' : 'arrêtée');
+
+    // ✅ Cleanup au démontage du composant
+    return () => {
+      isMountedRef.current = false;
+      console.log('[ProgressBar] 📤 Composant démonté');
+    };
   }, []);
 
   // ✅ Tenter l'autoplay uniquement au step "Race"
@@ -53,24 +70,33 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
 
     hasTriedAutoStartRef.current = true;
     
+    console.log('[ProgressBar] 🎬 Tentative de démarrage automatique de la musique');
+    
     globalAudio.play()
       .then(() => {
-        globalIsPlaying = true;
-        setIsPlaying(true);
-        setAutoPlayBlocked(false);
-        console.log('[ProgressBar] Musique démarrée automatiquement');
+        if (isMountedRef.current) {
+          globalIsPlaying = true;
+          setIsPlaying(true);
+          setAutoPlayBlocked(false);
+          console.log('[ProgressBar] ✅ Musique démarrée automatiquement');
+        }
       })
       .catch(() => {
-        globalIsPlaying = false;
-        setIsPlaying(false);
-        setAutoPlayBlocked(true);
-        console.log('[ProgressBar] Autoplay bloqué par le navigateur');
+        if (isMountedRef.current) {
+          globalIsPlaying = false;
+          setIsPlaying(false);
+          setAutoPlayBlocked(true);
+          console.log('[ProgressBar] ⚠️ Autoplay bloqué par le navigateur');
+        }
       });
   }, [shouldAutoStart]);
 
-  // ✅ Synchroniser l'état local avec l'état global
+  // ✅ Synchroniser l'état local avec l'état global à chaque changement d'étape
   useEffect(() => {
-    setIsPlaying(globalIsPlaying);
+    if (isMountedRef.current) {
+      setIsPlaying(globalIsPlaying);
+      console.log('[ProgressBar] 🔄 Synchronisation état musique (step', currentStep, '):', globalIsPlaying);
+    }
   }, [currentStep]);
 
   const togglePlayback = async () => {
@@ -80,17 +106,17 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
       globalAudio.pause();
       globalIsPlaying = false;
       setIsPlaying(false);
-      console.log('[ProgressBar] Musique mise en pause');
+      console.log('[ProgressBar] ⏸️ Musique mise en pause');
     } else {
       try {
         await globalAudio.play();
         globalIsPlaying = true;
         setIsPlaying(true);
         setAutoPlayBlocked(false);
-        console.log('[ProgressBar] Musique reprise');
+        console.log('[ProgressBar] ▶️ Musique reprise');
       } catch {
         setAutoPlayBlocked(true);
-        console.log('[ProgressBar] Impossible de lire la musique');
+        console.log('[ProgressBar] ❌ Impossible de lire la musique');
       }
     }
   };
