@@ -88,10 +88,7 @@ export default function CustomRaceModal({ open, onClose, onSave }: CustomRaceMod
   };
 
 return (
-  <div 
-    className="fixed top-0 left-0 right-0 bottom-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
-    style={{ zIndex: 200 }}
-  >
+  <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
     <div className="w-full max-w-4xl max-h-[85vh] overflow-hidden bg-gray-900 border border-gray-800 rounded-xl shadow-xl flex flex-col">
       {/* Header - FIXE */}
       <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800 flex-shrink-0">
@@ -109,7 +106,7 @@ return (
       </div>
 
       {/* Contenu - SCROLLABLE */}
-      <div className="overflow-y-auto flex-1 p-5 space-y-6">
+      <div className="p-5 overflow-y-auto flex-1 space-y-6">
         {/* Informations de base */}
         <Card>
           <CardHeader>
@@ -154,13 +151,12 @@ return (
               </div>
 
               <Input
-                label="Vitesse (mètres)"
+                label="Vitesse (pieds)"
                 type="number"
                 value={speed}
                 onChange={(e) => setSpeed(Number(e.target.value))}
                 min={0}
-                step={1.5}
-                placeholder="Ex: 9"
+                step={5}
               />
 
               <Input
@@ -176,50 +172,27 @@ return (
           </CardContent>
         </Card>
 
-        {/* Traits raciaux */}
+        {/* Bonus de caractéristiques */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <h4 className="text-white font-semibold">Traits raciaux *</h4>
-              <Button onClick={handleAddTrait} variant="secondary" size="sm">
-                <Plus className="w-4 h-4 mr-1" />
-                Ajouter un trait
-              </Button>
-            </div>
+            <h4 className="text-white font-semibold">Bonus de caractéristiques</h4>
+            <p className="text-xs text-gray-400 mt-1">Laissez à 0 pour ne pas appliquer de bonus</p>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {traits.map((trait, index) => (
-              <div key={index} className="flex gap-2">
-                <textarea
-                  value={trait}
-                  onChange={(e) => handleTraitChange(index, e.target.value)}
-                  placeholder="Décrivez le trait racial..."
-                  className="input-dark w-full min-h-[60px] resize-y"
-                />
-                {traits.length > 1 && (
-                  <button
-                    onClick={() => handleRemoveTrait(index)}
-                    className="text-red-400 hover:text-red-300 p-2"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                )}
-              </div>
-            ))}
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {abilities.map((ability) => (
+                <div key={ability}>
+                  <label className="block text-sm text-gray-300 mb-1">{ability}</label>
+                  <input
+                    type="number"
+                    value={abilityBonuses[ability] || 0}
+                    onChange={(e) => handleAbilityBonusChange(ability, Number(e.target.value))}
+                    className="input-dark w-full"
+                    min={0}
+                    max={3}
+                  />
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Footer - FIXE */}
-      <div className="flex items-center justify-between gap-3 p-4 border-t border-gray-800 flex-shrink-0">
-        <Button variant="secondary" onClick={handleCancel}>
-          Annuler
-        </Button>
-        <Button onClick={handleSave} className="min-w-[200px]">
-          Créer l'espèce
-        </Button>
-      </div>
-    </div>
-  </div>
-);
-}
