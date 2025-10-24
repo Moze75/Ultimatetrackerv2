@@ -1060,6 +1060,12 @@ export function PlayerProfileSettingsModal({
                   }}
                   className="input-dark w-full px-3 py-2 rounded-md"
                 >
+                    {/* ✅ AJOUTER: Afficher la race custom en premier si elle existe */}
+    {customRaceName && !DND_RACES.includes(customRaceName) && (
+      <option key={customRaceName} value={customRaceName}>
+        {customRaceName} (personnalisée)
+      </option>
+    )}
                   {DND_RACES.map((race) => (
                     <option key={race} value={race}>
                       {race || 'Sélectionnez une espèce'}
