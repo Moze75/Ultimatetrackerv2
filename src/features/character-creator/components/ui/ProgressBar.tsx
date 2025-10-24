@@ -4,7 +4,8 @@ import {
   startWizardMusic, 
   pauseWizardMusic, 
   resumeWizardMusic, 
-  isWizardMusicPlaying 
+  isWizardMusicPlaying,
+  stopWizardMusic
 } from './musicControl';
 
 interface ProgressBarProps {
@@ -43,7 +44,13 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
     };
 
     const timer = setTimeout(attemptAutoplay, 300);
-    return () => clearTimeout(timer);
+    
+    // ✅ CLEANUP : Arrêter et détruire la musique au démontage du ProgressBar
+    return () => {
+      clearTimeout(timer);
+      console.log('[ProgressBar] 🧹 Démontage - Arrêt et destruction de la musique');
+      stopWizardMusic();
+    };
   }, []);
 
   // ✅ Synchroniser l'état avec la musique à chaque changement d'étape
