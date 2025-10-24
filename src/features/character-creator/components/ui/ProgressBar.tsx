@@ -15,7 +15,7 @@ interface ProgressBarProps {
   isRestoredFromSnapshot?: boolean; // ✅ AJOUT
 }
 
-export default function ProgressBar({ currentStep, totalSteps, steps }: ProgressBarProps) {
+export default function ProgressBar({ currentStep, totalSteps, steps, isRestoredFromSnapshot }: ProgressBarProps) {
   const total = Math.max(1, steps.length - 1);
   const percent = Math.max(0, Math.min(100, (currentStep / total) * 100));
 
