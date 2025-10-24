@@ -14,6 +14,8 @@ interface ProgressBarProps {
 }
 
 export default function ProgressBar({ currentStep, totalSteps, steps }: ProgressBarProps) {
+  console.log('[ProgressBar] 🎨 RENDER - currentStep:', currentStep); // ← LOG CRITIQUE
+  
   const total = Math.max(1, steps.length - 1);
   const percent = Math.max(0, Math.min(100, (currentStep / total) * 100));
 
@@ -22,8 +24,11 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
   const hasTriedAutoStartRef = useRef(false);
   const isMountedRef = useRef(true);
 
+  console.log('[ProgressBar] 📊 État - isPlaying:', isPlaying, 'hasTriedAutoStart:', hasTriedAutoStartRef.current); // ← LOG CRITIQUE
+
   // ✅ Initialiser l'audio global une seule fois
   useEffect(() => {
+    console.log('[ProgressBar] 🚀 USEEFFECT 1 - Initialisation'); // ← LOG CRITIQUE
     initWizardMusic();
     
     // ✅ Au montage, synchroniser l'état avec l'audio global
@@ -37,40 +42,53 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
     };
   }, []);
 
-// ✅ Autoplay dès le montage du wizard (ouverture du creator)
-useEffect(() => {
-  if (hasTriedAutoStartRef.current) {
-    console.log('[ProgressBar] ⚠️ Autoplay déjà tenté, skip');
-    return;
-  }
-
-  hasTriedAutoStartRef.current = true;
-  
-  // ✅ Ajouter un petit délai pour s'assurer que le modal est bien visible
-  const autoplayTimer = setTimeout(async () => {
-    if (!isMountedRef.current) return;
-
-    console.log('[ProgressBar] 🎬 Tentative de démarrage automatique de la musique au lancement du wizard');
+  // ✅ Autoplay dès le montage du wizard (ouverture du creator)
+  useEffect(() => {
+    console.log('[ProgressBar] 🚀 USEEFFECT 2 - Autoplay, hasTriedAutoStart:', hasTriedAutoStartRef.current); // ← LOG CRITIQUE
     
-    const success = await startWizardMusic();
-    
-    if (isMountedRef.current) {
-      setIsPlaying(success);
-      setAutoPlayBlocked(!success);
-      console.log('[ProgressBar] Résultat autoplay:', success ? 'succès' : 'bloqué');
+    if (hasTriedAutoStartRef.current) {
+      console.log('[ProgressBar] ⚠️ Autoplay déjà tenté, skip');
+      return;
     }
-  }, 300);
 
-  // ✅ IMPORTANT : Réinitialiser le flag au démontage pour permettre l'autoplay à la prochaine ouverture
-  return () => {
-    clearTimeout(autoplayTimer);
-    hasTriedAutoStartRef.current = false; // ← AJOUT CRITIQUE
-    console.log('[ProgressBar] 🔄 Flag autoplay réinitialisé pour la prochaine ouverture');
-  };
-}, []);
+    console.log('[ProgressBar] ✅ Autoplay va être tenté'); // ← LOG CRITIQUE
+    hasTriedAutoStartRef.current = true;
+    
+    // ✅ Ajouter un petit délai pour s'assurer que le modal est bien visible
+    const autoplayTimer = setTimeout(async () => {
+      console.log('[ProgressBar] ⏰ Timeout déclenché, isMounted:', isMountedRef.current); // ← LOG CRITIQUE
+      
+      if (!isMountedRef.current) {
+        console.log('[ProgressBar] ❌ Composant démonté, annulation autoplay');
+        return;
+      }
+
+      console.log('[ProgressBar] 🎬 Tentative de démarrage automatique de la musique au lancement du wizard');
+      
+      const success = await startWizardMusic();
+      
+      console.log('[ProgressBar] 📢 Résultat startWizardMusic:', success); // ← LOG CRITIQUE
+      
+      if (isMountedRef.current) {
+        setIsPlaying(success);
+        setAutoPlayBlocked(!success);
+        console.log('[ProgressBar] Résultat autoplay:', success ? 'succès ✅' : 'bloqué ⚠️');
+      }
+    }, 300);
+
+    // ✅ IMPORTANT : Réinitialiser le flag au démontage pour permettre l'autoplay à la prochaine ouverture
+    return () => {
+      console.log('[ProgressBar] 🧹 Cleanup autoplay useEffect'); // ← LOG CRITIQUE
+      clearTimeout(autoplayTimer);
+      hasTriedAutoStartRef.current = false;
+      console.log('[ProgressBar] 🔄 Flag autoplay réinitialisé pour la prochaine ouverture');
+    };
+  }, []);
 
   // ✅ Synchroniser l'état local avec l'état global à chaque changement d'étape
   useEffect(() => {
+    console.log('[ProgressBar] 🚀 USEEFFECT 3 - Sync step', currentStep); // ← LOG CRITIQUE
+    
     if (isMountedRef.current) {
       const playing = isWizardMusicPlaying();
       setIsPlaying(playing);
@@ -79,6 +97,8 @@ useEffect(() => {
   }, [currentStep]);
 
   const togglePlayback = async () => {
+    console.log('[ProgressBar] 🎵 Toggle playback, isPlaying:', isPlaying); // ← LOG CRITIQUE
+    
     if (isPlaying) {
       pauseWizardMusic();
       setIsPlaying(false);
