@@ -593,7 +593,7 @@ export default function PlayerProfileProfileTab({ player, onUpdate }: PlayerProf
       <SectionContainer
         icon={<Shield size={18} className="text-emerald-400" />}
         title="Espèce"
-        subtitle={race ? `${race}${customRace ? ' (personnalisée)' : ''}` : undefined}
+        subtitle={race || undefined}
         defaultOpen={false}
       >
         {customRace ? (
