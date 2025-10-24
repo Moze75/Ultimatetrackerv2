@@ -558,16 +558,18 @@ useEffect(() => {
   };
 
   // Rendu des étapes
-  const renderStep = () => {
-    switch (currentStep) {
-      case 0:
-        return (
-          <RaceSelection
-            selectedRace={selectedRace}
-            onRaceSelect={setSelectedRace}
-            onNext={nextStep}
-          />
-        );
+const renderStep = () => {
+  switch (currentStep) {
+    case 0:
+      return (
+        <RaceSelection
+          selectedRace={selectedRace}
+          onRaceSelect={setSelectedRace}
+          customRaceData={customRaceData}              // ← NOUVEAU
+          onCustomRaceDataChange={setCustomRaceData}   // ← NOUVEAU
+          onNext={nextStep}
+        />
+      );
 
       case 1:
         return (
