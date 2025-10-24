@@ -53,23 +53,41 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
     console.log('[ProgressBar] 🔄 Sync step', currentStep, '- Playing:', playing);
   }, [currentStep]);
 
-  // ✅ Capturer le premier clic pour démarrer la musique si l'autoplay a été bloqué
-  useEffect(() => {
-    if (!autoPlayBlocked || isPlaying) return;
 
-    const handleFirstClick = async () => {
-      if (!isWizardMusicPlaying()) {
-        console.log('[ProgressBar] 🎵 Premier clic détecté, démarrage musique');
-        const success = await startWizardMusic();
-        setIsPlaying(success);
-        setAutoPlayBlocked(!success);
-        
-        if (success) {
-          // Retirer le listener après le premier succès
-          document.removeEventListener('click', handleFirstClick, true);
-        }
+// ✅ Capturer le premier clic DANS LE WIZARD UNIQUEMENT pour démarrer la musique si l'autoplay a été bloqué
+useEffect(() => {
+  if (!autoPlayBlocked || isPlaying) return;
+
+  const handleFirstClick = async (e: MouseEvent) => {
+    // ✅ Vérifier que le clic vient bien du wizard (vérifier si l'élément parent contient la classe wizard)
+    const target = e.target as HTMLElement;
+    const isInsideWizard = target.closest('.wizard-container');
+    
+    if (!isInsideWizard) {
+      console.log('[ProgressBar] ⏭️ Clic hors wizard, ignoré');
+      return;
+    }
+
+    if (!isWizardMusicPlaying()) {
+      console.log('[ProgressBar] 🎵 Premier clic dans le wizard détecté, démarrage musique');
+      const success = await startWizardMusic();
+      setIsPlaying(success);
+      setAutoPlayBlocked(!success);
+      
+      if (success) {
+        // Retirer le listener après le premier succès
+        document.removeEventListener('click', handleFirstClick, true);
       }
-    };
+    }
+  };
+
+  // Écouter en phase de capture pour attraper tous les clics
+  document.addEventListener('click', handleFirstClick, true);
+
+  return () => {
+    document.removeEventListener('click', handleFirstClick, true);
+  };
+}, [autoPlayBlocked, isPlaying]);
 
     // Écouter en phase de capture pour attraper tous les clics
     document.addEventListener('click', handleFirstClick, true);
