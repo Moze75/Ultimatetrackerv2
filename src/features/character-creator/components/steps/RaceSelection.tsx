@@ -64,6 +64,29 @@ export default function RaceSelection({ selectedRace, onRaceSelect, onNext }: Ra
 
   // Image de race (public/Races/...) avec fallback de noms
   function RaceImage({ raceName }: { raceName: string }) {
+
+  const RACE_IMAGE_MAPPING: Record<string, string> = {
+    'Haut-Elfe': 'Haut-elfe.png',
+    'Elfe sylvestre': 'Elfe-Sylvestre.png',
+    'Drow': 'Drow.png',
+  };
+
+  const base = '/Races/';
+  
+  // ✅ Vérifier d'abord le mapping
+  const mappedImage = RACE_IMAGE_MAPPING[raceName];
+  if (mappedImage) {
+    return (
+      <img
+        src={base + mappedImage}
+        alt={raceName}
+        className="w-full h-auto object-contain rounded-md shadow-sm"
+        loading="lazy"
+      />
+    );
+  }
+
+    
     const toASCII = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const slug = (s: string) =>
       toASCII(s)
