@@ -396,19 +396,23 @@ export function PlayerProfileSettingsModal({
 
       setWeaponProficiencies(weaponProfs);
       setArmorProficiencies(armorProfs);
-    } else {
-      setWeaponProficiencies([]);
-      setArmorProficiencies([]);
+    const customRace = stats.creator_meta?.custom_race;
+    if (customRace && customRace.name === player.race) {
+      setCustomRaceName(player.race);
     }
-  }, [
-    open,
-    player,
-    ALLOWED_RACES,
-    ALLOWED_BACKGROUNDS,
-    ALLOWED_ORIGIN_FEATS,
-    ALLOWED_GENERAL_FEATS,
-    ALLOWED_FIGHTING_STYLES,
-  ]);
+  } else {
+    setWeaponProficiencies([]);
+    setArmorProficiencies([]);
+  }
+}, [
+  open,
+  player,
+  ALLOWED_RACES,
+  ALLOWED_BACKGROUNDS,
+  ALLOWED_ORIGIN_FEATS,
+  ALLOWED_GENERAL_FEATS,
+  ALLOWED_FIGHTING_STYLES,
+]);
 
   useEffect(() => {
     if (!open) return;
