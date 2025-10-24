@@ -1,18 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { races } from '../../data/races';
 import Card, { CardContent, CardHeader } from '../ui/Card';
 import Button from '../ui/Button';
-import { Users, Zap, Shield, Star, ChevronDown, Eye, Heart } from 'lucide-react';
+import { Users, Zap, Shield, Star, ChevronDown, Eye, Heart, Settings } from 'lucide-react';
+import CustomRaceModal from '../CustomRaceModal';
 
 interface RaceSelectionProps {
   selectedRace: string;
   onRaceSelect: (race: string) => void;
   onNext: () => void;
+  // ✅ Pour stocker la race personnalisée
+  customRaceData?: DndRace | null;
+  onCustomRaceDataChange?: (race: DndRace | null) => void;
 }
 
-export default function RaceSelection({ selectedRace, onRaceSelect, onNext }: RaceSelectionProps) {
+export default function RaceSelection({ 
+  selectedRace, 
+  onRaceSelect, 
+  onNext,
+  customRaceData,
+  onCustomRaceDataChange 
+}: RaceSelectionProps) {
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [showCustomModal, setShowCustomModal] = useState(false);
 
+  // ✅ Combiner les races standards et la race personnalisée
+  const allRaces = customRaceData 
+    ? [...races, customRaceData] 
+    : races;
+
+  useEffect(() => {
+    console.log('[RaceSelection] customRaceData mis à jour:', customRaceData);
+    console.log('[RaceSelection] allRaces:', allRaces);
+  }, [customRaceData]);
+  
   // Conversion pieds -> mètres (les données sont en pieds)
   const feetToMeters = (ft?: number) => {
     if (!ft && ft !== 0) return '';
@@ -23,7 +44,30 @@ export default function RaceSelection({ selectedRace, onRaceSelect, onNext }: Ra
     onRaceSelect(raceName);
     setExpanded((prev) => (prev === raceName ? null : raceName));
   };
- 
+
+  // ✅ Gérer la sauvegarde de la race personnalisée
+  const handleSaveCustomRace = (race: DndRace) => {
+    console.log('[RaceSelection] Race reçue:', race);
+    
+    // 1. Sauvegarder la race personnalisée
+    if (onCustomRaceDataChange) {
+      onCustomRaceDataChange(race);
+    }
+    
+    // 2. Sélectionner la race
+    onRaceSelect(race.name);
+    console.log('[RaceSelection] Race sélectionnée:', race.name);
+    
+    // 3. Fermer le modal
+    setShowCustomModal(false);
+    
+    // ✅ 4. Passer automatiquement au step suivant
+    setTimeout(() => {
+      onNext();
+      console.log('[RaceSelection] Passage au step suivant');
+    }, 100);
+  };
+
   const getRaceIcon = (raceName: string) => {
     if (raceName === 'Elfe' || raceName === 'Demi-Elfe') {
       return <Star className="w-5 h-5 text-green-400" />;
@@ -64,6 +108,29 @@ export default function RaceSelection({ selectedRace, onRaceSelect, onNext }: Ra
 
   // Image de race (public/Races/...) avec fallback de noms
   function RaceImage({ raceName }: { raceName: string }) {
+    // ✅ Mapping explicite pour les races avec images spécifiques
+    const RACE_IMAGE_MAPPING: Record<string, string> = {
+      'Haut-Elfe': 'Haut-elfe.png',
+      'Elfe sylvestre': 'Elfe-Sylvestre.png',
+      'Drow': 'Drow.png',
+    };
+
+    const base = '/Races/';
+    
+    // ✅ Vérifier d'abord le mapping
+    const mappedImage = RACE_IMAGE_MAPPING[raceName];
+    if (mappedImage) {
+      return (
+        <img
+          src={base + mappedImage}
+          alt={raceName}
+          className="w-full h-auto object-contain rounded-md shadow-sm"
+          loading="lazy"
+        />
+      );
+    }
+
+    // Sinon, utiliser la logique de fallback comme avant
     const toASCII = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const slug = (s: string) =>
       toASCII(s)
@@ -72,7 +139,6 @@ export default function RaceSelection({ selectedRace, onRaceSelect, onNext }: Ra
         .replace(/^-+|-+$/g, '');
     const ascii = toASCII(raceName);
     const noSpaces = ascii.replace(/\s+/g, '');
-    const base = '/Races/';
 
     const candidates = [
       `${raceName}.png`,
@@ -110,7 +176,7 @@ export default function RaceSelection({ selectedRace, onRaceSelect, onNext }: Ra
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {races.map((race) => {
+        {allRaces.map((race) => {
           const isSelected = selectedRace === race.name;
           const isExpanded = expanded === race.name;
 
@@ -216,7 +282,32 @@ export default function RaceSelection({ selectedRace, onRaceSelect, onNext }: Ra
               </CardContent>
             </Card>
           );
-        })}
+        })} 
+
+        
+        {/* ✅ Carte pour créer une race personnalisée */}
+        <Card 
+          className="h-full border-2 border-dashed border-purple-500/50 hover:border-purple-400/70 transition-colors cursor-pointer"
+          onClick={() => setShowCustomModal(true)}
+        >
+          <CardHeader>
+            <div className="flex items-center justify-center">
+              <Settings className="w-6 h-6 text-purple-400 mr-2" />
+              <h3 className="text-lg font-semibold text-purple-300">Espèce personnalisée</h3>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8">
+              <p className="text-gray-400 text-sm mb-4">
+                Créez votre propre espèce avec des traits uniques
+              </p>
+              <Button variant="secondary" size="sm" onClick={() => setShowCustomModal(true)}>
+                <Settings className="w-4 h-4 mr-2" />
+                Configurer
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="flex justify-center pt-6">
@@ -229,6 +320,13 @@ export default function RaceSelection({ selectedRace, onRaceSelect, onNext }: Ra
           Continuer
         </Button>
       </div>
+
+      {/* ✅ Modal de configuration */}
+      <CustomRaceModal
+        open={showCustomModal}
+        onClose={() => setShowCustomModal(false)}
+        onSave={handleSaveCustomRace}
+      />
     </div>
   );
 }
