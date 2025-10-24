@@ -15,8 +15,8 @@ export const races: DndRace[] = [
     ]
   },
   {
-    name: 'Elfe',
-    description: 'Gracieux et proches de la magie, les elfes vivent en harmonie avec la nature.',
+    name: 'Haut-Elfe',
+    description: 'Elfes raffinés maîtrisant la magie arcanique.',
     size: 'Moyen',
     speed: 30,
     languages: ['Commun', 'Au choix'],
@@ -25,7 +25,35 @@ export const races: DndRace[] = [
       'Vision dans le noir (18 m)',
       'Ascendance féerique (avantage contre Charmé)',
       'Transe (repos long en 4h)',
-      'Lignage elfique (choix entre Haut elfe, Elfe sylvestre ou Drow avec sorts et capacités associés)'
+      'Lignage elfique - Haut elfe : prestidigitation (remplaçable après repos long), détection de la magie (niv 3), foulée brumeuse (niv 5)'
+    ]
+  },
+  {
+    name: 'Elfe sylvestre',
+    description: 'Elfes agiles vivant en harmonie avec la nature sauvage.',
+    size: 'Moyen',
+    speed: 35, // 10,50 m = 35 pieds
+    languages: ['Commun', 'Au choix'],
+    proficiencies: ['Intuition, Perception ou Survie (au choix)'],
+    traits: [
+      'Vision dans le noir (18 m)',
+      'Ascendance féerique (avantage contre Charmé)',
+      'Transe (repos long en 4h)',
+      'Lignage elfique - Elfe sylvestre : vitesse 10,50m, druidisme, grande foulée (niv 3), passage sans trace (niv 5)'
+    ]
+  },
+  {
+    name: 'Drow',
+    description: 'Elfes noirs maîtrisant la magie des ténèbres.',
+    size: 'Moyen',
+    speed: 30,
+    languages: ['Commun', 'Au choix'],
+    proficiencies: ['Intuition, Perception ou Survie (au choix)'],
+    traits: [
+      'Vision dans le noir (36 m)',
+      'Ascendance féerique (avantage contre Charmé)',
+      'Transe (repos long en 4h)',
+      'Lignage elfique - Drow : lumières dansantes, lueurs féeriques (niv 3), ténèbres (niv 5)'
     ]
   },
   {
