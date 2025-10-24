@@ -64,15 +64,24 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
     };
   }, []);
 
-  // ✅ Tenter l'autoplay uniquement au step "Race"
-  useEffect(() => {
-    if (!shouldAutoStart || hasTriedAutoStartRef.current || !globalAudio) return;
+// ✅ Tenter l'autoplay uniquement au step "Race" ET si le composant est bien monté et visible
+useEffect(() => {
+  // Ne rien faire si :
+  // - Pas sur l'étape Race
+  // - Déjà tenté l'autostart
+  // - Pas d'audio global
+  // - Le composant n'est pas encore visible (monté récemment)
+  if (!shouldAutoStart || hasTriedAutoStartRef.current || !globalAudio) return;
+
+  // ✅ Ajouter un délai pour s'assurer que le modal est bien visible
+  const autoplayTimer = setTimeout(() => {
+    if (!isMountedRef.current) return;
 
     hasTriedAutoStartRef.current = true;
     
     console.log('[ProgressBar] 🎬 Tentative de démarrage automatique de la musique');
     
-    globalAudio.play()
+    globalAudio!.play()
       .then(() => {
         if (isMountedRef.current) {
           globalIsPlaying = true;
@@ -89,7 +98,12 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
           console.log('[ProgressBar] ⚠️ Autoplay bloqué par le navigateur');
         }
       });
-  }, [shouldAutoStart]);
+  }, 500); // ✅ Délai de 500ms pour s'assurer que tout est bien monté
+
+  return () => {
+    clearTimeout(autoplayTimer);
+  };
+}, [shouldAutoStart, isMountedRef]);
 
   // ✅ Synchroniser l'état local avec l'état global à chaque changement d'étape
   useEffect(() => {
