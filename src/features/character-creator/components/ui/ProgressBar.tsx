@@ -31,18 +31,10 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
   const total = Math.max(1, steps.length - 1);
   const percent = Math.max(0, Math.min(100, (currentStep / total) * 100));
 
-  const [isPlaying, setIsPlaying] = useState(false); // ✅ Toujours démarrer à false
+  const [isPlaying, setIsPlaying] = useState(false);
   const [autoPlayBlocked, setAutoPlayBlocked] = useState(false);
   const hasTriedAutoStartRef = useRef(false);
   const isMountedRef = useRef(true);
-
-  // Détecte l'étape "Race"
-  const raceStepIndex = steps.findIndex((s) => {
-    const t = (s || '').toLowerCase();
-    return t.includes('race') || t.includes('peuple') || t.includes('ancestr');
-  });
-
-  const shouldAutoStart = raceStepIndex !== -1 && currentStep === raceStepIndex;
 
   // ✅ Initialiser l'audio global une seule fois
   useEffect(() => {
@@ -64,46 +56,41 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
     };
   }, []);
 
- // ✅ Tenter l'autoplay uniquement au step "Race" ET si le composant est bien monté et visible
-useEffect(() => {
-  // Ne rien faire si :
-  // - Pas sur l'étape Race
-  // - Déjà tenté l'autostart
-  // - Pas d'audio global
-  // - Le composant n'est pas encore visible (monté récemment)
-  if (!shouldAutoStart || hasTriedAutoStartRef.current || !globalAudio) return;
-
-  // ✅ Ajouter un délai pour s'assurer que le modal est bien visible
-  const autoplayTimer = setTimeout(() => {
-    if (!isMountedRef.current) return;
+  // ✅ Autoplay dès le montage du wizard (ouverture du creator)
+  useEffect(() => {
+    if (hasTriedAutoStartRef.current || !globalAudio) return;
 
     hasTriedAutoStartRef.current = true;
     
-    console.log('[ProgressBar] 🎬 Tentative de démarrage automatique de la musique');
-    
-    globalAudio!.play()
-      .then(() => {
-        if (isMountedRef.current) {
-          globalIsPlaying = true;
-          setIsPlaying(true);
-          setAutoPlayBlocked(false);
-          console.log('[ProgressBar] ✅ Musique démarrée automatiquement');
-        }
-      })
-      .catch(() => {
-        if (isMountedRef.current) {
-          globalIsPlaying = false;
-          setIsPlaying(false);
-          setAutoPlayBlocked(true);
-          console.log('[ProgressBar] ⚠️ Autoplay bloqué par le navigateur');
-        }
-      });
-  }, 500); // ✅ Délai de 500ms pour s'assurer que tout est bien monté
+    // ✅ Ajouter un petit délai pour s'assurer que le modal est bien visible
+    const autoplayTimer = setTimeout(() => {
+      if (!isMountedRef.current) return;
 
-  return () => {
-    clearTimeout(autoplayTimer);
-  };
-}, [shouldAutoStart, isMountedRef]);
+      console.log('[ProgressBar] 🎬 Tentative de démarrage automatique de la musique au lancement du wizard');
+      
+      globalAudio!.play()
+        .then(() => {
+          if (isMountedRef.current) {
+            globalIsPlaying = true;
+            setIsPlaying(true);
+            setAutoPlayBlocked(false);
+            console.log('[ProgressBar] ✅ Musique démarrée automatiquement');
+          }
+        })
+        .catch(() => {
+          if (isMountedRef.current) {
+            globalIsPlaying = false;
+            setIsPlaying(false);
+            setAutoPlayBlocked(true);
+            console.log('[ProgressBar] ⚠️ Autoplay bloqué par le navigateur');
+          }
+        });
+    }, 300);
+
+    return () => {
+      clearTimeout(autoplayTimer);
+    };
+  }, []);
 
   // ✅ Synchroniser l'état local avec l'état global à chaque changement d'étape
   useEffect(() => {
@@ -235,18 +222,5 @@ useEffect(() => {
           className={`text-xs sm:text-sm px-3 py-1.5 rounded-md border transition-colors
             ${isPlaying ? 'border-red-600 text-red-200 hover:bg-red-900/30' : 'border-gray-600 text-gray-300 hover:bg-gray-800/30'}
           `}
-          title={autoPlayBlocked && !isPlaying ? "Cliquez pour activer la musique" : (isPlaying ? "Arrêter la musique" : "Lire la musique")}
-        >
-          {isPlaying ? '⏸ Arrêter la musique' : '▶️ Lire la musique'}
-        </button>
-      </div>
-
-      {/* Alerte autoplay bloqué */}
-      {autoPlayBlocked && !isPlaying && (
-        <div className="mt-2 text-[11px] sm:text-xs text-gray-500 max-w-6xl mx-auto px-4">
-          Astuce: l'autoplay a été bloqué par votre navigateur. Cliquez sur "Lire la musique" pour l'activer.
-        </div>
-      )}
-    </div>
-  );
-}
+          title={autoPlayBlocked && !isPlaying ? "Cliquez pour activer la musique" : (isPlaying ? "Arrê`*
+
