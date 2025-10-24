@@ -50,19 +50,23 @@ const allRaces = customRaceData
 const handleSaveCustomRace = (race: DndRace) => {
   console.log('[RaceSelection] Race reçue:', race);
   
-  // ✅ 1. Sauvegarder la race personnalisée AVANT de la sélectionner
+  // 1. Sauvegarder la race personnalisée
   if (onCustomRaceDataChange) {
     onCustomRaceDataChange(race);
   }
   
-  // ✅ 2. Petit délai pour s'assurer que le state est mis à jour
-  setTimeout(() => {
-    onRaceSelect(race.name); // Sélectionner la race
-    console.log('[RaceSelection] Race sélectionnée:', race.name);
-  }, 0);
+  // 2. Sélectionner la race
+  onRaceSelect(race.name);
+  console.log('[RaceSelection] Race sélectionnée:', race.name);
   
-  // ✅ 3. Fermer le modal
+  // 3. Fermer le modal
   setShowCustomModal(false);
+  
+  // ✅ 4. NOUVEAU: Passer automatiquement au step suivant
+  setTimeout(() => {
+    onNext();
+    console.log('[RaceSelection] Passage au step suivant');
+  }, 100);
 };
 
   const getRaceIcon = (raceName: string) => {
