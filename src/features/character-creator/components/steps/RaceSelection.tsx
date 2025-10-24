@@ -8,10 +8,25 @@ interface RaceSelectionProps {
   selectedRace: string;
   onRaceSelect: (race: string) => void;
   onNext: () => void;
+  // ✅ NOUVEAU: Pour stocker la race personnalisée
+  customRaceData?: DndRace | null;
+  onCustomRaceDataChange?: (race: DndRace | null) => void;
 }
 
-export default function RaceSelection({ selectedRace, onRaceSelect, onNext }: RaceSelectionProps) {
+export default function RaceSelection({ 
+  selectedRace, 
+  onRaceSelect, 
+  onNext,
+  customRaceData,
+  onCustomRaceDataChange 
+}: RaceSelectionProps) {
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [showCustomModal, setShowCustomModal] = useState(false);
+
+  // ✅ NOUVEAU: Combiner les races standards et la race personnalisée
+  const allRaces = customRaceData 
+    ? [...races, customRaceData] 
+    : races;
 
   // Conversion pieds -> mètres (les données sont en pieds)
   const feetToMeters = (ft?: number) => {
@@ -22,6 +37,15 @@ export default function RaceSelection({ selectedRace, onRaceSelect, onNext }: Ra
   const handleClick = (raceName: string) => {
     onRaceSelect(raceName);
     setExpanded((prev) => (prev === raceName ? null : raceName));
+  };
+
+  // ✅ NOUVEAU: Gérer la sauvegarde de la race personnalisée
+  const handleSaveCustomRace = (race: DndRace) => {
+    if (onCustomRaceDataChange) {
+      onCustomRaceDataChange(race);
+      onRaceSelect(race.name);
+    }
+    setShowCustomModal(false);
   };
 
   const getRaceIcon = (raceName: string) => {
