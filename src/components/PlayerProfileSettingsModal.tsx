@@ -338,8 +338,7 @@ export function PlayerProfileSettingsModal({
     setSelectedClass(player.class || undefined);
     setSelectedSubclass(player.subclass || '');
 
-    const nextRace = player.race && ALLOWED_RACES.has(player.race) ? player.race : '';
-    setSelectedRace(nextRace);
+   setSelectedRace(player.race || '');
 
     const nextBackground =
       player.background && ALLOWED_BACKGROUNDS.has(player.background as PlayerBackground)
