@@ -3,6 +3,7 @@ import { races } from '../../data/races';
 import Card, { CardContent, CardHeader } from '../ui/Card';
 import Button from '../ui/Button';
 import { Users, Zap, Shield, Star, ChevronDown, Eye, Heart, Settings } from 'lucide-react';
+import CustomRaceModal from '../CustomRaceModal';
 
 interface RaceSelectionProps {
   selectedRace: string;
