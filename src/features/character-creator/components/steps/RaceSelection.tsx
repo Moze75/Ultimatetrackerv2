@@ -41,13 +41,18 @@ export default function RaceSelection({
   };
 
   // ✅ NOUVEAU: Gérer la sauvegarde de la race personnalisée
-  const handleSaveCustomRace = (race: DndRace) => {
-    if (onCustomRaceDataChange) {
-      onCustomRaceDataChange(race);
-      onRaceSelect(race.name);
-    }
-    setShowCustomModal(false);
-  };
+// ✅ Dans RaceSelection.tsx
+const handleSaveCustomRace = (race: DndRace) => {
+  console.log('[RaceSelection] Race reçue:', race); // ✅ DEBUG
+  
+  if (onCustomRaceDataChange) {
+    onCustomRaceDataChange(race); // Sauvegarder la race personnalisée
+  }
+  onRaceSelect(race.name); // Sélectionner la race
+  setShowCustomModal(false); // Fermer le modal
+  
+  console.log('[RaceSelection] Race sélectionnée:', race.name); // ✅ DEBUG
+};
 
   const getRaceIcon = (raceName: string) => {
     if (raceName === 'Elfe' || raceName === 'Demi-Elfe') {
