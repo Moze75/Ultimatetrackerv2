@@ -220,6 +220,14 @@ useEffect(() => {
   const handleCreatorComplete = async (payload: CharacterExportPayload) => {
     if (creating) return;
 
+     // ✅ Arrêter la musique immédiatement
+  try {
+    const { stopWizardMusic } = await import('../features/character-creator/components/ui/ProgressBar');
+    stopWizardMusic();
+  } catch (e) {
+    console.warn('[CharacterSelection] Impossible d\'arrêter la musique:', e);
+  }
+
     const canCreate = await subscriptionService.canCreateCharacter(session.user.id, players.length);
     if (!canCreate) {
       const limit = await subscriptionService.getCharacterLimit(session.user.id);
