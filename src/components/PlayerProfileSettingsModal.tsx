@@ -396,23 +396,19 @@ export function PlayerProfileSettingsModal({
 
       setWeaponProficiencies(weaponProfs);
       setArmorProficiencies(armorProfs);
-    const customRace = stats.creator_meta?.custom_race;
-    if (customRace && customRace.name === player.race) {
-      setCustomRaceName(player.race);
+    } else {
+      setWeaponProficiencies([]);
+      setArmorProficiencies([]);
     }
-  } else {
-    setWeaponProficiencies([]);
-    setArmorProficiencies([]);
-  }
-}, [
-  open,
-  player,
-  ALLOWED_RACES,
-  ALLOWED_BACKGROUNDS,
-  ALLOWED_ORIGIN_FEATS,
-  ALLOWED_GENERAL_FEATS,
-  ALLOWED_FIGHTING_STYLES,
-]);
+  }, [
+    open,
+    player,
+    ALLOWED_RACES,
+    ALLOWED_BACKGROUNDS,
+    ALLOWED_ORIGIN_FEATS,
+    ALLOWED_GENERAL_FEATS,
+    ALLOWED_FIGHTING_STYLES,
+  ]);
 
   useEffect(() => {
     if (!open) return;
@@ -526,55 +522,52 @@ export function PlayerProfileSettingsModal({
     setDirty(true);
   };
 
- const handleSave = async () => {
-  try {
-    const dexMod = getDexModFromPlayer(player);
-    const profAuto = getProficiencyBonusForLevel(level);
+  const handleSave = async () => {
+    try {
+      const dexMod = getDexModFromPlayer(player);
+      const profAuto = getProficiencyBonusForLevel(level);
 
-    const acVal = parseInt(acField, 10);
-    const initVal = parseInt(initField, 10);
-    const speedVal = parseDecimal(speedField);
-    const profVal = parseInt(profField, 10);
+      const acVal = parseInt(acField, 10);
+      const initVal = parseInt(initField, 10);
+      const speedVal = parseDecimal(speedField);
+      const profVal = parseInt(profField, 10);
 
-    const normOrigins = originFeats
-      .filter((v) => v && ALLOWED_ORIGIN_FEATS.has(v))
-      .filter((v, i, arr) => arr.indexOf(v) === i);
+      const normOrigins = originFeats
+        .filter((v) => v && ALLOWED_ORIGIN_FEATS.has(v))
+        .filter((v, i, arr) => arr.indexOf(v) === i);
 
-    const normGenerals = generalFeats
-      .filter((v) => v && ALLOWED_GENERAL_FEATS.has(v))
-      .filter((v, i, arr) => arr.indexOf(v) === i);
+      const normGenerals = generalFeats
+        .filter((v) => v && ALLOWED_GENERAL_FEATS.has(v))
+        .filter((v, i, arr) => arr.indexOf(v) === i);
 
-    const normStyles = fightingStyles
-      .filter((v) => v && ALLOWED_FIGHTING_STYLES.has(v))
-      .filter((v, i, arr) => arr.indexOf(v) === i);
+      const normStyles = fightingStyles
+        .filter((v) => v && ALLOWED_FIGHTING_STYLES.has(v))
+        .filter((v, i, arr) => arr.indexOf(v) === i);
 
-    const featsData: any = {
-      origin: normOrigins.length > 0 ? normOrigins[0] : null,
-      origins: normOrigins,
-      generals: normGenerals,
-      styles: normStyles,
-    };
+      const featsData: any = {
+        origin: normOrigins.length > 0 ? normOrigins[0] : null,
+        origins: normOrigins,
+        generals: normGenerals,
+        styles: normStyles,
+      };
 
-    const currentStats = (player.stats as any) || {};
-    
-    // ✅ COLLER ICI - Remplacer tout le bloc finalizedStats
-    const finalizedStats: any = {
-      ...currentStats,
-      armor_class: Number.isFinite(acVal) && acVal > 0 ? acVal : 10 + dexMod,
-      initiative: Number.isFinite(initVal) ? initVal : dexMod,
-      speed: Number.isFinite(speedVal) && speedVal > 0 ? speedVal : 9,
-      proficiency_bonus: profAuto,
-      ac_bonus: acBonus,
-      feats: featsData,
-      creator_meta: {
-        ...currentStats.creator_meta,
+      const currentStats = (player.stats as any) || {};
+      const finalizedStats: any = {
+        ...currentStats,
+        armor_class: Number.isFinite(acVal) && acVal > 0 ? acVal : 10 + dexMod,
+        initiative: Number.isFinite(initVal) ? initVal : dexMod,
+        speed: Number.isFinite(speedVal) && speedVal > 0 ? speedVal : 9,
+        proficiency_bonus: profAuto,
+        ac_bonus: acBonus,
+        feats: featsData,
+        creator_meta: {
+          ...currentStats.creator_meta,
+          weapon_proficiencies: weaponProficiencies,
+          armor_proficiencies: armorProficiencies,
+        },
         weapon_proficiencies: weaponProficiencies,
         armor_proficiencies: armorProficiencies,
-        custom_race: customRaceData || null, // ✅ NOUVEAU
-      },
-      weapon_proficiencies: weaponProficiencies,
-      armor_proficiencies: armorProficiencies,
-    };
+      };
 
       const updateData = {
         adventurer_name: adventurerName.trim() || null,
@@ -628,8 +621,6 @@ export function PlayerProfileSettingsModal({
     };
   }, [open]);
 
-  const [customRaceName, setCustomRaceName] = useState<string | null>(null);
-  
   const initialTranslate = slideFrom === 'right' ? 'translate-x-full' : '-translate-x-full';
 
   const startXRef = useRef<number | null>(null);
@@ -1043,33 +1034,24 @@ export function PlayerProfileSettingsModal({
           
           {/* Classe et Espèce */}
           <CollapsibleCard title="Classe et Espèce" defaultCollapsed>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-<div>
-  <label className="block text-sm font-medium text-gray-300 mb-2">Espèce</label>
-  <select
-    value={selectedRace}
-    onChange={(e) => {
-      setSelectedRace(e.target.value);
-      setDirty(true);
-    }}
-    className="input-dark w-full px-3 py-2 rounded-md"
-  >
-    {/* ✅ NOUVEAU : Afficher la race personnalisée en premier si elle existe */}
-    {customRaceName && (
-      <optgroup label="Espèce personnalisée">
-        <option value={customRaceName}>{customRaceName} (personnalisée)</option>
-      </optgroup>
-    )}
-    
-    <optgroup label="Espèces standards">
-      {DND_RACES.map((race) => (
-        <option key={race} value={race}>
-          {race || 'Sélectionnez une espèce'}
-        </option>
-      ))}
-    </optgroup>
-  </select>
-</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Espèce</label>
+                <select
+                  value={selectedRace}
+                  onChange={(e) => {
+                    setSelectedRace(e.target.value);
+                    setDirty(true);
+                  }}
+                  className="input-dark w-full px-3 py-2 rounded-md"
+                >
+                  {DND_RACES.map((race) => (
+                    <option key={race} value={race}>
+                      {race || 'Sélectionnez une espèce'}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Classe</label>
