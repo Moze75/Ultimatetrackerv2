@@ -695,16 +695,28 @@ useEffect(() => {
         </div>
       </div>
 
-      <CreatorModal
-        open={showCreator}
-        onClose={() => {
-          setShowCreator(false);
-          appContextService.clearWizardSnapshot();
-          appContextService.setContext('selection');
-        }}
-        onComplete={handleCreatorComplete}
-        initialSnapshot={appContextService.getWizardSnapshot()}
-      />
+<CreatorModal
+  open={showCreator}
+  onClose={() => {
+    console.log('[CharacterSelection] 🚪 Fermeture du wizard');
+    
+    // ✅ Arrêter la musique de façon synchrone
+    try {
+      // Import dynamique mais exécution immédiate
+      import('../features/character-creator/components/ui/ProgressBar').then(({ stopWizardMusic }) => {
+        stopWizardMusic();
+      });
+    } catch (e) {
+      console.warn('[CharacterSelection] Impossible d\'arrêter la musique:', e);
+    }
+    
+    setShowCreator(false);
+    appContextService.clearWizardSnapshot();
+    appContextService.setContext('selection');
+  }}
+  onComplete={handleCreatorComplete}
+  initialSnapshot={appContextService.getWizardSnapshot()}
+/>
 
       {creating && (
         <div className="fixed inset-0 z-[150] bg-black/90 flex items-center justify-center">
