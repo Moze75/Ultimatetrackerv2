@@ -704,9 +704,9 @@ useEffect(() => {
     // ✅ Arrêter la musique de façon synchrone
     try {
       // Import dynamique mais exécution immédiate
-      import('../features/character-creator/components/ui/ProgressBar').then(({ stopWizardMusic }) => {
-        stopWizardMusic();
-      });
+ import('../features/character-creator/components/ui/musicControl').then(({ stopWizardMusic }) => {
+  stopWizardMusic();
+});
     } catch (e) {
       console.warn('[CharacterSelection] Impossible d\'arrêter la musique:', e);
     }
