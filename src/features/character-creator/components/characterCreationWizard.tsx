@@ -21,6 +21,7 @@ import { classes } from '../data/classes';
 import { backgrounds } from '../data/backgrounds';
 import { enrichEquipmentList, determineAutoEquip } from '../../../services/equipmentLookupService';
 import { appContextService } from '../../../services/appContextService'; // ✅ IMPORT
+import { DndClass, DndRace } from '../types/character';
 
 /* ===========================================================
    Utilitaires
