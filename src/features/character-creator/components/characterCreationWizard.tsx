@@ -664,21 +664,15 @@ useEffect(() => {
     }
   };
 
-return (
-  <div className="min-h-screen bg-fantasy relative wizard-container"> {/* ✅ Ajout de wizard-container */}
-    <Toaster
-      position="top-right"
-      toastOptions={{
-        className: 'bg-gray-800 text-white border border-gray-700',
-        duration: 4000,
-      }}
-    />
-
-    {/* ✅ Badge de sauvegarde automatique */}
-    <div className="fixed bottom-4 left-4 z-50 text-xs text-gray-400 bg-gray-900/80 backdrop-blur-sm px-3 py-2 rounded-lg border border-gray-700/50 flex items-center gap-2">
-      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-      Sauvegarde auto
-    </div>
+  return (
+    <div className="min-h-screen bg-fantasy relative wizard-container">
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          className: 'bg-gray-800 text-white border border-gray-700',
+          duration: 4000,
+        }}
+      />
 
       {/* ✅ Badge de sauvegarde automatique */}
       <div className="fixed bottom-4 left-4 z-50 text-xs text-gray-400 bg-gray-900/80 backdrop-blur-sm px-3 py-2 rounded-lg border border-gray-700/50 flex items-center gap-2">
@@ -702,12 +696,11 @@ return (
 
       <div className="container mx-auto px-4 pt-0 pb-8">
         <div className="max-w-6xl mx-auto">
-<ProgressBar
-  currentStep={currentStep}
-  totalSteps={steps.length - 1}
-  steps={steps}
-  disableAutoplay={isRestoringFromSnapshot} // ✅ Utiliser le flag interne du wizard
-/>
+          <ProgressBar
+            currentStep={currentStep}
+            totalSteps={steps.length - 1}
+            steps={steps}
+          />
 
           <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-6 md:p-8">
             {renderStep()}
