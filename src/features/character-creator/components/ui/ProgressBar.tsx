@@ -53,13 +53,22 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
     console.log('[ProgressBar] 🔄 Sync step', currentStep, '- Playing:', playing);
   }, [currentStep]);
 
-  // ✅ Capturer le premier clic pour démarrer la musique si l'autoplay a été bloqué
+  // ✅ Capturer le premier clic DANS LE WIZARD UNIQUEMENT pour démarrer la musique si l'autoplay a été bloqué
   useEffect(() => {
     if (!autoPlayBlocked || isPlaying) return;
 
-    const handleFirstClick = async () => {
+    const handleFirstClick = async (e: MouseEvent) => {
+      // ✅ Vérifier que le clic vient bien du wizard (vérifier si l'élément parent contient la classe wizard)
+      const target = e.target as HTMLElement;
+      const isInsideWizard = target.closest('.wizard-container');
+      
+      if (!isInsideWizard) {
+        console.log('[ProgressBar] ⏭️ Clic hors wizard, ignoré');
+        return;
+      }
+
       if (!isWizardMusicPlaying()) {
-        console.log('[ProgressBar] 🎵 Premier clic détecté, démarrage musique');
+        console.log('[ProgressBar] 🎵 Premier clic dans le wizard détecté, démarrage musique');
         const success = await startWizardMusic();
         setIsPlaying(success);
         setAutoPlayBlocked(!success);
@@ -69,7 +78,7 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
           document.removeEventListener('click', handleFirstClick, true);
         }
       }
-    }; 
+    };
 
     // Écouter en phase de capture pour attraper tous les clics
     document.addEventListener('click', handleFirstClick, true);
@@ -206,7 +215,7 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
               🎵 Musique d'ambiance disponible
             </p>
             <p className="text-yellow-300/80 text-[10px] sm:text-xs">
-              Cliquez n'importe où ou sur le bouton "▶️ Lire la musique" pour activer
+              Cliquez n'importe où dans le wizard ou sur le bouton "▶️ Lire la musique" pour activer
             </p>
           </div>
         </div>
