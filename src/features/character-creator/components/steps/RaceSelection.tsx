@@ -115,6 +115,18 @@ const RACE_IMAGE_MAPPING: Record<string, string> = {
   // Ajoutez ici les autres races si nécessaire
 };
 
+  // ✅ Vérifier d'abord le mapping
+  const mappedImage = RACE_IMAGE_MAPPING[raceName];
+  if (mappedImage) {
+    return (
+      <img
+        src={base + mappedImage}
+        alt={raceName}
+        className="w-full h-auto object-contain rounded-md shadow-sm"
+        loading="lazy"
+      />
+    );
+  }
   
   // Image de race (public/Races/...) avec fallback de noms
   function RaceImage({ raceName }: { raceName: string }) {
