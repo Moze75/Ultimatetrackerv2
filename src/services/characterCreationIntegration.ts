@@ -467,6 +467,7 @@ export async function createCharacterFromCreatorPayload(
       weapon_proficiencies: payload.weaponProficiencies || [],
       armor_proficiencies: payload.armorProficiencies || [],
       tool_proficiencies: payload.toolProficiencies || [],
+      custom_race: payload.customRaceData || null, // ✅ AJOUTER cette ligne
     },
     weapon_proficiencies: payload.weaponProficiencies || [],
     armor_proficiencies: payload.armorProficiencies || [],
