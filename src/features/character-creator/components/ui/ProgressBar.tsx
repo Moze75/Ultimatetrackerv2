@@ -64,7 +64,7 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
     };
   }, []);
 
-// ✅ Tenter l'autoplay uniquement au step "Race" ET si le composant est bien monté et visible
+ // ✅ Tenter l'autoplay uniquement au step "Race" ET si le composant est bien monté et visible
 useEffect(() => {
   // Ne rien faire si :
   // - Pas sur l'étape Race
