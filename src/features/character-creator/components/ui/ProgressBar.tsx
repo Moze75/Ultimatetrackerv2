@@ -12,6 +12,7 @@ interface ProgressBarProps {
   currentStep: number;
   totalSteps: number;
   steps: string[];
+  isRestoredFromSnapshot?: boolean; // ✅ AJOUT
 }
 
 export default function ProgressBar({ currentStep, totalSteps, steps }: ProgressBarProps) {
