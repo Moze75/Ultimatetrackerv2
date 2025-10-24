@@ -25,10 +25,10 @@ export default function RaceSelection({
   const [showCustomModal, setShowCustomModal] = useState(false);
 
   // ✅ NOUVEAU: Combiner les races standards et la race personnalisée
-  const allRaces = customRaceData 
-    ? [...races, customRaceData] 
-    : races;
-
+const allRaces = customRaceData 
+  ? [...races, customRaceData] 
+  : races;
+  
   // Conversion pieds -> mètres (les données sont en pieds)
   const feetToMeters = (ft?: number) => {
     if (!ft && ft !== 0) return '';
