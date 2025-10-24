@@ -89,7 +89,7 @@ export default function CustomRaceModal({ open, onClose, onSave }: CustomRaceMod
 
 return (
   <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-    <div className="w-full max-w-4xl h-[85vh] bg-gray-900 border border-gray-800 rounded-xl shadow-xl flex flex-col">
+    <div className="w-full max-w-4xl max-h-[85vh] overflow-hidden bg-gray-900 border border-gray-800 rounded-xl shadow-xl flex flex-col">
       {/* Header - FIXE */}
       <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800 flex-shrink-0">
         <div className="flex items-center gap-2">
@@ -106,7 +106,7 @@ return (
       </div>
 
       {/* Contenu - SCROLLABLE */}
-      <div className="overflow-y-auto flex-1 p-5 space-y-6">
+      <div className="p-5 overflow-y-auto flex-1 space-y-6">
         {/* Informations de base */}
         <Card>
           <CardHeader>
