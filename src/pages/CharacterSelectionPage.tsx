@@ -702,21 +702,15 @@ useEffect(() => {
     console.log('[CharacterSelection] 🚪 Fermeture du wizard');
 
  
-    
-    // ✅ Arrêter la musique de façon synchrone
-    try {
-      // Import dynamique mais exécution immédiate
- import('../features/character-creator/components/ui/musicControl').then(({ stopWizardMusic }) => {
-  stopWizardMusic();
-});
-    } catch (e) {
-      console.warn('[CharacterSelection] Impossible d\'arrêter la musique:', e);
-    }
-    
-    setShowCreator(false);
-    appContextService.clearWizardSnapshot();
-    appContextService.setContext('selection');
-  }}
+// ✅ Arrêter et détruire la musique
+  import('../features/character-creator/components/ui/musicControl').then(({ stopWizardMusic }) => {
+    stopWizardMusic();
+  });
+  
+  setShowCreator(false);
+  appContextService.clearWizardSnapshot();
+  appContextService.setContext('selection');
+}}
   onComplete={handleCreatorComplete}
   initialSnapshot={appContextService.getWizardSnapshot()}
 />
