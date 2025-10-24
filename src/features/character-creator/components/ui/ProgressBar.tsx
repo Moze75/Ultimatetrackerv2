@@ -23,36 +23,43 @@ export default function ProgressBar({ currentStep, totalSteps, steps, isRestored
   const [autoPlayBlocked, setAutoPlayBlocked] = useState(false);
   const [musicStartAttempted, setMusicStartAttempted] = useState(false);
 
-  // ✅ Initialiser l'audio au montage
-  useEffect(() => {
-    console.log('[ProgressBar] 🚀 Initialisation audio');
-    initWizardMusic();
-    setIsPlaying(isWizardMusicPlaying());
+// ✅ Initialiser l'audio au montage
+useEffect(() => {
+  console.log('[ProgressBar] 🚀 Initialisation audio');
+  initWizardMusic();
+  setIsPlaying(isWizardMusicPlaying());
 
-    // ✅ Tenter l'autoplay (peut être bloqué par le navigateur)
-    const attemptAutoplay = async () => {
-      console.log('[ProgressBar] 🎬 Tentative autoplay au montage');
-      const success = await startWizardMusic();
-      setIsPlaying(success);
-      setAutoPlayBlocked(!success);
-      setMusicStartAttempted(true);
-      
-      if (success) {
-        console.log('[ProgressBar] ✅ Autoplay réussi !');
-      } else {
-        console.log('[ProgressBar] ⚠️ Autoplay bloqué, attente interaction utilisateur');
-      }
-    };
+  // ✅ NE PAS tenter l'autoplay si c'est une restauration de snapshot
+  if (isRestoredFromSnapshot) {
+    console.log('[ProgressBar] 📋 Restauration depuis snapshot détectée - Autoplay désactivé');
+    setMusicStartAttempted(true); // Marquer comme tenté pour éviter l'alerte
+    return; // ← SORTIR sans lancer l'autoplay
+  }
 
-    const timer = setTimeout(attemptAutoplay, 300);
+  // ✅ Tenter l'autoplay (peut être bloqué par le navigateur)
+  const attemptAutoplay = async () => {
+    console.log('[ProgressBar] 🎬 Tentative autoplay au montage');
+    const success = await startWizardMusic();
+    setIsPlaying(success);
+    setAutoPlayBlocked(!success);
+    setMusicStartAttempted(true);
     
-    // ✅ CLEANUP : Arrêter et détruire la musique au démontage du ProgressBar
-    return () => {
-      clearTimeout(timer);
-      console.log('[ProgressBar] 🧹 Démontage - Arrêt et destruction de la musique');
-      stopWizardMusic();
-    };
-  }, []);
+    if (success) {
+      console.log('[ProgressBar] ✅ Autoplay réussi !');
+    } else {
+      console.log('[ProgressBar] ⚠️ Autoplay bloqué, attente interaction utilisateur');
+    }
+  };
+
+  const timer = setTimeout(attemptAutoplay, 300);
+  
+  // ✅ CLEANUP : Arrêter et détruire la musique au démontage du ProgressBar
+  return () => {
+    clearTimeout(timer);
+    console.log('[ProgressBar] 🧹 Démontage - Arrêt et destruction de la musique');
+    stopWizardMusic();
+  };
+}, [isRestoredFromSnapshot]); // ✅ Ajouter la dépendance []);
 
   // ✅ Synchroniser l'état avec la musique à chaque changement d'étape
   useEffect(() => {
