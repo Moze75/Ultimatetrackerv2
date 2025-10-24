@@ -222,5 +222,18 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
           className={`text-xs sm:text-sm px-3 py-1.5 rounded-md border transition-colors
             ${isPlaying ? 'border-red-600 text-red-200 hover:bg-red-900/30' : 'border-gray-600 text-gray-300 hover:bg-gray-800/30'}
           `}
-          title={autoPlayBlocked && !isPlaying ? "Cliquez pour activer la musique" : (isPlaying ? "Arrê`*
-
+          title={autoPlayBlocked && !isPlaying ? "Cliquez pour activer la musique" : (isPlaying ? "Arrêter la musique" : "Lire la musique")}
+        >
+          {isPlaying ? '⏸ Arrêter la musique' : '▶️ Lire la musique'}
+        </button>
+      </div>
+
+      {/* Alerte autoplay bloqué */}
+      {autoPlayBlocked && !isPlaying && (
+        <div className="mt-2 text-[11px] sm:text-xs text-gray-500 max-w-6xl mx-auto px-4">
+          Astuce: l'autoplay a été bloqué par votre navigateur. Cliquez sur "Lire la musique" pour l'activer.
+        </div>
+      )}
+    </div>
+  );
+}
