@@ -14,55 +14,70 @@ interface ProgressBarProps {
 }
 
 export default function ProgressBar({ currentStep, totalSteps, steps }: ProgressBarProps) {
-  console.log('[ProgressBar] 🎨 RENDER - currentStep:', currentStep);
-  
   const total = Math.max(1, steps.length - 1);
   const percent = Math.max(0, Math.min(100, (currentStep / total) * 100));
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [autoPlayBlocked, setAutoPlayBlocked] = useState(false);
-  const [hasTriedAutoStart, setHasTriedAutoStart] = useState(false); // ✅ ÉTAT au lieu de REF
+  const [musicStartAttempted, setMusicStartAttempted] = useState(false);
 
-  console.log('[ProgressBar] 📊 État - isPlaying:', isPlaying, 'hasTriedAutoStart:', hasTriedAutoStart);
-
-  // ✅ Initialiser l'audio global + Autoplay en un seul useEffect
+  // ✅ Initialiser l'audio au montage
   useEffect(() => {
-    console.log('[ProgressBar] 🚀 USEEFFECT - Initialisation + Autoplay');
-    
-    // Initialiser l'audio
+    console.log('[ProgressBar] 🚀 Initialisation audio');
     initWizardMusic();
     setIsPlaying(isWizardMusicPlaying());
-    console.log('[ProgressBar] 🎵 État initial de la musique:', isWizardMusicPlaying() ? 'en lecture' : 'arrêtée');
 
-    // ✅ Autoplay uniquement si pas encore tenté
-    if (!hasTriedAutoStart) {
-      console.log('[ProgressBar] ✅ Lancement autoplay');
-      setHasTriedAutoStart(true);
+    // ✅ Tenter l'autoplay (peut être bloqué par le navigateur)
+    const attemptAutoplay = async () => {
+      console.log('[ProgressBar] 🎬 Tentative autoplay au montage');
+      const success = await startWizardMusic();
+      setIsPlaying(success);
+      setAutoPlayBlocked(!success);
+      setMusicStartAttempted(true);
+      
+      if (success) {
+        console.log('[ProgressBar] ✅ Autoplay réussi !');
+      } else {
+        console.log('[ProgressBar] ⚠️ Autoplay bloqué, attente interaction utilisateur');
+      }
+    };
 
-      const autoplayTimer = setTimeout(async () => {
-        console.log('[ProgressBar] ⏰ Timeout déclenché, tentative démarrage musique');
-        
-        const success = await startWizardMusic();
-        console.log('[ProgressBar] 📢 Résultat startWizardMusic:', success);
-        
-        setIsPlaying(success);
-        setAutoPlayBlocked(!success);
-        console.log('[ProgressBar] Résultat autoplay:', success ? 'succès ✅' : 'bloqué ⚠️');
-      }, 500); // ✅ Augmenté à 500ms pour plus de sécurité
-
-      return () => {
-        console.log('[ProgressBar] 🧹 Cleanup - annulation timeout');
-        clearTimeout(autoplayTimer);
-      };
-    }
-  }, [hasTriedAutoStart]); // ✅ Dépendance sur l'état
+    const timer = setTimeout(attemptAutoplay, 300);
+    return () => clearTimeout(timer);
+  }, []);
 
   // ✅ Synchroniser l'état avec la musique à chaque changement d'étape
   useEffect(() => {
-    console.log('[ProgressBar] 🔄 Sync step', currentStep);
     const playing = isWizardMusicPlaying();
     setIsPlaying(playing);
+    console.log('[ProgressBar] 🔄 Sync step', currentStep, '- Playing:', playing);
   }, [currentStep]);
+
+  // ✅ Capturer le premier clic pour démarrer la musique si l'autoplay a été bloqué
+  useEffect(() => {
+    if (!autoPlayBlocked || isPlaying) return;
+
+    const handleFirstClick = async () => {
+      if (!isWizardMusicPlaying()) {
+        console.log('[ProgressBar] 🎵 Premier clic détecté, démarrage musique');
+        const success = await startWizardMusic();
+        setIsPlaying(success);
+        setAutoPlayBlocked(!success);
+        
+        if (success) {
+          // Retirer le listener après le premier succès
+          document.removeEventListener('click', handleFirstClick, true);
+        }
+      }
+    };
+
+    // Écouter en phase de capture pour attraper tous les clics
+    document.addEventListener('click', handleFirstClick, true);
+
+    return () => {
+      document.removeEventListener('click', handleFirstClick, true);
+    };
+  }, [autoPlayBlocked, isPlaying]);
 
   const togglePlayback = async () => {
     console.log('[ProgressBar] 🎵 Toggle playback, isPlaying:', isPlaying);
@@ -183,10 +198,17 @@ export default function ProgressBar({ currentStep, totalSteps, steps }: Progress
         </button>
       </div>
 
-      {/* Alerte autoplay bloqué */}
-      {autoPlayBlocked && !isPlaying && (
-        <div className="mt-2 text-[11px] sm:text-xs text-gray-500 max-w-6xl mx-auto px-4">
-          Astuce: l'autoplay a été bloqué par votre navigateur. Cliquez sur "Lire la musique" pour l'activer.
+      {/* Alerte autoplay bloqué - Seulement si l'autoplay a échoué et que la musique n'est pas en lecture */}
+      {autoPlayBlocked && !isPlaying && musicStartAttempted && (
+        <div className="mt-2 text-[11px] sm:text-xs max-w-6xl mx-auto px-4">
+          <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-3 text-center">
+            <p className="text-yellow-400 font-medium mb-1">
+              🎵 Musique d'ambiance disponible
+            </p>
+            <p className="text-yellow-300/80 text-[10px] sm:text-xs">
+              Cliquez n'importe où ou sur le bouton "▶️ Lire la musique" pour activer
+            </p>
+          </div>
         </div>
       )}
     </div>
