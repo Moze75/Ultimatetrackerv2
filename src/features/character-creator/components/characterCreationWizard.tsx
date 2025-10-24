@@ -664,15 +664,21 @@ useEffect(() => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-fantasy relative">
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          className: 'bg-gray-800 text-white border border-gray-700',
-          duration: 4000,
-        }}
-      />
+return (
+  <div className="min-h-screen bg-fantasy relative wizard-container"> {/* ✅ Ajout de wizard-container */}
+    <Toaster
+      position="top-right"
+      toastOptions={{
+        className: 'bg-gray-800 text-white border border-gray-700',
+        duration: 4000,
+      }}
+    />
+
+    {/* ✅ Badge de sauvegarde automatique */}
+    <div className="fixed bottom-4 left-4 z-50 text-xs text-gray-400 bg-gray-900/80 backdrop-blur-sm px-3 py-2 rounded-lg border border-gray-700/50 flex items-center gap-2">
+      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+      Sauvegarde auto
+    </div>
 
       {/* ✅ Badge de sauvegarde automatique */}
       <div className="fixed bottom-4 left-4 z-50 text-xs text-gray-400 bg-gray-900/80 backdrop-blur-sm px-3 py-2 rounded-lg border border-gray-700/50 flex items-center gap-2">
