@@ -589,13 +589,65 @@ export default function PlayerProfileProfileTab({ player, onUpdate }: PlayerProf
       )}
 
       {/* Espèce */}
+   {/* Espèce - MODIFIÉ pour supporter les races personnalisées */}
       <SectionContainer
         icon={<Shield size={18} className="text-emerald-400" />}
         title="Espèce"
-        subtitle={race || undefined}
+        subtitle={race ? `${race}${customRace ? ' (personnalisée)' : ''}` : undefined}
         defaultOpen={false}
       >
-        {racesIdx.loading ? (
+        {customRace ? (
+          // ✅ NOUVEAU : Affichage pour race personnalisée
+          <>
+            <div className="text-base font-semibold mb-2">{customRace.name}</div>
+            
+            {customRace.description && (
+              <div className="text-sm text-gray-300 mb-4 italic">
+                {customRace.description}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+              <div className="bg-gray-800/30 rounded-lg p-2 border border-gray-700/30">
+                <span className="text-gray-400">Taille:</span>
+                <span className="text-white ml-2 font-medium">{customRace.size}</span>
+              </div>
+              <div className="bg-gray-800/30 rounded-lg p-2 border border-gray-700/30">
+                <span className="text-gray-400">Vitesse:</span>
+                <span className="text-white ml-2 font-medium">{Math.round(customRace.speed * 0.3048 * 2) / 2} m</span>
+              </div>
+            </div>
+
+            {customRace.traits && customRace.traits.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-gray-300">Traits raciaux:</div>
+                <ul className="space-y-2">
+                  {customRace.traits.map((trait, i) => (
+                    <li key={i} className="text-sm text-gray-300 bg-gray-800/20 rounded p-2 border border-gray-700/30">
+                      • {trait}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {customRace.languages && customRace.languages.length > 0 && (
+              <div className="mt-3">
+                <div className="text-sm font-medium text-gray-300 mb-2">Langues:</div>
+                <div className="flex flex-wrap gap-2">
+                  {customRace.languages.map((lang, i) => (
+                    <span
+                      key={i}
+                      className="px-2 py-1 text-xs bg-cyan-500/20 text-cyan-200 rounded border border-cyan-500/30"
+                    >
+                      {lang}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        ) : racesIdx.loading ? (
           <LoadingInline />
         ) : racesIdx.error ? (
           <div className="text-sm text-red-400">Erreur de chargement des espèces: {racesIdx.error}</div>
