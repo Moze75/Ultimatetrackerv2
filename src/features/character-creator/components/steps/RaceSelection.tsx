@@ -228,7 +228,7 @@ export default function RaceSelection({ selectedRace, onRaceSelect, onNext }: Ra
         >
           Continuer
         </Button>
-      </div> 
+      </div>
     </div>
   );
 }
