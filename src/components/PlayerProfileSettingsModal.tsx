@@ -636,6 +636,7 @@ export function PlayerProfileSettingsModal({
     };
   }, [open]);
 
+   const [customRaceName, setCustomRaceName] = useState<string | null>(null);
   const initialTranslate = slideFrom === 'right' ? 'translate-x-full' : '-translate-x-full';
 
   const startXRef = useRef<number | null>(null);
