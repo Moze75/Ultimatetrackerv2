@@ -1,8 +1,21 @@
+import React, { useState } from 'react';
+import Button from './ui/Button';
+import Input from './ui/Input';
+import Card, { CardContent, CardHeader } from './ui/Card';
+import { X, Plus, Trash2, Users } from 'lucide-react';
+import { DndRace } from '../types/character';
+
+interface CustomRaceModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSave: (race: DndRace) => void;
+}
+
 export default function CustomRaceModal({ open, onClose, onSave }: CustomRaceModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [size, setSize] = useState('Moyen');
-  const [speed, setSpeed] = useState(9);  // ← PAR DÉFAUT 9 mètres
+  const [speed, setSpeed] = useState(9);
   const [darkvision, setDarkvision] = useState(0);
   const [traits, setTraits] = useState<string[]>(['']);
 
