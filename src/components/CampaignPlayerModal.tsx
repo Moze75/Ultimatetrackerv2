@@ -981,46 +981,48 @@ const handleAcceptWithPlayer = async () => {
   </div>
 )}
 
-                {invitations.length > 0 && (
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-gray-300">Invitations en attente</h3>
-                    {invitations.map((invitation) => (
-                      <div
-                        key={invitation.id}
-                        className="bg-gray-800/40 border border-gray-700/50 rounded-lg p-4"
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <p className="font-medium text-white mb-1">
-                              Invitation à une campagne
-                            </p>
-                            <p className="text-sm text-gray-400">
-                              Code: <span className="font-mono text-purple-400">{invitation.invitation_code}</span>
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              Reçue le {new Date(invitation.invited_at).toLocaleDateString('fr-FR')}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleAcceptInvitation(invitation.id)}
-                            className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
-                          >
-                            <Check size={18} />
-                            Accepter
-                          </button>
-                          <button
-                            onClick={() => handleDeclineInvitation(invitation.id)}
-                            className="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 px-4 py-2 rounded-lg border border-red-500/30"
-                          >
-                            Refuser
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+{invitations.filter(inv => inv.player_email).length > 0 && (
+  <div className="space-y-3">
+    <h3 className="text-sm font-semibold text-gray-300">Invitations par email</h3>
+    {invitations
+      .filter(inv => inv.player_email) // Filtrer uniquement les invitations email
+      .map((invitation) => (
+        <div
+          key={invitation.id}
+          className="bg-gray-800/40 border border-gray-700/50 rounded-lg p-4"
+        >
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <p className="font-medium text-white mb-1">
+                Invitation par email
+              </p>
+              <p className="text-sm text-gray-400">
+                Email: <span className="text-purple-400">{invitation.player_email}</span>
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Reçue le {new Date(invitation.invited_at).toLocaleDateString('fr-FR')}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleAcceptInvitation(invitation.id)}
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
+            >
+              <Check size={18} />
+              Accepter
+            </button>
+            <button
+              onClick={() => handleDeclineInvitation(invitation.id)}
+              className="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 px-4 py-2 rounded-lg border border-red-500/30"
+            >
+              Refuser
+            </button>
+          </div>
+        </div>
+      ))}
+  </div>
+)}
 
                 {myCampaigns.length > 0 && (
                   <div className="space-y-3">
