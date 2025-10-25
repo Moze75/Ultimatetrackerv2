@@ -407,23 +407,26 @@ const [claiming, setClaiming] = useState(false);
     .eq('user_id', user.id)
     .eq('is_active', true);
 
-  const campaigns = (activeMemberships || [])
-    .map(m => m.campaigns)
-    .filter(Boolean);  // Enlever les nulls
+if (activeMemberships && activeMemberships.length > 0) {
+      // Extraire les objets campaigns
+      const campaigns = activeMemberships
+        .map(m => m.campaigns)
+        .filter(Boolean);  // Enlever les nulls
 
-  setMyCampaigns(campaigns || []);
-  setActiveCampaigns(campaigns || []);
+      setMyCampaigns(campaigns || []);
+      setActiveCampaigns(campaigns || []);
 
+      const campaignIds = campaigns.map(c => c.id);
 
-
-        const membersMap: Record<string, CampaignMember[]> = {};
-        await Promise.all(
-          campaignIds.map(async (campaignId) => {
-            const campaignMembers = await loadCampaignMembers(campaignId);
-            membersMap[campaignId] = campaignMembers;
-          })
-        );
-        setMembersByCampaign(membersMap);
+      // Charger les membres pour chaque campagne
+      const membersMap: Record<string, CampaignMember[]> = {};
+      await Promise.all(
+        campaignIds.map(async (campaignId) => {
+          const campaignMembers = await loadCampaignMembers(campaignId);
+          membersMap[campaignId] = campaignMembers;
+        })
+      );
+      setMembersByCampaign(membersMap);
 
         const { data: gifts } = await supabase
           .from('campaign_gifts')
