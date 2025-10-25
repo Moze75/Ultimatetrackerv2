@@ -802,7 +802,7 @@ const handleDeclineInvitation = async (invitationId: string) => {
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4" />
                 <p className="text-gray-400">Chargement...</p>
               </div>
-            ) : {activeTab === 'invitations' ? (
+            ) : activeTab === 'invitations' ? (
   <div className="space-y-4">
     {invitations.length > 0 ? (
       <div className="space-y-3">
