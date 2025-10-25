@@ -415,7 +415,7 @@ function EditCampaignModal({
 <button
   onClick={handleDelete}
   disabled={updating || deleting}
-  className="px-5 py-2 rounded-lg bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+  className="px-6 py-2 rounded-lg bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 disabled:opacity-50 flex items-center justify-center gap-2 whitespace-nowrap min-w-[140px]"
 >
   {deleting ? (
     <>
