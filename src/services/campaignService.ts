@@ -144,6 +144,8 @@ async acceptInvitationWithPlayer(invitationId: string, playerId: string): Promis
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Non authentifié');
 
+  console.log('🎯 acceptInvitationWithPlayer:', { invitationId, playerId, userId: user.id });
+
   // 1. Récupérer l'invitation
   const { data: invitation, error: invError } = await supabase
     .from('campaign_invitations')
@@ -151,21 +153,104 @@ async acceptInvitationWithPlayer(invitationId: string, playerId: string): Promis
     .eq('id', invitationId)
     .single();
 
-  if (invError) throw invError;
+  if (invError) {
+    console.error('❌ Erreur récupération invitation:', invError);
+    throw invError;
+  }
   if (!invitation) throw new Error('Invitation non trouvée');
   if (invitation.status !== 'pending') throw new Error('Cette invitation n\'est plus valide');
-  if (invitation.player_email !== user.email) throw new Error('Cette invitation ne vous est pas destinée');
+  if (invitation.player_email?.toLowerCase() !== user.email?.toLowerCase()) {
+    throw new Error('Cette invitation ne vous est pas destinée');
+  }
 
-// 2. ✅ Vérifier si CE PERSONNAGE SPÉCIFIQUE est déjà dans la campagne
-const { data: existingMember } = await supabase
-  .from('campaign_members')
-  .select('id')
-  .eq('campaign_id', invitation.campaign_id)
-  .eq('player_id', playerId)  // ✅ Vérifier le player_id au lieu du user_id
-  .single();
+  console.log('📧 Invitation trouvée:', invitation);
 
-if (existingMember) {
-  // Ce personnage est déjà dans la campagne, juste marquer l'invitation comme acceptée
+  // 2. Récupérer les infos du joueur
+  const { data: player, error: playerError } = await supabase
+    .from('players')
+    .select('name, adventurer_name, user_id')
+    .eq('id', playerId)
+    .single();
+
+  if (playerError) {
+    console.error('❌ Erreur récupération player:', playerError);
+    throw playerError;
+  }
+  if (!player) throw new Error('Personnage non trouvé');
+  if (player.user_id !== user.id) throw new Error('Ce personnage ne vous appartient pas');
+
+  console.log('🧙 Personnage trouvé:', player);
+
+  // 3. Vérifier si CE PERSONNAGE SPÉCIFIQUE est déjà dans la campagne
+  const { data: existingMember } = await supabase
+    .from('campaign_members')
+    .select('id, is_active')
+    .eq('campaign_id', invitation.campaign_id)
+    .eq('player_id', playerId)
+    .maybeSingle();
+
+  if (existingMember) {
+    console.log('⚠️ Membre déjà existant:', existingMember);
+    
+    // Si le membre existe mais est inactif, on le réactive
+    if (!existingMember.is_active) {
+      const { error: updateError } = await supabase
+        .from('campaign_members')
+        .update({ is_active: true })
+        .eq('id', existingMember.id);
+
+      if (updateError) {
+        console.error('❌ Erreur réactivation membre:', updateError);
+        throw updateError;
+      }
+      console.log('✅ Membre réactivé');
+    }
+
+    // Marquer l'invitation comme acceptée
+    const { error: updateInviteError } = await supabase
+      .from('campaign_invitations')
+      .update({ 
+        status: 'accepted',
+        responded_at: new Date().toISOString()
+      })
+      .eq('id', invitationId);
+
+    if (updateInviteError) {
+      console.error('❌ Erreur update invitation:', updateInviteError);
+      throw updateInviteError;
+    }
+
+    console.log('✅ Invitation acceptée (membre existant)');
+    return;
+  }
+
+  // 4. Créer le membre dans campaign_members
+  console.log('➕ Création du nouveau membre...');
+  
+  const { error: memberError } = await supabase
+    .from('campaign_members')
+    .insert({
+      campaign_id: invitation.campaign_id,
+      user_id: user.id,
+      player_id: playerId,
+      player_email: user.email!,
+      is_active: true,
+    });
+
+  if (memberError) {
+    console.error('❌ Erreur création membre:', memberError);
+    
+    // Si erreur de conflit (409), c'est que le membre a été créé entre-temps
+    if (memberError.code === '23505') {
+      console.log('⚠️ Membre créé entre-temps, on continue...');
+    } else {
+      throw memberError;
+    }
+  } else {
+    console.log('✅ Membre créé avec succès');
+  }
+
+  // 5. Marquer l'invitation comme acceptée
   const { error: updateError } = await supabase
     .from('campaign_invitations')
     .update({ 
@@ -174,52 +259,12 @@ if (existingMember) {
     })
     .eq('id', invitationId);
 
-  if (updateError) throw updateError;
-  return;
-}
-
-  // 3. Récupérer les infos du joueur
-  const { data: player, error: playerError } = await supabase
-    .from('players')
-    .select('name, adventurer_name')
-    .eq('id', playerId)
-    .single();
-
-  if (playerError) throw playerError;
-  if (!player) throw new Error('Personnage non trouvé');
-
-// 4. ✅ Créer le membre dans campaign_members
-const { error: memberError } = await supabase
-  .from('campaign_members')
-  .insert({
-    campaign_id: invitation.campaign_id,
-    user_id: user.id,
-    player_id: playerId,
-    player_email: user.email!,  // ✅ player_email au lieu de email
-    is_active: true,
-    // ❌ Enlever player_name et role qui n'existent pas
-  });
-
-  if (memberError) {
-    // ✅ Si erreur de conflit (409), c'est que le membre a été créé entre-temps
-    if (memberError.code === '23505') { // Code PostgreSQL pour doublon
-      console.log('⚠️ Membre créé entre-temps, on continue...');
-    } else {
-      throw memberError;
-    }
+  if (updateError) {
+    console.error('❌ Erreur update invitation:', updateError);
+    throw updateError;
   }
 
-  // 5. Marquer l'invitation comme acceptée
-const { error: updateError } = await supabase
-  .from('campaign_invitations')
-  .update({ 
-    status: 'accepted',
-    responded_at: new Date().toISOString()
-    // ❌ NE PAS mettre player_id ici non plus
-  })
-  .eq('id', invitationId);
-
-  if (updateError) throw updateError;
+  console.log('✅ Invitation acceptée avec succès !');
 },
 
 /**
