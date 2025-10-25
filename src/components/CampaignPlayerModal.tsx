@@ -375,6 +375,15 @@ export function CampaignPlayerModal({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+          // ✅ Charger les personnages de l'utilisateur
+    const { data: players } = await supabase
+      .from('players')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+    
+    setMyPlayers(players || []);
+
       const invites = await campaignService.getMyInvitations();
       setInvitations(invites);
 
