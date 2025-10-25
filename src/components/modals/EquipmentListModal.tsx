@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, X, Check } from 'lucide-react';
+import { Search, X, Check, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getWeaponCategory } from '../../utils/weaponProficiencyChecker';
 
@@ -75,24 +75,15 @@ function parseArmors(md: string): CatalogItem[] {
   const items: CatalogItem[] = [];
   const lines = md.split('\n');
   
-  console.log('=== DÉBUT PARSING ARMURES ===');
-  console.log('Contenu brut du fichier Armures.md:');
-  console.log(md);
-  console.log('===============================');
-  
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     
-    // Chercher les lignes de table qui contiennent des armures
     if (line.startsWith('|') && line.endsWith('|') && line.includes('|')) {
       const cells = line.substring(1, line.length - 1).split('|').map(c => c.trim());
       
       if (cells.length >= 2) {
         const [nomRaw, ca] = cells;
         
-        console.log(`Ligne ${i+1}: [${nomRaw}] -> [${ca}]`);
-        
-        // Ignorer les en-têtes et séparateurs de manière plus précise
         const nomNorm = nomRaw.toLowerCase();
         const caNorm = (ca || '').toLowerCase();
         
@@ -104,32 +95,25 @@ function parseArmors(md: string): CatalogItem[] {
           ca.includes('-') && ca.length > 5 ||
           nomRaw === '—' ||
           ca === '—' ||
-          nomRaw === '---' ||  // CORRECTION: Ignorer les lignes avec ---
-          ca === '---' ||      // CORRECTION: Ignorer les CA avec ---
+          nomRaw === '---' ||
+          ca === '---' ||
           caNorm.includes('force') ||
           caNorm.includes('discrétion') ||
           nomNorm === 'force' ||
           nomNorm === 'discrétion'
         ) {
-          console.log(`  -> Ignoré (en-tête ou séparateur)`);
           continue;
         }
         
         const nom = stripPriceParentheses(nomRaw);
 
-        // CORRECTION: Vérifier que le nom n'est pas vide après nettoyage
         if (!nom || nom === '---' || nom.length < 2) {
-          console.log(`  -> Ignoré (nom vide ou invalide): "${nom}"`);
           continue;
         }
         
-        // Parser la CA avec tous les cas possibles
         let base = 10, addDex = false, dexCap: number | null = null;
         
-        console.log(`  -> Parsing CA: "${ca}"`);
-        
         if (ca.toLowerCase().includes('modificateur de dex')) {
-          // Formule avec Dex: "11 + modificateur de Dex" ou "12 + modificateur de Dex (max 2)"
           const baseMatch = ca.match(/(\d+)/);
           const capMatch = ca.match(/max\s*(\d+)/i);
           
@@ -137,49 +121,32 @@ function parseArmors(md: string): CatalogItem[] {
             base = parseInt(baseMatch[1]);
             addDex = true;
             dexCap = capMatch ? parseInt(capMatch[1]) : null;
-            console.log(`    -> Formule Dex: ${base} + Dex${dexCap ? ` (max ${dexCap})` : ''}`);
           }
         } else {
-          // Nombre simple: "14", "16", etc.
           const numberMatch = ca.match(/^\s*(\d+)\s*$/);
           if (numberMatch) {
             base = parseInt(numberMatch[1]);
             addDex = false;
             dexCap = null;
-            console.log(`    -> Nombre simple: ${base}`);
           } else {
-            console.log(`    -> CA non reconnue, tentative d'extraction de nombre`);
-            // Fallback: essayer d'extraire n'importe quel nombre
             const anyNumberMatch = ca.match(/(\d+)/);
             if (anyNumberMatch) {
               base = parseInt(anyNumberMatch[1]);
               addDex = false;
               dexCap = null;
-              console.log(`    -> Nombre extrait: ${base}`);
             }
           }
         }
         
-        const armorItem = { 
+        items.push({ 
           id: `armor:${nom}`, 
           kind: 'armors' as CatalogKind, 
           name: nom, 
           armor: { base, addDex, dexCap, label: ca } 
-        };
-        
-        items.push(armorItem);
-        console.log(`  -> ✅ Ajouté: ${nom}`);
+        });
       }
     }
   }
-  
-  console.log(`\n=== RÉSUMÉ FINAL ===`);
-  console.log(`Total armures trouvées: ${items.length}`);
-  items.forEach(item => {
-    const armor = item.armor!;
-    console.log(`- ${item.name}: CA ${armor.base}${armor.addDex ? ' + Dex' : ''}${armor.dexCap ? ` (max ${armor.dexCap})` : ''}`);
-  });
-  console.log('====================');
   
   return items;
 }
@@ -199,6 +166,7 @@ function parseShields(md: string): CatalogItem[] {
   }
   return items;
 }
+
 function parseWeapons(md: string): CatalogItem[] {
   const rows = parseMarkdownTable(md);
   const items: CatalogItem[] = [];
@@ -237,6 +205,7 @@ function isMarkdownTableLine(line: string) {
   const l = line.trim();
   return l.startsWith('|') && l.endsWith('|') && l.includes('|');
 }
+
 function MarkdownLite({ text }: { text: string }) {
   const blocks = text.split(/\n{2,}/g).map(b => b.split('\n'));
   return (
@@ -299,6 +268,7 @@ function parseMarkdownTables(md: string): string[][][] {
   if (current && current.length > 0) tables.push(current);
   return tables;
 }
+
 function parseTools(md: string): CatalogItem[] {
   const items: CatalogItem[] = [];
   const tables = parseMarkdownTables(md);
@@ -376,14 +346,17 @@ type FilterState = {
   adventuring_gear: boolean;
   tools: boolean;
 };
+
 export function EquipmentListModal({
   onClose,
   onAddItem,
   allowedKinds = null,
+  multiAdd = false,  // ✅ NOUVEAU : Par défaut false (comportement joueur)
 }: {
   onClose: () => void;
   onAddItem: (item: { name: string; description?: string; meta: ItemMeta }) => void;
   allowedKinds?: CatalogKind[] | null;
+  multiAdd?: boolean;  // ✅ NOUVEAU
 }) {
   const [loading, setLoading] = React.useState(false);
   const [query, setQuery] = React.useState('');
@@ -392,6 +365,10 @@ export function EquipmentListModal({
     weapons: true, armors: true, shields: true, adventuring_gear: true, tools: true
   });
   const [expanded, setExpanded] = React.useState<Record<string, boolean>>({});
+  
+  // États pour le mode multi-ajout
+  const [addedItems, setAddedItems] = React.useState<Set<string>>(new Set());
+  const [adding, setAdding] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const prev = document.body.style.overflow;
@@ -408,9 +385,7 @@ export function EquipmentListModal({
           fetchText(URLS.adventuring_gear), fetchText(URLS.tools),
         ]);
 
-        console.log('Début du chargement des équipements...');
         const armorItems = parseArmors(armorsMd);
-        console.log('Fin du parsing des armures');
 
         const list: CatalogItem[] = [
           ...armorItems,
@@ -429,15 +404,6 @@ export function EquipmentListModal({
           seen.add(id);
           return true;
         });
-        
-        console.log(`\n=== STATISTIQUES FINALES ===`);
-        console.log(`Total d'équipements chargés: ${cleaned.length}`);
-        console.log(`Armures: ${cleaned.filter(i => i.kind === 'armors').length}`);
-        console.log(`Boucliers: ${cleaned.filter(i => i.kind === 'shields').length}`);
-        console.log(`Armes: ${cleaned.filter(i => i.kind === 'weapons').length}`);
-        console.log(`Outils: ${cleaned.filter(i => i.kind === 'tools').length}`);
-        console.log(`Équipements: ${cleaned.filter(i => i.kind === 'adventuring_gear').length}`);
-        console.log('============================');
         
         setAll(cleaned);
       } catch (e) {
@@ -510,14 +476,39 @@ export function EquipmentListModal({
     });
   }, [all, query, effectiveFilters, allowedKinds, noneSelected]);
 
-  const handlePick = (ci: CatalogItem) => {
-    let meta: ItemMeta = { type: 'equipment', quantity: 1, equipped: false };
-    if (ci.kind === 'armors' && ci.armor) meta = { type: 'armor', quantity: 1, equipped: false, armor: ci.armor };
-    if (ci.kind === 'shields' && ci.shield) meta = { type: 'shield', quantity: 1, equipped: false, shield: ci.shield };
-    if (ci.kind === 'weapons' && ci.weapon) meta = { type: 'weapon', quantity: 1, equipped: false, weapon: ci.weapon };
-    if (ci.kind === 'tools') meta = { type: 'tool', quantity: 1, equipped: false };
-    const description = (ci.kind === 'adventuring_gear' || ci.kind === 'tools') ? (ci.description || '').trim() : '';
-    onAddItem({ name: ci.name, description, meta });
+  // ✅ MODIFIÉ : Comportement conditionnel selon multiAdd
+  const handlePick = async (ci: CatalogItem) => {
+    // En mode multi-add, bloquer si déjà ajouté
+    // En mode single-add, ne pas bloquer
+    if (adding || (multiAdd && addedItems.has(ci.id))) return;
+
+    try {
+      setAdding(ci.id);
+
+      let meta: ItemMeta = { type: 'equipment', quantity: 1, equipped: false };
+      if (ci.kind === 'armors' && ci.armor) meta = { type: 'armor', quantity: 1, equipped: false, armor: ci.armor };
+      if (ci.kind === 'shields' && ci.shield) meta = { type: 'shield', quantity: 1, equipped: false, shield: ci.shield };
+      if (ci.kind === 'weapons' && ci.weapon) meta = { type: 'weapon', quantity: 1, equipped: false, weapon: ci.weapon };
+      if (ci.kind === 'tools') meta = { type: 'tool', quantity: 1, equipped: false };
+      const description = (ci.kind === 'adventuring_gear' || ci.kind === 'tools') ? (ci.description || '').trim() : '';
+      
+      await onAddItem({ name: ci.name, description, meta });
+      
+      if (multiAdd) {
+        // Mode GM : Marquer comme ajouté, rester ouvert
+        setAddedItems(prev => new Set(prev).add(ci.id));
+        toast.success(`${ci.name} ajouté !`);
+      } else {
+        // Mode joueur : Fermer immédiatement
+        toast.success(`${ci.name} ajouté !`);
+        onClose();
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Erreur lors de l\'ajout');
+    } finally {
+      setAdding(null);
+    }
   };
 
   const toggleExpand = (id: string) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
@@ -527,9 +518,18 @@ export function EquipmentListModal({
     <div className="fixed inset-0 z-[9999]">
       <div className="fixed inset-0 bg-black/70" onClick={onClose} />
       <div className="fixed inset-0 bg-gray-900 flex flex-col" style={{ height: '100dvh' }}>
+        {/* Header */}
         <div className="px-3 py-2 border-b border-gray-800">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-gray-100 font-semibold text-lg">Liste des équipements</h2>
+            <div>
+              <h2 className="text-gray-100 font-semibold text-lg">Liste des équipements</h2>
+              {/* ✅ Compteur uniquement en mode multi-add */}
+              {multiAdd && addedItems.size > 0 && (
+                <p className="text-sm text-green-400 mt-1">
+                  {addedItems.size} objet{addedItems.size > 1 ? 's' : ''} ajouté{addedItems.size > 1 ? 's' : ''}
+                </p>
+              )}
+            </div>
             <button onClick={onClose} className="p-2 text-gray-400 hover:bg-gray-800 rounded-lg" aria-label="Fermer">
               <X />
             </button>
@@ -566,6 +566,7 @@ export function EquipmentListModal({
           </div>
         </div>
 
+        {/* Liste */}
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
           {loading ? (
             <div className="text-gray-400">Chargement…</div>
@@ -574,6 +575,9 @@ export function EquipmentListModal({
           ) : (
             filtered.map(ci => {
               const isOpen = !!expanded[ci.id];
+              const isAdded = addedItems.has(ci.id);
+              const isAdding = adding === ci.id;
+
               const preview = (
                 <>
                   {ci.kind === 'armors' && ci.armor && <div>CA: {ci.armor.label}</div>}
@@ -588,8 +592,16 @@ export function EquipmentListModal({
                   {(ci.kind === 'adventuring_gear' || ci.kind === 'tools') && (ci.description ? 'Voir le détail' : 'Équipement')}
                 </>
               );
+
               return (
-                <div key={ci.id} className="bg-gray-800/50 border border-gray-700/50 rounded-md">
+                <div 
+                  key={ci.id} 
+                  className={`border rounded-md transition-all ${
+                    multiAdd && isAdded 
+                      ? 'bg-green-900/20 border-green-500/50' 
+                      : 'bg-gray-800/50 border-gray-700/50'
+                  }`}
+                >
                   <div className="flex items-start justify-between p-3 gap-3">
                     <div className="flex-1 min-w-0">
                       <button className="text-gray-100 font-medium hover:underline break-words text-left" onClick={() => toggleExpand(ci.id)}>
@@ -597,8 +609,30 @@ export function EquipmentListModal({
                       </button>
                       <div className="text-xs text-gray-400 mt-1">{preview}</div>
                     </div>
-                    <button onClick={() => handlePick(ci)} className="btn-primary px-3 py-2 rounded-lg flex items-center gap-1">
-                      <Check className="w-4 h-4" /> Ajouter
+                    
+                    {/* ✅ Bouton conditionnel */}
+                    <button 
+                      onClick={() => handlePick(ci)} 
+                      disabled={isAdding || (multiAdd && isAdded)}
+                      className={`px-3 py-2 rounded-lg flex items-center gap-1 transition-colors ${
+                        multiAdd && isAdded
+                          ? 'bg-green-600/20 text-green-400 cursor-default'
+                          : isAdding
+                          ? 'bg-gray-700 text-gray-400 cursor-wait'
+                          : 'btn-primary'
+                      }`}
+                    >
+                      {isAdding ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                      ) : (multiAdd && isAdded) ? (
+                        <>
+                          <Check className="w-4 h-4" /> Ajouté
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4" /> Ajouter
+                        </>
+                      )}
                     </button>
                   </div>
                   {isOpen && (
@@ -613,7 +647,30 @@ export function EquipmentListModal({
             })
           )}
         </div>
+
+        {/* ✅ Footer uniquement en mode multi-add */}
+        {multiAdd && (
+          <div className="bg-gray-800/60 border-t border-gray-700 px-3 py-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-400">
+                {filtered.length} résultat{filtered.length > 1 ? 's' : ''}
+                {addedItems.size > 0 && (
+                  <span className="ml-2 text-green-400">
+                    • {addedItems.size} ajouté{addedItems.size > 1 ? 's' : ''}
+                  </span>
+                )}
+              </p>
+              <button
+                onClick={onClose}
+                className="btn-primary px-6 py-2 rounded-lg flex items-center gap-2"
+              >
+                <Check size={18} />
+                Terminer {addedItems.size > 0 && `(${addedItems.size})`}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
-  );
+  ); 
 }
