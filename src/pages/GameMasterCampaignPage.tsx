@@ -1173,7 +1173,10 @@ function InventoryTab({
       {/* Modals */}
 {showList && (
   <EquipmentListModal
-    onClose={() => setShowList(false)}
+    onClose={() => {
+      setShowList(false);
+      onReload();  // ✅ Recharger UNIQUEMENT à la fermeture
+    }}
     onAddItem={async (payload) => {
       try {
         const META_PREFIX = '#meta:';
@@ -1190,15 +1193,15 @@ function InventoryTab({
           payload.meta.quantity || 1
         );
         
-        onReload();
-        // ✅ Ne pas fermer la modal ici, elle se fermera avec le bouton "Terminer"
+        // ✅ NE PAS RECHARGER ICI, seulement à la fermeture
       } catch (error) {
         console.error(error);
         toast.error('Erreur lors de l\'ajout');
-        throw error; // ✅ Remonter l'erreur pour que la modal la gère
+        throw error;
       }
     }}
     allowedKinds={null}
+    multiAdd={true}
   />
 )}
 
