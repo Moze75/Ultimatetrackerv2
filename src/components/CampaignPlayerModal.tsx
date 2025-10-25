@@ -877,47 +877,109 @@ const handleAcceptWithPlayer = async () => {
               </div>
             ) : activeTab === 'invitations' ? (
               <div className="space-y-4">
-                {!showCodeInput ? (
-                  <button
-                    onClick={() => setShowCodeInput(true)}
-                    className="w-full btn-primary px-4 py-3 rounded-lg flex items-center justify-center gap-2"
-                  >
-                    <Check size={20} />
-                    Rejoindre avec un code
-                  </button>
-                ) : (
-                  <div className="bg-gray-800/40 rounded-lg p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-white">Code d'invitation</h3>
-                      <button
-                        onClick={() => {
-                          setShowCodeInput(false);
-                          setInvitationCode('');
-                        }}
-                        className="text-gray-400 hover:text-white"
-                      >
-                        <X size={18} />
-                      </button>
-                    </div>
-                    <input
-                      type="text"
-                      value={invitationCode}
-                      onChange={(e) => setInvitationCode(e.target.value.toUpperCase())}
-                      className="input-dark w-full px-4 py-2 rounded-lg text-center font-mono text-lg tracking-wider"
-                      placeholder="ABCD1234"
-                      maxLength={8}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleJoinWithCode();
-                      }}
-                    />
-                    <button
-                      onClick={handleJoinWithCode}
-                      className="w-full btn-primary px-4 py-2 rounded-lg"
-                    >
-                      Rejoindre la campagne
-                    </button>
-                  </div>
-                )}
+             {!showCodeInput ? (
+  <button
+    onClick={() => setShowCodeInput(true)}
+    className="w-full btn-primary px-4 py-3 rounded-lg flex items-center justify-center gap-2"
+  >
+    <Check size={20} />
+    Rejoindre avec un code
+  </button>
+) : null}
+
+{showCodeInput && !validatedInvitation && (
+  <div className="bg-gray-800/40 rounded-lg p-4 space-y-3">
+    <div className="flex items-center justify-between">
+      <h3 className="font-semibold text-white">Code d'invitation</h3>
+      <button
+        onClick={() => {
+          setShowCodeInput(false);
+          setInvitationCode('');
+        }}
+        className="text-gray-400 hover:text-white"
+      >
+        <X size={18} />
+      </button>
+    </div>
+    <input
+      type="text"
+      value={invitationCode}
+      onChange={(e) => setInvitationCode(e.target.value.toUpperCase())}
+      className="input-dark w-full px-4 py-2 rounded-lg text-center font-mono text-lg tracking-wider"
+      placeholder="ABCD1234"
+      maxLength={8}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') handleValidateCode();
+      }}
+    />
+    <button
+      onClick={handleValidateCode}
+      disabled={validatingCode}
+      className="w-full btn-primary px-4 py-2 rounded-lg disabled:opacity-50"
+    >
+      {validatingCode ? 'Vérification...' : 'Vérifier le code'}
+    </button>
+  </div>
+)}
+
+{validatedInvitation && (
+  <div className="bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-purple-500/30 rounded-lg p-6 space-y-4">
+    <div className="flex items-start gap-3">
+      <Check className="w-6 h-6 text-green-400 flex-shrink-0 mt-1" />
+      <div className="flex-1">
+        <h3 className="font-semibold text-white text-lg mb-1">
+          Invitation valide !
+        </h3>
+        <p className="text-purple-200 text-sm">
+          {validatedInvitation.campaign?.name}
+        </p>
+        {validatedInvitation.campaign?.description && (
+          <p className="text-gray-400 text-sm mt-2">
+            {validatedInvitation.campaign.description}
+          </p>
+        )}
+      </div>
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium text-gray-300 mb-2">
+        Choisissez votre personnage
+      </label>
+      <select
+        value={selectedPlayerForInvite}
+        onChange={(e) => setSelectedPlayerForInvite(e.target.value)}
+        className="input-dark w-full px-4 py-2 rounded-lg"
+      >
+        <option value="">-- Sélectionnez un personnage --</option>
+        {myPlayers.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.adventurer_name || p.name}
+          </option>
+        ))}
+      </select>
+    </div>
+
+    <div className="flex gap-2">
+      <button
+        onClick={() => {
+          setValidatedInvitation(null);
+          setInvitationCode('');
+          setSelectedPlayerForInvite('');
+        }}
+        className="flex-1 btn-secondary px-4 py-2 rounded-lg"
+      >
+        Annuler
+      </button>
+      <button
+        onClick={handleAcceptWithPlayer}
+        disabled={!selectedPlayerForInvite}
+        className="flex-1 btn-primary px-4 py-2 rounded-lg disabled:opacity-50"
+      >
+        Rejoindre la campagne
+      </button>
+    </div>
+  </div>
+)}
 
                 {invitations.length > 0 && (
                   <div className="space-y-3">
