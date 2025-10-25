@@ -334,6 +334,7 @@ export function CampaignPlayerModal({
 
   // État pour empêcher les double-clics lors du claim
   const [claiming, setClaiming] = useState(false);
+  const [selectedGiftIds, setSelectedGiftIds] = useState<string[]>([]);
 
   const getVisibleDescription = (description: string | null | undefined): string => {
     if (!description) return '';
@@ -355,7 +356,41 @@ export function CampaignPlayerModal({
       return null;
     }
   };
+// ✅ AJOUTE CES FONCTIONS ICI
+const toggleGiftSelection = (giftId: string) => {
+  setSelectedGiftIds(prev => 
+    prev.includes(giftId) 
+      ? prev.filter(id => id !== giftId)
+      : [...prev, giftId]
+  );
+};
 
+const handleClaimMultiple = async () => {
+  if (claiming || selectedGiftIds.length === 0) return;
+
+  try {
+    setClaiming(true);
+    
+    const giftsToProcess = pendingGifts.filter(g => selectedGiftIds.includes(g.id));
+    
+    for (const gift of giftsToProcess) {
+      await handleClaimGift(gift);
+    }
+    
+    setSelectedGiftIds([]);
+    toast.success(`${giftsToProcess.length} loot${giftsToProcess.length > 1 ? 's' : ''} récupéré${giftsToProcess.length > 1 ? 's' : ''} !`);
+    
+    setTimeout(() => {
+      onClose();
+    }, 1000);
+  } catch (error) {
+    console.error('Erreur claim multiple:', error);
+    toast.error('Erreur lors de la récupération');
+  } finally {
+    setClaiming(false);
+  }
+};
+  
   useEffect(() => {
     if (open) {
       loadData();
