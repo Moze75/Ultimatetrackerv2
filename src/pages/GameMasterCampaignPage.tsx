@@ -1848,20 +1848,7 @@ function SendGiftModal({
 
   const handleSend = async () => {
     // Validation
-      console.log('📤 DEBUG ENVOI:');
-  console.log('- Mode:', distributionMode);
-  console.log('- Recipients sélectionnés:', selectedRecipients);
-  console.log('- Members (user_id uniquement):', members.map(m => ({
-    name: m.player_name,
-    user_id: m.user_id,
-    email: m.email
-  })));
-
-  try {
-    setSending(true);
-    const recipientIds = distributionMode === 'individual' ? selectedRecipients : null;
-    
-    console.log('- recipientIds envoyés à sendGift:', recipientIds);
+     
     if (distributionMode === 'individual' && selectedRecipients.length === 0) {
       toast.error('Sélectionnez au moins un destinataire');
       return;
