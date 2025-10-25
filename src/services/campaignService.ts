@@ -168,13 +168,17 @@ async acceptInvitationWithPlayer(invitationId: string, playerId: string): Promis
     // ✅ Le membre existe déjà, juste marquer l'invitation comme acceptée
     console.log('✅ Membre déjà présent dans la campagne, on met à jour l\'invitation');
     
-    const { error: updateError } = await supabase
-      .from('campaign_invitations')
-      .update({ status: 'accepted' })
-      .eq('id', invitationId);
+   const { error: updateError } = await supabase
+  .from('campaign_invitations')
+  .update({ 
+    status: 'accepted',
+    player_id: playerId,  // ✅ Ajouter l'ID du player
+    responded_at: new Date().toISOString()  // ✅ Ajouter la date
+  })
+  .eq('id', invitationId);
 
-    if (updateError) throw updateError;
-    return; // ✅ Stop ici, pas besoin de créer le membre
+if (updateError) throw updateError;
+return; // ✅ Stop ici, pas besoin de créer le membre
   }
 
   // 3. Récupérer les infos du joueur
