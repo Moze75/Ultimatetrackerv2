@@ -127,18 +127,22 @@ useEffect(() => {
         const prevHash = lastInventoryCheckRef.current;
         lastInventoryCheckRef.current = currentHash;
 
-        // Détecter les nouveaux items
-        if (prevHash) {
-          const prevIds = new Set(inventory.map(i => i.id));
-          const newItems = data.filter(item => !prevIds.has(item.id));
-          
-        if (newItems.length > 0) {
-  console.log('🆕 Nouveaux items détectés:', newItems);
-            newItems.forEach(item => {
-              toast.success(`Nouvel objet reçu : ${item.name}`, { duration: 3000 });
-            });
-          } 
-        }
+// Détecter les nouveaux items
+if (prevHash) {
+  const prevIds = new Set(inventory.map(i => i.id));
+  const newItems = data.filter(item => !prevIds.has(item.id));
+  
+  if (newItems.length > 0) {
+    console.log('🆕 Nouveaux items détectés:', newItems);
+    
+    // ✅ UN SEUL toast pour tous les objets
+    if (newItems.length === 1) {
+      toast.success(`Nouvel objet reçu : ${newItems[0].name}`, { duration: 3000 });
+    } else {
+      toast.success(`${newItems.length} nouveaux objets reçus !`, { duration: 3000 });
+    }
+  }
+}
 
         setInventory(data);
         console.log('📦 Inventaire mis à jour:', inventory.length);
