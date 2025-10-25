@@ -764,15 +764,31 @@ setActiveCampaigns(campaigns || []);
     }
   };
 
-  if (!open) return null;
+ if (!open) return null;
 
-  return (
-    <>
-      <div className="fixed inset-0 z-[11000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
-        <div className="fixed inset-0 sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[min(42rem,95vw)] sm:max-h-[90vh] sm:rounded-xl overflow-hidden bg-gray-900 border-0 sm:border sm:border-gray-700">
+return (
+  <>
+    <div className="fixed inset-0 z-[11000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
+      <div 
+        className="fixed inset-0 sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[min(42rem,95vw)] sm:max-h-[90vh] sm:rounded-xl overflow-hidden border-0 sm:border sm:border-gray-700 shadow-2xl"
+        style={{
+          backgroundImage: 'url(/background/ddbground.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
+        {/* Overlay blanc avec opacité */}
+        <div className="absolute inset-0 bg-white/20 pointer-events-none" />
+        
+        {/* Overlay gris foncé pour contraste */}
+        <div className="absolute inset-0 bg-gray-900/80 pointer-events-none" />
+
+        {/* Contenu par-dessus les overlays */}
+        <div className="relative z-10 h-full flex flex-col">
           {/* Header */}
-          <div className="bg-gray-800/60 border-b border-gray-700 px-4 py-3">
+          <div className="bg-gray-800/60 border-b border-gray-700 px-4 py-3 backdrop-blur-sm">
             <div className="flex items-center justify-between mb-3">
               <div className="flex-1">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -827,15 +843,15 @@ setActiveCampaigns(campaigns || []);
                     <span className="flex h-2 w-2">
                       <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-green-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                    </span> 
+                    </span>
                   )}
                 </span>
               </button>
             </div>
           </div>
- 
-          {/* Content */} 
-          <div className="p-4 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 140px)' }}>
+
+          {/* Content */}
+          <div className="p-4 overflow-y-auto flex-1">
             {loading ? (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4" />
@@ -870,7 +886,6 @@ setActiveCampaigns(campaigns || []);
                           </div>
                         </div>
 
-                        {/* Affichage du personnage actuel */}
                         <div className="mb-4 bg-gray-800/40 rounded-lg p-3 border border-gray-700">
                           <p className="text-xs text-gray-400 mb-1">Rejoindre avec :</p>
                           <p className="text-sm font-semibold text-white">
@@ -878,7 +893,6 @@ setActiveCampaigns(campaigns || []);
                           </p>
                         </div>
 
-                        {/* Boutons */}
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleDeclineInvitation(invitation.id)}
@@ -977,233 +991,230 @@ setActiveCampaigns(campaigns || []);
                   </div>
                 )}
 
-      {pendingGifts.length > 0 ? (
-  <>
-    {pendingGifts.map((gift) => {
-      const meta = parseMeta(gift.item_description);
-      const isCurrencyShared = gift.gift_type === 'currency' && gift.distribution_mode === 'shared';
-      const campaignMembers = membersByCampaign[gift.campaign_id] || [];
-      const memberCount = campaignMembers.length;
-      const isSelected = selectedGiftIds.includes(gift.id);
+                {pendingGifts.length > 0 ? (
+                  <>
+                    {pendingGifts.map((gift) => {
+                      const meta = parseMeta(gift.item_description);
+                      const isCurrencyShared = gift.gift_type === 'currency' && gift.distribution_mode === 'shared';
+                      const campaignMembers = membersByCampaign[gift.campaign_id] || [];
+                      const memberCount = campaignMembers.length;
+                      const isSelected = selectedGiftIds.includes(gift.id);
 
-      const previewDistribution = memberCount > 0 ? {
-        gold: Math.floor((gift.gold || 0) / memberCount),
-        silver: Math.floor((gift.silver || 0) / memberCount),
-        copper: Math.floor((gift.copper || 0) / memberCount),
-      } : null;
+                      const previewDistribution = memberCount > 0 ? {
+                        gold: Math.floor((gift.gold || 0) / memberCount),
+                        silver: Math.floor((gift.silver || 0) / memberCount),
+                        copper: Math.floor((gift.copper || 0) / memberCount),
+                      } : null;
 
-      return (
-        <div
-          key={gift.id}
-          className={`bg-gray-800/40 border rounded-lg p-4 transition-all ${
-            isSelected 
-              ? 'border-purple-500 bg-purple-900/20' 
-              : 'border-purple-500/30'
-          }`}
-        >
-          <div className="flex items-start justify-between mb-3">
-            <div className="flex items-start gap-3 flex-1">
-              <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center flex-shrink-0">
-                {gift.gift_type === 'item' ? (
-                  <Package className="w-5 h-5 text-purple-400" />
+                      return (
+                        <div
+                          key={gift.id}
+                          className={`bg-gray-800/40 border rounded-lg p-4 transition-all ${
+                            isSelected 
+                              ? 'border-purple-500 bg-purple-900/20' 
+                              : 'border-purple-500/30'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-start gap-3 flex-1">
+                              <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                                {gift.gift_type === 'item' ? (
+                                  <Package className="w-5 h-5 text-purple-400" />
+                                ) : (
+                                  <Coins className="w-5 h-5 text-yellow-400" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h3 className="font-semibold text-white">
+                                    {gift.gift_type === 'item' 
+                                      ? `${gift.item_name}${gift.item_quantity && gift.item_quantity > 1 ? ` x${gift.item_quantity}` : ''}`
+                                      : 'Argent'
+                                    }
+                                  </h3>
+
+                                  {meta?.type === 'armor' && (
+                                    <span className="text-xs px-2 py-0.5 rounded bg-purple-900/30 text-purple-300 border border-purple-500/30">
+                                      Armure
+                                    </span>
+                                  )}
+                                  {meta?.type === 'shield' && (
+                                    <span className="text-xs px-2 py-0.5 rounded bg-blue-900/30 text-blue-300 border border-blue-500/30">
+                                      Bouclier
+                                    </span>
+                                  )}
+                                  {meta?.type === 'weapon' && (
+                                    <span className="text-xs px-2 py-0.5 rounded bg-red-900/30 text-red-300 border border-red-500/30">
+                                      Arme
+                                    </span>
+                                  )}
+                                </div>
+
+                                {meta && (
+                                  <div className="mb-2 mt-2 text-xs text-gray-300">
+                                    {meta.type === 'armor' && meta.armor && (
+                                      <div className="text-purple-300 flex items-center gap-2">
+                                        <span className="text-sm">🛡️ CA: {meta.armor.label}</span>
+                                      </div>
+                                    )}
+                                    {meta.type === 'shield' && meta.shield && (
+                                      <div className="text-blue-300">🛡️ Bonus: +{meta.shield.bonus}</div>
+                                    )}
+                                    {meta.type === 'weapon' && meta.weapon && (
+                                      <div className="text-red-300">
+                                        ⚔️ {meta.weapon.damageDice} {meta.weapon.damageType}
+                                        {meta.weapon.properties && ` • ${meta.weapon.properties}`}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {getVisibleDescription(gift.item_description) && (
+                                  <p className="text-sm text-gray-400 mt-2">
+                                    {getVisibleDescription(gift.item_description)}
+                                  </p>
+                                )}
+
+                                {gift.gift_type === 'currency' && (
+                                  <div className="flex gap-3 mt-2 text-sm">
+                                    {gift.gold > 0 && (
+                                      <span className="text-yellow-400 font-medium">{gift.gold} po</span>
+                                    )}
+                                    {gift.silver > 0 && (
+                                      <span className="text-gray-300 font-medium">{gift.silver} pa</span>
+                                    )}
+                                    {gift.copper > 0 && (
+                                      <span className="text-orange-400 font-medium">{gift.copper} pc</span>
+                                    )}
+                                  </div>
+                                )}
+
+                                {gift.message && (
+                                  <div className="mt-2 text-sm text-gray-300 italic border-l-2 border-purple-500/40 pl-3">
+                                    "{gift.message}"
+                                  </div>
+                                )}
+                                <p className="text-xs text-gray-500 mt-2">
+                                  Envoyé le {new Date(gift.sent_at).toLocaleDateString('fr-FR')}
+                                </p>
+                              </div>
+                            </div>
+
+                            {!isCurrencyShared && (
+                              <label className="flex items-center gap-2 cursor-pointer ml-3">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleGiftSelection(gift.id)}
+                                  className="w-5 h-5 rounded border-gray-600 text-purple-600 focus:ring-purple-500 focus:ring-offset-gray-900"
+                                />
+                              </label>
+                            )}
+                          </div>
+
+                          {isCurrencyShared ? (
+                            <div className="space-y-2">
+                              {memberCount > 0 && previewDistribution && (
+                                <div className="bg-gray-800/60 border border-gray-700/50 rounded-lg p-3">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                                      <Users size={14} />
+                                      <span>{memberCount} joueur{memberCount > 1 ? 's' : ''} dans la campagne</span>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="text-sm">
+                                    <div className="text-gray-400 mb-1">Distribution équitable :</div>
+                                    <div className="flex gap-3 text-xs flex-wrap">
+                                      {previewDistribution.gold > 0 && (
+                                        <span className="text-yellow-400">
+                                          ~{previewDistribution.gold} po / joueur
+                                        </span>
+                                      )}
+                                      {previewDistribution.silver > 0 && (
+                                        <span className="text-gray-300">
+                                          ~{previewDistribution.silver} pa / joueur
+                                        </span>
+                                      )}
+                                      {previewDistribution.copper > 0 && (
+                                        <span className="text-orange-400">
+                                          ~{previewDistribution.copper} pc / joueur
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleClaimGift(gift)}
+                                  disabled={claiming}
+                                  className={`flex-1 px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm ${
+                                    claiming 
+                                      ? 'bg-gray-600 cursor-not-allowed' 
+                                      : 'bg-purple-600 hover:bg-purple-700'
+                                  } text-white`}
+                                >
+                                  <Gift size={16} />
+                                  {claiming ? 'En cours...' : 'Tout prendre'}
+                                </button>
+                                
+                                <button
+                                  onClick={() => {
+                                    setCampaignMembersForDistribution(campaignMembers);
+                                    setSelectedGiftForDistribution(gift);
+                                    setShowDistributionModal(true);
+                                  }}
+                                  disabled={claiming}
+                                  className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+                                >
+                                  <Users size={16} />
+                                  Distribuer
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleClaimGift(gift)}
+                              disabled={claiming}
+                              className={`w-full px-4 py-2 rounded-lg flex items-center justify-center gap-2 ${
+                                claiming 
+                                  ? 'bg-gray-600 cursor-not-allowed' 
+                                  : 'bg-purple-600 hover:bg-purple-700'
+                              } text-white`}
+                            >
+                              <Gift size={18} />
+                              {claiming ? 'En cours...' : 'Récupérer'}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {selectedGiftIds.length > 0 && (
+                      <div className="sticky bottom-0 bg-gray-900/95 backdrop-blur-sm border-t border-purple-500/30 p-4 -mx-4 -mb-4 mt-4">
+                        <button
+                          onClick={handleClaimMultiple}
+                          disabled={claiming}
+                          className="w-full bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 font-semibold"
+                        >
+                          {claiming ? (
+                            <>
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+                              Récupération...
+                            </>
+                          ) : (
+                            <>
+                              <Gift size={20} />
+                              Récupérer la sélection ({selectedGiftIds.length})
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
+                  </>
                 ) : (
-                  <Coins className="w-5 h-5 text-yellow-400" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-semibold text-white">
-                    {gift.gift_type === 'item' 
-                      ? `${gift.item_name}${gift.item_quantity && gift.item_quantity > 1 ? ` x${gift.item_quantity}` : ''}`
-                      : 'Argent'
-                    }
-                  </h3>
-
-                  {meta?.type === 'armor' && (
-                    <span className="text-xs px-2 py-0.5 rounded bg-purple-900/30 text-purple-300 border border-purple-500/30">
-                      Armure
-                    </span>
-                  )}
-                  {meta?.type === 'shield' && (
-                    <span className="text-xs px-2 py-0.5 rounded bg-blue-900/30 text-blue-300 border border-blue-500/30">
-                      Bouclier
-                    </span>
-                  )}
-                  {meta?.type === 'weapon' && (
-                    <span className="text-xs px-2 py-0.5 rounded bg-red-900/30 text-red-300 border border-red-500/30">
-                      Arme
-                    </span>
-                  )}
-                </div>
-
-                {meta && (
-                  <div className="mb-2 mt-2 text-xs text-gray-300">
-                    {meta.type === 'armor' && meta.armor && (
-                      <div className="text-purple-300 flex items-center gap-2">
-                        <span className="text-sm">🛡️ CA: {meta.armor.label}</span>
-                      </div>
-                    )}
-                    {meta.type === 'shield' && meta.shield && (
-                      <div className="text-blue-300">🛡️ Bonus: +{meta.shield.bonus}</div>
-                    )}
-                    {meta.type === 'weapon' && meta.weapon && (
-                      <div className="text-red-300">
-                        ⚔️ {meta.weapon.damageDice} {meta.weapon.damageType}
-                        {meta.weapon.properties && ` • ${meta.weapon.properties}`}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {getVisibleDescription(gift.item_description) && (
-                  <p className="text-sm text-gray-400 mt-2">
-                    {getVisibleDescription(gift.item_description)}
-                  </p>
-                )}
-
-                {gift.gift_type === 'currency' && (
-                  <div className="flex gap-3 mt-2 text-sm">
-                    {gift.gold > 0 && (
-                      <span className="text-yellow-400 font-medium">{gift.gold} po</span>
-                    )}
-                    {gift.silver > 0 && (
-                      <span className="text-gray-300 font-medium">{gift.silver} pa</span>
-                    )}
-                    {gift.copper > 0 && (
-                      <span className="text-orange-400 font-medium">{gift.copper} pc</span>
-                    )}
-                  </div>
-                )}
-
-                {gift.message && (
-                  <div className="mt-2 text-sm text-gray-300 italic border-l-2 border-purple-500/40 pl-3">
-                    "{gift.message}"
-                  </div>
-                )}
-                <p className="text-xs text-gray-500 mt-2">
-                  Envoyé le {new Date(gift.sent_at).toLocaleDateString('fr-FR')}
-                </p>
-              </div>
-            </div>
-
-            {/* CHECKBOX */}
-            {!isCurrencyShared && (
-              <label className="flex items-center gap-2 cursor-pointer ml-3">
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  onChange={() => toggleGiftSelection(gift.id)}
-                  className="w-5 h-5 rounded border-gray-600 text-purple-600 focus:ring-purple-500 focus:ring-offset-gray-900"
-                />
-              </label>
-            )}
-          </div>
-
-          {/* Boutons */}
-          {isCurrencyShared ? (
-            <div className="space-y-2">
-              {memberCount > 0 && previewDistribution && (
-                <div className="bg-gray-800/60 border border-gray-700/50 rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2 text-xs text-gray-400">
-                      <Users size={14} />
-                      <span>{memberCount} joueur{memberCount > 1 ? 's' : ''} dans la campagne</span>
-                    </div>
-                  </div>
-                  
-                  <div className="text-sm">
-                    <div className="text-gray-400 mb-1">Distribution équitable :</div>
-                    <div className="flex gap-3 text-xs flex-wrap">
-                      {previewDistribution.gold > 0 && (
-                        <span className="text-yellow-400">
-                          ~{previewDistribution.gold} po / joueur
-                        </span>
-                      )}
-                      {previewDistribution.silver > 0 && (
-                        <span className="text-gray-300">
-                          ~{previewDistribution.silver} pa / joueur
-                        </span>
-                      )}
-                      {previewDistribution.copper > 0 && (
-                        <span className="text-orange-400">
-                          ~{previewDistribution.copper} pc / joueur
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleClaimGift(gift)}
-                  disabled={claiming}
-                  className={`flex-1 px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm ${
-                    claiming 
-                      ? 'bg-gray-600 cursor-not-allowed' 
-                      : 'bg-purple-600 hover:bg-purple-700'
-                  } text-white`}
-                >
-                  <Gift size={16} />
-                  {claiming ? 'En cours...' : 'Tout prendre'}
-                </button>
-                
-                <button
-                  onClick={() => {
-                    setCampaignMembersForDistribution(campaignMembers);
-                    setSelectedGiftForDistribution(gift);
-                    setShowDistributionModal(true);
-                  }}
-                  disabled={claiming}
-                  className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm disabled:opacity-50"
-                >
-                  <Users size={16} />
-                  Distribuer
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={() => handleClaimGift(gift)}
-              disabled={claiming}
-              className={`w-full px-4 py-2 rounded-lg flex items-center justify-center gap-2 ${
-                claiming 
-                  ? 'bg-gray-600 cursor-not-allowed' 
-                  : 'bg-purple-600 hover:bg-purple-700'
-              } text-white`}
-            >
-              <Gift size={18} />
-              {claiming ? 'En cours...' : 'Récupérer'}
-            </button>
-          )}
-        </div>
-      );
-    })}
-
-    {/* BOUTON DE CLAIM MULTIPLE */}
-    {selectedGiftIds.length > 0 && (
-      <div className="sticky bottom-0 bg-gray-900/95 backdrop-blur-sm border-t border-purple-500/30 p-4 -mx-4 -mb-4 mt-4">
-        <button
-          onClick={handleClaimMultiple}
-          disabled={claiming}
-          className="w-full bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 font-semibold"
-        >
-          {claiming ? (
-            <>
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
-              Récupération...
-            </>
-          ) : (
-            <>
-              <Gift size={20} />
-              Récupérer la sélection ({selectedGiftIds.length})
-            </>
-          )}
-        </button>
-      </div>
-    )}
-  </>
-) : (
                   <div className="text-center py-12 text-gray-500">
                     <Gift className="w-16 h-16 mx-auto mb-4 opacity-50" />
                     <p>Aucun loot en attente</p>
@@ -1227,24 +1238,23 @@ setActiveCampaigns(campaigns || []);
           </div>
         </div>
       </div>
+    </div>
 
-      {/* Modal de distribution */}
-      {showDistributionModal && selectedGiftForDistribution && (
-        <CurrencyDistributionModal
-          gift={selectedGiftForDistribution}
-          campaignMembers={campaignMembersForDistribution}
-          currentUserId={(async () => { const { data: { user } } = await supabase.auth.getUser(); return user?.id || ''; })() as any}
-          playerId={player.id}
-          currentPlayer={player}
-          onClose={() => {
-            setShowDistributionModal(false);
-            setSelectedGiftForDistribution(null);
-          }}
-          onDistribute={handleDistributeCurrency}
-        />
-      )}
-    </>
-  );
-}
+    {showDistributionModal && selectedGiftForDistribution && (
+      <CurrencyDistributionModal
+        gift={selectedGiftForDistribution}
+        campaignMembers={campaignMembersForDistribution}
+        currentUserId={(async () => { const { data: { user } } = await supabase.auth.getUser(); return user?.id || ''; })() as any}
+        playerId={player.id}
+        currentPlayer={player}
+        onClose={() => {
+          setShowDistributionModal(false);
+          setSelectedGiftForDistribution(null);
+        }}
+        onDistribute={handleDistributeCurrency}
+      />
+    )}
+  </>
+);
 
 export default CampaignPlayerModal;
