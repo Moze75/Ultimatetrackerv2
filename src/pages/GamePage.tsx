@@ -141,7 +141,7 @@ useEffect(() => {
         }
 
         setInventory(data);
-        console.log('📦 Inventaire mis à jour:', data.length, 'items');
+        console.log('📦 Inventaire mis à jour:', inventory.length);
       }
     } catch (err) {
       console.error('💥 Erreur polling:', err);
