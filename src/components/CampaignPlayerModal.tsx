@@ -380,7 +380,7 @@ const loadData = async () => {
     setInvitations(invites);
 
     // ✅ CORRECTION : Récupérer SEULEMENT les campagnes où CE PERSONNAGE est membre
-    const { data: activeMemberships } = await supabase
+    const { data: activeMemberships, error: membershipError } = await supabase
       .from('campaign_members')
       .select(`
         campaign_id,
