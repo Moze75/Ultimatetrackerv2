@@ -372,7 +372,7 @@ const [claiming, setClaiming] = useState(false);
     }
   };
 
-  const loadData = async () => {
+ const loadData = async () => {
   try {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
@@ -381,7 +381,7 @@ const [claiming, setClaiming] = useState(false);
     const invites = await campaignService.getMyPendingInvitations();
     setInvitations(invites);
 
-    // ✅ Récupérer directement les campagnes avec leurs membres actifs
+    // ✅ CORRECTION : Filtrer par player_id ET is_active
     const { data: activeMemberships } = await supabase
       .from('campaign_members')
       .select(`
@@ -395,14 +395,20 @@ const [claiming, setClaiming] = useState(false);
           is_active
         )
       `)
-      .eq('user_id', user.id)
-      .eq('is_active', true);
+      .eq('player_id', player.id)  // ✅ Filtrer par CE personnage spécifique
+      .eq('is_active', true);        // ✅ ET actif
 
     if (activeMemberships && activeMemberships.length > 0) {
-      // Extraire les campagnes (filtrer les null)
-      const campaigns = activeMemberships
-        .map((m: any) => m.campaigns)
-        .filter((c: any) => c !== null);
+      // Dédupliquer les campagnes (au cas où)
+      const campaignsMap = new Map<string, any>();
+      
+      activeMemberships.forEach((m: any) => {
+        if (m.campaigns && m.campaigns.id) {
+          campaignsMap.set(m.campaigns.id, m.campaigns);
+        }
+      });
+
+      const campaigns = Array.from(campaignsMap.values());
 
       setMyCampaigns(campaigns);
       setActiveCampaigns(campaigns);
@@ -451,7 +457,7 @@ const [claiming, setClaiming] = useState(false);
           .map(g => g.gift)
       );
     } else {
-      // Aucune campagne active
+      // Aucune campagne active pour ce personnage
       setMyCampaigns([]);
       setActiveCampaigns([]);
       setMembersByCampaign({});
