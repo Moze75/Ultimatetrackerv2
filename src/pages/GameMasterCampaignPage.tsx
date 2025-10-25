@@ -126,16 +126,16 @@ export function GameMasterCampaignPage({ session, onBack }: GameMasterCampaignPa
     key={campaign.id}
     className="bg-gray-900/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6 hover:bg-gray-800/80 hover:border-purple-500/50 transition-all duration-200 hover:scale-105 group relative"
   >
-    {/* ✅ Bouton d'édition en haut à droite */}
+    {/* ✅ Bouton Settings en haut à droite */}
     <button
       onClick={(e) => {
         e.stopPropagation();  // Empêcher l'ouverture de la campagne
         setEditingCampaign(campaign);
       }}
       className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-      title="Modifier la campagne"
+      title="Paramètres de la campagne"
     >
-      <Edit2 size={18} />
+      <Settings size={18} />
     </button>
 
     {/* Carte cliquable */}
@@ -143,15 +143,10 @@ export function GameMasterCampaignPage({ session, onBack }: GameMasterCampaignPa
       onClick={() => setSelectedCampaign(campaign)}
       className="cursor-pointer"
     >
-      <div className="flex items-start justify-between mb-3">
+      <div className="mb-3">
         <h3 className="text-xl font-bold text-white">
           {campaign.name}
         </h3>
-        {campaign.is_active && (
-          <span className="px-2 py-1 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
-            Active
-          </span>
-        )}
       </div>
 
       {campaign.description && (
