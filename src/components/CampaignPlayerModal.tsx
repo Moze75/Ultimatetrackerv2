@@ -767,42 +767,7 @@ const handleDeclineInvitation = async (invitationId: string) => {
               <button
                 onClick={() => setActiveTab('invitations')}
                 className={`pb-2 px-1 border-b-2 transition-colors ${
-                  activeTab === 'invitations'
-                    ? 'border-purple-500 text-purple-400'
-                    : 'border-transparent text-gray-400 hover:text-gray-300'
-                }`}
-              >
-                Invitations ({invitations.length})
-              </button>
-              <button
-                onClick={() => setActiveTab('gifts')}
-                className={`pb-2 px-1 border-b-2 transition-colors relative ${
-                  activeTab === 'gifts'
-                    ? 'border-purple-500 text-purple-400'
-                    : 'border-transparent text-gray-400 hover:text-gray-300'
-                }`}
-              >
-                <span className="flex items-center gap-2">
-                  Loots ({pendingGifts.length})
-                  {pendingGifts.length > 0 && (
-                    <span className="flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-green-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                    </span>
-                  )}
-                </span>
-              </button>
-            </div>
-          </div>
-
-          {/* Content */}
-          <div className="p-4 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 140px)' }}>
-            {loading ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4" />
-                <p className="text-gray-400">Chargement...</p>
-              </div>
-            ) : activeTab === 'invitations' ? (
+                 {activeTab === 'invitations' ? (
   <div className="space-y-4">
     {invitations.length > 0 ? (
       <div className="space-y-3">
@@ -831,38 +796,55 @@ const handleDeclineInvitation = async (invitationId: string) => {
               </div>
             </div>
 
-            {/* Sélection du personnage */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Choisissez votre personnage
-              </label>
-              <select
-                value={selectedPlayerForInvite}
-                onChange={(e) => setSelectedPlayerForInvite(e.target.value)}
-                className="input-dark w-full px-4 py-2 rounded-lg"
-                disabled={processingInvitation === invitation.id}
-              >
-                <option value="">-- Sélectionnez un personnage --</option>
-                {myPlayers.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.adventurer_name || p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Affichage du personnage actuel */}
+            {currentPlayer && (
+              <div className="mb-4 bg-gray-800/40 rounded-lg p-3 border border-gray-700">
+                <p className="text-xs text-gray-400 mb-1">Rejoindre avec :</p>
+                <p className="text-sm font-semibold text-white">
+                  {currentPlayer.adventurer_name || currentPlayer.name}
+                </p>
+              </div>
+            )}
 
             {/* Boutons */}
             <div className="flex gap-2">
               <button
-                onClick={() => handleDeclineInvitation(invitation.id)}
+                onClick={async () => {
+                  if (!confirm('Refuser cette invitation ?')) return;
+                  try {
+                    await campaignService.declineInvitation(invitation.id);
+                    toast.success('Invitation refusée');
+                    loadData();
+                  } catch (error) {
+                    console.error(error);
+                    toast.error('Erreur');
+                  }
+                }}
                 disabled={processingInvitation === invitation.id}
                 className="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 px-4 py-2 rounded-lg border border-red-500/30 disabled:opacity-50"
               >
                 Refuser
               </button>
               <button
-                onClick={() => handleAcceptInvitationWithPlayer(invitation.id)}
-                disabled={!selectedPlayerForInvite || processingInvitation === invitation.id}
+                onClick={async () => {
+                  if (!currentPlayer) {
+                    toast.error('Aucun personnage actif');
+                    return;
+                  }
+                  
+                  try {
+                    setProcessingInvitation(invitation.id);
+                    await campaignService.acceptInvitationWithPlayer(invitation.id, currentPlayer.id);
+                    toast.success('Vous avez rejoint la campagne !');
+                    loadData();
+                  } catch (error: any) {
+                    console.error(error);
+                    toast.error(error.message || 'Erreur');
+                  } finally {
+                    setProcessingInvitation(null);
+                  }
+                }}
+                disabled={!currentPlayer || processingInvitation === invitation.id}
                 className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {processingInvitation === invitation.id ? (
@@ -871,6 +853,53 @@ const handleDeclineInvitation = async (invitationId: string) => {
                     Inscription...
                   </>
                 ) : (
+                  <>
+                    <Check size={18} />
+                    Rejoindre la campagne
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div className="text-center py-12 text-gray-500">
+        <Users className="w-16 h-16 mx-auto mb-4 opacity-50" />
+        <p>Aucune invitation en attente</p>
+        <p className="text-sm mt-2">
+          Les invitations des Maîtres du Jeu apparaîtront ici
+        </p>
+      </div>
+    )}
+
+    {myCampaigns.length > 0 && (
+      <div className="space-y-3 mt-6">
+        <h3 className="text-sm font-semibold text-gray-300">Mes campagnes actives</h3>
+        {myCampaigns.map((campaign) => (
+          <div
+            key={campaign.id}
+            className="bg-gray-800/40 border border-green-500/30 rounded-lg p-4"
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-semibold text-white">{campaign.name}</h3>
+                  <span className="px-2 py-0.5 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
+                    Active
+                  </span>
+                </div>
+                {campaign.description && (
+                  <p className="text-sm text-gray-400 mt-1">{campaign.description}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+) : (
                   <>
                     <Check size={18} />
                     Rejoindre
