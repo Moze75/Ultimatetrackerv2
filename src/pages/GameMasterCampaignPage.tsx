@@ -2126,17 +2126,22 @@ function SendGiftModal({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-y-auto">
-                {members.map((m) => {
-                  const uid = m.user_id || m.player_id || m.id;
-                  return (
-                    <label key={uid} className="inline-flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={selectedRecipients.includes(uid)}
-                        onChange={() => toggleRecipient(uid)}
-                      />
-                      <span className="ml-1">{m.player_name || m.email}</span>
-                    </label>
+ {members.map((m) => {
+  const uid = m.user_id;  // ✅ TOUJOURS user_id uniquement
+  if (!uid) {
+    console.warn('⚠️ Member sans user_id:', m);
+    return null;  // ✅ Skip si pas de user_id
+  }
+  
+  return (
+    <label key={uid} className="inline-flex items-center gap-2 text-sm">
+      <input
+        type="checkbox"
+        checked={selectedRecipients.includes(uid)}
+        onChange={() => toggleRecipient(uid)}
+      />
+      <span className="ml-1">{m.player_name || m.email}</span>
+    </label>
                   );
                 })}
               </div>
