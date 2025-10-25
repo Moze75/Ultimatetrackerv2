@@ -1240,36 +1240,36 @@ export function EquipmentTab({
         </div>
       </div>
 
-      {/* Modals ajout / custom / édition */}
-      {showList && (
-        <EquipmentListModal
-          onClose={() => { setShowList(false); setAllowedKinds(null); }}
-          onAddItem={async (payload) => {
-            try {
-              const meta: ItemMeta = { ...(payload.meta as any), equipped: false };
-              const finalDesc = injectMetaIntoDescription(payload.description || '', meta);
-              const { data, error } = await supabase
-                .from('inventory_items')
-                .insert([{
-                  player_id: player.id,
-                  name: smartCapitalize(payload.name),
-                  description: finalDesc
-                }])
-                .select()
-                .single();
-              if (error) throw error;
-              if (data) onInventoryUpdate([...inventory, data]);
-              toast.success('Équipement ajouté');
-            } catch (e) {
-              console.error(e);
-              toast.error('Erreur ajout équipement');
-            } finally {
-              setShowList(false);
-              setAllowedKinds(null);
-            }
-          }}
-          allowedKinds={allowedKinds}
-        />
+{/* Modals ajout / custom / édition */}
+{showList && (
+  <EquipmentListModal
+    onClose={() => { setShowList(false); setAllowedKinds(null); }}
+    onAddItem={async (payload) => {
+      try {
+        const meta: ItemMeta = { ...(payload.meta as any), equipped: false };
+        const finalDesc = injectMetaIntoDescription(payload.description || '', meta);
+        const { data, error } = await supabase
+          .from('inventory_items')
+          .insert([{
+            player_id: player.id,
+            name: smartCapitalize(payload.name),
+            description: finalDesc
+          }])
+          .select()
+          .single();
+        if (error) throw error;
+        if (data) onInventoryUpdate([...inventory, data]);
+        // ✅ Supprimé : toast.success('Équipement ajouté');
+      } catch (e) {
+        console.error(e);
+        toast.error('Erreur ajout équipement');
+      } finally {
+        setShowList(false);
+        setAllowedKinds(null);
+      }
+    }}
+    allowedKinds={allowedKinds}
+  />
       )}
       {showCustom && (
         <CustomItemModal
