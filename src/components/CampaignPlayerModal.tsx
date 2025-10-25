@@ -371,6 +371,10 @@ const loadData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    console.log('🎯 DEBUG LOAD DATA (Golfot):');
+    console.log('- user.id:', user.id);
+    console.log('- player.id:', player.id);
+
     // ✅ Charger les invitations avec la nouvelle méthode
     const invites = await campaignService.getMyPendingInvitations();
     setInvitations(invites);
