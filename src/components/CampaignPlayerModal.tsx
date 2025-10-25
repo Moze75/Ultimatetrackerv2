@@ -22,7 +22,7 @@ interface DistributionModalProps {
   currentPlayer: Player;
   onClose: () => void;
   onDistribute: (distribution: { userId: string; playerId: string; gold: number; silver: number; copper: number }[]) => Promise<void>;
-}
+} 
 
 function CurrencyDistributionModal({
   gift,
@@ -316,10 +316,8 @@ export function CampaignPlayerModal({
   const [pendingGifts, setPendingGifts] = useState<CampaignGift[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'invitations' | 'gifts'>('gifts');
-const [myPlayers, setMyPlayers] = useState<Player[]>([]);
-const [selectedPlayerForInvite, setSelectedPlayerForInvite] = useState<string>('');
-const [processingInvitation, setProcessingInvitation] = useState<string | null>(null);
-  const [myPlayers, setMyPlayers] = useState<Player[]>([]);
+  const [showCodeInput, setShowCodeInput] = useState(false);
+  const [invitationCode, setInvitationCode] = useState('');
   
   // États pour la distribution
   const [showDistributionModal, setShowDistributionModal] = useState(false);
@@ -372,15 +370,6 @@ const [processingInvitation, setProcessingInvitation] = useState<string | null>(
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-
-          // ✅ Charger les personnages de l'utilisateur
-    const { data: players } = await supabase
-      .from('players')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-    
-    setMyPlayers(players || []);
 
       const invites = await campaignService.getMyInvitations();
       setInvitations(invites);
@@ -548,58 +537,6 @@ const [processingInvitation, setProcessingInvitation] = useState<string | null>(
       }
     }
   };
-
-  // ===== FONCTION POUR VALIDER LE CODE =====
-const handleValidateCode = async () => {
-  const code = invitationCode.trim().toUpperCase();
-  if (!code) {
-    toast.error('Entrez un code d\'invitation');
-    return;
-  }
-
-  try {
-    setValidatingCode(true);
-    const result = await campaignService.validateInvitationCode(code);
-    
-    if (!result.valid) {
-      toast.error(result.error || 'Code invalide');
-      return;
-    }
-
-    setValidatedInvitation(result);
-    toast.success('Code valide ! Choisissez votre personnage');
-  } catch (error: any) {
-    console.error(error);
-    toast.error('Erreur lors de la validation');
-  } finally {
-    setValidatingCode(false);
-  }
-};
-
-// ===== FONCTION POUR ACCEPTER AVEC UN PERSONNAGE =====
-const handleAcceptWithPlayer = async () => {
-  if (!validatedInvitation || !selectedPlayerForInvite) {
-    toast.error('Sélectionnez un personnage');
-    return;
-  }
-
-  try {
-    await campaignService.acceptInvitationWithPlayer(
-      invitationCode,
-      selectedPlayerForInvite
-    );
-    
-    toast.success('Vous avez rejoint la campagne !');
-    setShowCodeInput(false);
-    setInvitationCode('');
-    setValidatedInvitation(null);
-    setSelectedPlayerForInvite('');
-    loadData();
-  } catch (error: any) {
-    console.error(error);
-    toast.error(error.message || 'Erreur');
-  }
-};
 
   // ✅ FONCTION CLAIM CORRIGÉE (ordre fixé + guard double-clic)
   const handleClaimGift = async (gift: CampaignGift) => {
@@ -875,152 +812,88 @@ const handleAcceptWithPlayer = async () => {
               </div>
             ) : activeTab === 'invitations' ? (
               <div className="space-y-4">
-             {!showCodeInput ? (
-  <button
-    onClick={() => setShowCodeInput(true)}
-    className="w-full btn-primary px-4 py-3 rounded-lg flex items-center justify-center gap-2"
-  >
-    <Check size={20} />
-    Rejoindre avec un code
-  </button>
-) : null}
+                {!showCodeInput ? (
+                  <button
+                    onClick={() => setShowCodeInput(true)}
+                    className="w-full btn-primary px-4 py-3 rounded-lg flex items-center justify-center gap-2"
+                  >
+                    <Check size={20} />
+                    Rejoindre avec un code
+                  </button>
+                ) : (
+                  <div className="bg-gray-800/40 rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-white">Code d'invitation</h3>
+                      <button
+                        onClick={() => {
+                          setShowCodeInput(false);
+                          setInvitationCode('');
+                        }}
+                        className="text-gray-400 hover:text-white"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={invitationCode}
+                      onChange={(e) => setInvitationCode(e.target.value.toUpperCase())}
+                      className="input-dark w-full px-4 py-2 rounded-lg text-center font-mono text-lg tracking-wider"
+                      placeholder="ABCD1234"
+                      maxLength={8}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleJoinWithCode();
+                      }}
+                    />
+                    <button
+                      onClick={handleJoinWithCode}
+                      className="w-full btn-primary px-4 py-2 rounded-lg"
+                    >
+                      Rejoindre la campagne
+                    </button>
+                  </div>
+                )}
 
-{showCodeInput && !validatedInvitation && (
-  <div className="bg-gray-800/40 rounded-lg p-4 space-y-3">
-    <div className="flex items-center justify-between">
-      <h3 className="font-semibold text-white">Code d'invitation</h3>
-      <button
-        onClick={() => {
-          setShowCodeInput(false);
-          setInvitationCode('');
-        }}
-        className="text-gray-400 hover:text-white"
-      >
-        <X size={18} />
-      </button>
-    </div>
-    <input
-      type="text"
-      value={invitationCode}
-      onChange={(e) => setInvitationCode(e.target.value.toUpperCase())}
-      className="input-dark w-full px-4 py-2 rounded-lg text-center font-mono text-lg tracking-wider"
-      placeholder="ABCD1234"
-      maxLength={8}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') handleValidateCode();
-      }}
-    />
-    <button
-      onClick={handleValidateCode}
-      disabled={validatingCode}
-      className="w-full btn-primary px-4 py-2 rounded-lg disabled:opacity-50"
-    >
-      {validatingCode ? 'Vérification...' : 'Vérifier le code'}
-    </button>
-  </div>
-)}
-
-{validatedInvitation && (
-  <div className="bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-purple-500/30 rounded-lg p-6 space-y-4">
-    <div className="flex items-start gap-3">
-      <Check className="w-6 h-6 text-green-400 flex-shrink-0 mt-1" />
-      <div className="flex-1">
-        <h3 className="font-semibold text-white text-lg mb-1">
-          Invitation valide !
-        </h3>
-        <p className="text-purple-200 text-sm">
-          {validatedInvitation.campaign?.name}
-        </p>
-        {validatedInvitation.campaign?.description && (
-          <p className="text-gray-400 text-sm mt-2">
-            {validatedInvitation.campaign.description}
-          </p>
-        )}
-      </div>
-    </div>
-
-    <div>
-      <label className="block text-sm font-medium text-gray-300 mb-2">
-        Choisissez votre personnage
-      </label>
-      <select
-        value={selectedPlayerForInvite}
-        onChange={(e) => setSelectedPlayerForInvite(e.target.value)}
-        className="input-dark w-full px-4 py-2 rounded-lg"
-      >
-        <option value="">-- Sélectionnez un personnage --</option>
-        {myPlayers.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.adventurer_name || p.name}
-          </option>
-        ))}
-      </select>
-    </div>
-
-    <div className="flex gap-2">
-      <button
-        onClick={() => {
-          setValidatedInvitation(null);
-          setInvitationCode('');
-          setSelectedPlayerForInvite('');
-        }}
-        className="flex-1 btn-secondary px-4 py-2 rounded-lg"
-      >
-        Annuler
-      </button>
-      <button
-        onClick={handleAcceptWithPlayer}
-        disabled={!selectedPlayerForInvite}
-        className="flex-1 btn-primary px-4 py-2 rounded-lg disabled:opacity-50"
-      >
-        Rejoindre la campagne
-      </button>
-    </div>
-  </div>
-)}
-
-{invitations.filter(inv => inv.player_email).length > 0 && (
-  <div className="space-y-3">
-    <h3 className="text-sm font-semibold text-gray-300">Invitations par email</h3>
-    {invitations
-      .filter(inv => inv.player_email) // Filtrer uniquement les invitations email
-      .map((invitation) => (
-        <div
-          key={invitation.id}
-          className="bg-gray-800/40 border border-gray-700/50 rounded-lg p-4"
-        >
-          <div className="flex items-start justify-between mb-3">
-            <div>
-              <p className="font-medium text-white mb-1">
-                Invitation par email
-              </p>
-              <p className="text-sm text-gray-400">
-                Email: <span className="text-purple-400">{invitation.player_email}</span>
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Reçue le {new Date(invitation.invited_at).toLocaleDateString('fr-FR')}
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleAcceptInvitation(invitation.id)}
-              className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
-            >
-              <Check size={18} />
-              Accepter
-            </button>
-            <button
-              onClick={() => handleDeclineInvitation(invitation.id)}
-              className="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 px-4 py-2 rounded-lg border border-red-500/30"
-            >
-              Refuser
-            </button>
-          </div>
-        </div>
-      ))}
-  </div>
-)}
+                {invitations.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-gray-300">Invitations en attente</h3>
+                    {invitations.map((invitation) => (
+                      <div
+                        key={invitation.id}
+                        className="bg-gray-800/40 border border-gray-700/50 rounded-lg p-4"
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <p className="font-medium text-white mb-1">
+                              Invitation à une campagne
+                            </p>
+                            <p className="text-sm text-gray-400">
+                              Code: <span className="font-mono text-purple-400">{invitation.invitation_code}</span>
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Reçue le {new Date(invitation.invited_at).toLocaleDateString('fr-FR')}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleAcceptInvitation(invitation.id)}
+                            className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
+                          >
+                            <Check size={18} />
+                            Accepter
+                          </button>
+                          <button
+                            onClick={() => handleDeclineInvitation(invitation.id)}
+                            className="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 px-4 py-2 rounded-lg border border-red-500/30"
+                          >
+                            Refuser
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {myCampaigns.length > 0 && (
                   <div className="space-y-3">
