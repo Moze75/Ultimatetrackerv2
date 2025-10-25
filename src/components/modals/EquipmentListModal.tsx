@@ -615,5 +615,5 @@ export function EquipmentListModal({
         </div>
       </div>
     </div>
-  );
+  ); 
 }
