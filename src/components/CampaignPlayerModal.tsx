@@ -398,7 +398,7 @@ const loadData = async () => {
 
 // ✅ AJOUTER CES LOGS
 console.log('🏕️ QUERY campaign_members:');
-console.log('  - Error:', membError);
+console.log('  - Error:', membershipError);  // ✅ BON NOM
 console.log('  - Data brut:', activeMemberships);
 console.log('  - Nombre de memberships:', activeMemberships?.length || 0);
     
