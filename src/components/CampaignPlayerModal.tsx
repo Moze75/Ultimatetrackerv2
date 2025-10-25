@@ -494,25 +494,7 @@ const [claiming, setClaiming] = useState(false);
   };
 
 // ===== FONCTION POUR ACCEPTER UNE INVITATION =====
-const handleAcceptInvitationWithPlayer = async (invitationId: string) => {
-  if (!selectedPlayerForInvite) {
-    toast.error('Sélectionnez un personnage');
-    return;
-  }
 
-  try {
-    setProcessingInvitation(invitationId);
-    await campaignService.acceptInvitationWithPlayer(invitationId, selectedPlayerForInvite);
-    toast.success('Vous avez rejoint la campagne !');
-    setSelectedPlayerForInvite('');
-    loadData();
-  } catch (error: any) {
-    console.error(error);
-    toast.error(error.message || 'Erreur');
-  } finally {
-    setProcessingInvitation(null);
-  }
-};
 
 // ===== FONCTION POUR REFUSER UNE INVITATION =====
 const handleDeclineInvitation = async (invitationId: string) => {
