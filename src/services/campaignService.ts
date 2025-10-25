@@ -156,30 +156,27 @@ async acceptInvitationWithPlayer(invitationId: string, playerId: string): Promis
   if (invitation.status !== 'pending') throw new Error('Cette invitation n\'est plus valide');
   if (invitation.player_email !== user.email) throw new Error('Cette invitation ne vous est pas destinée');
 
-  // 2. ✅ VÉRIFIER SI LE MEMBRE EXISTE DÉJÀ (pour éviter le 409)
-  const { data: existingMember } = await supabase
-    .from('campaign_members')
-    .select('id')
-    .eq('campaign_id', invitation.campaign_id)
-    .eq('user_id', user.id)
-    .single();
+// 2. ✅ Vérifier si CE PERSONNAGE SPÉCIFIQUE est déjà dans la campagne
+const { data: existingMember } = await supabase
+  .from('campaign_members')
+  .select('id')
+  .eq('campaign_id', invitation.campaign_id)
+  .eq('player_id', playerId)  // ✅ Vérifier le player_id au lieu du user_id
+  .single();
 
-  if (existingMember) {
-    // ✅ Le membre existe déjà, juste marquer l'invitation comme acceptée
-    console.log('✅ Membre déjà présent dans la campagne, on met à jour l\'invitation');
-    
-   const { error: updateError } = await supabase
-  .from('campaign_invitations')
-  .update({ 
-    status: 'accepted',
-    responded_at: new Date().toISOString()  // ✅ Garder juste ça
-    // ❌ NE PAS mettre player_id ici
-  })
-  .eq('id', invitationId);
+if (existingMember) {
+  // Ce personnage est déjà dans la campagne, juste marquer l'invitation comme acceptée
+  const { error: updateError } = await supabase
+    .from('campaign_invitations')
+    .update({ 
+      status: 'accepted',
+      responded_at: new Date().toISOString()
+    })
+    .eq('id', invitationId);
 
-if (updateError) throw updateError;
-return;
-  }
+  if (updateError) throw updateError;
+  return;
+}
 
   // 3. Récupérer les infos du joueur
   const { data: player, error: playerError } = await supabase
