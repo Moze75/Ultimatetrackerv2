@@ -182,31 +182,34 @@ async acceptInvitationWithPlayer(invitationId: string, playerId: string): Promis
   console.log('🧙 Personnage trouvé:', player);
 
   // 3. Vérifier si CE PERSONNAGE SPÉCIFIQUE est déjà dans la campagne
-  const { data: existingMember } = await supabase
-    .from('campaign_members')
-    .select('id, is_active')
-    .eq('campaign_id', invitation.campaign_id)
-    .eq('player_id', playerId)
-    .maybeSingle();
+const { data: existingMember } = await supabase
+  .from('campaign_members')
+  .select('id, is_active')
+  .eq('campaign_id', invitation.campaign_id)
+  .eq('player_id', playerId)
+  .maybeSingle();
 
-  if (existingMember) {
-    console.log('⚠️ Membre déjà existant:', existingMember);
+if (existingMember) {
+  console.log('⚠️ Membre déjà existant:', existingMember);
+  
+  if (!existingMember.is_active) {
+    // ❌ Au lieu de UPDATE, on SUPPRIME puis RECRÉE
+    console.log('🗑️ Suppression de l\'ancien membre...');
     
-    // Si le membre existe mais est inactif, on le réactive
-    if (!existingMember.is_active) {
-      const { error: updateError } = await supabase
-        .from('campaign_members')
-        .update({ is_active: true })
-        .eq('id', existingMember.id);
+    const { error: deleteError } = await supabase
+      .from('campaign_members')
+      .delete()
+      .eq('id', existingMember.id);
 
-      if (updateError) {
-        console.error('❌ Erreur réactivation membre:', updateError);
-        throw updateError;
-      }
-      console.log('✅ Membre réactivé');
+    if (deleteError) {
+      console.error('❌ Erreur suppression membre:', deleteError);
+      throw deleteError;
     }
-
-    // Marquer l'invitation comme acceptée
+    
+    console.log('✅ Ancien membre supprimé, on continue vers la création');
+    // Pas de return ici, on continue vers la création
+  } else {
+    // Si déjà actif, juste marquer l'invitation comme acceptée
     const { error: updateInviteError } = await supabase
       .from('campaign_invitations')
       .update({ 
@@ -220,9 +223,10 @@ async acceptInvitationWithPlayer(invitationId: string, playerId: string): Promis
       throw updateInviteError;
     }
 
-    console.log('✅ Invitation acceptée (membre existant)');
+    console.log('✅ Invitation acceptée (membre déjà actif)');
     return;
   }
+}
 
   // 4. Créer le membre dans campaign_members
   console.log('➕ Création du nouveau membre...');
