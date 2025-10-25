@@ -551,6 +551,58 @@ export function CampaignPlayerModal({
     }
   };
 
+  // ===== FONCTION POUR VALIDER LE CODE =====
+const handleValidateCode = async () => {
+  const code = invitationCode.trim().toUpperCase();
+  if (!code) {
+    toast.error('Entrez un code d\'invitation');
+    return;
+  }
+
+  try {
+    setValidatingCode(true);
+    const result = await campaignService.validateInvitationCode(code);
+    
+    if (!result.valid) {
+      toast.error(result.error || 'Code invalide');
+      return;
+    }
+
+    setValidatedInvitation(result);
+    toast.success('Code valide ! Choisissez votre personnage');
+  } catch (error: any) {
+    console.error(error);
+    toast.error('Erreur lors de la validation');
+  } finally {
+    setValidatingCode(false);
+  }
+};
+
+// ===== FONCTION POUR ACCEPTER AVEC UN PERSONNAGE =====
+const handleAcceptWithPlayer = async () => {
+  if (!validatedInvitation || !selectedPlayerForInvite) {
+    toast.error('Sélectionnez un personnage');
+    return;
+  }
+
+  try {
+    await campaignService.acceptInvitationWithPlayer(
+      invitationCode,
+      selectedPlayerForInvite
+    );
+    
+    toast.success('Vous avez rejoint la campagne !');
+    setShowCodeInput(false);
+    setInvitationCode('');
+    setValidatedInvitation(null);
+    setSelectedPlayerForInvite('');
+    loadData();
+  } catch (error: any) {
+    console.error(error);
+    toast.error(error.message || 'Erreur');
+  }
+};
+
   // ✅ FONCTION CLAIM CORRIGÉE (ordre fixé + guard double-clic)
   const handleClaimGift = async (gift: CampaignGift) => {
     // ✅ Guard contre double-clic
