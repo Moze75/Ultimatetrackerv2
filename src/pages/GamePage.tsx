@@ -132,8 +132,8 @@ useEffect(() => {
           const prevIds = new Set(inventory.map(i => i.id));
           const newItems = data.filter(item => !prevIds.has(item.id));
           
-          if (newItems.length > 0) {
-            console.log('🆕 Nouveaux items détectés:', newItems);
+        if (newItems.length > 0) {
+  console.log('🆕 Nouveaux items détectés:', newItems);
             newItems.forEach(item => {
               toast.success(`Nouvel objet reçu : ${item.name}`, { duration: 3000 });
             });
