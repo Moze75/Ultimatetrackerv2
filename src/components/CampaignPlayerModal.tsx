@@ -428,44 +428,51 @@ if (activeMemberships && activeMemberships.length > 0) {
       );
       setMembersByCampaign(membersMap);
 
-        const { data: gifts } = await supabase
-          .from('campaign_gifts')
-          .select('*')
-          .in('campaign_id', campaignIds)
-          .eq('status', 'pending')
-          .order('sent_at', { ascending: false });
+     // Charger les gifts
+      const { data: gifts } = await supabase
+        .from('campaign_gifts')
+        .select('*')
+        .in('campaign_id', campaignIds)
+        .eq('status', 'pending')
+        .order('sent_at', { ascending: false });
 
-        const filteredGifts = (gifts || []).filter((gift) => {
-          if (gift.distribution_mode === 'shared') {
-            return true;
-          }
-          if (gift.distribution_mode === 'individual' && gift.recipient_ids) {
-            return gift.recipient_ids.includes(user.id);
-          }
-          return false;
-        });
+      const filteredGifts = (gifts || []).filter((gift) => {
+        if (gift.distribution_mode === 'shared') {
+          return true;
+        }
+        if (gift.distribution_mode === 'individual' && gift.recipient_ids) {
+          return gift.recipient_ids.includes(user.id);
+        }
+        return false;
+      });
 
-        const giftsWithClaims = await Promise.all(
-          filteredGifts.map(async (gift) => {
-            const claims = await campaignService.getGiftClaims(gift.id);
-            const alreadyClaimed = claims.some(c => c.user_id === user.id);
-            return { gift, alreadyClaimed };
-          })
-        );
+      const giftsWithClaims = await Promise.all(
+        filteredGifts.map(async (gift) => {
+          const claims = await campaignService.getGiftClaims(gift.id);
+          const alreadyClaimed = claims.some(c => c.user_id === user.id);
+          return { gift, alreadyClaimed };
+        })
+      );
 
-        setPendingGifts(
-          giftsWithClaims
-            .filter(g => !g.alreadyClaimed)
-            .map(g => g.gift)
-        );
-      }
-    } catch (error) {
-      console.error('Erreur chargement campagnes:', error);
-      toast.error('Erreur lors du chargement');
-    } finally {
-      setLoading(false);
+      setPendingGifts(
+        giftsWithClaims
+          .filter(g => !g.alreadyClaimed)
+          .map(g => g.gift)
+      );
+    } else {
+      // ✅ Aucune campagne active
+      setMyCampaigns([]);
+      setActiveCampaigns([]);
+      setMembersByCampaign({});
+      setPendingGifts([]);
     }
-  };
+  } catch (error) {
+    console.error('Erreur chargement campagnes:', error);
+    toast.error('Erreur lors du chargement');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleDistributeCurrency = async (distribution: { userId: string; playerId: string; gold: number; silver: number; copper: number }[]) => {
     if (!selectedGiftForDistribution) return;
