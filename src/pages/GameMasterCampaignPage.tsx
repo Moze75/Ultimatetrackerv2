@@ -201,6 +201,19 @@ export function GameMasterCampaignPage({ session, onBack }: GameMasterCampaignPa
           }}
         />
       )}
+
+{/* ✅ AJOUTER : Modal d'édition */}
+{editingCampaign && (
+  <EditCampaignModal
+    campaign={editingCampaign}
+    onClose={() => setEditingCampaign(null)}
+    onUpdated={() => {
+      setEditingCampaign(null);
+      loadCampaigns();
+    }}
+  />
+)}
+      
     </div>
   );
 }
