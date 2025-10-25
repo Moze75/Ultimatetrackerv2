@@ -97,123 +97,200 @@ export const campaignService = {
     if (error) throw error;
   },
 
-  // =============================================
-  // INVITATIONS
-  // =============================================
+// =============================================
+// INVITATIONS (système simplifié par email)
+// =============================================
 
-  async invitePlayer(campaignId: string, playerEmail: string): Promise<CampaignInvitation> {
-    const invitationCode = generateInvitationCode();
+/**
+ * Inviter un joueur par email
+ */
+async invitePlayerByEmail(
+  campaignId: string,
+  playerEmail: string
+): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Non authentifié');
 
-    const { data, error } = await supabase
-      .from('campaign_invitations')
-      .insert({
-        campaign_id: campaignId,
-        player_email: playerEmail,
-        invitation_code: invitationCode,
-      })
-      .select()
-      .single();
+  // Vérifier si une invitation pending existe déjà
+  const { data: existing } = await supabase
+    .from('campaign_invitations')
+    .select('id, status')
+    .eq('campaign_id', campaignId)
+    .eq('player_email', playerEmail.toLowerCase().trim())
+    .eq('status', 'pending')
+    .maybeSingle();
 
-    if (error) throw error;
-    return data;
-  },
+  if (existing) {
+    throw new Error('Une invitation est déjà en attente pour cet email');
+  }
 
-  async getInvitationsByCode(code: string): Promise<CampaignInvitation> {
-    const { data, error } = await supabase
-      .from('campaign_invitations')
-      .select('*')
-      .eq('invitation_code', code.toUpperCase())
-      .single();
+  // Créer l'invitation
+  const { error } = await supabase
+    .from('campaign_invitations')
+    .insert({
+      campaign_id: campaignId,
+      player_email: playerEmail.toLowerCase().trim(),
+      status: 'pending',
+      invited_at: new Date().toISOString(),
+    });
 
-    if (error) throw error;
-    return data;
-  },
+  if (error) throw error;
+},
 
-  async acceptInvitation(invitationId: string, playerId?: string): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Non authentifié');
+/**
+ * Accepter une invitation avec un personnage
+ */
+async acceptInvitationWithPlayer(
+  invitationId: string,
+  playerId: string
+): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Non authentifié');
 
-    const { data: invitation, error: invError } = await supabase
-      .from('campaign_invitations')
-      .update({
-        status: 'accepted',
-        player_id: user.id,
-        responded_at: new Date().toISOString(),
-      })
-      .eq('id', invitationId)
-      .select()
-      .single();
+  // Récupérer l'invitation
+  const { data: invitation, error: invError } = await supabase
+    .from('campaign_invitations')
+    .select('id, campaign_id, player_email, status')
+    .eq('id', invitationId)
+    .single();
 
-    if (invError) throw invError;
+  if (invError || !invitation) {
+    throw new Error('Invitation introuvable');
+  }
 
-    const { error: memberError } = await supabase
-      .from('campaign_members')
-      .insert({
-        campaign_id: invitation.campaign_id,
-        user_id: user.id,
-        player_id: playerId,
-      });
+  // Vérifier que l'invitation est pour cet utilisateur
+  if (invitation.player_email !== user.email) {
+    throw new Error('Cette invitation ne vous est pas destinée');
+  }
 
-    if (memberError) throw memberError;
-  },
+  // Vérifier le statut
+  if (invitation.status !== 'pending') {
+    throw new Error('Cette invitation n\'est plus valide');
+  }
 
-  async declineInvitation(invitationId: string): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Non authentifié');
+  // Vérifier que le joueur appartient à l'utilisateur
+  const { data: player, error: playerError } = await supabase
+    .from('players')
+    .select('id, user_id')
+    .eq('id', playerId)
+    .eq('user_id', user.id)
+    .single();
 
-    // Remplir le player_id lors du refus pour satisfaire la policy
-    const { error } = await supabase
-      .from('campaign_invitations')
-      .update({
-        status: 'declined',
-        responded_at: new Date().toISOString(),
-        player_id: user.id,
-      })
-      .eq('id', invitationId);
+  if (playerError || !player) {
+    throw new Error('Personnage invalide');
+  }
 
-    if (error) throw error;
-  },
+  // Vérifier que le joueur n'est pas déjà dans la campagne
+  const { data: existingMember } = await supabase
+    .from('campaign_members')
+    .select('id')
+    .eq('campaign_id', invitation.campaign_id)
+    .eq('player_id', playerId)
+    .maybeSingle();
 
-  // ✅ AJOUTEZ ICI :
-  async deleteInvitation(invitationId: string): Promise<void> {
-    const { error } = await supabase
-      .from('campaign_invitations')
-      .delete()
-      .eq('id', invitationId);
+  if (existingMember) {
+    throw new Error('Ce personnage est déjà membre de cette campagne');
+  }
 
-    if (error) throw error;
-  },
+  // Ajouter le membre à la campagne
+  const { error: memberError } = await supabase
+    .from('campaign_members')
+    .insert({
+      campaign_id: invitation.campaign_id,
+      user_id: user.id,
+      player_id: playerId,
+      is_active: true,
+      joined_at: new Date().toISOString(),
+    });
 
-  async getMyInvitations(): Promise<CampaignInvitation[]> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Non authentifié');
+  if (memberError) throw memberError;
 
-    const { data, error } = await supabase
-      .from('campaign_invitations')
-      .select('*')
-      .or(`player_id.eq.${user.id},player_email.eq.${user.email}`)
-      .eq('status', 'pending')
-      .order('invited_at', { ascending: false });
+  // Marquer l'invitation comme acceptée
+  const { error: updateError } = await supabase
+    .from('campaign_invitations')
+    .update({
+      status: 'accepted',
+      player_id: playerId,
+      responded_at: new Date().toISOString(),
+    })
+    .eq('id', invitationId);
 
-    if (error) throw error;
-    return data || [];
-  },
+  if (updateError) throw updateError;
+},
 
-  
-    async getMyInvitations(): Promise<CampaignInvitation[]> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Non authentifié');
+/**
+ * Refuser une invitation
+ */
+async declineInvitation(invitationId: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Non authentifié');
 
-    const { data, error } = await supabase
-      .from('campaign_invitations')
-      .select('*')
-      .or(`player_id.eq.${user.id},player_email.eq.${user.email}`)
-      .eq('status', 'pending')
-      .order('invited_at', { ascending: false });
+  const { error } = await supabase
+    .from('campaign_invitations')
+    .update({
+      status: 'declined',
+      responded_at: new Date().toISOString(),
+    })
+    .eq('id', invitationId)
+    .eq('player_email', user.email);
 
-    if (error) throw error;
-    return data || [];
-  },
+  if (error) throw error;
+},
+
+/**
+ * Récupérer les invitations en attente pour l'utilisateur connecté
+ */
+async getMyPendingInvitations(): Promise<any[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data: invitations, error } = await supabase
+    .from('campaign_invitations')
+    .select(`
+      *,
+      campaigns (
+        id,
+        name,
+        description
+      )
+    `)
+    .eq('player_email', user.email)
+    .eq('status', 'pending')
+    .order('invited_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching invitations:', error);
+    return [];
+  }
+
+  return invitations || [];
+},
+
+/**
+ * Supprimer une invitation (pour le MJ)
+ */
+async deleteInvitation(invitationId: string): Promise<void> {
+  const { error } = await supabase
+    .from('campaign_invitations')
+    .delete()
+    .eq('id', invitationId);
+
+  if (error) throw error;
+},
+
+/**
+ * Récupérer les invitations d'une campagne (pour le MJ)
+ */
+async getCampaignInvitations(campaignId: string): Promise<any[]> {
+  const { data, error } = await supabase
+    .from('campaign_invitations')
+    .select('*')
+    .eq('campaign_id', campaignId)
+    .order('invited_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+},
 
   // =============================================
   // NOUVELLES FONCTIONS - Invitations par personnage
