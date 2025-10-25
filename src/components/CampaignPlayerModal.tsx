@@ -431,6 +431,9 @@ const loadData = async () => {
         .eq('status', 'pending')
         .order('sent_at', { ascending: false });
 
+ console.log('📦 GIFTS BRUTS (avant filtrage):', gifts);
+
+      
       const filteredGifts = (gifts || []).filter((gift) => {
         if (gift.distribution_mode === 'shared') {
           return true;
@@ -448,6 +451,8 @@ const loadData = async () => {
           return { gift, alreadyClaimed };
         })
       );
+
+       console.log('📦 GIFTS FILTRÉS:', filteredGifts);
 
       // ✅ CORRECTION : Définir newGifts correctement
       const newGifts = giftsWithClaims
