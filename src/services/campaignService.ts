@@ -215,9 +215,13 @@ return; // ✅ Stop ici, pas besoin de créer le membre
 
   // 5. Marquer l'invitation comme acceptée
   const { error: updateError } = await supabase
-    .from('campaign_invitations')
-    .update({ status: 'accepted' })
-    .eq('id', invitationId);
+  .from('campaign_invitations')
+  .update({ 
+    status: 'accepted',
+    player_id: playerId,  // ✅ Ajouter ici aussi
+    responded_at: new Date().toISOString()
+  })
+  .eq('id', invitationId);
 
   if (updateError) throw updateError;
 },
