@@ -495,57 +495,40 @@ const [claiming, setClaiming] = useState(false);
     }
   };
 
-  const handleAcceptInvitation = async (invitationId: string) => {
-    try {
-      await campaignService.acceptInvitation(invitationId, player.id);
-      toast.success('Invitation acceptée !');
-      loadData();
-    } catch (error) {
-      console.error(error);
-      toast.error('Erreur lors de l\'acceptation');
-    }
-  };
+// ===== FONCTION POUR ACCEPTER UNE INVITATION =====
+const handleAcceptInvitationWithPlayer = async (invitationId: string) => {
+  if (!selectedPlayerForInvite) {
+    toast.error('Sélectionnez un personnage');
+    return;
+  }
 
-  const handleDeclineInvitation = async (invitationId: string) => {
-    if (!confirm('Refuser cette invitation ?')) return;
-    
-    try {
-      await campaignService.declineInvitation(invitationId);
-      toast.success('Invitation refusée');
-      loadData();
-    } catch (error) {
-      console.error(error);
-      toast.error('Erreur');
-    }
-  };
+  try {
+    setProcessingInvitation(invitationId);
+    await campaignService.acceptInvitationWithPlayer(invitationId, selectedPlayerForInvite);
+    toast.success('Vous avez rejoint la campagne !');
+    setSelectedPlayerForInvite('');
+    loadData();
+  } catch (error: any) {
+    console.error(error);
+    toast.error(error.message || 'Erreur');
+  } finally {
+    setProcessingInvitation(null);
+  }
+};
 
-  const handleJoinWithCode = async () => {
-    const code = invitationCode.trim().toUpperCase();
-    if (!code) {
-      toast.error('Entrez un code d\'invitation');
-      return;
-    }
-
-    try {
-      const invitation = await campaignService.getInvitationsByCode(code);
-      
-      if (invitation.status !== 'pending') {
-        toast.error('Cette invitation n\'est plus valide');
-        return;
-      }
-
-      await handleAcceptInvitation(invitation.id);
-      setShowCodeInput(false);
-      setInvitationCode('');
-    } catch (error: any) {
-      console.error(error);
-      if (error.message?.includes('not found')) {
-        toast.error('Code d\'invitation invalide');
-      } else {
-        toast.error('Erreur lors de la vérification du code');
-      }
-    }
-  };
+// ===== FONCTION POUR REFUSER UNE INVITATION =====
+const handleDeclineInvitation = async (invitationId: string) => {
+  if (!confirm('Refuser cette invitation ?')) return;
+  
+  try {
+    await campaignService.declineInvitation(invitationId);
+    toast.success('Invitation refusée');
+    loadData();
+  } catch (error) {
+    console.error(error);
+    toast.error('Erreur');
+  }
+};
 
   // ✅ FONCTION CLAIM CORRIGÉE (ordre fixé + guard double-clic)
   const handleClaimGift = async (gift: CampaignGift) => {
