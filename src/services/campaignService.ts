@@ -214,12 +214,12 @@ return;
   }
 
   // 5. Marquer l'invitation comme acceptée
-  const { error: updateError } = await supabase
+const { error: updateError } = await supabase
   .from('campaign_invitations')
   .update({ 
     status: 'accepted',
-    player_id: playerId,  // ✅ Ajouter ici aussi
     responded_at: new Date().toISOString()
+    // ❌ NE PAS mettre player_id ici non plus
   })
   .eq('id', invitationId);
 
