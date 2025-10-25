@@ -766,13 +766,30 @@ setActiveCampaigns(campaigns || []);
 
   if (!open) return null;
 
-  return (
-    <>
-      <div className="fixed inset-0 z-[11000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
-        <div className="fixed inset-0 sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[min(42rem,95vw)] sm:max-h-[90vh] sm:rounded-xl overflow-hidden bg-gray-900 border-0 sm:border sm:border-gray-700">
+ return (
+  <>
+    <div className="fixed inset-0 z-[11000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
+      <div 
+<div 
+  className="fixed inset-0 sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[min(42rem,95vw)] sm:max-h-[90vh] sm:rounded-xl overflow-hidden border-0 sm:border sm:border-gray-700 shadow-2xl"
+  style={{
+    backgroundImage: 'url(/background/ddbground.png)',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat'
+  }}
+      >
+        {/* Overlay blanc avec opacité */}
+        <div className="absolute inset-0 bg-white/20 pointer-events-none" />
+        
+        {/* Overlay gris foncé pour contraste */}
+        <div className="absolute inset-0 bg-gray-900/80 pointer-events-none" />
+
+        {/* Contenu par-dessus les overlays */}
+        <div className="relative z-10 h-full flex flex-col">
           {/* Header */}
-          <div className="bg-gray-800/60 border-b border-gray-700 px-4 py-3">
+          <div className="bg-gray-800/60 border-b border-gray-700 px-4 py-3 backdrop-blur-sm">
             <div className="flex items-center justify-between mb-3">
               <div className="flex-1">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -833,8 +850,8 @@ setActiveCampaigns(campaigns || []);
               </button>
             </div>
           </div>
- 
-          {/* Content */} 
+
+          {/* Content */}
           <div className="p-4 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 140px)' }}>
             {loading ? (
               <div className="text-center py-12">
