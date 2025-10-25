@@ -310,23 +310,31 @@ export function CampaignPlayerModal({
   player,
   onUpdate
 }: CampaignPlayerModalProps) {
-  const [invitations, setInvitations] = useState<CampaignInvitation[]>([]);
-  const [myCampaigns, setMyCampaigns] = useState<Campaign[]>([]);
-  const [activeCampaigns, setActiveCampaigns] = useState<Campaign[]>([]);
-  const [pendingGifts, setPendingGifts] = useState<CampaignGift[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'invitations' | 'gifts'>('gifts');
-  const [showCodeInput, setShowCodeInput] = useState(false);
-  const [invitationCode, setInvitationCode] = useState('');
-  
-  // États pour la distribution
-  const [showDistributionModal, setShowDistributionModal] = useState(false);
-  const [selectedGiftForDistribution, setSelectedGiftForDistribution] = useState<CampaignGift | null>(null);
-  const [campaignMembersForDistribution, setCampaignMembersForDistribution] = useState<CampaignMember[]>([]);
-  const [membersByCampaign, setMembersByCampaign] = useState<Record<string, CampaignMember[]>>({});
+// =============================================
+// ÉTATS DU COMPOSANT
+// =============================================
 
-  // ✅ AJOUT: État pour empêcher double-clic
-  const [claiming, setClaiming] = useState(false);
+// États principaux
+const [invitations, setInvitations] = useState<CampaignInvitation[]>([]);
+const [myCampaigns, setMyCampaigns] = useState<Campaign[]>([]);
+const [activeCampaigns, setActiveCampaigns] = useState<Campaign[]>([]);
+const [pendingGifts, setPendingGifts] = useState<CampaignGift[]>([]);
+const [loading, setLoading] = useState(true);
+const [activeTab, setActiveTab] = useState<'invitations' | 'gifts'>('gifts');
+
+// États pour les invitations simplifiées
+const [myPlayers, setMyPlayers] = useState<Player[]>([]);
+const [selectedPlayerForInvite, setSelectedPlayerForInvite] = useState<string>('');
+const [processingInvitation, setProcessingInvitation] = useState<string | null>(null);
+
+// États pour la distribution d'argent
+const [showDistributionModal, setShowDistributionModal] = useState(false);
+const [selectedGiftForDistribution, setSelectedGiftForDistribution] = useState<CampaignGift | null>(null);
+const [campaignMembersForDistribution, setCampaignMembersForDistribution] = useState<CampaignMember[]>([]);
+const [membersByCampaign, setMembersByCampaign] = useState<Record<string, CampaignMember[]>>({});
+
+// État pour empêcher les double-clics lors du claim
+const [claiming, setClaiming] = useState(false);
 
   const getVisibleDescription = (description: string | null | undefined): string => {
     if (!description) return '';
