@@ -22,7 +22,7 @@ interface DistributionModalProps {
   currentPlayer: Player;
   onClose: () => void;
   onDistribute: (distribution: { userId: string; playerId: string; gold: number; silver: number; copper: number }[]) => Promise<void>;
-} 
+}
 
 function CurrencyDistributionModal({
   gift,
@@ -310,30 +310,23 @@ export function CampaignPlayerModal({
   player,
   onUpdate
 }: CampaignPlayerModalProps) {
+  const [invitations, setInvitations] = useState<CampaignInvitation[]>([]);
+  const [myCampaigns, setMyCampaigns] = useState<Campaign[]>([]);
+  const [activeCampaigns, setActiveCampaigns] = useState<Campaign[]>([]);
+  const [pendingGifts, setPendingGifts] = useState<CampaignGift[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'invitations' | 'gifts'>('gifts');
+  const [showCodeInput, setShowCodeInput] = useState(false);
+  const [invitationCode, setInvitationCode] = useState('');
   
-// =============================================
-// ÉTATS DU COMPOSANT
-// =============================================
+  // États pour la distribution
+  const [showDistributionModal, setShowDistributionModal] = useState(false);
+  const [selectedGiftForDistribution, setSelectedGiftForDistribution] = useState<CampaignGift | null>(null);
+  const [campaignMembersForDistribution, setCampaignMembersForDistribution] = useState<CampaignMember[]>([]);
+  const [membersByCampaign, setMembersByCampaign] = useState<Record<string, CampaignMember[]>>({});
 
-// États principaux
-const [invitations, setInvitations] = useState<CampaignInvitation[]>([]);
-const [myCampaigns, setMyCampaigns] = useState<Campaign[]>([]);
-const [activeCampaigns, setActiveCampaigns] = useState<Campaign[]>([]);
-const [pendingGifts, setPendingGifts] = useState<CampaignGift[]>([]);
-const [loading, setLoading] = useState(true);
-const [activeTab, setActiveTab] = useState<'invitations' | 'gifts'>('gifts');
-
-// États pour les invitations simplifiées
-const [processingInvitation, setProcessingInvitation] = useState<string | null>(null);
-
-// États pour la distribution d'argent
-const [showDistributionModal, setShowDistributionModal] = useState(false);
-const [selectedGiftForDistribution, setSelectedGiftForDistribution] = useState<CampaignGift | null>(null);
-const [campaignMembersForDistribution, setCampaignMembersForDistribution] = useState<CampaignMember[]>([]);
-const [membersByCampaign, setMembersByCampaign] = useState<Record<string, CampaignMember[]>>({});
-
-// État pour empêcher les double-clics lors du claim
-const [claiming, setClaiming] = useState(false);
+  // ✅ AJOUT: État pour empêcher double-clic
+  const [claiming, setClaiming] = useState(false);
 
   const getVisibleDescription = (description: string | null | undefined): string => {
     if (!description) return '';
@@ -372,78 +365,133 @@ const [claiming, setClaiming] = useState(false);
     }
   };
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+const loadData = async () => {
+  try {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
-      const invites = await campaignService.getMyPendingInvitations();
-      setInvitations(invites);
+    console.log('🎯 DEBUG LOAD DATA (Golfot):');
+    console.log('- user.id:', user.id);
+    console.log('- player.id:', player.id);
 
-      const { data: members } = await supabase
-        .from('campaign_members')
-        .select('campaign_id')
-        .eq('user_id', user.id)
-        .eq('is_active', true);
+    // ✅ Charger les invitations avec la nouvelle méthode
+    const invites = await campaignService.getMyPendingInvitations();
+    setInvitations(invites);
 
-      if (members && members.length > 0) {
-        const campaignIds = members.map(m => m.campaign_id);
-        const { data: campaigns } = await supabase
-          .from('campaigns')
-          .select('*')
-          .in('id', campaignIds);
+    // ✅ CORRECTION : Récupérer SEULEMENT les campagnes où CE PERSONNAGE est membre
+    const { data: activeMemberships, error: membershipError } = await supabase
+      .from('campaign_members')
+      .select(`
+        campaign_id,
+        campaigns (
+          id,
+          name,
+          description,
+          game_master_id,
+          created_at,
+          is_active
+        )
+      `)
+      .eq('player_id', player.id)  // ✅ Filtrer par CE personnage spécifique
+      .eq('is_active', true);        // ✅ ET actif
 
-        setMyCampaigns(campaigns || []);
-        setActiveCampaigns(campaigns || []);
+    console.log('🏕️ QUERY campaign_members:');
+    console.log('  - Error:', membershipError);
+    console.log('  - Data brut:', activeMemberships);
+    console.log('  - Nombre de memberships:', activeMemberships?.length || 0);
 
-        const membersMap: Record<string, CampaignMember[]> = {};
-        await Promise.all(
-          campaignIds.map(async (campaignId) => {
-            const campaignMembers = await loadCampaignMembers(campaignId);
-            membersMap[campaignId] = campaignMembers;
-          })
-        );
-        setMembersByCampaign(membersMap);
+    if (activeMemberships && activeMemberships.length > 0) {
+      console.log('  - Détails memberships:', activeMemberships.map((m: any) => ({
+        campaign_id: m.campaign_id,
+        campaign_name: m.campaigns?.name
+      })));
 
-        const { data: gifts } = await supabase
-          .from('campaign_gifts')
-          .select('*')
-          .in('campaign_id', campaignIds)
-          .eq('status', 'pending')
-          .order('sent_at', { ascending: false });
+      // Dédupliquer les campagnes (au cas où)
+      const campaignsMap = new Map<string, any>();
+      
+      activeMemberships.forEach((m: any) => {
+        if (m.campaigns && m.campaigns.id) {
+          campaignsMap.set(m.campaigns.id, m.campaigns);
+        }
+      });
 
-        const filteredGifts = (gifts || []).filter((gift) => {
-          if (gift.distribution_mode === 'shared') {
-            return true;
-          }
-          if (gift.distribution_mode === 'individual' && gift.recipient_ids) {
-            return gift.recipient_ids.includes(user.id);
-          }
-          return false;
+      const campaigns = Array.from(campaignsMap.values());
+
+      setMyCampaigns(campaigns);
+      setActiveCampaigns(campaigns);
+
+      const campaignIds = campaigns.map((c: any) => c.id);
+
+      // Charger les membres pour chaque campagne
+      const membersMap: Record<string, CampaignMember[]> = {};
+      await Promise.all(
+        campaignIds.map(async (campaignId: string) => {
+          const campaignMembers = await loadCampaignMembers(campaignId);
+          membersMap[campaignId] = campaignMembers;
+        })
+      );
+      setMembersByCampaign(membersMap);
+
+      // Charger les gifts
+      const { data: gifts } = await supabase
+        .from('campaign_gifts')
+        .select('*')
+        .in('campaign_id', campaignIds)
+        .eq('status', 'pending')
+        .order('sent_at', { ascending: false });
+
+      console.log('📦 GIFTS BRUTS (avant filtrage):', gifts);
+
+      const filteredGifts = (gifts || []).filter((gift) => {
+        console.log(`  → Gift "${gift.item_name}":`, {
+          distribution_mode: gift.distribution_mode,
+          recipient_ids: gift.recipient_ids,
+          match_shared: gift.distribution_mode === 'shared',
+          match_individual: gift.distribution_mode === 'individual' && gift.recipient_ids?.includes(user.id)
         });
 
-        const giftsWithClaims = await Promise.all(
-          filteredGifts.map(async (gift) => {
-            const claims = await campaignService.getGiftClaims(gift.id);
-            const alreadyClaimed = claims.some(c => c.user_id === user.id);
-            return { gift, alreadyClaimed };
-          })
-        );
+        if (gift.distribution_mode === 'shared') {
+          return true;
+        }
+        if (gift.distribution_mode === 'individual' && gift.recipient_ids) {
+          return gift.recipient_ids.includes(user.id);
+        }
+        return false;
+      });
 
-        setPendingGifts(
-          giftsWithClaims
-            .filter(g => !g.alreadyClaimed)
-            .map(g => g.gift)
-        );
-      }
-    } catch (error) {
-      console.error('Erreur chargement campagnes:', error);
-      toast.error('Erreur lors du chargement');
-    } finally {
-      setLoading(false);
+      console.log('📦 GIFTS FILTRÉS:', filteredGifts);
+
+      const giftsWithClaims = await Promise.all(
+        filteredGifts.map(async (gift) => {
+          const claims = await campaignService.getGiftClaims(gift.id);
+          const alreadyClaimed = claims.some(c => c.user_id === user.id);
+          return { gift, alreadyClaimed };
+        })
+      );
+
+      // ✅ CORRECTION : Définir newGifts correctement
+      const newGifts = giftsWithClaims
+        .filter(g => !g.alreadyClaimed)
+        .map(g => g.gift);
+
+      setPendingGifts(newGifts);
+
+      // ✅ PAS de toast automatique ici
+    } else {
+      // Aucune campagne active pour ce personnage
+      setMyCampaigns([]);
+      setActiveCampaigns([]);
+      setMembersByCampaign({});
+      setPendingGifts([]);
     }
-  };
+  } catch (error) {
+    console.error('Erreur chargement campagnes:', error);
+    toast.error('Erreur lors du chargement');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleDistributeCurrency = async (distribution: { userId: string; playerId: string; gold: number; silver: number; copper: number }[]) => {
     if (!selectedGiftForDistribution) return;
@@ -493,22 +541,57 @@ const [claiming, setClaiming] = useState(false);
     }
   };
 
-// ===== FONCTION POUR ACCEPTER UNE INVITATION =====
+  const handleAcceptInvitation = async (invitationId: string) => {
+    try {
+      await campaignService.acceptInvitation(invitationId, player.id);
+      toast.success('Invitation acceptée !');
+      loadData();
+    } catch (error) {
+      console.error(error);
+      toast.error('Erreur lors de l\'acceptation');
+    }
+  };
 
+  const handleDeclineInvitation = async (invitationId: string) => {
+    if (!confirm('Refuser cette invitation ?')) return;
+    
+    try {
+      await campaignService.declineInvitation(invitationId);
+      toast.success('Invitation refusée');
+      loadData();
+    } catch (error) {
+      console.error(error);
+      toast.error('Erreur');
+    }
+  };
 
-// ===== FONCTION POUR REFUSER UNE INVITATION =====
-const handleDeclineInvitation = async (invitationId: string) => {
-  if (!confirm('Refuser cette invitation ?')) return;
-  
-  try {
-    await campaignService.declineInvitation(invitationId);
-    toast.success('Invitation refusée');
-    loadData();
-  } catch (error) {
-    console.error(error);
-    toast.error('Erreur');
-  }
-};
+  const handleJoinWithCode = async () => {
+    const code = invitationCode.trim().toUpperCase();
+    if (!code) {
+      toast.error('Entrez un code d\'invitation');
+      return;
+    }
+
+    try {
+      const invitation = await campaignService.getInvitationsByCode(code);
+      
+      if (invitation.status !== 'pending') {
+        toast.error('Cette invitation n\'est plus valide');
+        return;
+      }
+
+      await handleAcceptInvitation(invitation.id);
+      setShowCodeInput(false);
+      setInvitationCode('');
+    } catch (error: any) {
+      console.error(error);
+      if (error.message?.includes('not found')) {
+        toast.error('Code d\'invitation invalide');
+      } else {
+        toast.error('Erreur lors de la vérification du code');
+      }
+    }
+  };
 
   // ✅ FONCTION CLAIM CORRIGÉE (ordre fixé + guard double-clic)
   const handleClaimGift = async (gift: CampaignGift) => {
@@ -711,7 +794,7 @@ const handleDeclineInvitation = async (invitationId: string) => {
     <>
       <div className="fixed inset-0 z-[11000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
-        <div className="fixed inset-0 sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[min(42rem,95vw)] sm:max-h-[90vh] sm:rounded-xl overflow-hidden bg-gray-900 border-0 sm:border sm:border-gray-700">
+        <div className="fixed inset-0 sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[min(42rem,95vw)] sm:max-h-[90vh] sm:rounded-xl overflow-hidden bg-gray-900 border-0 sm:border border-gray-700">
           {/* Header */}
           <div className="bg-gray-800/60 border-b border-gray-700 px-4 py-3">
             <div className="flex items-center justify-between mb-3">
@@ -783,121 +866,117 @@ const handleDeclineInvitation = async (invitationId: string) => {
                 <p className="text-gray-400">Chargement...</p>
               </div>
             ) : activeTab === 'invitations' ? (
-  <div className="space-y-4">
-    {invitations.length > 0 ? (
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-gray-300">Invitations en attente</h3>
-        {invitations.map((invitation) => (
-          <div
-            key={invitation.id}
-            className="bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-purple-500/30 rounded-lg p-6"
-          >
-            <div className="flex items-start gap-3 mb-4">
-              <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center flex-shrink-0">
-                <Users className="w-5 h-5 text-purple-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-white text-lg mb-1">
-                  {invitation.campaigns?.name || 'Campagne'}
-                </h3>
-                {invitation.campaigns?.description && (
-                  <p className="text-sm text-gray-400 mt-1">
-                    {invitation.campaigns.description}
-                  </p>
-                )}
-                <p className="text-xs text-gray-500 mt-2">
-                  Reçue le {new Date(invitation.invited_at).toLocaleDateString('fr-FR')}
-                </p>
-              </div>
-            </div>
-
-            {/* Affichage du personnage actuel */}
-            <div className="mb-4 bg-gray-800/40 rounded-lg p-3 border border-gray-700">
-              <p className="text-xs text-gray-400 mb-1">Rejoindre avec :</p>
-              <p className="text-sm font-semibold text-white">
-                {player.adventurer_name || player.name}
-              </p>
-            </div>
-
-            {/* Boutons */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleDeclineInvitation(invitation.id)}
-                disabled={processingInvitation === invitation.id}
-                className="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 px-4 py-2 rounded-lg border border-red-500/30 disabled:opacity-50"
-              >
-                Refuser
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    setProcessingInvitation(invitation.id);
-                    await campaignService.acceptInvitationWithPlayer(invitation.id, player.id);
-                    toast.success('Vous avez rejoint la campagne !');
-                    loadData();
-                  } catch (error: any) {
-                    console.error(error);
-                    toast.error(error.message || 'Erreur');
-                  } finally {
-                    setProcessingInvitation(null);
-                  }
-                }}
-                disabled={processingInvitation === invitation.id}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {processingInvitation === invitation.id ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                    Inscription...
-                  </>
+              <div className="space-y-4">
+                {!showCodeInput ? (
+                  <button
+                    onClick={() => setShowCodeInput(true)}
+                    className="w-full btn-primary px-4 py-3 rounded-lg flex items-center justify-center gap-2"
+                  >
+                    <Check size={20} />
+                    Rejoindre avec un code
+                  </button>
                 ) : (
-                  <>
-                    <Check size={18} />
-                    Rejoindre
-                  </>
+                  <div className="bg-gray-800/40 rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-white">Code d'invitation</h3>
+                      <button
+                        onClick={() => {
+                          setShowCodeInput(false);
+                          setInvitationCode('');
+                        }}
+                        className="text-gray-400 hover:text-white"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={invitationCode}
+                      onChange={(e) => setInvitationCode(e.target.value.toUpperCase())}
+                      className="input-dark w-full px-4 py-2 rounded-lg text-center font-mono text-lg tracking-wider"
+                      placeholder="ABCD1234"
+                      maxLength={8}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleJoinWithCode();
+                      }}
+                    />
+                    <button
+                      onClick={handleJoinWithCode}
+                      className="w-full btn-primary px-4 py-2 rounded-lg"
+                    >
+                      Rejoindre la campagne
+                    </button>
+                  </div>
                 )}
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    ) : (
-      <div className="text-center py-12 text-gray-500">
-        <Users className="w-16 h-16 mx-auto mb-4 opacity-50" />
-        <p>Aucune invitation en attente</p>
-        <p className="text-sm mt-2">
-          Les invitations des Maîtres du Jeu apparaîtront ici
-        </p>
-      </div>
-    )}
 
-    {myCampaigns.length > 0 && (
-      <div className="space-y-3 mt-6">
-        <h3 className="text-sm font-semibold text-gray-300">Mes campagnes actives</h3>
-        {myCampaigns.map((campaign) => (
-          <div
-            key={campaign.id}
-            className="bg-gray-800/40 border border-green-500/30 rounded-lg p-4"
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-semibold text-white">{campaign.name}</h3>
-                  <span className="px-2 py-0.5 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
-                    Active
-                  </span>
-                </div>
-                {campaign.description && (
-                  <p className="text-sm text-gray-400 mt-1">{campaign.description}</p>
+                {invitations.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-gray-300">Invitations en attente</h3>
+                    {invitations.map((invitation) => (
+                      <div
+                        key={invitation.id}
+                        className="bg-gray-800/40 border border-gray-700/50 rounded-lg p-4"
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <p className="font-medium text-white mb-1">
+                              Invitation à une campagne
+                            </p>
+                            <p className="text-sm text-gray-400">
+                              Code: <span className="font-mono text-purple-400">{invitation.invitation_code}</span>
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Reçue le {new Date(invitation.invited_at).toLocaleDateString('fr-FR')}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleAcceptInvitation(invitation.id)}
+                            className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
+                          >
+                            <Check size={18} />
+                            Accepter
+                          </button>
+                          <button
+                            onClick={() => handleDeclineInvitation(invitation.id)}
+                            className="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 px-4 py-2 rounded-lg border border-red-500/30"
+                          >
+                            Refuser
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {myCampaigns.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-gray-300">Mes campagnes actives</h3>
+                    {myCampaigns.map((campaign) => (
+                      <div
+                        key={campaign.id}
+                        className="bg-gray-800/40 border border-green-500/30 rounded-lg p-4"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold text-white">{campaign.name}</h3>
+                              <span className="px-2 py-0.5 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
+                                Active
+                              </span>
+                            </div>
+                            {campaign.description && (
+                              <p className="text-sm text-gray-400 mt-1">{campaign.description}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    )}
-  </div>
-) : (
+            ) : (
               <div className="space-y-4">
                 {activeCampaigns.length > 0 && pendingGifts.length > 0 && (
                   <div className="bg-gradient-to-r from-purple-900/40 to-blue-900/40 border border-purple-500/30 rounded-lg p-4">
@@ -1146,4 +1225,4 @@ const handleDeclineInvitation = async (invitationId: string) => {
   );
 }
 
-export default CampaignPlayerModal;
+export default CampaignPlayerModal; 
