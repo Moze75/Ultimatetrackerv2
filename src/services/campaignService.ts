@@ -172,13 +172,13 @@ async acceptInvitationWithPlayer(invitationId: string, playerId: string): Promis
   .from('campaign_invitations')
   .update({ 
     status: 'accepted',
-    player_id: playerId,  // ✅ Ajouter l'ID du player
-    responded_at: new Date().toISOString()  // ✅ Ajouter la date
+    responded_at: new Date().toISOString()  // ✅ Garder juste ça
+    // ❌ NE PAS mettre player_id ici
   })
   .eq('id', invitationId);
 
 if (updateError) throw updateError;
-return; // ✅ Stop ici, pas besoin de créer le membre
+return;
   }
 
   // 3. Récupérer les infos du joueur
