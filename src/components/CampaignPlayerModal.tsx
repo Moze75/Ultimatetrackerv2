@@ -767,7 +767,42 @@ const handleDeclineInvitation = async (invitationId: string) => {
               <button
                 onClick={() => setActiveTab('invitations')}
                 className={`pb-2 px-1 border-b-2 transition-colors ${
-                 {activeTab === 'invitations' ? (
+                  activeTab === 'invitations'
+                    ? 'border-purple-500 text-purple-400'
+                    : 'border-transparent text-gray-400 hover:text-gray-300'
+                }`}
+              >
+                Invitations ({invitations.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('gifts')}
+                className={`pb-2 px-1 border-b-2 transition-colors relative ${
+                  activeTab === 'gifts'
+                    ? 'border-purple-500 text-purple-400'
+                    : 'border-transparent text-gray-400 hover:text-gray-300'
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  Loots ({pendingGifts.length})
+                  {pendingGifts.length > 0 && (
+                    <span className="flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-green-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                  )}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="p-4 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 140px)' }}>
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4" />
+                <p className="text-gray-400">Chargement...</p>
+              </div>
+{activeTab === 'invitations' ? (
   <div className="space-y-4">
     {invitations.length > 0 ? (
       <div className="space-y-3">
@@ -796,7 +831,6 @@ const handleDeclineInvitation = async (invitationId: string) => {
               </div>
             </div>
 
-            {/* Affichage du personnage actuel */}
             {currentPlayer && (
               <div className="mb-4 bg-gray-800/40 rounded-lg p-3 border border-gray-700">
                 <p className="text-xs text-gray-400 mb-1">Rejoindre avec :</p>
@@ -806,7 +840,6 @@ const handleDeclineInvitation = async (invitationId: string) => {
               </div>
             )}
 
-            {/* Boutons */}
             <div className="flex gap-2">
               <button
                 onClick={async () => {
@@ -855,53 +888,6 @@ const handleDeclineInvitation = async (invitationId: string) => {
                 ) : (
                   <>
                     <Check size={18} />
-                    Rejoindre la campagne
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    ) : (
-      <div className="text-center py-12 text-gray-500">
-        <Users className="w-16 h-16 mx-auto mb-4 opacity-50" />
-        <p>Aucune invitation en attente</p>
-        <p className="text-sm mt-2">
-          Les invitations des Maîtres du Jeu apparaîtront ici
-        </p>
-      </div>
-    )}
-
-    {myCampaigns.length > 0 && (
-      <div className="space-y-3 mt-6">
-        <h3 className="text-sm font-semibold text-gray-300">Mes campagnes actives</h3>
-        {myCampaigns.map((campaign) => (
-          <div
-            key={campaign.id}
-            className="bg-gray-800/40 border border-green-500/30 rounded-lg p-4"
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-semibold text-white">{campaign.name}</h3>
-                  <span className="px-2 py-0.5 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
-                    Active
-                  </span>
-                </div>
-                {campaign.description && (
-                  <p className="text-sm text-gray-400 mt-1">{campaign.description}</p>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    )}
-  </div>
-) : (
-                  <>
-                    <Check size={18} />
                     Rejoindre
                   </>
                 )}
@@ -946,7 +932,11 @@ const handleDeclineInvitation = async (invitationId: string) => {
       </div>
     )}
   </div>
-) : (
+) : activeTab === 'gifts' ? (
+  <div className="space-y-4">
+    {/* ... contenu de l'onglet gifts ... */}
+  </div>
+) : null}
               <div className="space-y-4">
                 {activeCampaigns.length > 0 && pendingGifts.length > 0 && (
                   <div className="bg-gradient-to-r from-purple-900/40 to-blue-900/40 border border-purple-500/30 rounded-lg p-4">
