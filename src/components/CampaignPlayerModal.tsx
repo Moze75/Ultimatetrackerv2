@@ -310,6 +310,7 @@ export function CampaignPlayerModal({
   player,
   onUpdate
 }: CampaignPlayerModalProps) {
+  
 // =============================================
 // ÉTATS DU COMPOSANT
 // =============================================
