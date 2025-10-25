@@ -380,7 +380,7 @@ const [claiming, setClaiming] = useState(false);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const invites = await campaignService.getMyInvitations();
+      const invites = await campaignService.getMyPendingInvitations();
       setInvitations(invites);
 
       const { data: members } = await supabase
