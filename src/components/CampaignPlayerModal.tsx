@@ -396,6 +396,12 @@ const loadData = async () => {
       .eq('player_id', player.id)  // ✅ Filtrer par CE personnage spécifique
       .eq('is_active', true);        // ✅ ET actif
 
+// ✅ AJOUTER CES LOGS
+console.log('🏕️ QUERY campaign_members:');
+console.log('  - Error:', membError);
+console.log('  - Data brut:', activeMemberships);
+console.log('  - Nombre de memberships:', activeMemberships?.length || 0);
+    
     if (activeMemberships && activeMemberships.length > 0) {
       // Dédupliquer les campagnes (au cas où)
       const campaignsMap = new Map<string, any>();
