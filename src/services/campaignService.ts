@@ -366,17 +366,16 @@ export const campaignService = {
       throw new Error('Ce personnage est déjà membre de cette campagne');
     }
 
-    // Ajouter le membre à la campagne
-    const { error: memberError } = await supabase
-      .from('campaign_members')
-      .insert({
-        campaign_id: invitation.campaign_id,
-        user_id: user.id,
-        player_id: playerId,
-        role: 'player',
-        is_active: true,
-        joined_at: new Date().toISOString(),
-      });
+// Ajouter le membre à la campagne
+const { error: memberError } = await supabase
+  .from('campaign_members')
+  .insert({
+    campaign_id: invitation.campaign_id,
+    user_id: user.id,
+    player_id: playerId,
+    is_active: true,
+    joined_at: new Date().toISOString(),
+  });
 
     if (memberError) throw memberError;
 
