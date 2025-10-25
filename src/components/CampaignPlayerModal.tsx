@@ -1256,5 +1256,6 @@ return (
     )}
   </>
 );
+}  // ✅ FERME LA FONCTION
 
 export default CampaignPlayerModal;
