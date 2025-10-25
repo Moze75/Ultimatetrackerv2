@@ -272,56 +272,29 @@ export const campaignService = {
   /**
    * Valider un code d'invitation (sans l'accepter)
    */
-async validateInvitationCode(code: string): Promise<{
-  valid: boolean;
-  invitation?: any;
-  campaign?: any;
-  error?: string;
-}> {
-  const upperCode = code.toUpperCase().trim();
+  async validateInvitationCode(code: string): Promise<{
+    valid: boolean;
+    invitation?: any;
+    campaign?: any;
+    error?: string;
+  }> {
+    const upperCode = code.toUpperCase().trim();
 
-  // Récupérer l'invitation
-  const { data: invitation, error: invError } = await supabase
-    .from('campaign_invitations')
-    .select(`
-      *,
-      campaigns (
-        id,
-        name,
-        description,
-        game_master_id
-      )
-    `)
-    .eq('invitation_code', upperCode)
-    .single();
-
-  if (invError || !invitation) {
-    return { valid: false, error: 'Code invalide' };
-  }
-
-  // Vérifier le statut
-  if (invitation.status !== 'pending') {
-    return { valid: false, error: 'Code déjà utilisé' };
-  }
-
-  // Vérifier l'expiration
-  if (invitation.expires_at && new Date(invitation.expires_at) < new Date()) {
-    return { valid: false, error: 'Code expiré' };
-  }
-
-  // Marquer comme "vu"
-  await supabase
-    .from('campaign_invitations')
-    .update({ viewed_at: new Date().toISOString() })
-    .eq('id', invitation.id);
-
-  return {
-    valid: true,
-    invitation,
-    campaign: invitation.campaigns,
-  };
-},
-
+    // Récupérer l'invitation
+    const { data: invitation, error: invError } = await supabase
+      .from('campaign_invitations')
+      .select(`
+        *,
+        campaigns (
+          id,
+          name,
+          description,
+          created_by
+        )
+      `)
+      .eq('invitation_code', upperCode)
+      .single();
+ 
     if (invError || !invitation) {
       return { valid: false, error: 'Code invalide' };
     }
