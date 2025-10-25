@@ -140,79 +140,79 @@ async invitePlayerByEmail(
 /**
  * Accepter une invitation avec un personnage
  */
-async acceptInvitationWithPlayer(
-  invitationId: string,
-  playerId: string
-): Promise<void> {
+async acceptInvitationWithPlayer(invitationId: string, playerId: string): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Non authentifié');
 
-  // Récupérer l'invitation
+  // 1. Récupérer l'invitation
   const { data: invitation, error: invError } = await supabase
     .from('campaign_invitations')
-    .select('id, campaign_id, player_email, status')
+    .select('campaign_id, player_email, status')
     .eq('id', invitationId)
     .single();
 
-  if (invError || !invitation) {
-    throw new Error('Invitation introuvable');
-  }
+  if (invError) throw invError;
+  if (!invitation) throw new Error('Invitation non trouvée');
+  if (invitation.status !== 'pending') throw new Error('Cette invitation n\'est plus valide');
+  if (invitation.player_email !== user.email) throw new Error('Cette invitation ne vous est pas destinée');
 
-  // Vérifier que l'invitation est pour cet utilisateur
-  if (invitation.player_email !== user.email) {
-    throw new Error('Cette invitation ne vous est pas destinée');
-  }
-
-  // Vérifier le statut
-  if (invitation.status !== 'pending') {
-    throw new Error('Cette invitation n\'est plus valide');
-  }
-
-  // Vérifier que le joueur appartient à l'utilisateur
-  const { data: player, error: playerError } = await supabase
-    .from('players')
-    .select('id, user_id')
-    .eq('id', playerId)
-    .eq('user_id', user.id)
-    .single();
-
-  if (playerError || !player) {
-    throw new Error('Personnage invalide');
-  }
-
-  // Vérifier que le joueur n'est pas déjà dans la campagne
+  // 2. ✅ VÉRIFIER SI LE MEMBRE EXISTE DÉJÀ (pour éviter le 409)
   const { data: existingMember } = await supabase
     .from('campaign_members')
     .select('id')
     .eq('campaign_id', invitation.campaign_id)
-    .eq('player_id', playerId)
-    .maybeSingle();
+    .eq('user_id', user.id)
+    .single();
 
   if (existingMember) {
-    throw new Error('Ce personnage est déjà membre de cette campagne');
+    // ✅ Le membre existe déjà, juste marquer l'invitation comme acceptée
+    console.log('✅ Membre déjà présent dans la campagne, on met à jour l\'invitation');
+    
+    const { error: updateError } = await supabase
+      .from('campaign_invitations')
+      .update({ status: 'accepted' })
+      .eq('id', invitationId);
+
+    if (updateError) throw updateError;
+    return; // ✅ Stop ici, pas besoin de créer le membre
   }
 
-  // Ajouter le membre à la campagne
+  // 3. Récupérer les infos du joueur
+  const { data: player, error: playerError } = await supabase
+    .from('players')
+    .select('name, adventurer_name')
+    .eq('id', playerId)
+    .single();
+
+  if (playerError) throw playerError;
+  if (!player) throw new Error('Personnage non trouvé');
+
+  // 4. Créer le membre ET marquer l'invitation comme acceptée
   const { error: memberError } = await supabase
     .from('campaign_members')
     .insert({
       campaign_id: invitation.campaign_id,
       user_id: user.id,
       player_id: playerId,
+      player_name: player.adventurer_name || player.name,
+      email: user.email!,
+      role: 'player',
       is_active: true,
-      joined_at: new Date().toISOString(),
     });
 
-  if (memberError) throw memberError;
+  if (memberError) {
+    // ✅ Si erreur de conflit (409), c'est que le membre a été créé entre-temps
+    if (memberError.code === '23505') { // Code PostgreSQL pour doublon
+      console.log('⚠️ Membre créé entre-temps, on continue...');
+    } else {
+      throw memberError;
+    }
+  }
 
-  // Marquer l'invitation comme acceptée
+  // 5. Marquer l'invitation comme acceptée
   const { error: updateError } = await supabase
     .from('campaign_invitations')
-    .update({
-      status: 'accepted',
-      player_id: playerId,
-      responded_at: new Date().toISOString(),
-    })
+    .update({ status: 'accepted' })
     .eq('id', invitationId);
 
   if (updateError) throw updateError;
