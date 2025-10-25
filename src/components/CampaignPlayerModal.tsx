@@ -803,117 +803,121 @@ const handleDeclineInvitation = async (invitationId: string) => {
                 <p className="text-gray-400">Chargement...</p>
               </div>
             ) : activeTab === 'invitations' ? (
-              <div className="space-y-4">
-                {!showCodeInput ? (
-                  <button
-                    onClick={() => setShowCodeInput(true)}
-                    className="w-full btn-primary px-4 py-3 rounded-lg flex items-center justify-center gap-2"
-                  >
-                    <Check size={20} />
-                    Rejoindre avec un code
-                  </button>
+  <div className="space-y-4">
+    {invitations.length > 0 ? (
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-gray-300">Invitations en attente</h3>
+        {invitations.map((invitation) => (
+          <div
+            key={invitation.id}
+            className="bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-purple-500/30 rounded-lg p-6"
+          >
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                <Users className="w-5 h-5 text-purple-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-white text-lg mb-1">
+                  {invitation.campaigns?.name || 'Campagne'}
+                </h3>
+                {invitation.campaigns?.description && (
+                  <p className="text-sm text-gray-400 mt-1">
+                    {invitation.campaigns.description}
+                  </p>
+                )}
+                <p className="text-xs text-gray-500 mt-2">
+                  Reçue le {new Date(invitation.invited_at).toLocaleDateString('fr-FR')}
+                </p>
+              </div>
+            </div>
+
+            {/* Sélection du personnage */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Choisissez votre personnage
+              </label>
+              <select
+                value={selectedPlayerForInvite}
+                onChange={(e) => setSelectedPlayerForInvite(e.target.value)}
+                className="input-dark w-full px-4 py-2 rounded-lg"
+                disabled={processingInvitation === invitation.id}
+              >
+                <option value="">-- Sélectionnez un personnage --</option>
+                {myPlayers.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.adventurer_name || p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Boutons */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleDeclineInvitation(invitation.id)}
+                disabled={processingInvitation === invitation.id}
+                className="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 px-4 py-2 rounded-lg border border-red-500/30 disabled:opacity-50"
+              >
+                Refuser
+              </button>
+              <button
+                onClick={() => handleAcceptInvitationWithPlayer(invitation.id)}
+                disabled={!selectedPlayerForInvite || processingInvitation === invitation.id}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {processingInvitation === invitation.id ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    Inscription...
+                  </>
                 ) : (
-                  <div className="bg-gray-800/40 rounded-lg p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-white">Code d'invitation</h3>
-                      <button
-                        onClick={() => {
-                          setShowCodeInput(false);
-                          setInvitationCode('');
-                        }}
-                        className="text-gray-400 hover:text-white"
-                      >
-                        <X size={18} />
-                      </button>
-                    </div>
-                    <input
-                      type="text"
-                      value={invitationCode}
-                      onChange={(e) => setInvitationCode(e.target.value.toUpperCase())}
-                      className="input-dark w-full px-4 py-2 rounded-lg text-center font-mono text-lg tracking-wider"
-                      placeholder="ABCD1234"
-                      maxLength={8}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleJoinWithCode();
-                      }}
-                    />
-                    <button
-                      onClick={handleJoinWithCode}
-                      className="w-full btn-primary px-4 py-2 rounded-lg"
-                    >
-                      Rejoindre la campagne
-                    </button>
-                  </div>
+                  <>
+                    <Check size={18} />
+                    Rejoindre
+                  </>
                 )}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div className="text-center py-12 text-gray-500">
+        <Users className="w-16 h-16 mx-auto mb-4 opacity-50" />
+        <p>Aucune invitation en attente</p>
+        <p className="text-sm mt-2">
+          Les invitations des Maîtres du Jeu apparaîtront ici
+        </p>
+      </div>
+    )}
 
-                {invitations.length > 0 && (
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-gray-300">Invitations en attente</h3>
-                    {invitations.map((invitation) => (
-                      <div
-                        key={invitation.id}
-                        className="bg-gray-800/40 border border-gray-700/50 rounded-lg p-4"
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <p className="font-medium text-white mb-1">
-                              Invitation à une campagne
-                            </p>
-                            <p className="text-sm text-gray-400">
-                              Code: <span className="font-mono text-purple-400">{invitation.invitation_code}</span>
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              Reçue le {new Date(invitation.invited_at).toLocaleDateString('fr-FR')}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleAcceptInvitation(invitation.id)}
-                            className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
-                          >
-                            <Check size={18} />
-                            Accepter
-                          </button>
-                          <button
-                            onClick={() => handleDeclineInvitation(invitation.id)}
-                            className="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 px-4 py-2 rounded-lg border border-red-500/30"
-                          >
-                            Refuser
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {myCampaigns.length > 0 && (
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-gray-300">Mes campagnes actives</h3>
-                    {myCampaigns.map((campaign) => (
-                      <div
-                        key={campaign.id}
-                        className="bg-gray-800/40 border border-green-500/30 rounded-lg p-4"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-semibold text-white">{campaign.name}</h3>
-                              <span className="px-2 py-0.5 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
-                                Active
-                              </span>
-                            </div>
-                            {campaign.description && (
-                              <p className="text-sm text-gray-400 mt-1">{campaign.description}</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+    {myCampaigns.length > 0 && (
+      <div className="space-y-3 mt-6">
+        <h3 className="text-sm font-semibold text-gray-300">Mes campagnes actives</h3>
+        {myCampaigns.map((campaign) => (
+          <div
+            key={campaign.id}
+            className="bg-gray-800/40 border border-green-500/30 rounded-lg p-4"
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-semibold text-white">{campaign.name}</h3>
+                  <span className="px-2 py-0.5 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
+                    Active
+                  </span>
+                </div>
+                {campaign.description && (
+                  <p className="text-sm text-gray-400 mt-1">{campaign.description}</p>
                 )}
               </div>
-            ) : (
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+) : (
               <div className="space-y-4">
                 {activeCampaigns.length > 0 && pendingGifts.length > 0 && (
                   <div className="bg-gradient-to-r from-purple-900/40 to-blue-900/40 border border-purple-500/30 rounded-lg p-4">
