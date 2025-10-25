@@ -924,6 +924,18 @@ function MembersTab({
         onCancel={() => setConfirmRemoveMember(null)}
         danger
       />
+
+      {/* ✅ AJOUTER CETTE MODAL MANQUANTE */}
+      {showInviteModal && (
+        <InvitePlayerModal
+          campaignId={campaignId}
+          onClose={() => setShowInviteModal(false)}
+          onInvited={() => {
+            setShowInviteModal(false);
+            onReload();
+          }}
+        />
+      )}
     </div>
   );
 }
