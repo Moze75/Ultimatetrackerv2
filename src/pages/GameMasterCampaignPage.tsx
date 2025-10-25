@@ -412,23 +412,23 @@ function EditCampaignModal({
 
 <div className="flex justify-between items-center gap-3 mt-6">
   {/* ✅ Bouton de suppression à gauche - mieux aligné */}
-  <button
-    onClick={handleDelete}
-    disabled={updating || deleting}
-    className="px-4 py-2 rounded-lg bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 disabled:opacity-50 flex items-center gap-2 h-10"
-  >
-    {deleting ? (
-      <>
-        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-400" />
-        <span>Suppression...</span>
-      </>
-    ) : (
-      <>
-        <Trash2 size={16} />
-        <span>Supprimer</span>
-      </>
-    )}
-  </button>
+<button
+  onClick={handleDelete}
+  disabled={updating || deleting}
+  className="px-5 py-2 rounded-lg bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+>
+  {deleting ? (
+    <>
+      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-400" />
+      Suppression...
+    </>
+  ) : (
+    <>
+      <Trash2 size={16} />
+      Supprimer
+    </>
+  )}
+</button>
 
   {/* Boutons Annuler / Sauvegarder à droite */}
   <div className="flex gap-3">
