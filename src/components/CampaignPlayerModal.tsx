@@ -373,24 +373,15 @@ const [claiming, setClaiming] = useState(false);
   };
 
   const loadData = async () => {
-    try {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+  try {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
-      const invites = await campaignService.getMyPendingInvitations();
-      setInvitations(invites);
+    const invites = await campaignService.getMyPendingInvitations();
+    setInvitations(invites);
 
-      const { data: members } = await supabase
-        .from('campaign_members')
-        .select('campaign_id')
-        .eq('user_id', user.id)
-        .eq('is_active', true);
-
-      if (members && members.length > 0) {
-        const campaignIds = members.map(m => m.campaign_id);
-    // ✅ CORRECTION : Récupérer directement les campagnes via un JOIN
-    // au lieu de faire 2 requêtes séparées
+    // ✅ Récupérer directement les campagnes avec leurs membres actifs
     const { data: activeMemberships } = await supabase
       .from('campaign_members')
       .select(`
@@ -404,31 +395,31 @@ const [claiming, setClaiming] = useState(false);
           is_active
         )
       `)
-    .eq('user_id', user.id)
-    .eq('is_active', true);
+      .eq('user_id', user.id)
+      .eq('is_active', true);
 
-if (activeMemberships && activeMemberships.length > 0) {
-      // Extraire les objets campaigns
+    if (activeMemberships && activeMemberships.length > 0) {
+      // Extraire les campagnes (filtrer les null)
       const campaigns = activeMemberships
-        .map(m => m.campaigns)
-        .filter(Boolean);  // Enlever les nulls
+        .map((m: any) => m.campaigns)
+        .filter((c: any) => c !== null);
 
-      setMyCampaigns(campaigns || []);
-      setActiveCampaigns(campaigns || []);
+      setMyCampaigns(campaigns);
+      setActiveCampaigns(campaigns);
 
-      const campaignIds = campaigns.map(c => c.id);
+      const campaignIds = campaigns.map((c: any) => c.id);
 
       // Charger les membres pour chaque campagne
       const membersMap: Record<string, CampaignMember[]> = {};
       await Promise.all(
-        campaignIds.map(async (campaignId) => {
+        campaignIds.map(async (campaignId: string) => {
           const campaignMembers = await loadCampaignMembers(campaignId);
           membersMap[campaignId] = campaignMembers;
         })
       );
       setMembersByCampaign(membersMap);
 
-     // Charger les gifts
+      // Charger les gifts
       const { data: gifts } = await supabase
         .from('campaign_gifts')
         .select('*')
@@ -460,7 +451,7 @@ if (activeMemberships && activeMemberships.length > 0) {
           .map(g => g.gift)
       );
     } else {
-      // ✅ Aucune campagne active
+      // Aucune campagne active
       setMyCampaigns([]);
       setActiveCampaigns([]);
       setMembersByCampaign({});
