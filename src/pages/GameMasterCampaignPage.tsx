@@ -859,23 +859,13 @@ function MembersTab({
             Rejoint le {new Date(member.joined_at).toLocaleDateString('fr-FR')}
           </p>
         </div>
-        <button
-          onClick={async () => {
-            if (!confirm('Retirer ce joueur de la campagne ?')) return;
-            try {
-              await campaignService.removeMember(member.id);
-              toast.success('Joueur retiré');
-              onReload();
-            } catch (error) {
-              console.error(error);
-              toast.error('Erreur');
-            }
-          }}
-          className="p-2 text-red-400 hover:bg-red-900/30 rounded-lg"
-          title="Retirer"
-        >
-          <Trash2 size={16} />
-        </button>
+<button
+  onClick={() => setConfirmRemoveMember(member.id)}
+  className="p-2 text-red-400 hover:bg-red-900/30 rounded-lg"
+  title="Retirer"
+>
+  <Trash2 size={16} />
+</button>
       </div>
     </div>
   ))}
