@@ -24,6 +24,7 @@ export function GameMasterCampaignPage({ session, onBack }: GameMasterCampaignPa
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
 
   useEffect(() => {
     loadCampaigns();
