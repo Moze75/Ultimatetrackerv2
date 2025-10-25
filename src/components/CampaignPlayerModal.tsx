@@ -365,74 +365,108 @@ export function CampaignPlayerModal({
     }
   };
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+const loadData = async () => {
+  try {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
-      const invites = await campaignService.getMyInvitations();
-      setInvitations(invites);
+    // ✅ Charger les invitations avec la nouvelle méthode
+    const invites = await campaignService.getMyPendingInvitations();
+    setInvitations(invites);
 
-      const { data: members } = await supabase
-        .from('campaign_members')
-        .select('campaign_id')
-        .eq('user_id', user.id)
-        .eq('is_active', true);
+    // ✅ CORRECTION : Récupérer SEULEMENT les campagnes où CE PERSONNAGE est membre
+    const { data: activeMemberships } = await supabase
+      .from('campaign_members')
+      .select(`
+        campaign_id,
+        campaigns (
+          id,
+          name,
+          description,
+          game_master_id,
+          created_at,
+          is_active
+        )
+      `)
+      .eq('player_id', player.id)  // ✅ Filtrer par CE personnage spécifique
+      .eq('is_active', true);        // ✅ ET actif
 
-      if (members && members.length > 0) {
-        const campaignIds = members.map(m => m.campaign_id);
-        const { data: campaigns } = await supabase
-          .from('campaigns')
-          .select('*')
-          .in('id', campaignIds);
+    if (activeMemberships && activeMemberships.length > 0) {
+      // Dédupliquer les campagnes (au cas où)
+      const campaignsMap = new Map<string, any>();
+      
+      activeMemberships.forEach((m: any) => {
+        if (m.campaigns && m.campaigns.id) {
+          campaignsMap.set(m.campaigns.id, m.campaigns);
+        }
+      });
 
-        setMyCampaigns(campaigns || []);
-        setActiveCampaigns(campaigns || []);
+      const campaigns = Array.from(campaignsMap.values());
 
-        const membersMap: Record<string, CampaignMember[]> = {};
-        await Promise.all(
-          campaignIds.map(async (campaignId) => {
-            const campaignMembers = await loadCampaignMembers(campaignId);
-            membersMap[campaignId] = campaignMembers;
-          })
-        );
-        setMembersByCampaign(membersMap);
+      setMyCampaigns(campaigns);
+      setActiveCampaigns(campaigns);
 
-        const { data: gifts } = await supabase
-          .from('campaign_gifts')
-          .select('*')
-          .in('campaign_id', campaignIds)
-          .eq('status', 'pending')
-          .order('sent_at', { ascending: false });
+      const campaignIds = campaigns.map((c: any) => c.id);
 
-        const filteredGifts = (gifts || []).filter((gift) => {
-          if (gift.distribution_mode === 'shared') {
-            return true;
-          }
-          if (gift.distribution_mode === 'individual' && gift.recipient_ids) {
-            return gift.recipient_ids.includes(user.id);
-          }
-          return false;
-        });
+      // Charger les membres pour chaque campagne
+      const membersMap: Record<string, CampaignMember[]> = {};
+      await Promise.all(
+        campaignIds.map(async (campaignId: string) => {
+          const campaignMembers = await loadCampaignMembers(campaignId);
+          membersMap[campaignId] = campaignMembers;
+        })
+      );
+      setMembersByCampaign(membersMap);
 
-        const giftsWithClaims = await Promise.all(
-          filteredGifts.map(async (gift) => {
-            const claims = await campaignService.getGiftClaims(gift.id);
-            const alreadyClaimed = claims.some(c => c.user_id === user.id);
-            return { gift, alreadyClaimed };
-          })
-        );
+      // Charger les gifts
+      const { data: gifts } = await supabase
+        .from('campaign_gifts')
+        .select('*')
+        .in('campaign_id', campaignIds)
+        .eq('status', 'pending')
+        .order('sent_at', { ascending: false });
 
-        setPendingGifts(newGifts);
+      const filteredGifts = (gifts || []).filter((gift) => {
+        if (gift.distribution_mode === 'shared') {
+          return true;
+        }
+        if (gift.distribution_mode === 'individual' && gift.recipient_ids) {
+          return gift.recipient_ids.includes(user.id);
+        }
+        return false;
+      });
 
-    } catch (error) {
-      console.error('Erreur chargement campagnes:', error);
-      toast.error('Erreur lors du chargement');
-    } finally {
-      setLoading(false);
+      const giftsWithClaims = await Promise.all(
+        filteredGifts.map(async (gift) => {
+          const claims = await campaignService.getGiftClaims(gift.id);
+          const alreadyClaimed = claims.some(c => c.user_id === user.id);
+          return { gift, alreadyClaimed };
+        })
+      );
+
+      // ✅ CORRECTION : Définir newGifts correctement
+      const newGifts = giftsWithClaims
+        .filter(g => !g.alreadyClaimed)
+        .map(g => g.gift);
+
+      setPendingGifts(newGifts);
+
+      // ✅ PAS de toast automatique ici
+    } else {
+      // Aucune campagne active pour ce personnage
+      setMyCampaigns([]);
+      setActiveCampaigns([]);
+      setMembersByCampaign({});
+      setPendingGifts([]);
     }
-  };
+  } catch (error) {
+    console.error('Erreur chargement campagnes:', error);
+    toast.error('Erreur lors du chargement');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleDistributeCurrency = async (distribution: { userId: string; playerId: string; gold: number; silver: number; copper: number }[]) => {
     if (!selectedGiftForDistribution) return;
