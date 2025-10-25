@@ -1866,14 +1866,30 @@ function SendGiftModal({
       }
     }
    // ✅ DEBUG LOGS
-  console.log('📤 DEBUG ENVOI:');
-  console.log('- Mode:', distributionMode);
-  console.log('- Recipients sélectionnés:', selectedRecipients);
-  console.log('- Members (user_id uniquement):', members.map(m => ({
-    name: m.player_name,
+ console.log('📤 DEBUG ENVOI:');
+console.log('- Mode:', distributionMode);
+console.log('- Recipients sélectionnés:', selectedRecipients);
+
+// ✅ LOG DÉTAILLÉ des members
+members.forEach((m, index) => {
+  console.log(`  Member ${index + 1}:`, {
+    name: m.player_name || m.email,
     user_id: m.user_id,
+    player_id: m.player_id,
     email: m.email
-  })));
+  });
+});
+
+// ✅ VÉRIF : Est-ce que le destinataire sélectionné est dans la liste ?
+const matchingMember = members.find(m => m.user_id === selectedRecipients[0]);
+console.log('- Destinataire trouvé dans members ?', matchingMember ? 'OUI' : 'NON');
+if (matchingMember) {
+  console.log('  → Détails:', {
+    name: matchingMember.player_name,
+    user_id: matchingMember.user_id,
+    email: matchingMember.email
+  });
+}
     try {
       setSending(true);
  
