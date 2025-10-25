@@ -351,10 +351,12 @@ export function EquipmentListModal({
   onClose,
   onAddItem,
   allowedKinds = null,
+  multiAdd = false,  // ✅ NOUVEAU : Par défaut false (comportement joueur)
 }: {
   onClose: () => void;
   onAddItem: (item: { name: string; description?: string; meta: ItemMeta }) => void;
   allowedKinds?: CatalogKind[] | null;
+  multiAdd?: boolean;  // ✅ NOUVEAU
 }) {
   const [loading, setLoading] = React.useState(false);
   const [query, setQuery] = React.useState('');
@@ -364,7 +366,7 @@ export function EquipmentListModal({
   });
   const [expanded, setExpanded] = React.useState<Record<string, boolean>>({});
   
-  // ✅ AJOUT : États pour le mode multi-ajout
+  // États pour le mode multi-ajout
   const [addedItems, setAddedItems] = React.useState<Set<string>>(new Set());
   const [adding, setAdding] = React.useState<string | null>(null);
 
@@ -474,9 +476,11 @@ export function EquipmentListModal({
     });
   }, [all, query, effectiveFilters, allowedKinds, noneSelected]);
 
-  // ✅ MODIFIÉ : handlePick ne ferme plus la modal
+  // ✅ MODIFIÉ : Comportement conditionnel selon multiAdd
   const handlePick = async (ci: CatalogItem) => {
-    if (adding || addedItems.has(ci.id)) return;
+    // En mode multi-add, bloquer si déjà ajouté
+    // En mode single-add, ne pas bloquer
+    if (adding || (multiAdd && addedItems.has(ci.id))) return;
 
     try {
       setAdding(ci.id);
@@ -490,9 +494,15 @@ export function EquipmentListModal({
       
       await onAddItem({ name: ci.name, description, meta });
       
-      // Marquer comme ajouté
-      setAddedItems(prev => new Set(prev).add(ci.id));
-      toast.success(`${ci.name} ajouté !`);
+      if (multiAdd) {
+        // Mode GM : Marquer comme ajouté, rester ouvert
+        setAddedItems(prev => new Set(prev).add(ci.id));
+        toast.success(`${ci.name} ajouté !`);
+      } else {
+        // Mode joueur : Fermer immédiatement
+        toast.success(`${ci.name} ajouté !`);
+        onClose();
+      }
     } catch (error) {
       console.error(error);
       toast.error('Erreur lors de l\'ajout');
@@ -513,8 +523,8 @@ export function EquipmentListModal({
           <div className="flex items-center justify-between mb-2">
             <div>
               <h2 className="text-gray-100 font-semibold text-lg">Liste des équipements</h2>
-              {/* ✅ AJOUT : Compteur d'objets ajoutés */}
-              {addedItems.size > 0 && (
+              {/* ✅ Compteur uniquement en mode multi-add */}
+              {multiAdd && addedItems.size > 0 && (
                 <p className="text-sm text-green-400 mt-1">
                   {addedItems.size} objet{addedItems.size > 1 ? 's' : ''} ajouté{addedItems.size > 1 ? 's' : ''}
                 </p>
@@ -587,7 +597,7 @@ export function EquipmentListModal({
                 <div 
                   key={ci.id} 
                   className={`border rounded-md transition-all ${
-                    isAdded 
+                    multiAdd && isAdded 
                       ? 'bg-green-900/20 border-green-500/50' 
                       : 'bg-gray-800/50 border-gray-700/50'
                   }`}
@@ -600,12 +610,12 @@ export function EquipmentListModal({
                       <div className="text-xs text-gray-400 mt-1">{preview}</div>
                     </div>
                     
-                    {/* ✅ MODIFIÉ : Bouton change d'état selon si ajouté */}
+                    {/* ✅ Bouton conditionnel */}
                     <button 
                       onClick={() => handlePick(ci)} 
-                      disabled={isAdding || isAdded}
+                      disabled={isAdding || (multiAdd && isAdded)}
                       className={`px-3 py-2 rounded-lg flex items-center gap-1 transition-colors ${
-                        isAdded
+                        multiAdd && isAdded
                           ? 'bg-green-600/20 text-green-400 cursor-default'
                           : isAdding
                           ? 'bg-gray-700 text-gray-400 cursor-wait'
@@ -614,7 +624,7 @@ export function EquipmentListModal({
                     >
                       {isAdding ? (
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                      ) : isAdded ? (
+                      ) : (multiAdd && isAdded) ? (
                         <>
                           <Check className="w-4 h-4" /> Ajouté
                         </>
@@ -638,26 +648,28 @@ export function EquipmentListModal({
           )}
         </div>
 
-        {/* ✅ AJOUT : Footer avec bouton Terminer */}
-        <div className="bg-gray-800/60 border-t border-gray-700 px-3 py-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-400">
-              {filtered.length} résultat{filtered.length > 1 ? 's' : ''}
-              {addedItems.size > 0 && (
-                <span className="ml-2 text-green-400">
-                  • {addedItems.size} ajouté{addedItems.size > 1 ? 's' : ''}
-                </span>
-              )}
-            </p>
-            <button
-              onClick={onClose}
-              className="btn-primary px-6 py-2 rounded-lg flex items-center gap-2"
-            >
-              <Check size={18} />
-              Terminer {addedItems.size > 0 && `(${addedItems.size})`}
-            </button>
+        {/* ✅ Footer uniquement en mode multi-add */}
+        {multiAdd && (
+          <div className="bg-gray-800/60 border-t border-gray-700 px-3 py-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-400">
+                {filtered.length} résultat{filtered.length > 1 ? 's' : ''}
+                {addedItems.size > 0 && (
+                  <span className="ml-2 text-green-400">
+                    • {addedItems.size} ajouté{addedItems.size > 1 ? 's' : ''}
+                  </span>
+                )}
+              </p>
+              <button
+                onClick={onClose}
+                className="btn-primary px-6 py-2 rounded-lg flex items-center gap-2"
+              >
+                <Check size={18} />
+                Terminer {addedItems.size > 0 && `(${addedItems.size})`}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   ); 
