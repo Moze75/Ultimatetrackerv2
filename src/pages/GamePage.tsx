@@ -134,13 +134,7 @@ if (prevHash) {
   
   if (newItems.length > 0) {
     console.log('🆕 Nouveaux items détectés:', newItems);
-    
-    // ✅ UN SEUL toast pour tous les objets
-    if (newItems.length === 1) {
-      toast.success(`Nouvel objet reçu : ${newItems[0].name}`, { duration: 3000 });
-    } else {
-      toast.success(`${newItems.length} nouveaux objets reçus !`, { duration: 3000 });
-    }
+    // ✅ Pas de toast : l'inventaire se met à jour silencieusement
   }
 }
 
