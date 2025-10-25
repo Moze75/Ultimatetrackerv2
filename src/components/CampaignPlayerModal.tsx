@@ -316,11 +316,9 @@ export function CampaignPlayerModal({
   const [pendingGifts, setPendingGifts] = useState<CampaignGift[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'invitations' | 'gifts'>('gifts');
-  const [showCodeInput, setShowCodeInput] = useState(false);
-  const [invitationCode, setInvitationCode] = useState('');
-    const [validatingCode, setValidatingCode] = useState(false);
-  const [validatedInvitation, setValidatedInvitation] = useState<any | null>(null);
-  const [selectedPlayerForInvite, setSelectedPlayerForInvite] = useState<string>('');
+const [myPlayers, setMyPlayers] = useState<Player[]>([]);
+const [selectedPlayerForInvite, setSelectedPlayerForInvite] = useState<string>('');
+const [processingInvitation, setProcessingInvitation] = useState<string | null>(null);
   const [myPlayers, setMyPlayers] = useState<Player[]>([]);
   
   // États pour la distribution
