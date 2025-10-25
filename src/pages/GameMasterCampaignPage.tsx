@@ -120,37 +120,54 @@ export function GameMasterCampaignPage({ session, onBack }: GameMasterCampaignPa
 
         {/* Liste des campagnes */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {campaigns.map((campaign) => (
-            <div
-              key={campaign.id}
-              onClick={() => setSelectedCampaign(campaign)}
-              className="bg-gray-900/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6 cursor-pointer hover:bg-gray-800/80 hover:border-purple-500/50 transition-all duration-200 hover:scale-105"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <h3 className="text-xl font-bold text-white">
-                  {campaign.name}
-                </h3>
-                {campaign.is_active && (
-                  <span className="px-2 py-1 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
-                    Active
-                  </span>
-                )}
-              </div>
+{campaigns.map((campaign) => (
+  <div
+    key={campaign.id}
+    className="bg-gray-900/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6 hover:bg-gray-800/80 hover:border-purple-500/50 transition-all duration-200 hover:scale-105 group relative"
+  >
+    {/* ✅ Bouton d'édition en haut à droite */}
+    <button
+      onClick={(e) => {
+        e.stopPropagation();  // Empêcher l'ouverture de la campagne
+        setEditingCampaign(campaign);
+      }}
+      className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+      title="Modifier la campagne"
+    >
+      <Edit2 size={18} />
+    </button>
 
-              {campaign.description && (
-                <p className="text-sm text-gray-400 mb-4 line-clamp-2">
-                  {campaign.description}
-                </p>
-              )}
+    {/* Carte cliquable */}
+    <div
+      onClick={() => setSelectedCampaign(campaign)}
+      className="cursor-pointer"
+    >
+      <div className="flex items-start justify-between mb-3">
+        <h3 className="text-xl font-bold text-white">
+          {campaign.name}
+        </h3>
+        {campaign.is_active && (
+          <span className="px-2 py-1 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
+            Active
+          </span>
+        )}
+      </div>
 
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <span>
-                  Créée le {new Date(campaign.created_at).toLocaleDateString('fr-FR')}
-                </span>
-                <Crown className="w-4 h-4 text-purple-400" />
-              </div>
-            </div>
-          ))}
+      {campaign.description && (
+        <p className="text-sm text-gray-400 mb-4 line-clamp-2">
+          {campaign.description}
+        </p>
+      )}
+
+      <div className="flex items-center justify-between text-xs text-gray-500">
+        <span>
+          Créée le {new Date(campaign.created_at).toLocaleDateString('fr-FR')}
+        </span>
+        <Crown className="w-4 h-4 text-purple-400" />
+      </div>
+    </div>
+  </div>
+))}
 
           {campaigns.length === 0 && (
             <div className="col-span-full bg-gray-900/60 backdrop-blur-sm border-2 border-dashed border-gray-700 rounded-xl p-12 text-center">
