@@ -403,15 +403,16 @@ export function CampaignPlayerModal({
         
         console.log('  - Campaign IDs:', campaignIds);
 
-        const { data: campaigns } = await supabase
-          .from('campaigns')
-          .select('*')
-          .in('id', campaignIds);
+const { data: campaigns, error: campaignError } = await supabase
+  .from('campaigns')
+  .select('*')
+  .in('id', campaignIds);
 
-console.log('📋 CAMPAIGNS CHARGÉES:', campaigns); // ✅ AJOUTE CE LOG
-        
-        setMyCampaigns(campaigns || []);
-        setActiveCampaigns(campaigns || []);
+console.log('📋 CAMPAIGNS CHARGÉES:', campaigns);
+console.log('❌ CAMPAIGNS ERROR:', campaignError); // ✅ AJOUTE CE LOG
+
+setMyCampaigns(campaigns || []);
+setActiveCampaigns(campaigns || []);
 
         // Charger les membres pour chaque campagne
         const membersMap: Record<string, CampaignMember[]> = {};
