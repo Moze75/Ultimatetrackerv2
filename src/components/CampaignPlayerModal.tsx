@@ -324,8 +324,6 @@ const [loading, setLoading] = useState(true);
 const [activeTab, setActiveTab] = useState<'invitations' | 'gifts'>('gifts');
 
 // États pour les invitations simplifiées
-const [myPlayers, setMyPlayers] = useState<Player[]>([]);
-const [selectedPlayerForInvite, setSelectedPlayerForInvite] = useState<string>('');
 const [processingInvitation, setProcessingInvitation] = useState<string | null>(null);
 
 // États pour la distribution d'argent
