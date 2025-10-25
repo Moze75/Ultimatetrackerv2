@@ -899,6 +899,56 @@ function MembersTab({
           }}
         />
       )}
+
+ {/* ✅ AJOUTER : Modal confirmation suppression invitation */}
+      <ConfirmModal
+        open={confirmDeleteInvite !== null}
+        title="Supprimer l'invitation"
+        message="Voulez-vous vraiment supprimer cette invitation ?"
+        confirmButtonText="Supprimer"
+        onConfirm={async () => {
+          if (!confirmDeleteInvite) return;
+          try {
+            await campaignService.deleteInvitation(confirmDeleteInvite);
+            toast.success('Invitation supprimée');
+            onReload();
+          } catch (error) {
+            console.error(error);
+            toast.error('Erreur lors de la suppression');
+          } finally {
+            setConfirmDeleteInvite(null);
+          }
+        }}
+        onCancel={() => setConfirmDeleteInvite(null)}
+        danger
+      />
+
+      {/* ✅ AJOUTER : Modal confirmation retirer membre */}
+      <ConfirmModal
+        open={confirmRemoveMember !== null}
+        title="Retirer le joueur"
+        message="Voulez-vous vraiment retirer ce joueur de la campagne ?"
+        confirmButtonText="Retirer"
+        onConfirm={async () => {
+          if (!confirmRemoveMember) return;
+          try {
+            await campaignService.removeMember(confirmRemoveMember);
+            toast.success('Joueur retiré');
+            onReload();
+          } catch (error) {
+            console.error(error);
+            toast.error('Erreur');
+          } finally {
+            setConfirmRemoveMember(null);
+          }
+        }}
+        onCancel={() => setConfirmRemoveMember(null)}
+        danger
+      />
+    </div>
+  );
+}
+      
     </div>
   );
 }
