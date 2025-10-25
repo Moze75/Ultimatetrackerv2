@@ -802,7 +802,7 @@ const handleDeclineInvitation = async (invitationId: string) => {
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4" />
                 <p className="text-gray-400">Chargement...</p>
               </div>
-            ) : activeTab === 'invitations' ? (
+            ) : {activeTab === 'invitations' ? (
   <div className="space-y-4">
     {invitations.length > 0 ? (
       <div className="space-y-3">
@@ -831,24 +831,12 @@ const handleDeclineInvitation = async (invitationId: string) => {
               </div>
             </div>
 
-            {/* Sélection du personnage */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Choisissez votre personnage
-              </label>
-              <select
-                value={selectedPlayerForInvite}
-                onChange={(e) => setSelectedPlayerForInvite(e.target.value)}
-                className="input-dark w-full px-4 py-2 rounded-lg"
-                disabled={processingInvitation === invitation.id}
-              >
-                <option value="">-- Sélectionnez un personnage --</option>
-                {myPlayers.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.adventurer_name || p.name}
-                  </option>
-                ))}
-              </select>
+            {/* Affichage du personnage actuel */}
+            <div className="mb-4 bg-gray-800/40 rounded-lg p-3 border border-gray-700">
+              <p className="text-xs text-gray-400 mb-1">Rejoindre avec :</p>
+              <p className="text-sm font-semibold text-white">
+                {player.adventurer_name || player.name}
+              </p>
             </div>
 
             {/* Boutons */}
@@ -861,8 +849,20 @@ const handleDeclineInvitation = async (invitationId: string) => {
                 Refuser
               </button>
               <button
-                onClick={() => handleAcceptInvitationWithPlayer(invitation.id)}
-                disabled={!selectedPlayerForInvite || processingInvitation === invitation.id}
+                onClick={async () => {
+                  try {
+                    setProcessingInvitation(invitation.id);
+                    await campaignService.acceptInvitationWithPlayer(invitation.id, player.id);
+                    toast.success('Vous avez rejoint la campagne !');
+                    loadData();
+                  } catch (error: any) {
+                    console.error(error);
+                    toast.error(error.message || 'Erreur');
+                  } finally {
+                    setProcessingInvitation(null);
+                  }
+                }}
+                disabled={processingInvitation === invitation.id}
                 className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {processingInvitation === invitation.id ? (
@@ -917,7 +917,7 @@ const handleDeclineInvitation = async (invitationId: string) => {
       </div>
     )}
   </div>
-) : (  
+) : (
               <div className="space-y-4">
                 {activeCampaigns.length > 0 && pendingGifts.length > 0 && (
                   <div className="bg-gradient-to-r from-purple-900/40 to-blue-900/40 border border-purple-500/30 rounded-lg p-4">
