@@ -396,13 +396,17 @@ const loadData = async () => {
       .eq('player_id', player.id)  // ✅ Filtrer par CE personnage spécifique
       .eq('is_active', true);        // ✅ ET actif
 
-// ✅ AJOUTER CES LOGS
-console.log('🏕️ QUERY campaign_members:');
-console.log('  - Error:', membershipError);  // ✅ BON NOM
-console.log('  - Data brut:', activeMemberships);
-console.log('  - Nombre de memberships:', activeMemberships?.length || 0);
-    
+    console.log('🏕️ QUERY campaign_members:');
+    console.log('  - Error:', membershipError);
+    console.log('  - Data brut:', activeMemberships);
+    console.log('  - Nombre de memberships:', activeMemberships?.length || 0);
+
     if (activeMemberships && activeMemberships.length > 0) {
+      console.log('  - Détails memberships:', activeMemberships.map((m: any) => ({
+        campaign_id: m.campaign_id,
+        campaign_name: m.campaigns?.name
+      })));
+
       // Dédupliquer les campagnes (au cas où)
       const campaignsMap = new Map<string, any>();
       
@@ -437,10 +441,16 @@ console.log('  - Nombre de memberships:', activeMemberships?.length || 0);
         .eq('status', 'pending')
         .order('sent_at', { ascending: false });
 
- console.log('📦 GIFTS BRUTS (avant filtrage):', gifts);
+      console.log('📦 GIFTS BRUTS (avant filtrage):', gifts);
 
-      
       const filteredGifts = (gifts || []).filter((gift) => {
+        console.log(`  → Gift "${gift.item_name}":`, {
+          distribution_mode: gift.distribution_mode,
+          recipient_ids: gift.recipient_ids,
+          match_shared: gift.distribution_mode === 'shared',
+          match_individual: gift.distribution_mode === 'individual' && gift.recipient_ids?.includes(user.id)
+        });
+
         if (gift.distribution_mode === 'shared') {
           return true;
         }
@@ -450,6 +460,8 @@ console.log('  - Nombre de memberships:', activeMemberships?.length || 0);
         return false;
       });
 
+      console.log('📦 GIFTS FILTRÉS:', filteredGifts);
+
       const giftsWithClaims = await Promise.all(
         filteredGifts.map(async (gift) => {
           const claims = await campaignService.getGiftClaims(gift.id);
@@ -457,8 +469,6 @@ console.log('  - Nombre de memberships:', activeMemberships?.length || 0);
           return { gift, alreadyClaimed };
         })
       );
-
-       console.log('📦 GIFTS FILTRÉS:', filteredGifts);
 
       // ✅ CORRECTION : Définir newGifts correctement
       const newGifts = giftsWithClaims
@@ -784,7 +794,7 @@ console.log('  - Nombre de memberships:', activeMemberships?.length || 0);
     <>
       <div className="fixed inset-0 z-[11000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
-        <div className="fixed inset-0 sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[min(42rem,95vw)] sm:max-h-[90vh] sm:rounded-xl overflow-hidden bg-gray-900 border-0 sm:border sm:border-gray-700">
+        <div className="fixed inset-0 sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[min(42rem,95vw)] sm:max-h-[90vh] sm:rounded-xl overflow-hidden bg-gray-900 border-0 sm:border border-gray-700">
           {/* Header */}
           <div className="bg-gray-800/60 border-b border-gray-700 px-4 py-3">
             <div className="flex items-center justify-between mb-3">
