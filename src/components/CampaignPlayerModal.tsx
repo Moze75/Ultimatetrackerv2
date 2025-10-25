@@ -977,26 +977,32 @@ setActiveCampaigns(campaigns || []);
                   </div>
                 )}
 
-                {pendingGifts.length > 0 ? (
-                  pendingGifts.map((gift) => {
-                    const meta = parseMeta(gift.item_description);
-                    const isCurrencyShared = gift.gift_type === 'currency' && gift.distribution_mode === 'shared';
-                    const campaignMembers = membersByCampaign[gift.campaign_id] || [];
-                    const memberCount = campaignMembers.length;
+{pendingGifts.length > 0 ? (
+  <>
+    {pendingGifts.map((gift) => {
+      const meta = parseMeta(gift.item_description);
+      const isCurrencyShared = gift.gift_type === 'currency' && gift.distribution_mode === 'shared';
+      const campaignMembers = membersByCampaign[gift.campaign_id] || [];
+      const memberCount = campaignMembers.length;
+      const isSelected = selectedGiftIds.includes(gift.id); // ✅ NOUVELLE LIGNE
 
-                    const previewDistribution = memberCount > 0 ? {
-                      gold: Math.floor((gift.gold || 0) / memberCount),
-                      silver: Math.floor((gift.silver || 0) / memberCount),
-                      copper: Math.floor((gift.copper || 0) / memberCount),
-                    } : null;
+      const previewDistribution = memberCount > 0 ? {
+        gold: Math.floor((gift.gold || 0) / memberCount),
+        silver: Math.floor((gift.silver || 0) / memberCount),
+        copper: Math.floor((gift.copper || 0) / memberCount),
+      } : null;
 
-                    return (
-                      <div
-                        key={gift.id}
-                        className="bg-gray-800/40 border border-purple-500/30 rounded-lg p-4"
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-start gap-3 flex-1">
+      return (
+        <div
+          key={gift.id}
+          className={`bg-gray-800/40 border rounded-lg p-4 transition-all ${ // ✅ MODIFIÉ
+            isSelected 
+              ? 'border-purple-500 bg-purple-900/20' 
+              : 'border-purple-500/30'
+          }`}
+        >
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex items-start gap-3 flex-1">
                             <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center flex-shrink-0">
                               {gift.gift_type === 'item' ? (
                                 <Package className="w-5 h-5 text-purple-400" />
