@@ -1171,37 +1171,36 @@ function InventoryTab({
       )}
 
       {/* Modals */}
-      {showList && (
-        <EquipmentListModal
-          onClose={() => setShowList(false)}
-          onAddItem={async (payload) => {
-            try {
-              const META_PREFIX = '#meta:';
-              const metaLine = `${META_PREFIX}${JSON.stringify(payload.meta)}`;
-              const visibleDesc = (payload.description || '').trim();
-              const fullDescription = visibleDesc 
-                ? `${visibleDesc}\n${metaLine}`
-                : metaLine;
+{showList && (
+  <EquipmentListModal
+    onClose={() => setShowList(false)}
+    onAddItem={async (payload) => {
+      try {
+        const META_PREFIX = '#meta:';
+        const metaLine = `${META_PREFIX}${JSON.stringify(payload.meta)}`;
+        const visibleDesc = (payload.description || '').trim();
+        const fullDescription = visibleDesc 
+          ? `${visibleDesc}\n${metaLine}`
+          : metaLine;
 
-              await campaignService.addItemToCampaign(
-                campaignId,
-                payload.name,
-                fullDescription,
-                payload.meta.quantity || 1
-              );
-              
-              toast.success('Objet ajouté à l\'inventaire');
-              onReload();
-            } catch (error) {
-              console.error(error);
-              toast.error('Erreur lors de l\'ajout');
-            } finally {
-              setShowList(false);
-            }
-          }}
-          allowedKinds={null}
-        />
-      )}
+        await campaignService.addItemToCampaign(
+          campaignId,
+          payload.name,
+          fullDescription,
+          payload.meta.quantity || 1
+        );
+        
+        onReload();
+        // ✅ Ne pas fermer la modal ici, elle se fermera avec le bouton "Terminer"
+      } catch (error) {
+        console.error(error);
+        toast.error('Erreur lors de l\'ajout');
+        throw error; // ✅ Remonter l'erreur pour que la modal la gère
+      }
+    }}
+    allowedKinds={null}
+  />
+)}
 
       {showCustom && (
         <CustomItemModal
