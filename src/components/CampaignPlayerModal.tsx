@@ -389,13 +389,29 @@ const [claiming, setClaiming] = useState(false);
 
       if (members && members.length > 0) {
         const campaignIds = members.map(m => m.campaign_id);
-        const { data: campaigns } = await supabase
-          .from('campaigns')
-          .select('*')
-          .in('id', campaignIds);
+         const { data: activeMemberships } = await supabase
+    .from('campaign_members')
+    .select(`
+      campaign_id,
+      campaigns (
+        id,
+        name,
+        description,
+        game_master_id,
+        created_at
+      )
+    `)
+    .eq('user_id', user.id)
+    .eq('is_active', true);
 
-        setMyCampaigns(campaigns || []);
-        setActiveCampaigns(campaigns || []);
+  const campaigns = (activeMemberships || [])
+    .map(m => m.campaigns)
+    .filter(Boolean);  // Enlever les nulls
+
+  setMyCampaigns(campaigns || []);
+  setActiveCampaigns(campaigns || []);
+
+
 
         const membersMap: Record<string, CampaignMember[]> = {};
         await Promise.all(
