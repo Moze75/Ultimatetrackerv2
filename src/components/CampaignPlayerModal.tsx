@@ -389,18 +389,21 @@ const [claiming, setClaiming] = useState(false);
 
       if (members && members.length > 0) {
         const campaignIds = members.map(m => m.campaign_id);
-         const { data: activeMemberships } = await supabase
-    .from('campaign_members')
-    .select(`
-      campaign_id,
-      campaigns (
-        id,
-        name,
-        description,
-        game_master_id,
-        created_at
-      )
-    `)
+    // ✅ CORRECTION : Récupérer directement les campagnes via un JOIN
+    // au lieu de faire 2 requêtes séparées
+    const { data: activeMemberships } = await supabase
+      .from('campaign_members')
+      .select(`
+        campaign_id,
+        campaigns (
+          id,
+          name,
+          description,
+          game_master_id,
+          created_at,
+          is_active
+        )
+      `)
     .eq('user_id', user.id)
     .eq('is_active', true);
 
