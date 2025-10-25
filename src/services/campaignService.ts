@@ -188,18 +188,17 @@ if (existingMember) {
   if (playerError) throw playerError;
   if (!player) throw new Error('Personnage non trouvé');
 
-  // 4. Créer le membre ET marquer l'invitation comme acceptée
-  const { error: memberError } = await supabase
-    .from('campaign_members')
-    .insert({
-      campaign_id: invitation.campaign_id,
-      user_id: user.id,
-      player_id: playerId,
-      player_name: player.adventurer_name || player.name,
-      email: user.email!,
-      role: 'player',
-      is_active: true,
-    });
+// 4. ✅ Créer le membre dans campaign_members
+const { error: memberError } = await supabase
+  .from('campaign_members')
+  .insert({
+    campaign_id: invitation.campaign_id,
+    user_id: user.id,
+    player_id: playerId,
+    player_email: user.email!,  // ✅ player_email au lieu de email
+    is_active: true,
+    // ❌ Enlever player_name et role qui n'existent pas
+  });
 
   if (memberError) {
     // ✅ Si erreur de conflit (409), c'est que le membre a été créé entre-temps
