@@ -610,7 +610,7 @@ function MembersTab({
 }
 
 // =============================================
-// Modal d'invitation
+// Modal d'invitation (SYSTÈME SIMPLIFIÉ)
 // =============================================
 function InvitePlayerModal({
   campaignId,
@@ -623,7 +623,6 @@ function InvitePlayerModal({
 }) {
   const [email, setEmail] = useState('');
   const [inviting, setInviting] = useState(false);
-  const [invitationCode, setInvitationCode] = useState<string | null>(null);
 
   const handleInvite = async () => {
     const cleanEmail = email.trim().toLowerCase();
@@ -640,76 +639,18 @@ function InvitePlayerModal({
 
     try {
       setInviting(true);
-      const invitation = await campaignService.invitePlayer(campaignId, cleanEmail);
-      setInvitationCode(invitation.invitation_code);
-      toast.success('Invitation envoyée !');
+      await campaignService.invitePlayerByEmail(campaignId, cleanEmail);
+      toast.success(`Invitation envoyée à ${cleanEmail}`);
+      setEmail('');
+      onInvited();
+      onClose();
     } catch (error: any) {
       console.error(error);
-      if (error.message?.includes('duplicate')) {
-        toast.error('Ce joueur a déjà été invité');
-      } else {
-        toast.error('Erreur lors de l\'invitation');
-      }
+      toast.error(error.message || 'Erreur lors de l\'invitation');
     } finally {
       setInviting(false);
     }
   };
-
-  if (invitationCode) {
-    return (
-      <div className="fixed inset-0 z-[10000]" onClick={(e) => { if (e.target === e.currentTarget) { onInvited(); onClose(); } }}>
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
-        <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(32rem,95vw)] bg-gray-900/95 border border-gray-700 rounded-xl p-6">
-          <div className="text-center space-y-4">
-            <div className="w-16 h-16 mx-auto bg-green-500/20 rounded-full flex items-center justify-center">
-              <Check className="w-8 h-8 text-green-400" />
-            </div>
-
-            <h3 className="text-xl font-bold text-white">Invitation envoyée !</h3>
-            
-            <div className="bg-gray-800/60 rounded-lg p-4 space-y-3">
-              <p className="text-sm text-gray-300">
-                Partagez ce code d'invitation au joueur :
-              </p>
-              <div className="bg-gray-900 rounded-lg p-4">
-                <p className="text-2xl font-mono font-bold text-purple-400 tracking-wider">
-                  {invitationCode}
-                </p>
-              </div>
-              <button
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(invitationCode);
-                    toast.success('Code copié dans le presse-papier !');
-                  } catch {
-                    toast.error('Erreur lors de la copie');
-                  }
-                }}
-                className="btn-primary w-full px-4 py-2 rounded-lg flex items-center justify-center gap-2"
-              >
-                <Copy size={18} />
-                Copier le code
-              </button>
-            </div>
-
-            <p className="text-xs text-gray-500">
-              Le joueur devra entrer ce code lors de sa connexion pour rejoindre la campagne.
-            </p>
-
-            <button
-              onClick={() => {
-                onInvited();
-                onClose();
-              }}
-              className="btn-secondary w-full px-4 py-2 rounded-lg"
-            >
-              Fermer
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="fixed inset-0 z-[10000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
@@ -738,8 +679,8 @@ function InvitePlayerModal({
                 if (e.key === 'Enter') handleInvite();
               }}
             />
-            <p className="text-xs text-gray-500 mt-1">
-              Un code d'invitation sera généré pour ce joueur
+            <p className="text-xs text-gray-500 mt-2">
+              Le joueur recevra une invitation et devra sélectionner son personnage pour rejoindre la campagne.
             </p>
           </div>
         </div>
