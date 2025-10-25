@@ -500,48 +500,28 @@ function MembersTab({
           >
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-200">{inv.player_email}</p>
-              <div className="flex items-center gap-4 mt-1">
-                <p className="text-xs text-gray-500">
-                  Code: <span className="font-mono text-amber-400">{inv.invitation_code}</span>
-                </p>
-                <p className="text-xs text-gray-500">⏳ En attente</p>
-              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Envoyée le {new Date(inv.invited_at).toLocaleDateString('fr-FR')} • ⏳ En attente
+              </p>
             </div>
             
-            <div className="flex items-center gap-1">
-              <button
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(inv.invitation_code);
-                    toast.success('Code copié !');
-                  } catch {
-                    toast.error('Erreur copie');
-                  }
-                }}
-                className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"
-                title="Copier le code"
-              >
-                <Copy size={16} />
-              </button>
-              
-              <button
-                onClick={async () => {
-                  if (!confirm('Supprimer cette invitation ?')) return;
-                  try {
-                    await campaignService.deleteInvitation(inv.id);
-                    toast.success('Invitation supprimée');
-                    onReload();
-                  } catch (error) {
-                    console.error(error);
-                    toast.error('Erreur lors de la suppression');
-                  }
-                }}
-                className="p-2 text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
-                title="Supprimer l'invitation"
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
+            <button
+              onClick={async () => {
+                if (!confirm('Supprimer cette invitation ?')) return;
+                try {
+                  await campaignService.deleteInvitation(inv.id);
+                  toast.success('Invitation supprimée');
+                  onReload();
+                } catch (error) {
+                  console.error(error);
+                  toast.error('Erreur lors de la suppression');
+                }
+              }}
+              className="p-2 text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
+              title="Supprimer l'invitation"
+            >
+              <Trash2 size={16} />
+            </button>
           </div>
         ))}
     </div>
