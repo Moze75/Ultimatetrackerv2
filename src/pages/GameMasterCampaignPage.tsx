@@ -1741,7 +1741,7 @@ function GiftsTab({
 // =============================================
 // Modal d'envoi de cadeaux
 // =============================================
-// Remplacez uniquement la fonction SendGiftModal existante par celle-ci.
+
 
 function SendGiftModal({
   campaignId,
@@ -1758,24 +1758,21 @@ function SendGiftModal({
   onClose: () => void;
   onSent: () => void;
 }) {
-  // États
-  const [selectedItemId, setSelectedItemId] = useState('');
-  const [itemQuantity, setItemQuantity] = useState(1);
+  // ✅ NOUVEAU : États pour multi-sélection d'objets
+  const [selectedItems, setSelectedItems] = useState<Map<string, number>>(new Map());
+  
+  // États pour l'argent
   const [gold, setGold] = useState(0);
   const [silver, setSilver] = useState(0);
   const [copper, setCopper] = useState(0);
+  
   const [distributionMode, setDistributionMode] = useState<'individual' | 'shared'>('individual');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
 
-  // Liste des destinataires sélectionnés (user ids)
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
-  // Option pour "tous les membres" quand distribution shared ou individual
   const [selectAllRecipients, setSelectAllRecipients] = useState(false);
 
-  const selectedItem = inventory.find(i => i.id === selectedItemId);
-
-  // ✅ AJOUT : Constantes et fonctions utilitaires
   const META_PREFIX = '#meta:';
   
   const parseMeta = (description: string | null | undefined) => {
@@ -1801,21 +1798,34 @@ function SendGiftModal({
 
   const getFullDescription = (item: CampaignInventoryItem) => {
     if (!item) return '';
-    
-    // Parser les métadonnées existantes
     const existingMeta = parseMeta(item.description);
-    
-    if (!existingMeta) {
-      // Pas de métadonnées, retourner la description brute
-      return item.description || '';
-    }
-
-    // Nettoyer la description visible (sans #meta:)
+    if (!existingMeta) return item.description || '';
     const visibleDesc = getVisibleDescription(item.description);
-
-    // Reconstruire avec les métadonnées
     const metaLine = `${META_PREFIX}${JSON.stringify(existingMeta)}`;
     return visibleDesc ? `${visibleDesc}\n${metaLine}` : metaLine;
+  };
+
+  // ✅ NOUVEAU : Gestion de la sélection d'items
+  const toggleItem = (itemId: string) => {
+    const newMap = new Map(selectedItems);
+    if (newMap.has(itemId)) {
+      newMap.delete(itemId);
+    } else {
+      newMap.set(itemId, 1); // Quantité par défaut: 1
+    }
+    setSelectedItems(newMap);
+  };
+
+  const updateItemQuantity = (itemId: string, quantity: number) => {
+    const item = inventory.find(i => i.id === itemId);
+    if (!item) return;
+    
+    const maxQty = item.quantity;
+    const clampedQty = Math.max(1, Math.min(quantity, maxQty));
+    
+    const newMap = new Map(selectedItems);
+    newMap.set(itemId, clampedQty);
+    setSelectedItems(newMap);
   };
 
   // Sync selectAllRecipients <-> selectedRecipients
@@ -1826,18 +1836,7 @@ function SendGiftModal({
     } else {
       setSelectedRecipients([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectAllRecipients]);
-
-  // Quand on change l'item sélectionné, réinitialiser la quantité
-  useEffect(() => {
-    const item = inventory.find(i => i.id === selectedItemId);
-    if (item) {
-      setItemQuantity(1);
-    } else {
-      setItemQuantity(1);
-    }
-  }, [selectedItemId, inventory]);
+  }, [selectAllRecipients, members]);
 
   const toggleRecipient = (userId: string) => {
     setSelectedRecipients(prev => {
@@ -1848,23 +1847,15 @@ function SendGiftModal({
   };
 
   const handleSend = async () => {
-    // Validation supplémentaire : pour 'individual' il faut au moins un destinataire
-    if (distributionMode === 'individual' && (!selectedRecipients || selectedRecipients.length === 0)) {
-      toast.error('Sélectionnez au moins un destinataire pour un envoi individuel');
+    // Validation
+    if (distributionMode === 'individual' && selectedRecipients.length === 0) {
+      toast.error('Sélectionnez au moins un destinataire');
       return;
     }
 
     if (giftType === 'item') {
-      if (!selectedItemId) {
-        toast.error('Sélectionnez un objet');
-        return;
-      }
-      if (itemQuantity <= 0) {
-        toast.error('Quantité invalide');
-        return;
-      }
-      if (selectedItem && itemQuantity > selectedItem.quantity) {
-        toast.error(`Quantité disponible : ${selectedItem.quantity}`);
+      if (selectedItems.size === 0) {
+        toast.error('Sélectionnez au moins un objet');
         return;
       }
     } else {
@@ -1877,41 +1868,49 @@ function SendGiftModal({
     try {
       setSending(true);
 
-      // LOG DE DEBUG
-      if (giftType === 'item' && selectedItem) {
-        console.log('📤 Objet sélectionné:', selectedItem);
-        console.log('📤 Description brute:', selectedItem.description);
-        console.log('📤 Description complète:', getFullDescription(selectedItem));
-      }
-
-      // Préparer recipientIds : null = visible par tous (shared), tableau = destinataires explicites (individual)
       const recipientIds = distributionMode === 'individual' ? selectedRecipients : null;
 
-      // Appel au service en envoyant aussi l'id de l'item en inventaire si on veut le décrémenter côté service
-      await campaignService.sendGift(campaignId, giftType, {
-        itemName: selectedItem?.name,
-        itemDescription: selectedItem ? getFullDescription(selectedItem) : undefined,
-        itemQuantity: giftType === 'item' ? itemQuantity : undefined,
-        gold,
-        silver,
-        copper,
-        distributionMode,
-        message: message.trim() || undefined,
-        recipientIds: recipientIds || undefined,
-        inventoryItemId: giftType === 'item' && selectedItem ? selectedItem.id : undefined,
-      });
+      if (giftType === 'item') {
+        // ✅ Envoyer chaque objet sélectionné
+        for (const [itemId, quantity] of selectedItems.entries()) {
+          const item = inventory.find(i => i.id === itemId);
+          if (!item) continue;
 
-      // Si c'est un objet et que le service ne l'a pas géré (fallback), on décrémente localement comme avant.
-      // (Le service devrait idéalement décrémenter l'inventaire de manière atomique si inventoryItemId est fourni.)
-      if (giftType === 'item' && selectedItem) {
-        const newQuantity = selectedItem.quantity - itemQuantity;
-        if (newQuantity > 0) {
-          await campaignService.updateCampaignItem(selectedItem.id, {
-            quantity: newQuantity,
+          await campaignService.sendGift(campaignId, 'item', {
+            itemName: item.name,
+            itemDescription: getFullDescription(item),
+            itemQuantity: quantity,
+            gold: 0,
+            silver: 0,
+            copper: 0,
+            distributionMode,
+            message: message.trim() || undefined,
+            recipientIds: recipientIds || undefined,
+            inventoryItemId: item.id,
           });
-        } else {
-          await campaignService.deleteCampaignItem(selectedItem.id);
+
+          // Décrémenter l'inventaire
+          const newQuantity = item.quantity - quantity;
+          if (newQuantity > 0) {
+            await campaignService.updateCampaignItem(item.id, {
+              quantity: newQuantity,
+            });
+          } else {
+            await campaignService.deleteCampaignItem(item.id);
+          }
         }
+
+        toast.success(`${selectedItems.size} objet${selectedItems.size > 1 ? 's' : ''} envoyé${selectedItems.size > 1 ? 's' : ''} !`);
+      } else {
+        // Envoi d'argent (inchangé)
+        await campaignService.sendGift(campaignId, 'currency', {
+          gold,
+          silver,
+          copper,
+          distributionMode,
+          message: message.trim() || undefined,
+          recipientIds: recipientIds || undefined,
+        });
       }
 
       onSent();
@@ -1926,10 +1925,10 @@ function SendGiftModal({
   return (
     <div className="fixed inset-0 z-[10000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="fixed inset-0 bg-black/60" />
-      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(36rem,95vw)] max-h-[90vh] overflow-y-auto bg-gray-900/95 border border-gray-700 rounded-xl p-6">
+      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(40rem,95vw)] max-h-[90vh] overflow-y-auto bg-gray-900/95 border border-gray-700 rounded-xl p-6">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-bold text-white">
-            {giftType === 'item' ? '📦 Envoyer un objet' : '💰 Envoyer de l\'argent'}
+            {giftType === 'item' ? '📦 Envoyer des objets' : '💰 Envoyer de l\'argent'}
           </h3>
           <button onClick={onClose} className="p-2 text-gray-400 hover:bg-gray-800 rounded-lg">
             <X size={20} />
@@ -1939,84 +1938,105 @@ function SendGiftModal({
         <div className="space-y-6">
           {giftType === 'item' ? (
             <>
+              {/* ✅ NOUVEAU : Interface multi-sélection */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Objet à envoyer</label>
-                <select
-                  value={selectedItemId}
-                  onChange={(e) => {
-                    setSelectedItemId(e.target.value);
-                    const item = inventory.find(i => i.id === e.target.value);
-                    if (item) setItemQuantity(1);
-                  }}
-                  className="input-dark w-full px-4 py-2 rounded-lg"
-                >
-                  <option value="">-- Sélectionner un objet --</option>
-                  {inventory.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name} (x{item.quantity} disponible{item.quantity > 1 ? 's' : ''})
-                    </option>
-                  ))}
-                </select>
-              </div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm font-medium text-gray-300">
+                    Objets à envoyer ({selectedItems.size} sélectionné{selectedItems.size > 1 ? 's' : ''})
+                  </label>
+                  {selectedItems.size > 0 && (
+                    <button
+                      onClick={() => setSelectedItems(new Map())}
+                      className="text-xs text-red-400 hover:text-red-300"
+                    >
+                      Tout désélectionner
+                    </button>
+                  )}
+                </div>
 
-              {selectedItem && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Quantité (max: {selectedItem.quantity})
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      max={selectedItem.quantity}
-                      value={itemQuantity}
-                      onChange={(e) => setItemQuantity(Math.min(parseInt(e.target.value) || 1, selectedItem.quantity))}
-                      className="input-dark w-full px-4 py-2 rounded-lg"
-                    />
-                  </div>
+                <div className="max-h-[400px] overflow-y-auto space-y-2 bg-gray-800/30 rounded-lg p-3">
+                  {inventory.map((item) => {
+                    const isSelected = selectedItems.has(item.id);
+                    const selectedQty = selectedItems.get(item.id) || 1;
+                    const meta = parseMeta(item.description);
 
-                  {/* Aperçu */}
-                  {getVisibleDescription(selectedItem.description) && (
-                    <div className="bg-gray-800/40 rounded-lg p-3 border border-gray-700">
-                      <h5 className="text-xs font-medium text-gray-400 mb-2">Aperçu de l'objet :</h5>
-                      <p className="text-sm text-gray-300 whitespace-pre-wrap">
-                        {getVisibleDescription(selectedItem.description)}
-                      </p>
-                      
-                      {(() => {
-                        const meta = parseMeta(selectedItem.description);
-                        if (!meta) return null;
-                        
-                        return (
-                          <div className="mt-2 pt-2 border-t border-gray-700/50 text-xs text-gray-400 space-y-1">
-                            {meta.type === 'armor' && meta.armor && (
-                              <>
-                                <div className="text-purple-300">📋 Type: Armure</div>
-                                <div>CA: {meta.armor.label}</div>
-                              </>
-                            )}
-                            {meta.type === 'shield' && meta.shield && (
-                              <>
-                                <div className="text-blue-300">📋 Type: Bouclier</div>
-                                <div>Bonus: +{meta.shield.bonus}</div>
-                              </>
-                            )}
-                            {meta.type === 'weapon' && meta.weapon && (
-                              <>
-                                <div className="text-red-300">📋 Type: Arme</div>
-                                <div>Dégâts: {meta.weapon.damageDice} {meta.weapon.damageType}</div>
-                                {meta.weapon.properties && <div>Propriétés: {meta.weapon.properties}</div>}
-                              </>
+                    return (
+                      <div
+                        key={item.id}
+                        className={`p-3 rounded-lg border-2 transition-all ${
+                          isSelected
+                            ? 'bg-purple-900/30 border-purple-500/50'
+                            : 'bg-gray-800/40 border-gray-700/50 hover:bg-gray-700/40'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          {/* Checkbox */}
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleItem(item.id)}
+                            className="mt-1 w-4 h-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500"
+                          />
+
+                          {/* Info item */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-semibold text-white">{item.name}</h4>
+                              
+                              {/* Badges type */}
+                              {meta?.type === 'armor' && (
+                                <span className="text-xs px-2 py-0.5 rounded bg-purple-900/30 text-purple-300 border border-purple-500/30">
+                                  Armure
+                                </span>
+                              )}
+                              {meta?.type === 'shield' && (
+                                <span className="text-xs px-2 py-0.5 rounded bg-blue-900/30 text-blue-300 border border-blue-500/30">
+                                  Bouclier
+                                </span>
+                              )}
+                              {meta?.type === 'weapon' && (
+                                <span className="text-xs px-2 py-0.5 rounded bg-red-900/30 text-red-300 border border-red-500/30">
+                                  Arme
+                                </span>
+                              )}
+                            </div>
+
+                            <p className="text-xs text-gray-400">
+                              {item.quantity} disponible{item.quantity > 1 ? 's' : ''}
+                            </p>
+
+                            {/* Sélecteur de quantité (si sélectionné) */}
+                            {isSelected && (
+                              <div className="mt-2 flex items-center gap-2">
+                                <label className="text-xs text-gray-400">Quantité:</label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max={item.quantity}
+                                  value={selectedQty}
+                                  onChange={(e) => updateItemQuantity(item.id, parseInt(e.target.value) || 1)}
+                                  className="input-dark w-20 px-2 py-1 text-sm rounded"
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                                <span className="text-xs text-gray-500">/ {item.quantity}</span>
+                              </div>
                             )}
                           </div>
-                        );
-                      })()}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {inventory.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      Aucun objet dans l'inventaire
                     </div>
                   )}
-                </>
-              )}
+                </div>
+              </div>
             </>
           ) : (
+            // Argent (inchangé)
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
                 <div>
@@ -2085,16 +2105,16 @@ function SendGiftModal({
                 }`}
               >
                 <div className="font-semibold mb-1">Partagé</div>
-                <div className="text-xs opacity-80">Visible à tous (1 exemplaire)</div>
+                <div className="text-xs opacity-80">Visible à tous</div>
               </button>
             </div>
           </div>
 
-          {/* Sélection des destinataires si individual */}
+          {/* Sélection des destinataires */}
           {distributionMode === 'individual' && (
             <div className="bg-gray-800/30 rounded-lg p-3">
               <div className="flex items-center justify-between mb-2">
-                <div className="text-sm font-medium text-gray-300">Destinataires spécifiques</div>
+                <div className="text-sm font-medium text-gray-300">Destinataires</div>
                 <label className="text-xs text-gray-400 inline-flex items-center gap-2">
                   <input
                     type="checkbox"
@@ -2120,14 +2140,10 @@ function SendGiftModal({
                   );
                 })}
               </div>
-
-              <p className="text-xs text-gray-400 mt-2">
-                Les destinataires choisis recevront l'envoi en priorité. Un objet partagé reste visible par tous.
-              </p>
             </div>
           )}
 
-          {/* Message optionnel */}
+          {/* Message */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Message (optionnel)
@@ -2139,24 +2155,6 @@ function SendGiftModal({
               rows={3}
               placeholder="Ajoutez un message pour les joueurs..."
             />
-          </div>
-
-          {/* Info destinataires */}
-          <div className="bg-gray-800/40 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-sm text-gray-300 mb-2">
-              <Users size={16} />
-              <span className="font-medium">Destinataires ({members.length})</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {members.map((member) => (
-                <span
-                  key={member.id}
-                  className="px-2 py-1 bg-gray-700/50 rounded text-xs text-gray-300"
-                >
-                  {member.player_name || member.email}
-                </span>
-              ))}
-            </div>
           </div>
         </div>
 
@@ -2171,18 +2169,21 @@ function SendGiftModal({
           </button>
           <button
             onClick={handleSend}
-            disabled={sending || (distributionMode === 'individual' && selectedRecipients.length === 0)}
+            disabled={sending || (giftType === 'item' ? selectedItems.size === 0 : false) || (distributionMode === 'individual' && selectedRecipients.length === 0)}
             className="btn-primary px-6 py-3 rounded-lg disabled:opacity-50 flex items-center gap-2"
           >
             {sending ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                Envoi en cours...
+                Envoi...
               </>
             ) : (
               <>
                 <Send size={18} />
-                Envoyer aux joueurs
+                {giftType === 'item' && selectedItems.size > 0 
+                  ? `Envoyer ${selectedItems.size} objet${selectedItems.size > 1 ? 's' : ''}`
+                  : 'Envoyer'
+                }
               </>
             )}
           </button>
