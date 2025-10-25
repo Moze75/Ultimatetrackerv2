@@ -408,6 +408,8 @@ export function CampaignPlayerModal({
           .select('*')
           .in('id', campaignIds);
 
+console.log('📋 CAMPAIGNS CHARGÉES:', campaigns); // ✅ AJOUTE CE LOG
+        
         setMyCampaigns(campaigns || []);
         setActiveCampaigns(campaigns || []);
 
