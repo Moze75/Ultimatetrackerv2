@@ -34,7 +34,7 @@ interface Equipment {
   } | null;
 
   shield_bonus?: number | null;
- 
+
   weapon_meta?: {
     damageDice: string;
     damageType: 'Tranchant' | 'Perforant' | 'Contondant';
@@ -52,7 +52,6 @@ interface WeaponMeta {
   properties: string;
   range: string;
   category?: WeaponCategory;
-  bonus?: number; // ✅ NOUVEAU
 }
 interface ArmorMeta {
   base: number;
@@ -271,39 +270,14 @@ const InfoBubble = ({
             </div>
           )}
 
-{type === 'weapon' && equipment.weapon_meta && (
-  <div className="mt-1 text-sm text-gray-300 space-y-1">
-    <div className="flex items-center justify-between">
-      <span className="text-gray-400">Dés</span>
-      <span className="font-medium text-gray-100">{equipment.weapon_meta.damageDice}</span>
-    </div>
-    <div className="flex items-center justify-between">
-      <span className="text-gray-400">Type</span>
-      <span className="font-medium text-gray-100">{equipment.weapon_meta.damageType}</span>
-    </div>
-    {equipment.weapon_meta.properties && (
-      <div className="flex items-center justify-between">
-        <span className="text-gray-400">Propriété</span>
-        <span className="font-medium text-gray-100">{equipment.weapon_meta.properties}</span>
-      </div>
-    )}
-    {equipment.weapon_meta.range && (
-      <div className="flex items-center justify-between">
-        <span className="text-gray-400">Portée</span>
-        <span className="font-medium text-gray-100">{equipment.weapon_meta.range}</span>
-      </div>
-    )}
-    {/* ✅ NOUVEAU : Afficher le bonus */}
-    {equipment.weapon_meta.bonus && (
-      <div className="flex items-center justify-between">
-        <span className="text-gray-400">Bonus</span>
-        <span className="font-medium text-purple-400">
-          +{equipment.weapon_meta.bonus}
-        </span>
-      </div>
-    )}
-  </div>
-)}
+          {type === 'weapon' && equipment.weapon_meta && (
+            <div className="mt-1 text-sm text-gray-300 space-y-1">
+              <div className="flex items-center justify-between"><span className="text-gray-400">Dés</span><span className="font-medium text-gray-100">{equipment.weapon_meta.damageDice}</span></div>
+              <div className="flex items-center justify-between"><span className="text-gray-400">Type</span><span className="font-medium text-gray-100">{equipment.weapon_meta.damageType}</span></div>
+              {equipment.weapon_meta.properties && <div className="flex items-center justify-between"><span className="text-gray-400">Propriété</span><span className="font-medium text-gray-100">{equipment.weapon_meta.properties}</span></div>}
+              {equipment.weapon_meta.range && <div className="flex items-center justify-between"><span className="text-gray-400">Portée</span><span className="font-medium text-gray-100">{equipment.weapon_meta.range}</span></div>}
+            </div>
+          )}
         </div>
       ) : type === 'bag' ? (
         <div className="space-y-2">
@@ -698,19 +672,20 @@ export function EquipmentTab({
       const weaponProperties = w?.properties;
       const proficiencyResult = checkWeaponProficiency(weaponName || name, playerWeaponProficiencies, explicitCategory, weaponProperties);
 
-const payload = {
-  player_id: player.id,
-  name,
-  damage_dice: w?.damageDice || '1d6',
-  damage_type: w?.damageType || 'Tranchant',
-  range: w?.range || 'Corps à corps',
-  properties: w?.properties || '',
-  weapon_bonus: w?.bonus || null, // ✅ NOUVEAU (remplace manual_attack/damage_bonus)
-  expertise: proficiencyResult.shouldApplyProficiencyBonus,
-  attack_type: 'physical' as const,
-  spell_level: null as any,
-  ammo_count: (existing as any)?.ammo_count ?? 0
-};
+      const payload = {
+        player_id: player.id,
+        name,
+        damage_dice: w?.damageDice || '1d6',
+        damage_type: w?.damageType || 'Tranchant',
+        range: w?.range || 'Corps à corps',
+        properties: w?.properties || '',
+        manual_attack_bonus: null,
+        manual_damage_bonus: null,
+        expertise: proficiencyResult.shouldApplyProficiencyBonus,
+        attack_type: 'physical' as const,
+        spell_level: null as any,
+        ammo_count: (existing as any)?.ammo_count ?? 0
+      };
 
       if (existing) {
         await attackService.updateAttack({ ...payload, id: existing.id });
@@ -1227,29 +1202,25 @@ const payload = {
       </div>
     )}
     
-{/* Propriétés techniques pour armure/bouclier/arme */}
-{(isArmor || isShield || isWeapon) && (
-  <div className="text-xs text-gray-400 space-y-0.5">
-    {isArmor && meta?.armor && <div>CA: {meta.armor.label}</div>}
-    {isShield && meta?.shield && <div>Bonus de bouclier: +{meta.shield.bonus}</div>}
-    {isWeapon && meta?.weapon && (
-      <>
-        <div>Dégâts: {meta.weapon.damageDice} {meta.weapon.damageType}</div>
-        {meta.weapon.properties && <div>Propriété: {meta.weapon.properties}</div>}
-        {meta.weapon.range && <div>Portée: {meta.weapon.range}</div>}
-        {/* ✅ NOUVEAU : Afficher le bonus */}
-        {meta.weapon.bonus && (
-          <div className="text-purple-400">Bonus: +{meta.weapon.bonus}</div>
+    {/* Propriétés techniques pour armure/bouclier/arme */}
+    {(isArmor || isShield || isWeapon) && (
+      <div className="text-xs text-gray-400 space-y-0.5">
+        {isArmor && meta?.armor && <div>CA: {meta.armor.label}</div>}
+        {isShield && meta?.shield && <div>Bonus de bouclier: +{meta.shield.bonus}</div>}
+        {isWeapon && meta?.weapon && (
+          <>
+            <div>Dégâts: {meta.weapon.damageDice} {meta.weapon.damageType}</div>
+            {meta.weapon.properties && <div>Propriété: {meta.weapon.properties}</div>}
+            {meta.weapon.range && <div>Portée: {meta.weapon.range}</div>}
+            {notProficient && (
+              <div className="text-[10px] text-amber-300 mt-1">
+                Non maîtrisée : bonus de maîtrise non appliqué.
+              </div>
+            )}
+          </>
         )}
-        {notProficient && (
-          <div className="text-[10px] text-amber-300 mt-1">
-            Non maîtrisée : bonus de maîtrise non appliqué.
-          </div>
-        )}
-      </>
+      </div>
     )}
-  </div>
-)}
     
     {/* Description pour les autres types d'items */}
     {!(isArmor || isShield || isWeapon) && (
