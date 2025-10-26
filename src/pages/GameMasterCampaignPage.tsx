@@ -1620,9 +1620,13 @@ const baseMeta: any = {
                   <label className="text-xs text-gray-400">Portée</label>
                   <input className="input-dark w-full px-2 py-1 rounded" value={weaponRange} onChange={(e) => setWeaponRange(e.target.value)} />
                 </div>
-                <div className="col-span-2">
+                                <div className="col-span-2">
                   <label className="text-xs text-gray-400">Catégorie</label>
                   <input className="input-dark w-full px-2 py-1 rounded" value={weaponCategory} onChange={(e) => setWeaponCategory(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400">Bonus de l'arme</label>
+                  <input type="number" className="input-dark w-full px-2 py-1 rounded" value={weaponBonus ?? ''} onChange={(e) => setWeaponBonus(e.target.value ? parseInt(e.target.value) : null)} placeholder="Ex: 1, 2, 3" />
                 </div>
               </div>
             </div>
