@@ -148,6 +148,12 @@ export function CustomItemModal({
             </div>
           </div>
         )}
+        <div className="mt-4 border-t border-gray-700 pt-4">
+  <ImageUrlInput
+    value={imageUrl}
+    onChange={setImageUrl}
+  />
+</div>
 
         <div className="mt-4">
           <label className="block text-sm font-medium text-gray-300 mb-1">Quantité</label>
