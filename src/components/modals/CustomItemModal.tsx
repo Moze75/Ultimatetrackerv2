@@ -5,8 +5,20 @@ import toast from 'react-hot-toast';
 
 /* Types locaux alignés */
 type MetaType = 'armor' | 'shield' | 'weapon' | 'potion' | 'equipment' | 'jewelry' | 'tool' | 'other';
-type WeaponCategory = 'Armes courantes' | 'Armes de guerre' | 'Armes de guerre dotées de la propriété Légère' | 'Armes de guerre présentant la propriété Finesse ou Légère';
-interface WeaponMeta { damageDice: string; damageType: 'Tranchant' | 'Perforant' | 'Contondant'; properties: string; range: string; category?: WeaponCategory; }
+type WeaponCategory =
+  | 'Armes courantes'
+  | 'Armes de guerre'
+  | 'Armes de guerre dotées de la propriété Légère'
+  | 'Armes de guerre présentant la propriété Finesse ou Légère';
+
+interface WeaponMeta {
+  damageDice: string;
+  damageType: 'Tranchant' | 'Perforant' | 'Contondant';
+  properties: string;
+  range: string;
+  category?: WeaponCategory;
+  weapon_bonus?: number | null; // ✅ ajout
+}
 interface ArmorMeta { base: number; addDex: boolean; dexCap?: number | null; label: string; }
 interface ShieldMeta { bonus: number; }
 export interface ItemMeta {
@@ -16,6 +28,7 @@ export interface ItemMeta {
   weapon?: WeaponMeta;
   armor?: ArmorMeta;
   shield?: ShieldMeta;
+  imageUrl?: string; // ✅ ajout
 }
 
 const stripPriceParentheses = (name: string) =>
@@ -61,34 +74,53 @@ export function CustomItemModal({
     const cleanNameRaw = name.trim();
     if (!cleanNameRaw) return toast.error('Nom requis');
     if (quantity <= 0) return toast.error('Quantité invalide');
+
     const cleanName = smartCapitalize(cleanNameRaw);
-    let meta: ItemMeta = { 
-  type, 
-  quantity, 
-  equipped: false,
-  imageUrl: imageUrl.trim() || undefined 
-};
+
+    // ✅ Construire la méta complète et correcte
+    const meta: ItemMeta = {
+      type,
+      quantity,
+      equipped: false,
+      imageUrl: imageUrl.trim() || undefined
+    };
+
     if (type === 'armor') {
       const cap = armDexCap === '' ? null : Number(armDexCap);
-      meta.armor = { base: armBase, addDex: armAddDex, dexCap: cap, label: `${armBase}${armAddDex ? ` + modificateur de Dex${cap != null ? ` (max ${cap})` : ''}` : ''}` };
+      meta.armor = {
+        base: armBase,
+        addDex: armAddDex,
+        dexCap: cap,
+        label: `${armBase}${armAddDex ? ` + modificateur de Dex${cap != null ? ` (max ${cap})` : ''}` : ''}`
+      };
     } else if (type === 'shield') {
       meta.shield = { bonus: shieldBonus };
     } else if (type === 'weapon') {
-    } else if (type === 'weapon') {
-      meta.weapon = { 
-        damageDice: wDice, 
-        damageType: wType, 
-        properties: wProps, 
-        range: wRange, 
+      meta.weapon = {
+        damageDice: wDice,
+        damageType: wType,
+        properties: wProps,
+        range: wRange,
         category: wCategory,
         weapon_bonus: wBonus
       };
     }
+
     onAdd({ name: cleanName, description: description.trim(), meta });
     onClose();
   };
 
   return (
+    <div className="fixed inset-0 z-[9999]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="fixed inset-0 bg-black/60" />
+      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(32rem,95vw)] max-h-[90vh] overflow-y-auto bg-gray-900/95 border border-gray-700 rounded-lg p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-100">Objet personnalisé</h3>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:bg-gray-800 rounded-lg"><X size={20} /></button>
+        </div>
+
+
+    
     <div className="fixed inset-0 z-[9999]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="fixed inset-0 bg-black/60" />
       <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(32rem,95vw)] max-h-[90vh] overflow-y-auto bg-gray-900/95 border border-gray-700 rounded-lg p-4">
