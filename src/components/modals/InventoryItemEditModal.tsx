@@ -332,6 +332,21 @@ export function InventoryItemEditModal({
                   placeholder="Corps à corps, 6/18 m..."
                 />
               </div>
+              <div>
+  <label className="block text-xs text-gray-400 mb-1">
+    Bonus de l'arme
+  </label>
+  <input
+    type="number"
+    value={wBonus}
+    onChange={(e) => setWBonus(parseInt(e.target.value) || 0)}
+    className="input-dark w-full px-2 py-1 text-sm rounded"
+    placeholder="0"
+  />
+  <p className="text-xs text-gray-500 mt-1">
+    S'ajoute aux attaques et dégâts
+  </p>
+</div>
             </div>
           )}
 
