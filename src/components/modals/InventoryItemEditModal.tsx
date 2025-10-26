@@ -18,6 +18,7 @@ interface ItemMeta {
   weapon?: WeaponMeta;
   armor?: ArmorMeta;
   shield?: ShieldMeta;
+  imageUrl?: string; // ✅ AJOUT
 }
 
 const META_PREFIX = '#meta:';
@@ -84,18 +85,27 @@ export function InventoryItemEditModal({
   // Shield fields
   const [sBonus, setSBonus] = React.useState<number>(existingMeta.shield?.bonus || 2);
 
+  // ✅ ÉTAPE 2.2 : Ajout de l'état imageUrl
+  const [imageUrl, setImageUrl] = React.useState('');
+
   const [saving, setSaving] = React.useState(false);
+
+  // ✅ ÉTAPE 2.3 : Initialiser imageUrl depuis les métadonnées
+  React.useEffect(() => {
+    setImageUrl(existingMeta.imageUrl || '');
+  }, [existingMeta.imageUrl]);
 
   const handleSave = async () => {
     if (saving) return;
     setSaving(true);
 
     try {
-      // Construire les nouvelles métadonnées
+      // ✅ ÉTAPE 2.4 : Construire les nouvelles métadonnées avec imageUrl
       const newMeta: ItemMeta = {
         type,
         quantity,
         equipped: existingMeta.equipped || false,
+        imageUrl: imageUrl.trim() || undefined, // ✅ NOUVEAU
       };
 
       // Ajouter les métadonnées spécifiques selon le type
@@ -391,6 +401,15 @@ export function InventoryItemEditModal({
               </div>
             </div>
           )}
+
+          {/* ✅ ÉTAPE 2.5 : Champ Image URL (AVANT la description) */}
+          <div className="border-t border-gray-700 pt-4">
+            <ImageUrlInput
+              value={imageUrl}
+              onChange={setImageUrl}
+              label="Image de l'objet"
+            />
+          </div>
 
           {/* Description */}
           <div>
