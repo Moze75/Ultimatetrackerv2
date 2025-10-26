@@ -20,7 +20,7 @@ export const attackService = {
         .select('*')
         .eq('player_id', playerId)
         .order('created_at', { ascending: true });
-console.log('[CombatTab] Attaques chargées:', attacks.map(a => ({ name: a.name, weapon_bonus: a.weapon_bonus })));
+ 
       if (error) throw error;
       return (data || []) as Attack[];
     } catch (error) {
