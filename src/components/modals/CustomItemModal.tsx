@@ -147,6 +147,17 @@ export function CustomItemModal({
               </select>
               <p className="text-xs text-gray-500 mt-1">Cette catégorie détermine si votre bonus de maîtrise s'applique aux jets d'attaque</p>
             </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Bonus de l'arme (attaque & dégâts)</label>
+              <input 
+                type="number" 
+                className="input-dark w-full px-3 py-2 rounded-md" 
+                value={wBonus} 
+                onChange={e => setWBonus(parseInt(e.target.value) || 0)} 
+                placeholder="0"
+              />
+              <p className="text-xs text-gray-500 mt-1">S'ajoute aux jets d'attaque et de dégâts (ex: +1 pour une épée +1)</p>
+            </div>
           </div>
         )}
         <div className="mt-4 border-t border-gray-700 pt-4">
