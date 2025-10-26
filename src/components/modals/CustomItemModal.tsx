@@ -48,6 +48,7 @@ export function CustomItemModal({
   const [wProps, setWProps] = React.useState('');
   const [wRange, setWRange] = React.useState('Corps à corps');
   const [wCategory, setWCategory] = React.useState<WeaponCategory>('Armes courantes');
+  const [imageUrl, setImageUrl] = React.useState('');
 
   React.useEffect(() => {
     const prev = document.body.style.overflow;
