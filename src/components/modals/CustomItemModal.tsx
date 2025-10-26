@@ -74,7 +74,15 @@ export function CustomItemModal({
     } else if (type === 'shield') {
       meta.shield = { bonus: shieldBonus };
     } else if (type === 'weapon') {
-      meta.weapon = { damageDice: wDice, damageType: wType, properties: wProps, range: wRange, category: wCategory };
+    } else if (type === 'weapon') {
+      meta.weapon = { 
+        damageDice: wDice, 
+        damageType: wType, 
+        properties: wProps, 
+        range: wRange, 
+        category: wCategory,
+        weapon_bonus: wBonus
+      };
     }
     onAdd({ name: cleanName, description: description.trim(), meta });
     onClose();
