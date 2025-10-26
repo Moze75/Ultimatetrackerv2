@@ -239,7 +239,7 @@ const AttackEditModal = ({ attack, onClose, onSave, onDelete }: AttackEditModalP
             />
           </div>
 
-          <div>
+                 <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Bonus de dégâts manuel (vide = auto)
             </label>
@@ -256,6 +256,31 @@ const AttackEditModal = ({ attack, onClose, onSave, onDelete }: AttackEditModalP
               placeholder="Laissez vide pour calcul automatique"
             />
           </div>
+
+          {/* ✅ NOUVEAU : Bonus de l'arme */}
+          <div className="border-t border-gray-700 pt-4 mt-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Bonus de l'arme (vide = aucun)
+              <span className="text-xs text-gray-500 ml-2">(s'ajoute aux calculs d'attaque et de dégâts)</span>
+            </label>
+            <input
+              type="number"
+              value={formData.weapon_bonus ?? ''}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  weapon_bonus: e.target.value ? parseInt(e.target.value) : null
+                })
+              }
+              className="input-dark w-full px-3 py-2 rounded-md border border-gray-600 focus:border-red-500"
+              placeholder="Ex: 1, 2, 3 pour une arme +1, +2, +3"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Ce bonus s'ajoute au calcul automatique d'attaque et de dégâts (ex: +2 pour une arme magique +2)
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
 
           <div className="flex items-center gap-3">
             <button
