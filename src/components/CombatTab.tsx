@@ -440,14 +440,8 @@ const getAttackBonus = (attack: Attack): number => {
   return abilityModifier + masteryBonus + weaponBonus;
 };
 
-// ✅ MODIFIÉ : Bonus d'arme s'ajoute au calcul
 const getDamageBonus = (attack: Attack): number => {
   const weaponBonus = attack.weapon_bonus ?? 0;
-
-  // 1. Bonus manuel a la priorité absolue (se substitue)
-  if (attack.manual_damage_bonus !== null && attack.manual_damage_bonus !== undefined) {
-    return attack.manual_damage_bonus + weaponBonus;
-  }
 
   // 2. Caractéristique forcée (override_ability)
   if (attack.override_ability) {
