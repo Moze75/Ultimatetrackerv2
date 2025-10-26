@@ -5,6 +5,7 @@ import { Attack } from '../types/dnd';
  * Service pour gérer les requêtes liées aux attaques
  * Gère maintenant le champ override_ability pour permettre
  * de forcer une caractéristique spécifique (ex: Charisme pour l'Occultiste)
+ * et le champ weapon_bonus pour les bonus d'arme magiques.
  */
 export const attackService = {
   /**
@@ -41,7 +42,7 @@ export const attackService = {
         return null;
       }
 
-      // Préparer les données avec tous les champs (incluant override_ability)
+      // Préparer les données avec tous les champs (incluant override_ability et weapon_bonus)
       const attackData = {
         player_id: attack.player_id,
         name: attack.name,
@@ -56,8 +57,9 @@ export const attackService = {
         spell_level: attack.spell_level ?? null,
         ammo_count: attack.ammo_count ?? 0,
         ammo_type: attack.ammo_type ?? null,
-        // ✅ AJOUT : Gestion de override_ability
-        override_ability: attack.override_ability ?? null
+        // ✅ AJOUTS
+        override_ability: attack.override_ability ?? null,
+        weapon_bonus: attack.weapon_bonus ?? null
       };
 
       const { data, error } = await supabase
@@ -94,11 +96,11 @@ export const attackService = {
       // Extraire l'ID et préparer les données de mise à jour
       const { id, ...updateData } = attack;
 
-      // S'assurer que override_ability est inclus dans les mises à jour
+      // S'assurer que override_ability et weapon_bonus sont inclus uniquement s'ils sont fournis
       const finalUpdateData = {
         ...updateData,
-        // ✅ AJOUT : Préserver override_ability si fourni
-        ...(attack.override_ability !== undefined && { override_ability: attack.override_ability })
+        ...(attack.override_ability !== undefined && { override_ability: attack.override_ability }),
+        ...(attack.weapon_bonus !== undefined && { weapon_bonus: attack.weapon_bonus })
       };
 
       const { data, error } = await supabase
@@ -200,8 +202,9 @@ export const attackService = {
         spell_level: original.spell_level,
         ammo_count: 0, // Reset du compteur de munitions
         ammo_type: original.ammo_type,
-        // ✅ AJOUT : Copier override_ability
-        override_ability: original.override_ability
+        // ✅ AJOUTS : Copier override_ability et weapon_bonus
+        override_ability: original.override_ability,
+        weapon_bonus: original.weapon_bonus ?? null
       };
 
       return await this.addAttack(duplicate);
