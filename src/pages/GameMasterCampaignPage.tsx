@@ -1431,15 +1431,33 @@ function EditCampaignItemModal({
         setArmorAddDex(meta.armor.addDex ?? true);
         setArmorDexCap(meta.armor.dexCap ?? null);
       }
-      // Weapon
-      if (meta.type === 'weapon' && meta.weapon) {
-        setWeaponDamageDice(meta.weapon.damageDice ?? '');
-        setWeaponDamageType(meta.weapon.damageType ?? '');
-        setWeaponProperties(meta.weapon.properties ?? '');
-        setWeaponRange(meta.weapon.range ?? '');
-        setWeaponCategory(meta.weapon.category ?? '');
-        setWeaponBonus(meta.weapon.weapon_bonus ?? null);
-      }
+    // Weapon
+if (meta.type === 'weapon' && meta.weapon) {
+  setWeaponDamageDice(meta.weapon.damageDice || '1d6');
+  setWeaponDamageType(
+    (meta.weapon.damageType && DAMAGE_TYPES.includes(meta.weapon.damageType as any))
+      ? meta.weapon.damageType
+      : 'Tranchant'
+  );
+  setWeaponProperties(meta.weapon.properties || '');
+  setWeaponRange(
+    (meta.weapon.range && RANGES.includes(meta.weapon.range as any))
+      ? meta.weapon.range
+      : 'Corps à corps'
+  );
+  setWeaponCategory(
+    (meta.weapon.category && WEAPON_CATEGORIES.includes(meta.weapon.category as any))
+      ? meta.weapon.category
+      : 'Armes courantes'
+  );
+  setWeaponBonus(meta.weapon.weapon_bonus ?? null);
+} else if (type === 'weapon') {
+  // Si pas de méta existante mais type = weapon, mettre des valeurs par défaut
+  setWeaponDamageDice((prev) => prev || '1d6');
+  setWeaponDamageType((prev) => (prev && DAMAGE_TYPES.includes(prev as any) ? prev : 'Tranchant'));
+  setWeaponRange((prev) => (prev && RANGES.includes(prev as any) ? prev : 'Corps à corps'));
+  setWeaponCategory((prev) => (prev && WEAPON_CATEGORIES.includes(prev as any) ? prev : 'Armes courantes'));
+}
       // Shield
       if (meta.type === 'shield' && meta.shield) {
         setShieldBonus(meta.shield.bonus ?? null);
