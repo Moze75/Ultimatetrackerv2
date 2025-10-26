@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 /* Types locaux alignés */
 type MetaType = 'armor' | 'shield' | 'weapon' | 'potion' | 'equipment' | 'jewelry' | 'tool' | 'other';
 type WeaponCategory = 'Armes courantes' | 'Armes de guerre' | 'Armes de guerre dotées de la propriété Légère' | 'Armes de guerre présentant la propriété Finesse ou Légère';
-interface WeaponMeta { damageDice: string; damageType: 'Tranchant' | 'Perforant' | 'Contondant'; properties: string; range: string; category?: WeaponCategory; bonus?: number; }
+interface WeaponMeta { damageDice: string; damageType: 'Tranchant' | 'Perforant' | 'Contondant'; properties: string; range: string; category?: WeaponCategory; }
 interface ArmorMeta { base: number; addDex: boolean; dexCap?: number | null; label: string; }
 interface ShieldMeta { bonus: number; }
 export interface ItemMeta {
@@ -48,7 +48,6 @@ export function CustomItemModal({
   const [wProps, setWProps] = React.useState('');
   const [wRange, setWRange] = React.useState('Corps à corps');
   const [wCategory, setWCategory] = React.useState<WeaponCategory>('Armes courantes');
-  const [wBonus, setWBonus] = React.useState<number>(0);
   const [imageUrl, setImageUrl] = React.useState('');
 
   React.useEffect(() => {
@@ -73,9 +72,9 @@ export function CustomItemModal({
       meta.armor = { base: armBase, addDex: armAddDex, dexCap: cap, label: `${armBase}${armAddDex ? ` + modificateur de Dex${cap != null ? ` (max ${cap})` : ''}` : ''}` };
     } else if (type === 'shield') {
       meta.shield = { bonus: shieldBonus };
-  } else if (type === 'weapon') {
-  meta.weapon = { damageDice: wDice, damageType: wType, properties: wProps, range: wRange, category: wCategory, bonus: wBonus || undefined };
-}
+    } else if (type === 'weapon') {
+      meta.weapon = { damageDice: wDice, damageType: wType, properties: wProps, range: wRange, category: wCategory };
+    }
     onAdd({ name: cleanName, description: description.trim(), meta });
     onClose();
   };
@@ -146,17 +145,6 @@ export function CustomItemModal({
                 <option value="Armes de guerre présentant la propriété Finesse ou Légère">Armes de guerre présentant la propriété Finesse ou Légère</option>
               </select>
               <p className="text-xs text-gray-500 mt-1">Cette catégorie détermine si votre bonus de maîtrise s'applique aux jets d'attaque</p>
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Bonus de l'arme (attaque & dégâts)</label>
-              <input 
-                type="number" 
-                className="input-dark w-full px-3 py-2 rounded-md" 
-                value={wBonus} 
-                onChange={e => setWBonus(parseInt(e.target.value) || 0)} 
-                placeholder="0"
-              />
-              <p className="text-xs text-gray-500 mt-1">S'ajoute aux jets d'attaque et de dégâts (ex: +1 pour une épée +1)</p>
             </div>
           </div>
         )}
