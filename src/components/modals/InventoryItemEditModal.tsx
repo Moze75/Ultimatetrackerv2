@@ -1,5 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
+import { ImageUrlInput } from '../ImageUrlInput';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { InventoryItem } from '../../types/dnd';
