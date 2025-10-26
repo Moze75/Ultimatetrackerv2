@@ -1394,7 +1394,7 @@ function EditCampaignItemModal({
   const [shieldBonus, setShieldBonus] = useState<number | null>(null);
   const [imageUrl, setImageUrl] = React.useState<string>('');
 
-  // Listes de choix pour éviter les fautes de frappe
+// Listes de choix pour éviter les fautes de frappe
 const DAMAGE_TYPES = ['Tranchant', 'Perforant', 'Contondant'] as const;
 
 const WEAPON_CATEGORIES = [
