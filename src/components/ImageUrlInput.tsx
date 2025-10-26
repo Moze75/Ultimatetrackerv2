@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Image, AlertCircle } from 'lucide-react';
+import { Image as ImageIcon, AlertCircle } from 'lucide-react';
 
 interface ImageUrlInputProps {
   value: string;
@@ -27,7 +27,8 @@ export function ImageUrlInput({
     setImageLoading(true);
     setImageError(false);
 
-    const img = new Image();
+    // ✅ FIX: Utiliser HTMLImageElement au lieu de Image
+    const img = new window.Image();
     img.onload = () => {
       setImageLoading(false);
       setImageError(false);
@@ -78,7 +79,7 @@ export function ImageUrlInput({
           {!imageError && !imageLoading && (
             <div className="bg-gray-800/40 rounded-lg p-3 border border-gray-700/50">
               <div className="flex items-center gap-2 text-xs text-gray-400 mb-2">
-                <Image size={14} />
+                <ImageIcon size={14} />
                 Aperçu :
               </div>
               <img
