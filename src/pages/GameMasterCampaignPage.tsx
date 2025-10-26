@@ -1430,6 +1430,8 @@ function EditCampaignItemModal({
       if (meta.type === 'shield' && meta.shield) {
         setShieldBonus(meta.shield.bonus ?? null);
       }
+      // ✅ NOUVEAU : Récupérer l'URL d'image
+setImageUrl(meta.imageUrl || '');
     } else {
       // Pas de méta : on peut laisser type null (objet générique)
       setType(null);
