@@ -1502,6 +1502,21 @@ setImageUrl(meta.imageUrl || '');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item]);
 
+  React.useEffect(() => {
+  if (type === 'weapon') {
+    setWeaponDamageDice((prev) => prev || '1d6');
+    setWeaponDamageType((prev) =>
+      prev && (DAMAGE_TYPES as readonly string[]).includes(prev as any) ? prev : 'Tranchant'
+    );
+    setWeaponRange((prev) =>
+      prev && (RANGES as readonly string[]).includes(prev as any) ? prev : 'Corps à corps'
+    );
+    setWeaponCategory((prev) =>
+      prev && (WEAPON_CATEGORIES as readonly string[]).includes(prev as any) ? prev : 'Armes courantes'
+    );
+  }
+}, [type]);
+
   // Construire l'objet meta à partir des champs
   const buildMeta = () => {
     if (!type) return null;
