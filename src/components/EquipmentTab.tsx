@@ -673,20 +673,19 @@ export function EquipmentTab({
       const weaponProperties = w?.properties;
       const proficiencyResult = checkWeaponProficiency(weaponName || name, playerWeaponProficiencies, explicitCategory, weaponProperties);
 
-      const payload = {
-        player_id: player.id,
-        name,
-        damage_dice: w?.damageDice || '1d6',
-        damage_type: w?.damageType || 'Tranchant',
-        range: w?.range || 'Corps à corps',
-        properties: w?.properties || '',
-        manual_attack_bonus: null,
-        manual_damage_bonus: null,
-        expertise: proficiencyResult.shouldApplyProficiencyBonus,
-        attack_type: 'physical' as const,
-        spell_level: null as any,
-        ammo_count: (existing as any)?.ammo_count ?? 0
-      };
+const payload = {
+  player_id: player.id,
+  name,
+  damage_dice: w?.damageDice || '1d6',
+  damage_type: w?.damageType || 'Tranchant',
+  range: w?.range || 'Corps à corps',
+  properties: w?.properties || '',
+  weapon_bonus: w?.bonus || null, // ✅ NOUVEAU (remplace manual_attack/damage_bonus)
+  expertise: proficiencyResult.shouldApplyProficiencyBonus,
+  attack_type: 'physical' as const,
+  spell_level: null as any,
+  ammo_count: (existing as any)?.ammo_count ?? 0
+};
 
       if (existing) {
         await attackService.updateAttack({ ...payload, id: existing.id });
