@@ -403,14 +403,8 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
     }
   };
 
-// ✅ MODIFIÉ : Bonus d'arme s'ajoute au calcul
 const getAttackBonus = (attack: Attack): number => {
   const weaponBonus = attack.weapon_bonus ?? 0;
-
-  // 1. Bonus manuel a la priorité absolue (se substitue)
-  if (attack.manual_attack_bonus !== null && attack.manual_attack_bonus !== undefined) {
-    return attack.manual_attack_bonus + weaponBonus;
-  }
 
   const proficiencyBonus = player.stats?.proficiency_bonus || 2;
 
