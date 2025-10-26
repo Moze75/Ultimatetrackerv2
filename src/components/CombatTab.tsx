@@ -86,8 +86,7 @@ const AttackEditModal = ({ attack, onClose, onSave, onDelete }: AttackEditModalP
       : 'Tranchant',
     range: attack?.range || 'Corps à corps',
     properties: attack?.properties || '',
-    manual_attack_bonus: attack?.manual_attack_bonus ?? null,
-    manual_damage_bonus: attack?.manual_damage_bonus ?? null,
+  weapon_bonus: attack?.weapon_bonus ?? null, // ✅ NOUVEAU
     expertise: attack?.expertise || false,
     ammo_type: (attack as any)?.ammo_type || '',
     override_ability: attack?.override_ability || null // ✅ AJOUT
