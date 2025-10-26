@@ -143,7 +143,17 @@ export function CustomItemModal({
               <div><label className="block text-xs text-gray-400 mb-1">Dés de dégâts</label><input className="input-dark w-full px-3 py-2 rounded-md" value={wDice} onChange={e => setWDice(e.target.value)} placeholder="1d6" /></div>
               <div><label className="block text-xs text-gray-400 mb-1">Type de dégâts</label><select className="input-dark w-full px-3 py-2 rounded-md" value={wType} onChange={e => setWType(e.target.value as any)}><option>Tranchant</option><option>Perforant</option><option>Contondant</option></select></div>
               <div><label className="block text-xs text-gray-400 mb-1">Propriété(s)</label><input className="input-dark w-full px-3 py-2 rounded-md" value={wProps} onChange={e => setWProps(e.target.value)} placeholder="Finesse, Polyvalente..." /></div>
-              <div><label className="block text-xs text-gray-400 mb-1">Portée</label><input className="input-dark w-full px-3 py-2 rounded-md" value={wRange} onChange={e => setWRange(e.target.value)} placeholder="Corps à corps, 6 m..." /></div>
+              <div><label className="block text-xs text-gray-400 mb-1">Portée</label><input className="input-dark w-full px-3 py-2 rounded-md" value={wRange} onChange={e => setWRange(e.target.value)} placeholder="Ex: Corps à corps, 18 m" /></div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Bonus de l'arme (optionnel)</label>
+                <input 
+                  type="number" 
+                  className="input-dark w-full px-3 py-2 rounded-md" 
+                  value={wBonus ?? ''} 
+                  onChange={e => setWBonus(e.target.value ? parseInt(e.target.value) : null)} 
+                  placeholder="Ex: 1, 2, 3 pour arme +1, +2, +3"
+                />
+              </div>
             </div>
             <div>
               <label className="block text-xs text-gray-400 mb-1">Catégorie d'arme</label>
