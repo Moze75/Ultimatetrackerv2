@@ -1389,6 +1389,7 @@ function EditCampaignItemModal({
   const [weaponProperties, setWeaponProperties] = useState<string>('');
   const [weaponRange, setWeaponRange] = useState<string>('');
   const [weaponCategory, setWeaponCategory] = useState<string>('');
+  const [weaponBonus, setWeaponBonus] = useState<number | null>(null);
   // shield
   const [shieldBonus, setShieldBonus] = useState<number | null>(null);
   const [imageUrl, setImageUrl] = React.useState<string>('');
