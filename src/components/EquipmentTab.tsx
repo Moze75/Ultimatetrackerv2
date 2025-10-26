@@ -673,6 +673,14 @@ export function EquipmentTab({
     const weaponProperties = w?.properties;
     const proficiencyResult = checkWeaponProficiency(weaponName || name, playerWeaponProficiencies, explicitCategory, weaponProperties);
 
+      // ✅ DEBUG LOGS
+    console.log('🔧 [EquipmentTab] createOrUpdateWeaponAttack:', {
+      name,
+      weaponMeta: w,
+      'w?.weapon_bonus': w?.weapon_bonus,
+      'existing?.weapon_bonus': existing?.weapon_bonus
+    });
+
     // ✅ CORRECTION : Extraire weapon_bonus depuis w ou conserver celui existant
     const weaponBonus = w?.weapon_bonus !== undefined && w?.weapon_bonus !== null 
       ? w.weapon_bonus 
