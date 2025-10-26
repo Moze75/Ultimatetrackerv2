@@ -841,7 +841,17 @@ export function EquipmentTab({
     };
           updatedWeapons = [...currentWeapons.filter((w: any) => w.inventory_item_id !== freshItem.id), weaponData];
 
-          await createOrUpdateWeaponAttack(freshItem.name, meta.weapon, freshItem.name);
+     // ✅ CORRECTION : Passer meta.weapon complet (incluant weapon_bonus)
+const weaponMetaToPass: WeaponMeta | null = meta.weapon ? {
+  damageDice: meta.weapon.damageDice || '1d6',
+  damageType: meta.weapon.damageType || 'Tranchant',
+  properties: meta.weapon.properties || '',
+  range: meta.weapon.range || 'Corps à corps',
+  category: meta.weapon.category,
+  weapon_bonus: meta.weapon.weapon_bonus ?? null  // ✅ EXTRACTION DU BONUS
+} : null;
+
+await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.name);
 
           if (proficiencyResult.shouldApplyProficiencyBonus) {
             toast.success('Arme équipée avec bonus de maîtrise');
