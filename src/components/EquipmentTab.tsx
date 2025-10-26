@@ -277,7 +277,17 @@ const InfoBubble = ({
               <div className="flex items-center justify-between"><span className="text-gray-400">Type</span><span className="font-medium text-gray-100">{equipment.weapon_meta.damageType}</span></div>
               {equipment.weapon_meta.properties && <div className="flex items-center justify-between"><span className="text-gray-400">Propriété</span><span className="font-medium text-gray-100">{equipment.weapon_meta.properties}</span></div>}
               {equipment.weapon_meta.range && <div className="flex items-center justify-between"><span className="text-gray-400">Portée</span><span className="font-medium text-gray-100">{equipment.weapon_meta.range}</span></div>}
-              
+              {type === 'weapon' && equipment.weapon_meta && (
+  <div className="mt-1 text-sm text-gray-300 space-y-1">
+    <div className="flex items-center justify-between"><span className="text-gray-400">Dés</span><span className="font-medium text-gray-100">{equipment.weapon_meta.damageDice}</span></div>
+    <div className="flex items-center justify-between"><span className="text-gray-400">Type</span><span className="font-medium text-gray-100">{equipment.weapon_meta.damageType}</span></div>
+    {equipment.weapon_meta.properties && <div className="flex items-center justify-between"><span className="text-gray-400">Propriété</span><span className="font-medium text-gray-100">{equipment.weapon_meta.properties}</span></div>}
+    {equipment.weapon_meta.range && <div className="flex items-center justify-between"><span className="text-gray-400">Portée</span><span className="font-medium text-gray-100">{equipment.weapon_meta.range}</span></div>}
+    {/* ✅ NOUVEAU : Afficher le bonus */}
+    {equipment.weapon_meta.bonus && (
+      <div className="flex items-center justify-between">
+        <span className="text-gray-400">Bonus</span>
+        <span className="font-medium text-purple-400">+{equipment.weapon_meta.bonus}</span>
             </div> 
           )}
         </div>
