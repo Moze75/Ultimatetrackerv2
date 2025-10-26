@@ -72,36 +72,45 @@ export function CustomItemModal({
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-  const add = () => {
-    const cleanNameRaw = name.trim();
-    if (!cleanNameRaw) return toast.error('Nom requis');
-    if (quantity <= 0) return toast.error('Quantité invalide');
-    const cleanName = smartCapitalize(cleanNameRaw);
-    let meta: ItemMeta = { 
-  type, 
-  quantity, 
-  equipped: false,
-  imageUrl: imageUrl.trim() || undefined 
-};
-    if (type === 'armor') {
-      const cap = armDexCap === '' ? null : Number(armDexCap);
-      meta.armor = { base: armBase, addDex: armAddDex, dexCap: cap, label: `${armBase}${armAddDex ? ` + modificateur de Dex${cap != null ? ` (max ${cap})` : ''}` : ''}` };
-    } else if (type === 'shield') {
-      meta.shield = { bonus: shieldBonus };
-    } else if (type === 'weapon') {
-    } else if (type === 'weapon') {
-      meta.weapon = { 
-        damageDice: wDice, 
-        damageType: wType, 
-        properties: wProps, 
-        range: wRange, 
-        category: wCategory,
-        weapon_bonus: wBonus
-      };
-    }
-    onAdd({ name: cleanName, description: description.trim(), meta });
-    onClose();
+const add = () => {
+  const cleanNameRaw = name.trim();
+  if (!cleanNameRaw) return toast.error('Nom requis');
+  if (quantity <= 0) return toast.error('Quantité invalide');
+
+  const cleanName = smartCapitalize(cleanNameRaw);
+
+  // ✅ Construire la méta complète et correcte
+  const meta: ItemMeta = {
+    type,
+    quantity,
+    equipped: false,
+    imageUrl: imageUrl.trim() || undefined
   };
+
+  if (type === 'armor') {
+    const cap = armDexCap === '' ? null : Number(armDexCap);
+    meta.armor = {
+      base: armBase,
+      addDex: armAddDex,
+      dexCap: cap,
+      label: `${armBase}${armAddDex ? ` + modificateur de Dex${cap != null ? ` (max ${cap})` : ''}` : ''}`
+    };
+  } else if (type === 'shield') {
+    meta.shield = { bonus: shieldBonus };
+  } else if (type === 'weapon') {
+    meta.weapon = {
+      damageDice: wDice,
+      damageType: wType,
+      properties: wProps,
+      range: wRange,
+      category: wCategory,
+      weapon_bonus: wBonus
+    };
+  }
+
+  onAdd({ name: cleanName, description: description.trim(), meta });
+  onClose();
+};
 
   return ( 
 
