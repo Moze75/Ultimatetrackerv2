@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 // Réutilisation des modals d'équipement
 import { CustomItemModal } from '../components/modals/CustomItemModal';
 import { EquipmentListModal } from '../components/modals/EquipmentListModal';
+import { ImageUrlInput } from '../components/ImageUrlInput';
 
 interface GameMasterCampaignPageProps {
   session: any;
