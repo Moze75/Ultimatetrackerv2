@@ -151,6 +151,7 @@ export interface Attack {
   created_at: string;
   manual_attack_bonus?: number | null;
   manual_damage_bonus?: number | null;
+  weapon_bonus?: number | null;
   attack_type?: 'physical' | 'spell';
   spell_level?: number | null;
 
