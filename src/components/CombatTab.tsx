@@ -224,26 +224,21 @@ const AttackEditModal = ({ attack, onClose, onSave, onDelete }: AttackEditModalP
  
 
 
-          {/* ✅ NOUVEAU : Bonus de l'arme */}
+             {/* ✅ Bonus de l'arme (lecture seule) */}
           <div className="border-t border-gray-700 pt-4 mt-4">
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Bonus de l'arme (vide = aucun)
-              <span className="text-xs text-gray-500 ml-2">(s'ajoute aux calculs d'attaque et de dégâts)</span>
+              Bonus de l'arme
+              <span className="text-xs text-gray-500 ml-2">(défini dans l'onglet Équipement)</span>
             </label>
-            <input
-              type="number"
-              value={formData.weapon_bonus ?? ''}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  weapon_bonus: e.target.value ? parseInt(e.target.value) : null
-                })
-              }
-              className="input-dark w-full px-3 py-2 rounded-md border border-gray-600 focus:border-red-500"
-              placeholder="Ex: 1, 2, 3 pour une arme +1, +2, +3"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Ce bonus s'ajoute au calcul automatique d'attaque et de dégâts (ex: +2 pour une arme magique +2)
+            <div className="bg-gray-700/50 px-4 py-3 rounded-md border border-gray-600">
+              <span className="text-gray-100 font-medium">
+                {formData.weapon_bonus !== null && formData.weapon_bonus !== undefined 
+                  ? `+${formData.weapon_bonus}` 
+                  : 'Aucun bonus'}
+              </span>
+            </div>
+            <p className="text-xs text-gray-400 mt-2">
+              💡 Pour modifier le bonus de cette arme, allez dans <span className="text-purple-400 font-medium">Onglet Sac → Paramètres de l'arme</span>
             </p>
           </div>
 
