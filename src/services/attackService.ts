@@ -3,8 +3,15 @@ import { Attack } from '../types/dnd';
 
 /**
  * Service pour gérer les requêtes liées aux attaques
+ * Gère maintenant le champ override_ability pour permettre
+ * de forcer une caractéristique spécifique (ex: Charisme pour l'Occultiste)
  */
 export const attackService = {
+  /**
+   * Récupérer les attaques d'un joueur
+   * @param playerId - ID du joueur
+   * @returns Liste des attaques du joueur
+   */
   async getPlayerAttacks(playerId: string): Promise<Attack[]> {
     try {
       const { data, error } = await supabase
@@ -21,13 +28,20 @@ export const attackService = {
     }
   },
 
+  /**
+   * Ajouter une nouvelle attaque
+   * @param attack - Données de l'attaque à créer
+   * @returns L'attaque créée ou null en cas d'erreur
+   */
   async addAttack(attack: Partial<Attack>): Promise<Attack | null> {
     try {
+      // Validation minimale
       if (!attack.player_id || !attack.name) {
         console.error('[attackService] Données invalides: player_id et name sont requis');
         return null;
       }
 
+      // Préparer les données avec tous les champs (incluant override_ability)
       const attackData = {
         player_id: attack.player_id,
         name: attack.name,
@@ -37,13 +51,12 @@ export const attackService = {
         properties: attack.properties || '',
         manual_attack_bonus: attack.manual_attack_bonus ?? null,
         manual_damage_bonus: attack.manual_damage_bonus ?? null,
-        // ✅ AJOUT : persist weapon_bonus
-        weapon_bonus: attack.weapon_bonus ?? null,
         expertise: attack.expertise ?? false,
         attack_type: attack.attack_type || 'physical',
         spell_level: attack.spell_level ?? null,
         ammo_count: attack.ammo_count ?? 0,
         ammo_type: attack.ammo_type ?? null,
+        // ✅ AJOUT : Gestion de override_ability
         override_ability: attack.override_ability ?? null
       };
 
@@ -66,6 +79,11 @@ export const attackService = {
     }
   },
 
+  /**
+   * Mettre à jour une attaque existante
+   * @param attack - Données de l'attaque à mettre à jour (doit contenir l'id)
+   * @returns L'attaque mise à jour ou null en cas d'erreur
+   */
   async updateAttack(attack: Partial<Attack> & { id: string }): Promise<Attack | null> {
     try {
       if (!attack.id) {
@@ -73,12 +91,13 @@ export const attackService = {
         return null;
       }
 
+      // Extraire l'ID et préparer les données de mise à jour
       const { id, ...updateData } = attack;
 
-      // Inclure weapon_bonus s'il est fourni explicitement (préserver les autres champs)
+      // S'assurer que override_ability est inclus dans les mises à jour
       const finalUpdateData = {
         ...updateData,
-        ...(attack.weapon_bonus !== undefined && { weapon_bonus: attack.weapon_bonus }),
+        // ✅ AJOUT : Préserver override_ability si fourni
         ...(attack.override_ability !== undefined && { override_ability: attack.override_ability })
       };
 
@@ -102,6 +121,11 @@ export const attackService = {
     }
   },
 
+  /**
+   * Supprimer une attaque
+   * @param attackId - ID de l'attaque à supprimer
+   * @returns true si la suppression a réussi, false sinon
+   */
   async removeAttack(attackId: string): Promise<boolean> {
     try {
       if (!attackId) {
@@ -127,6 +151,11 @@ export const attackService = {
     }
   },
 
+  /**
+   * Récupérer une attaque par son ID
+   * @param attackId - ID de l'attaque
+   * @returns L'attaque ou null si non trouvée
+   */
   async getAttackById(attackId: string): Promise<Attack | null> {
     try {
       const { data, error } = await supabase
@@ -143,11 +172,17 @@ export const attackService = {
     }
   },
 
+  /**
+   * Dupliquer une attaque (utile pour créer des variantes)
+   * @param attackId - ID de l'attaque à dupliquer
+   * @param newName - Nouveau nom pour l'attaque dupliquée
+   * @returns L'attaque dupliquée ou null en cas d'erreur
+   */
   async duplicateAttack(attackId: string, newName?: string): Promise<Attack | null> {
     try {
       const original = await this.getAttackById(attackId);
       if (!original) {
-        console.error('[attackService] Attaque originale non trouvée');
+        console.error('[attackService] Attaque originale non trouvée'); 
         return null;
       }
 
@@ -160,13 +195,12 @@ export const attackService = {
         properties: original.properties,
         manual_attack_bonus: original.manual_attack_bonus,
         manual_damage_bonus: original.manual_damage_bonus,
-        // ✅ AJOUT : copier weapon_bonus
-        weapon_bonus: original.weapon_bonus ?? null,
         expertise: original.expertise,
         attack_type: original.attack_type,
         spell_level: original.spell_level,
-        ammo_count: 0,
+        ammo_count: 0, // Reset du compteur de munitions
         ammo_type: original.ammo_type,
+        // ✅ AJOUT : Copier override_ability
         override_ability: original.override_ability
       };
 
