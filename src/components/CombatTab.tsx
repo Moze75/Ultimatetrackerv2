@@ -413,82 +413,86 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
     }
   };
 
-  // ✅ MODIFIÉ : Prise en compte de override_ability
-  const getAttackBonus = (attack: Attack): number => {
-    // 1. Bonus manuel a la priorité absolue
-    if (attack.manual_attack_bonus !== null && attack.manual_attack_bonus !== undefined) {
-      return attack.manual_attack_bonus;
-    }
+// ✅ MODIFIÉ : Bonus d'arme s'ajoute au calcul
+const getAttackBonus = (attack: Attack): number => {
+  const weaponBonus = attack.weapon_bonus ?? 0;
 
-    const proficiencyBonus = player.stats?.proficiency_bonus || 2;
+  // 1. Bonus manuel a la priorité absolue (se substitue)
+  if (attack.manual_attack_bonus !== null && attack.manual_attack_bonus !== undefined) {
+    return attack.manual_attack_bonus + weaponBonus;
+  }
 
-    // 2. Caractéristique forcée (override_ability)
-    if (attack.override_ability) {
-      const ability = player.abilities?.find((a) => a.name === attack.override_ability);
-      const abilityMod = ability?.modifier || 0;
-      const masteryBonus = attack.expertise ? proficiencyBonus : 0;
-      return abilityMod + masteryBonus;
-    }
+  const proficiencyBonus = player.stats?.proficiency_bonus || 2;
 
-    // 3. Calcul automatique selon la classe
-    let abilityModifier = 0;
-    if (player.abilities) {
-      if (player.class === 'Ensorceleur' || player.class === 'Barde' || player.class === 'Paladin') {
-        const chaAbility = player.abilities.find((a) => a.name === 'Charisme');
-        abilityModifier = chaAbility?.modifier || 0;
-      } else if (player.class === 'Moine' || player.class === 'Roublard') {
-        const dexAbility = player.abilities.find((a) => a.name === 'Dextérité');
-        abilityModifier = dexAbility?.modifier || 0;
-      } else {
-        if (attack.range?.toLowerCase().includes('distance') || attack.range?.toLowerCase().includes('portée')) {
-          const dexAbility = player.abilities.find((a) => a.name === 'Dextérité');
-          abilityModifier = dexAbility?.modifier || 0;
-        } else {
-          const strAbility = player.abilities.find((a) => a.name === 'Force');
-          abilityModifier = strAbility?.modifier || 0;
-        }
-      }
-    }
-
+  // 2. Caractéristique forcée (override_ability)
+  if (attack.override_ability) {
+    const ability = player.abilities?.find((a) => a.name === attack.override_ability);
+    const abilityMod = ability?.modifier || 0;
     const masteryBonus = attack.expertise ? proficiencyBonus : 0;
-    return abilityModifier + masteryBonus;
-  };
+    return abilityMod + masteryBonus + weaponBonus;
+  }
 
-  // ✅ MODIFIÉ : Prise en compte de override_ability
-  const getDamageBonus = (attack: Attack): number => {
-    // 1. Bonus manuel a la priorité absolue
-    if (attack.manual_damage_bonus !== null && attack.manual_damage_bonus !== undefined) {
-      return attack.manual_damage_bonus;
-    }
-
-    // 2. Caractéristique forcée (override_ability)
-    if (attack.override_ability) {
-      const ability = player.abilities?.find((a) => a.name === attack.override_ability);
-      return ability?.modifier || 0;
-    }
-
-    // 3. Calcul automatique selon la classe
-    let abilityModifier = 0;
-    if (player.abilities) {
-      if (player.class === 'Ensorceleur' || player.class === 'Barde' || player.class === 'Paladin') {
-        const chaAbility = player.abilities.find((a) => a.name === 'Charisme');
-        abilityModifier = chaAbility?.modifier || 0;
-      } else if (player.class === 'Moine' || player.class === 'Roublard') {
+  // 3. Calcul automatique selon la classe
+  let abilityModifier = 0;
+  if (player.abilities) {
+    if (player.class === 'Ensorceleur' || player.class === 'Barde' || player.class === 'Paladin') {
+      const chaAbility = player.abilities.find((a) => a.name === 'Charisme');
+      abilityModifier = chaAbility?.modifier || 0;
+    } else if (player.class === 'Moine' || player.class === 'Roublard') {
+      const dexAbility = player.abilities.find((a) => a.name === 'Dextérité');
+      abilityModifier = dexAbility?.modifier || 0;
+    } else {
+      if (attack.range?.toLowerCase().includes('distance') || attack.range?.toLowerCase().includes('portée')) {
         const dexAbility = player.abilities.find((a) => a.name === 'Dextérité');
         abilityModifier = dexAbility?.modifier || 0;
       } else {
-        if (attack.range?.toLowerCase().includes('distance') || attack.range?.toLowerCase().includes('portée')) {
-          const dexAbility = player.abilities.find((a) => a.name === 'Dextérité');
-          abilityModifier = dexAbility?.modifier || 0;
-        } else {
-          const strAbility = player.abilities.find((a) => a.name === 'Force');
-          abilityModifier = strAbility?.modifier || 0;
-        }
+        const strAbility = player.abilities.find((a) => a.name === 'Force');
+        abilityModifier = strAbility?.modifier || 0;
       }
     }
+  }
 
-    return abilityModifier;
-  };
+  const masteryBonus = attack.expertise ? proficiencyBonus : 0;
+  return abilityModifier + masteryBonus + weaponBonus;
+};
+
+// ✅ MODIFIÉ : Bonus d'arme s'ajoute au calcul
+const getDamageBonus = (attack: Attack): number => {
+  const weaponBonus = attack.weapon_bonus ?? 0;
+
+  // 1. Bonus manuel a la priorité absolue (se substitue)
+  if (attack.manual_damage_bonus !== null && attack.manual_damage_bonus !== undefined) {
+    return attack.manual_damage_bonus + weaponBonus;
+  }
+
+  // 2. Caractéristique forcée (override_ability)
+  if (attack.override_ability) {
+    const ability = player.abilities?.find((a) => a.name === attack.override_ability);
+    return (ability?.modifier || 0) + weaponBonus;
+  }
+
+  // 3. Calcul automatique selon la classe
+  let abilityModifier = 0;
+  if (player.abilities) {
+    if (player.class === 'Ensorceleur' || player.class === 'Barde' || player.class === 'Paladin') {
+      const chaAbility = player.abilities.find((a) => a.name === 'Charisme');
+      abilityModifier = chaAbility?.modifier || 0;
+    } else if (player.class === 'Moine' || player.class === 'Roublard') {
+      const dexAbility = player.abilities.find((a) => a.name === 'Dextérité');
+      abilityModifier = dexAbility?.modifier || 0;
+    } else {
+      if (attack.range?.toLowerCase().includes('distance') || attack.range?.toLowerCase().includes('portée')) {
+        const dexAbility = player.abilities.find((a) => a.name === 'Dextérité');
+        abilityModifier = dexAbility?.modifier || 0;
+      } else {
+        const strAbility = player.abilities.find((a) => a.name === 'Force');
+        abilityModifier = strAbility?.modifier || 0;
+      }
+    }
+  }
+
+  return abilityModifier + weaponBonus;
+};
 
   const rollAttack = (attack: Attack) => {
     const attackBonus = getAttackBonus(attack);
