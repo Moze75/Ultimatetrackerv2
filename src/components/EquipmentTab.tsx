@@ -1170,8 +1170,20 @@ export function EquipmentTab({
               return (
                 <div key={item.id} className="bg-gray-800/40 border border-gray-700/40 rounded-md">
                   <div className="flex items-start justify-between p-2">
-                    <div className="flex-1 mr-2">
-                      <div className="flex items-center gap-2">
+  {/* ✅ NOUVEAU : Miniature de l'image */}
+  {meta?.imageUrl && (
+    <img
+      src={meta.imageUrl}
+      alt={item.name}
+      className="w-12 h-12 rounded object-cover border border-gray-600/50 mr-2 flex-shrink-0"
+      onError={(e) => {
+        (e.target as HTMLImageElement).style.display = 'none';
+      }}
+    />
+  )}
+  
+  <div className="flex-1 mr-2">
+    <div className="flex items-center gap-2">
                         <button onClick={() => toggleExpand(item.id)} className="text-left text-gray-100 font-medium hover:underline break-words">
                           {smartCapitalize(item.name)}
                         </button>
