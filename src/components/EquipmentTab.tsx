@@ -812,26 +812,33 @@ export function EquipmentTab({
           await saveEquipment('shield', eq);
           toast.success('Bouclier équipé');
         }
-      } else if (meta.type === 'weapon') {
-        const targetEquipped = mode === 'equip';
-        if (meta.equipped === targetEquipped) return;
+    } else if (meta.type === 'weapon') {
+  const targetEquipped = mode === 'equip';
+  if (meta.equipped === targetEquipped) return;
 
-        const explicitCategory = meta.weapon?.category;
-        const weaponProperties = meta.weapon?.properties;
-        const proficiencyResult = checkWeaponProficiency(freshItem.name, playerWeaponProficiencies, explicitCategory, weaponProperties);
-        const nextMeta = { ...meta, equipped: targetEquipped, forced: !proficiencyResult.isProficient && targetEquipped }; // forced indicatif
-        await updateItemMetaComplete(freshItem, nextMeta);
+  const explicitCategory = meta.weapon?.category;
+  const weaponProperties = meta.weapon?.properties;
+  const proficiencyResult = checkWeaponProficiency(freshItem.name, playerWeaponProficiencies, explicitCategory, weaponProperties);
+  const nextMeta = { ...meta, equipped: targetEquipped, forced: !proficiencyResult.isProficient && targetEquipped };
+  await updateItemMetaComplete(freshItem, nextMeta);
 
-        const currentWeapons = (player.equipment as any)?.weapons || [];
-        let updatedWeapons;
+  const currentWeapons = (player.equipment as any)?.weapons || [];
+  let updatedWeapons;
 
-        if (targetEquipped) {
-          const weaponData = {
-            inventory_item_id: freshItem.id,
-            name: freshItem.name,
-            description: visibleDescription(freshItem.description),
-            weapon_meta: meta.weapon || null
-          };
+  if (targetEquipped) {
+    // ✅ CORRECTION : Extraire weapon_bonus depuis meta.weapon
+    console.log('🔍 [EquipmentTab] Avant createOrUpdateWeaponAttack:', {
+      itemName: freshItem.name,
+      'meta.weapon': meta?.weapon,
+      'meta.weapon?.weapon_bonus': meta?.weapon?.weapon_bonus
+    });
+
+    const weaponData = {
+      inventory_item_id: freshItem.id,
+      name: freshItem.name,
+      description: visibleDescription(freshItem.description),
+      weapon_meta: meta.weapon || null
+    };
           updatedWeapons = [...currentWeapons.filter((w: any) => w.inventory_item_id !== freshItem.id), weaponData];
 
           await createOrUpdateWeaponAttack(freshItem.name, meta.weapon, freshItem.name);
