@@ -1483,7 +1483,8 @@ const baseMeta: any = {
         damageType: weaponDamageType || '',
         properties: weaponProperties || '',
         range: weaponRange || '',
-        category: weaponCategory || ''
+        category: weaponCategory || '',
+        weapon_bonus: weaponBonus
       };
     } else if (type === 'shield') {
       baseMeta.shield = {
