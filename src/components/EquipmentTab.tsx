@@ -35,13 +35,12 @@ interface Equipment {
 
   shield_bonus?: number | null;
  
-interface WeaponMeta {
-  damageDice: string;
-  damageType: 'Tranchant' | 'Perforant' | 'Contondant';
-  properties: string;
-  range: string;
-  category?: WeaponCategory;
-  bonus?: number; // ✅ NOUVEAU
+  weapon_meta?: {
+    damageDice: string;
+    damageType: 'Tranchant' | 'Perforant' | 'Contondant';
+    properties: string;
+    range: string;
+  } | null;
 }
 
 type MetaType = 'armor' | 'shield' | 'weapon' | 'potion' | 'equipment' | 'jewelry' | 'tool' | 'other';
@@ -53,6 +52,7 @@ interface WeaponMeta {
   properties: string;
   range: string;
   category?: WeaponCategory;
+  bonus?: number; // ✅ NOUVEAU
 }
 interface ArmorMeta {
   base: number;
