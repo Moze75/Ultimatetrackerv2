@@ -91,8 +91,8 @@ const AttackEditModal = ({ attack, onClose, onSave, onDelete }: AttackEditModalP
     manual_damage_bonus: attack?.manual_damage_bonus ?? null,
     expertise: attack?.expertise || false,
     ammo_type: (attack as any)?.ammo_type || '',
-    override_ability: attack?.override_ability || null 
-    weapon_bonus: attack?.weapon_bonus ?? null // ✅ AJOUT
+    override_ability: attack?.override_ability || null // ✅ AJOUT
+     
   });
 
   const handleSave = () => {
