@@ -110,14 +110,14 @@ export function InventoryItemEditModal({
       };
 
       // Ajouter les métadonnées spécifiques selon le type
-      if (type === 'weapon') {
+         if (type === 'weapon') {
         newMeta.weapon = {
           damageDice: wDice,
           damageType: wType,
           properties: wProps,
           range: wRange,
           category: wCategory,
-          bonus: wBonus || undefined,
+          weapon_bonus: wBonus  // ✅ CORRECTION : utiliser weapon_bonus au lieu de bonus
         };
       } else if (type === 'armor') {
         newMeta.armor = {
