@@ -1204,9 +1204,27 @@ export function EquipmentTab({
                           )}
                         </div>
                       )}
-                      {expanded[item.id] && !(isArmor || isShield || isWeapon) && (
-                        <div className="text-sm text-gray-300 mt-2 whitespace-pre-wrap">{visibleDescription(item.description)}</div>
-                      )}
+{expanded[item.id] && !(isArmor || isShield || isWeapon) && (
+  <div className="mt-2 space-y-2">
+    {/* ✅ Image pour les autres types d'items */}
+    {meta?.imageUrl && (
+      <div className="mb-3">
+        <img
+          src={meta.imageUrl}
+          alt={item.name}
+          className="w-full max-w-sm rounded-lg border border-gray-600/50 shadow-lg"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
+        />
+      </div>
+    )}
+    
+    <div className="text-sm text-gray-300 whitespace-pre-wrap">
+      {visibleDescription(item.description)}
+    </div>
+  </div>
+)}
                     </div>
 
                     <div className="flex items-center gap-2">
