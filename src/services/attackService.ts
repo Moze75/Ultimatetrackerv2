@@ -28,7 +28,7 @@ export const attackService = {
       return [];
     }
   },
-
+console.log('[CombatTab] Attaques chargées:', attacks.map(a => ({ name: a.name, weapon_bonus: a.weapon_bonus })));
   /**
    * Ajouter une nouvelle attaque
    * @param attack - Données de l'attaque à créer
