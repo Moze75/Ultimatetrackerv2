@@ -26,6 +26,7 @@ interface CatalogItem {
   armor?: ArmorMeta;
   shield?: ShieldMeta;
   weapon?: WeaponMeta;
+  imageUrl?: string; // ✅ Support des images
 }
 
 /* Helpers locaux */
