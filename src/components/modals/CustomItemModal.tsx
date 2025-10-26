@@ -73,9 +73,9 @@ export function CustomItemModal({
       meta.armor = { base: armBase, addDex: armAddDex, dexCap: cap, label: `${armBase}${armAddDex ? ` + modificateur de Dex${cap != null ? ` (max ${cap})` : ''}` : ''}` };
     } else if (type === 'shield') {
       meta.shield = { bonus: shieldBonus };
-    } else if (type === 'weapon') {
-      meta.weapon = { damageDice: wDice, damageType: wType, properties: wProps, range: wRange, category: wCategory };
-    }
+  } else if (type === 'weapon') {
+  meta.weapon = { damageDice: wDice, damageType: wType, properties: wProps, range: wRange, category: wCategory, bonus: wBonus || undefined };
+}
     onAdd({ name: cleanName, description: description.trim(), meta });
     onClose();
   };
