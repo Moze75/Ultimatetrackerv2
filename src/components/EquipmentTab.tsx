@@ -1186,26 +1186,9 @@ export function EquipmentTab({
                         {meta?.type === 'other' && <span className="text-xs px-2 py-0.5 rounded bg-slate-900/30 text-slate-300">Autre</span>}
                       </div>
 
-{expanded[item.id] && (
-  <div className="mt-2 space-y-2">
-    {/* ✅ NOUVEAU : Image en grand quand dépliée */}
-    {meta?.imageUrl && (
-      <div className="mb-3">
-        <img
-          src={meta.imageUrl}
-          alt={item.name}
-          className="w-full max-w-sm rounded-lg border border-gray-600/50 shadow-lg"
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.display = 'none';
-          }}
-        />
-      </div>
-    )}
-    
-    {/* Propriétés techniques */}
-    {(isArmor || isShield || isWeapon) && (
-      <div className="text-xs text-gray-400 space-y-0.5">
-        {isArmor && meta?.armor && <div>CA: {meta.armor.label}</div>}
+                      {expanded[item.id] && (isArmor || isShield || isWeapon) && ( 
+                        <div className="text-xs text-gray-400 mt-2 space-y-0.5">
+                          {isArmor && meta?.armor && <div>CA: {meta.armor.label}</div>}
                           {isShield && meta?.shield && <div>Bonus de bouclier: +{meta.shield.bonus}</div>}
                           {isWeapon && meta?.weapon && (
                             <>
