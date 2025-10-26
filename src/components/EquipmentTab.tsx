@@ -1227,25 +1227,29 @@ const payload = {
       </div>
     )}
     
-    {/* Propriétés techniques pour armure/bouclier/arme */}
-    {(isArmor || isShield || isWeapon) && (
-      <div className="text-xs text-gray-400 space-y-0.5">
-        {isArmor && meta?.armor && <div>CA: {meta.armor.label}</div>}
-        {isShield && meta?.shield && <div>Bonus de bouclier: +{meta.shield.bonus}</div>}
-        {isWeapon && meta?.weapon && (
-          <>
-            <div>Dégâts: {meta.weapon.damageDice} {meta.weapon.damageType}</div>
-            {meta.weapon.properties && <div>Propriété: {meta.weapon.properties}</div>}
-            {meta.weapon.range && <div>Portée: {meta.weapon.range}</div>}
-            {notProficient && (
-              <div className="text-[10px] text-amber-300 mt-1">
-                Non maîtrisée : bonus de maîtrise non appliqué.
-              </div>
-            )}
-          </>
+{/* Propriétés techniques pour armure/bouclier/arme */}
+{(isArmor || isShield || isWeapon) && (
+  <div className="text-xs text-gray-400 space-y-0.5">
+    {isArmor && meta?.armor && <div>CA: {meta.armor.label}</div>}
+    {isShield && meta?.shield && <div>Bonus de bouclier: +{meta.shield.bonus}</div>}
+    {isWeapon && meta?.weapon && (
+      <>
+        <div>Dégâts: {meta.weapon.damageDice} {meta.weapon.damageType}</div>
+        {meta.weapon.properties && <div>Propriété: {meta.weapon.properties}</div>}
+        {meta.weapon.range && <div>Portée: {meta.weapon.range}</div>}
+        {/* ✅ NOUVEAU : Afficher le bonus */}
+        {meta.weapon.bonus && (
+          <div className="text-purple-400">Bonus: +{meta.weapon.bonus}</div>
         )}
-      </div>
+        {notProficient && (
+          <div className="text-[10px] text-amber-300 mt-1">
+            Non maîtrisée : bonus de maîtrise non appliqué.
+          </div>
+        )}
+      </>
     )}
+  </div>
+)}
     
     {/* Description pour les autres types d'items */}
     {!(isArmor || isShield || isWeapon) && (
