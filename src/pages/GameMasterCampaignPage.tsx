@@ -1467,20 +1467,7 @@ if (meta.type === 'weapon' && meta.weapon) {
       : 'Tranchant'
   );
 
-React.useEffect(() => {
-  if (type === 'weapon') {
-    setWeaponDamageDice((prev) => prev || '1d6');
-    setWeaponDamageType((prev) =>
-      prev && (DAMAGE_TYPES as readonly string[]).includes(prev as any) ? prev : 'Tranchant'
-    );
-    setWeaponRange((prev) =>
-      prev && (RANGES as readonly string[]).includes(prev as any) ? prev : 'Corps à corps'
-    );
-    setWeaponCategory((prev) =>
-      prev && (WEAPON_CATEGORIES as readonly string[]).includes(prev as any) ? prev : 'Armes courantes'
-    );
-  }
-}, [type]);
+
   
   setWeaponProperties(meta.weapon.properties || '');
   setWeaponRange(
