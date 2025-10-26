@@ -52,6 +52,7 @@ interface WeaponMeta {
   properties: string;
   range: string;
   category?: WeaponCategory;
+   weapon_bonus?: number | null; //
 }
 interface ArmorMeta {
   base: number;
