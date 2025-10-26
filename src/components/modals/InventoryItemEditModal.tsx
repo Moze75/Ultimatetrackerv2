@@ -117,6 +117,7 @@ export function InventoryItemEditModal({
           properties: wProps,
           range: wRange,
           category: wCategory,
+          bonus: wBonus || undefined,
         };
       } else if (type === 'armor') {
         newMeta.armor = {
