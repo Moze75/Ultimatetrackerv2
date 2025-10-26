@@ -686,7 +686,7 @@ export function EquipmentTab({
         attack_type: 'physical' as const,
         spell_level: null as any,
         ammo_count: (existing as any)?.ammo_count ?? 0
-          weapon_bonus: w?.weapon_bonus ?? null 
+          
       };
 
       if (existing) {
