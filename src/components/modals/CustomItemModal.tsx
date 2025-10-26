@@ -5,10 +5,24 @@ import toast from 'react-hot-toast';
 
 /* Types locaux alignés */
 type MetaType = 'armor' | 'shield' | 'weapon' | 'potion' | 'equipment' | 'jewelry' | 'tool' | 'other';
-type WeaponCategory = 'Armes courantes' | 'Armes de guerre' | 'Armes de guerre dotées de la propriété Légère' | 'Armes de guerre présentant la propriété Finesse ou Légère';
-interface WeaponMeta { damageDice: string; damageType: 'Tranchant' | 'Perforant' | 'Contondant'; properties: string; range: string; category?: WeaponCategory; }
+type WeaponCategory =
+  | 'Armes courantes'
+  | 'Armes de guerre'
+  | 'Armes de guerre dotées de la propriété Légère'
+  | 'Armes de guerre présentant la propriété Finesse ou Légère';
+
+interface WeaponMeta {
+  damageDice: string;
+  damageType: 'Tranchant' | 'Perforant' | 'Contondant';
+  properties: string;
+  range: string;
+  category?: WeaponCategory;
+  weapon_bonus?: number | null; // ✅ ajout
+}
+
 interface ArmorMeta { base: number; addDex: boolean; dexCap?: number | null; label: string; }
 interface ShieldMeta { bonus: number; }
+
 export interface ItemMeta {
   type: MetaType;
   quantity?: number;
@@ -16,6 +30,7 @@ export interface ItemMeta {
   weapon?: WeaponMeta;
   armor?: ArmorMeta;
   shield?: ShieldMeta;
+  imageUrl?: string; // ✅ ajout
 }
 
 const stripPriceParentheses = (name: string) =>
