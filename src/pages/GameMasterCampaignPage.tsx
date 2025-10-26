@@ -1619,36 +1619,83 @@ const baseMeta: any = {
           )}
 
           {/* Champs pour arme */}
-          {type === 'weapon' && (
-            <div className="space-y-2 bg-gray-800/30 p-3 rounded">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs text-gray-400">Dégâts (ex: 1d6)</label>
-                  <input className="input-dark w-full px-2 py-1 rounded" value={weaponDamageDice} onChange={(e) => setWeaponDamageDice(e.target.value)} />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-400">Type de dégâts</label>
-                  <input className="input-dark w-full px-2 py-1 rounded" value={weaponDamageType} onChange={(e) => setWeaponDamageType(e.target.value)} />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-400">Propriétés</label>
-                  <input className="input-dark w-full px-2 py-1 rounded" value={weaponProperties} onChange={(e) => setWeaponProperties(e.target.value)} />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-400">Portée</label>
-                  <input className="input-dark w-full px-2 py-1 rounded" value={weaponRange} onChange={(e) => setWeaponRange(e.target.value)} />
-                </div>
-                                <div className="col-span-2">
-                  <label className="text-xs text-gray-400">Catégorie</label>
-                  <input className="input-dark w-full px-2 py-1 rounded" value={weaponCategory} onChange={(e) => setWeaponCategory(e.target.value)} />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-400">Bonus de l'arme</label>
-                  <input type="number" className="input-dark w-full px-2 py-1 rounded" value={weaponBonus ?? ''} onChange={(e) => setWeaponBonus(e.target.value ? parseInt(e.target.value) : null)} placeholder="Ex: 1, 2, 3" />
-                </div>
-              </div>
-            </div>
-          )}
+      {type === 'weapon' && (
+  <div className="space-y-2 bg-gray-800/30 p-3 rounded">
+    <div className="grid grid-cols-2 gap-2">
+      <div>
+        <label className="text-xs text-gray-400">Dégâts (ex: 1d6)</label>
+        <input
+          className="input-dark w-full px-2 py-1 rounded"
+          value={weaponDamageDice}
+          onChange={(e) => setWeaponDamageDice(e.target.value)}
+        />
+      </div>
+
+      <div>
+        <label className="text-xs text-gray-400">Type de dégâts</label>
+        <select
+          className="input-dark w-full px-2 py-1 rounded"
+          value={weaponDamageType || 'Tranchant'}
+          onChange={(e) => setWeaponDamageType(e.target.value)}
+        >
+          {DAMAGE_TYPES.map((dt) => (
+            <option key={dt} value={dt}>{dt}</option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="text-xs text-gray-400">Propriétés</label>
+        <input
+          className="input-dark w-full px-2 py-1 rounded"
+          value={weaponProperties}
+          onChange={(e) => setWeaponProperties(e.target.value)}
+          placeholder="Finesse, Légère…"
+        />
+      </div>
+
+      <div>
+        <label className="text-xs text-gray-400">Portée</label>
+        <select
+          className="input-dark w-full px-2 py-1 rounded"
+          value={weaponRange || 'Corps à corps'}
+          onChange={(e) => setWeaponRange(e.target.value)}
+        >
+          {RANGES.map((r) => (
+            <option key={r} value={r}>{r}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="col-span-2">
+        <label className="text-xs text-gray-400">Catégorie</label>
+        <select
+          className="input-dark w-full px-2 py-1 rounded"
+          value={weaponCategory || 'Armes courantes'}
+          onChange={(e) => setWeaponCategory(e.target.value)}
+        >
+          {WEAPON_CATEGORIES.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+        <p className="text-[10px] text-gray-500 mt-1">
+          La catégorie influence la maîtrise pour le calcul des attaques
+        </p>
+      </div>
+
+      <div>
+        <label className="text-xs text-gray-400">Bonus de l'arme</label>
+        <input
+          type="number"
+          className="input-dark w-full px-2 py-1 rounded"
+          value={weaponBonus ?? ''}
+          onChange={(e) => setWeaponBonus(e.target.value ? parseInt(e.target.value) : null)}
+          placeholder="Ex: 1, 2, 3"
+        />
+      </div>
+    </div>
+  </div>
+)}
 
           {/* Champs pour bouclier */}
           {type === 'shield' && (
