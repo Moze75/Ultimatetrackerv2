@@ -290,7 +290,7 @@ const InfoBubble = ({
         <span className="font-medium text-purple-400">+{equipment.weapon_meta.bonus}</span>
       </div>
 
-            </div> 
+           
           )}
         </div>
       ) : type === 'bag' ? (
