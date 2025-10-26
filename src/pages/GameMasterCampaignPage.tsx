@@ -1443,11 +1443,12 @@ setImageUrl(meta.imageUrl || '');
   // Construire l'objet meta à partir des champs
   const buildMeta = () => {
     if (!type) return null;
-    const baseMeta: any = {
-      type,
-      quantity: quantity || 1,
-      equipped: false,
-    };
+const baseMeta: any = {
+  type,
+  quantity: quantity || 1,
+  equipped: false,
+  imageUrl: imageUrl.trim() || undefined, // ✅ NOUVEAU
+};
 
     if (type === 'armor') {
       baseMeta.armor = {
