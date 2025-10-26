@@ -1186,27 +1186,9 @@ export function EquipmentTab({
                         {meta?.type === 'other' && <span className="text-xs px-2 py-0.5 rounded bg-slate-900/30 text-slate-300">Autre</span>}
                       </div>
 
-                      {expanded[item.id] && (isArmor || isShield || isWeapon) && ( 
-                        <div className="text-xs text-gray-400 mt-2 space-y-0.5">
-                          {isArmor && meta?.armor && <div>CA: {meta.armor.label}</div>}
-                          {isShield && meta?.shield && <div>Bonus de bouclier: +{meta.shield.bonus}</div>}
-                          {isWeapon && meta?.weapon && (
-                            <>
-                              <div>Dégâts: {meta.weapon.damageDice} {meta.weapon.damageType}</div>
-                              {meta.weapon.properties && <div>Propriété: {meta.weapon.properties}</div>}
-                              {meta.weapon.range && <div>Portée: {meta.weapon.range}</div>}
-                              {notProficient && (
-                                <div className="text-[10px] text-amber-300 mt-1">
-                                  Non maîtrisée : bonus de maîtrise non appliqué.
-                                </div>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      )}
-{expanded[item.id] && !(isArmor || isShield || isWeapon) && (
+{expanded[item.id] && (
   <div className="mt-2 space-y-2">
-    {/* ✅ Image pour les autres types d'items */}
+    {/* ✅ Image en grand quand dépliée */}
     {meta?.imageUrl && (
       <div className="mb-3">
         <img
@@ -1220,9 +1202,32 @@ export function EquipmentTab({
       </div>
     )}
     
-    <div className="text-sm text-gray-300 whitespace-pre-wrap">
-      {visibleDescription(item.description)}
-    </div>
+    {/* Propriétés techniques pour armure/bouclier/arme */}
+    {(isArmor || isShield || isWeapon) && (
+      <div className="text-xs text-gray-400 space-y-0.5">
+        {isArmor && meta?.armor && <div>CA: {meta.armor.label}</div>}
+        {isShield && meta?.shield && <div>Bonus de bouclier: +{meta.shield.bonus}</div>}
+        {isWeapon && meta?.weapon && (
+          <>
+            <div>Dégâts: {meta.weapon.damageDice} {meta.weapon.damageType}</div>
+            {meta.weapon.properties && <div>Propriété: {meta.weapon.properties}</div>}
+            {meta.weapon.range && <div>Portée: {meta.weapon.range}</div>}
+            {notProficient && (
+              <div className="text-[10px] text-amber-300 mt-1">
+                Non maîtrisée : bonus de maîtrise non appliqué.
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    )}
+    
+    {/* Description pour les autres types d'items */}
+    {!(isArmor || isShield || isWeapon) && (
+      <div className="text-sm text-gray-300 whitespace-pre-wrap">
+        {visibleDescription(item.description)}
+      </div>
+    )}
   </div>
 )}
                     </div>
