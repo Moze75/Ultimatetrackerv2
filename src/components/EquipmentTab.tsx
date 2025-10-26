@@ -70,6 +70,7 @@ interface ItemMeta {
   armor?: ArmorMeta;
   shield?: ShieldMeta;
   forced?: boolean; // --- ADDED (optionnel pour marquer un équipement forcé)
+   imageUrl?: string; // ✅ NOUVEAU : URL de l'image de l'item
 }
 
 const META_PREFIX = '#meta:';
