@@ -73,7 +73,8 @@ const AttackEditModal = ({ attack, onClose, onSave, onDelete }: AttackEditModalP
     damage_type: PhysicalDamage;
     range: string;
     properties: string;
-weapon_bonus: number | null;
+    manual_attack_bonus: number | null;
+    manual_damage_bonus: number | null;
     expertise: boolean;
     ammo_type: string;
     override_ability: Ability | null; // ✅ AJOUT
@@ -85,7 +86,8 @@ weapon_bonus: number | null;
       : 'Tranchant',
     range: attack?.range || 'Corps à corps',
     properties: attack?.properties || '',
-  weapon_bonus: attack?.weapon_bonus ?? null, // ✅ NOUVEAU
+    manual_attack_bonus: attack?.manual_attack_bonus ?? null,
+    manual_damage_bonus: attack?.manual_damage_bonus ?? null,
     expertise: attack?.expertise || false,
     ammo_type: (attack as any)?.ammo_type || '',
     override_ability: attack?.override_ability || null // ✅ AJOUT
@@ -96,16 +98,17 @@ weapon_bonus: number | null;
       toast.error("Le nom de l'attaque est obligatoire");
       return;
     }
-onSave({
-  name: formData.name,
-  damage_dice: formData.damage_dice,
-  damage_type: formData.damage_type,
-  range: formData.range,
-  properties: formData.properties,
-  weapon_bonus: formData.weapon_bonus, // ✅ NOUVEAU (remplace les 2 anciens)
-  expertise: formData.expertise,
-  ammo_type: formData.ammo_type.trim() || null,
-  override_ability: formData.override_ability
+    onSave({
+      name: formData.name,
+      damage_dice: formData.damage_dice,
+      damage_type: formData.damage_type,
+      range: formData.range,
+      properties: formData.properties,
+      manual_attack_bonus: formData.manual_attack_bonus,
+      manual_damage_bonus: formData.manual_damage_bonus,
+      expertise: formData.expertise,
+      ammo_type: formData.ammo_type.trim() || null,
+      override_ability: formData.override_ability // ✅ AJOUT
     });
   };
 
@@ -215,26 +218,23 @@ onSave({
             </p>
           </div>
 
-  <div className="border-t border-gray-700 pt-4">
-  <label className="block text-sm font-medium text-gray-300 mb-2">
-    Bonus de l'arme (attaque & dégâts)
-  </label>
-  <input
-    type="number"
-    value={formData.weapon_bonus ?? ''}
-    onChange={(e) =>
-      setFormData({
-        ...formData,
-        weapon_bonus: e.target.value ? parseInt(e.target.value) : null
-      })
-    }
-    className="input-dark w-full px-3 py-2 rounded-md border border-gray-600 focus:border-red-500"
-    placeholder="0"
-  />
-  <p className="text-xs text-gray-500 mt-1">
-    S'ajoute aux jets d'attaque et de dégâts (ex: +1 pour une épée +1)
-  </p>
-</div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Bonus d&apos;attaque manuel (vide = auto)
+            </label>
+            <input
+              type="number"
+              value={formData.manual_attack_bonus ?? ''}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  manual_attack_bonus: e.target.value ? parseInt(e.target.value) : null
+                })
+              }
+              className="input-dark w-full px-3 py-2 rounded-md border border-gray-600 focus:border-red-500"
+              placeholder="Laissez vide pour calcul automatique"
+            />
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -411,17 +411,24 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
   };
 
   // ✅ MODIFIÉ : Prise en compte de override_ability
- const getAttackBonus = (attack: Attack): number => {
-  const proficiencyBonus = player.stats?.proficiency_bonus || 2;
-  let abilityModifier = 0;
+  const getAttackBonus = (attack: Attack): number => {
+    // 1. Bonus manuel a la priorité absolue
+    if (attack.manual_attack_bonus !== null && attack.manual_attack_bonus !== undefined) {
+      return attack.manual_attack_bonus;
+    }
 
-  // 1. Déterminer le modificateur de caractéristique
-  if (attack.override_ability) {
-    // Caractéristique forcée
-    const ability = player.abilities?.find((a) => a.name === attack.override_ability);
-    abilityModifier = ability?.modifier || 0;
-  } else {
-    // Calcul automatique selon la classe
+    const proficiencyBonus = player.stats?.proficiency_bonus || 2;
+
+    // 2. Caractéristique forcée (override_ability)
+    if (attack.override_ability) {
+      const ability = player.abilities?.find((a) => a.name === attack.override_ability);
+      const abilityMod = ability?.modifier || 0;
+      const masteryBonus = attack.expertise ? proficiencyBonus : 0;
+      return abilityMod + masteryBonus;
+    }
+
+    // 3. Calcul automatique selon la classe
+    let abilityModifier = 0;
     if (player.abilities) {
       if (player.class === 'Ensorceleur' || player.class === 'Barde' || player.class === 'Paladin') {
         const chaAbility = player.abilities.find((a) => a.name === 'Charisme');
@@ -439,26 +446,26 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
         }
       }
     }
-  }
 
-  // 2. ✅ CALCUL FINAL : modificateur + maîtrise + bonus d'arme
-  const masteryBonus = attack.expertise ? proficiencyBonus : 0;
-  const weaponBonus = attack.weapon_bonus || 0; // ✅ NOUVEAU
-  
-  return abilityModifier + masteryBonus + weaponBonus; // ✅ MODIFIÉ
-};
+    const masteryBonus = attack.expertise ? proficiencyBonus : 0;
+    return abilityModifier + masteryBonus;
+  };
 
   // ✅ MODIFIÉ : Prise en compte de override_ability
   const getDamageBonus = (attack: Attack): number => {
-  let abilityModifier = 0;
+    // 1. Bonus manuel a la priorité absolue
+    if (attack.manual_damage_bonus !== null && attack.manual_damage_bonus !== undefined) {
+      return attack.manual_damage_bonus;
+    }
 
-  // 1. Déterminer le modificateur de caractéristique
-  if (attack.override_ability) {
-    // Caractéristique forcée
-    const ability = player.abilities?.find((a) => a.name === attack.override_ability);
-    abilityModifier = ability?.modifier || 0;
-  } else {
-    // Calcul automatique selon la classe
+    // 2. Caractéristique forcée (override_ability)
+    if (attack.override_ability) {
+      const ability = player.abilities?.find((a) => a.name === attack.override_ability);
+      return ability?.modifier || 0;
+    }
+
+    // 3. Calcul automatique selon la classe
+    let abilityModifier = 0;
     if (player.abilities) {
       if (player.class === 'Ensorceleur' || player.class === 'Barde' || player.class === 'Paladin') {
         const chaAbility = player.abilities.find((a) => a.name === 'Charisme');
@@ -476,13 +483,9 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
         }
       }
     }
-  }
 
-  // 2. ✅ CALCUL FINAL : modificateur + bonus d'arme
-  const weaponBonus = attack.weapon_bonus || 0; // ✅ NOUVEAU
-  
-  return abilityModifier + weaponBonus; // ✅ MODIFIÉ
-};
+    return abilityModifier;
+  };
 
   const rollAttack = (attack: Attack) => {
     const attackBonus = getAttackBonus(attack);
