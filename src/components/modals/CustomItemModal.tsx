@@ -61,7 +61,12 @@ export function CustomItemModal({
     if (!cleanNameRaw) return toast.error('Nom requis');
     if (quantity <= 0) return toast.error('Quantité invalide');
     const cleanName = smartCapitalize(cleanNameRaw);
-    let meta: ItemMeta = { type, quantity, equipped: false };
+    let meta: ItemMeta = { 
+  type, 
+  quantity, 
+  equipped: false,
+  imageUrl: imageUrl.trim() || undefined 
+};
     if (type === 'armor') {
       const cap = armDexCap === '' ? null : Number(armDexCap);
       meta.armor = { base: armBase, addDex: armAddDex, dexCap: cap, label: `${armBase}${armAddDex ? ` + modificateur de Dex${cap != null ? ` (max ${cap})` : ''}` : ''}` };
