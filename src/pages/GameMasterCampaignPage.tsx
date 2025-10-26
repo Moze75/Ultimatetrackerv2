@@ -2031,10 +2031,22 @@ if (matchingMember) {
                             : 'bg-gray-800/40 border-gray-700/50 hover:bg-gray-700/40'
                         }`}
                       >
-                        <div className="flex items-start gap-3">
-                          {/* Checkbox */}
-                          <input
-                            type="checkbox"
+<div className="flex items-start gap-3">
+  {/* ✅ NOUVEAU : Miniature de l'item */}
+  {meta?.imageUrl && (
+    <img
+      src={meta.imageUrl}
+      alt={item.name}
+      className="w-12 h-12 rounded object-cover border border-gray-600/50 flex-shrink-0"
+      onError={(e) => {
+        (e.target as HTMLImageElement).style.display = 'none';
+      }}
+    />
+  )}
+  
+  {/* Checkbox */}
+  <input
+    type="checkbox"
                             checked={isSelected}
                             onChange={() => toggleItem(item.id)}
                             className="mt-1 w-4 h-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500"
