@@ -162,6 +162,9 @@ export interface Attack {
   override_ability?: 'Force' | 'Dextérité' | 'Constitution' | 'Intelligence' | 'Sagesse' | 'Charisme' | null;
 }
 
+  // ✅ NOUVEAU : Bonus de l'arme (s'ajoute aux calculs d'attaque et de dégâts)
+  weapon_bonus?: number | null;
+
 export interface Player {
   id: string;
   user_id?: string | null;
