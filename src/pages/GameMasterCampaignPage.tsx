@@ -1624,6 +1624,13 @@ const baseMeta: any = {
           )}
 
           <div>
+  <ImageUrlInput
+    value={imageUrl}
+    onChange={setImageUrl}
+  />
+</div>
+          
+          <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">Description (visible)</label>
             <textarea
               value={visibleDescription}
