@@ -221,7 +221,23 @@ const AttackEditModal = ({ attack, onClose, onSave, onDelete }: AttackEditModalP
             </p>
           </div>
 
-
+ 
+                 <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Bonus de dégâts manuel (vide = auto)
+            </label>
+            <input
+              type="number"
+              value={formData.manual_damage_bonus ?? ''}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  manual_damage_bonus: e.target.value ? parseInt(e.target.value) : null
+                })
+              }
+              className="input-dark w-full px-3 py-2 rounded-md border border-gray-600 focus:border-red-500"
+              placeholder="Laissez vide pour calcul automatique"
+            />
           </div>
 
           {/* ✅ NOUVEAU : Bonus de l'arme */}
