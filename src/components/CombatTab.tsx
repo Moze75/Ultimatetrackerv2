@@ -77,7 +77,8 @@ const AttackEditModal = ({ attack, onClose, onSave, onDelete }: AttackEditModalP
     manual_damage_bonus: number | null;
     expertise: boolean;
     ammo_type: string;
-    override_ability: Ability | null; // ✅ AJOUT
+    override_ability: Ability | null; 
+    weapon_bonus: number | null;
   }>({
     name: attack?.name || '',
     damage_dice: attack?.damage_dice || '1d8',
