@@ -686,6 +686,8 @@ export function EquipmentTab({
       ? w.weapon_bonus 
       : (existing?.weapon_bonus ?? null);
 
+    console.log('🔧 [EquipmentTab] weaponBonus final:', weaponBonus);
+
     const payload = {
       player_id: player.id,
       name,
@@ -701,6 +703,8 @@ export function EquipmentTab({
       ammo_count: (existing as any)?.ammo_count ?? 0,
       weapon_bonus: weaponBonus
     };
+
+    console.log('🔧 [EquipmentTab] payload envoyé:', payload);
 
     if (existing) {
       await attackService.updateAttack({ ...payload, id: existing.id });
