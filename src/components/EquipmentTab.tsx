@@ -1186,7 +1186,7 @@ export function EquipmentTab({
                         {meta?.type === 'other' && <span className="text-xs px-2 py-0.5 rounded bg-slate-900/30 text-slate-300">Autre</span>}
                       </div>
 
-                      {expanded[item.id] && (
+{expanded[item.id] && (
   <div className="mt-2 space-y-2">
     {/* ✅ NOUVEAU : Image en grand quand dépliée */}
     {meta?.imageUrl && (
