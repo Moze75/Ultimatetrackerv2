@@ -288,6 +288,8 @@ const InfoBubble = ({
       <div className="flex items-center justify-between">
         <span className="text-gray-400">Bonus</span>
         <span className="font-medium text-purple-400">+{equipment.weapon_meta.bonus}</span>
+      </div>
+    )}
             </div> 
           )}
         </div>
