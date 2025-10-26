@@ -111,7 +111,7 @@ const AttackEditModal = ({ attack, onClose, onSave, onDelete }: AttackEditModalP
       expertise: formData.expertise,
       ammo_type: formData.ammo_type.trim() || null,
       override_ability: formData.override_ability // ✅ AJOUT
-      weapon_bonus: formData.weapon_bonus // ✅ AJOUT
+       
     });
   };
 
