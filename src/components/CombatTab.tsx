@@ -96,17 +96,19 @@ weapon_bonus: number | null;
       toast.error("Le nom de l'attaque est obligatoire");
       return;
     }
-onSave({
-  name: formData.name,
-  damage_dice: formData.damage_dice,
-  damage_type: formData.damage_type,
-  range: formData.range,
-  properties: formData.properties,
-  weapon_bonus: formData.weapon_bonus, // ✅ NOUVEAU (remplace les 2 anciens)
-  expertise: formData.expertise,
-  ammo_type: formData.ammo_type.trim() || null,
-  override_ability: formData.override_ability
-});
+    onSave({
+      name: formData.name,
+      damage_dice: formData.damage_dice,
+      damage_type: formData.damage_type,
+      range: formData.range,
+      properties: formData.properties,
+      manual_attack_bonus: formData.manual_attack_bonus,
+      manual_damage_bonus: formData.manual_damage_bonus,
+      expertise: formData.expertise, 
+      ammo_type: formData.ammo_type.trim() || null,
+      override_ability: formData.override_ability // ✅ AJOUT
+    });
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
