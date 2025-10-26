@@ -215,23 +215,26 @@ onSave({
             </p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Bonus d&apos;attaque manuel (vide = auto)
-            </label>
-            <input
-              type="number"
-              value={formData.manual_attack_bonus ?? ''}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  manual_attack_bonus: e.target.value ? parseInt(e.target.value) : null
-                })
-              }
-              className="input-dark w-full px-3 py-2 rounded-md border border-gray-600 focus:border-red-500"
-              placeholder="Laissez vide pour calcul automatique"
-            />
-          </div>
+  <div className="border-t border-gray-700 pt-4">
+  <label className="block text-sm font-medium text-gray-300 mb-2">
+    Bonus de l'arme (attaque & dégâts)
+  </label>
+  <input
+    type="number"
+    value={formData.weapon_bonus ?? ''}
+    onChange={(e) =>
+      setFormData({
+        ...formData,
+        weapon_bonus: e.target.value ? parseInt(e.target.value) : null
+      })
+    }
+    className="input-dark w-full px-3 py-2 rounded-md border border-gray-600 focus:border-red-500"
+    placeholder="0"
+  />
+  <p className="text-xs text-gray-500 mt-1">
+    S'ajoute aux jets d'attaque et de dégâts (ex: +1 pour une épée +1)
+  </p>
+</div>
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
