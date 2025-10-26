@@ -82,12 +82,12 @@ export function ImageUrlInput({
                 <ImageIcon size={14} />
                 Aperçu :
               </div>
-              <img
-                src={value}
-                alt="Aperçu"
-                className="w-full max-w-xs rounded-lg border border-gray-600/50"
-                onError={() => setImageError(true)}
-              />
+<img
+  src={value}
+  alt="Aperçu"
+  className="w-full max-w-md rounded-lg border border-gray-600/50 shadow-lg"
+  onError={() => setImageError(true)}
+/>
             </div>
           )}
         </div>
