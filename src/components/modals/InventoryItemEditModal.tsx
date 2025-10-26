@@ -75,6 +75,7 @@ export function InventoryItemEditModal({
   const [wProps, setWProps] = React.useState(existingMeta.weapon?.properties || '');
   const [wRange, setWRange] = React.useState(existingMeta.weapon?.range || '');
   const [wCategory, setWCategory] = React.useState<WeaponCategory>(existingMeta.weapon?.category || 'Armes courantes');
+  const [wBonus, setWBonus] = React.useState(existingMeta.weapon?.bonus || 0); // ✅ NOUVEAU
 
   // Armor fields
   const [aBase, setABase] = React.useState<number>(existingMeta.armor?.base || 10);
