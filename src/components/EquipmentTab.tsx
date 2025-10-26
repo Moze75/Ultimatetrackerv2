@@ -665,13 +665,18 @@ export function EquipmentTab({
   };
 
   const createOrUpdateWeaponAttack = async (name: string, w?: WeaponMeta | null, weaponName?: string) => {
-    try {
-      const attacks = await attackService.getPlayerAttacks(player.id);
-      const existing = attacks.find(a => norm(a.name) === norm(name));
+  try {
+    const attacks = await attackService.getPlayerAttacks(player.id);
+    const existing = attacks.find(a => norm(a.name) === norm(name));
 
-      const explicitCategory = w?.category;
-      const weaponProperties = w?.properties;
-      const proficiencyResult = checkWeaponProficiency(weaponName || name, playerWeaponProficiencies, explicitCategory, weaponProperties);
+    const explicitCategory = w?.category;
+    const weaponProperties = w?.properties;
+    const proficiencyResult = checkWeaponProficiency(weaponName || name, playerWeaponProficiencies, explicitCategory, weaponProperties);
+
+    // ✅ CORRECTION : Extraire weapon_bonus depuis w ou conserver celui existant
+    const weaponBonus = w?.weapon_bonus !== undefined && w?.weapon_bonus !== null 
+      ? w.weapon_bonus 
+      : (existing?.weapon_bonus ?? null);
 
     const payload = {
       player_id: player.id,
@@ -686,19 +691,19 @@ export function EquipmentTab({
       attack_type: 'physical' as const,
       spell_level: null as any,
       ammo_count: (existing as any)?.ammo_count ?? 0,
-     weapon_bonus: w?.weapon_bonus !== undefined ? w.weapon_bonus : (existing?.weapon_bonus ?? null)
+      weapon_bonus: weaponBonus
     };
 
-      if (existing) {
-        await attackService.updateAttack({ ...payload, id: existing.id });
-      } else {
-        await attackService.addAttack(payload);
-      }
-      notifyAttacksChanged();
-    } catch (err) {
-      console.error('Création/mise à jour attaque échouée', err);
+    if (existing) {
+      await attackService.updateAttack({ ...payload, id: existing.id });
+    } else {
+      await attackService.addAttack(payload);
     }
-  };
+    notifyAttacksChanged();
+  } catch (err) {
+    console.error('Création/mise à jour attaque échouée', err);
+  }
+};
 
   const removeWeaponAttacksByName = async (name: string) => {
     try {
