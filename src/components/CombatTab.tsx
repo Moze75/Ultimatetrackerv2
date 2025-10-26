@@ -450,19 +450,15 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
 
   // ✅ MODIFIÉ : Prise en compte de override_ability
   const getDamageBonus = (attack: Attack): number => {
-    // 1. Bonus manuel a la priorité absolue
-    if (attack.manual_damage_bonus !== null && attack.manual_damage_bonus !== undefined) {
-      return attack.manual_damage_bonus;
-    }
+  let abilityModifier = 0;
 
-    // 2. Caractéristique forcée (override_ability)
-    if (attack.override_ability) {
-      const ability = player.abilities?.find((a) => a.name === attack.override_ability);
-      return ability?.modifier || 0;
-    }
-
-    // 3. Calcul automatique selon la classe
-    let abilityModifier = 0;
+  // 1. Déterminer le modificateur de caractéristique
+  if (attack.override_ability) {
+    // Caractéristique forcée
+    const ability = player.abilities?.find((a) => a.name === attack.override_ability);
+    abilityModifier = ability?.modifier || 0;
+  } else {
+    // Calcul automatique selon la classe
     if (player.abilities) {
       if (player.class === 'Ensorceleur' || player.class === 'Barde' || player.class === 'Paladin') {
         const chaAbility = player.abilities.find((a) => a.name === 'Charisme');
@@ -480,9 +476,13 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
         }
       }
     }
+  }
 
-    return abilityModifier;
-  };
+  // 2. ✅ CALCUL FINAL : modificateur + bonus d'arme
+  const weaponBonus = attack.weapon_bonus || 0; // ✅ NOUVEAU
+  
+  return abilityModifier + weaponBonus; // ✅ MODIFIÉ
+};
 
   const rollAttack = (attack: Attack) => {
     const attackBonus = getAttackBonus(attack);
