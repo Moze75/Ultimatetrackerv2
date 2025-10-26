@@ -1438,6 +1438,7 @@ function EditCampaignItemModal({
         setWeaponProperties(meta.weapon.properties ?? '');
         setWeaponRange(meta.weapon.range ?? '');
         setWeaponCategory(meta.weapon.category ?? '');
+        setWeaponBonus(meta.weapon.weapon_bonus ?? null);
       }
       // Shield
       if (meta.type === 'shield' && meta.shield) {
