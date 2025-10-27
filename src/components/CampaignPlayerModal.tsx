@@ -397,12 +397,7 @@ const handleClaimMultiple = async () => {
   }
 };
   
- useEffect(() => {
-  if (open && activeTab === 'notes') {
-    loadNotes();
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [open, activeTab]);
+
 
   const loadCampaignMembers = async (campaignId: string) => {
     try {
@@ -541,6 +536,14 @@ const loadNotes = async () => {
       return;
     }
   } catch {
+
+    useEffect(() => {
+  if (open && activeTab === 'notes') {
+    loadNotes();
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [open, activeTab]);
+    
     // fallback local
   }
 
