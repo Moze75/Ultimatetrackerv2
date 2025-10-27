@@ -590,13 +590,6 @@ const saveNotes = async () => {
     updated_at: new Date().toISOString(),
   };
 
-  useEffect(() => {
-  if (open && activeTab === 'notes') {
-    loadNotes();
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [open, activeTab]);
-
   try {
     console.log('[Notes] Save start', { playerId: player.id, payload });
     const { data, error } = await supabase
@@ -613,7 +606,7 @@ const saveNotes = async () => {
 
     // Mets à jour le cache local pour un affichage immédiat en fallback
     try {
-      localStorage.setItem(LS_NOTES_KEY, JSON.stringify({
+      localStorage.setItem(`campaign_notes_${player.id}`, JSON.stringify({
         journal: payload.journal,
         npcs: payload.npcs,
         quests: payload.quests,
@@ -625,7 +618,7 @@ const saveNotes = async () => {
   } catch (e: any) {
     console.error('[Notes] Save failed, fallback localStorage. Reason:', e?.message || e);
     try {
-      localStorage.setItem(LS_NOTES_KEY, JSON.stringify({
+      localStorage.setItem(`campaign_notes_${player.id}`, JSON.stringify({
         journal: payload.journal,
         npcs: payload.npcs,
         quests: payload.quests,
