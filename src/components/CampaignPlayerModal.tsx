@@ -574,6 +574,7 @@ const loadNotes = async () => {
 const saveNotes = async () => {
   if (savingNotes) return;
   setSavingNotes(true);
+
   const payload = {
     journal: notesJournal,
     npcs: notesNPCs,
@@ -582,16 +583,25 @@ const saveNotes = async () => {
   };
 
   try {
-    const { error } = await supabase
+    console.log('[Notes] Save start', { playerId: player.id, payload });
+    const { data, error } = await supabase
       .from('players')
       .update({ notes_json: payload })
-      .eq('id', player.id);
+      .eq('id', player.id)
+      .select('id, notes_json')
+      .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('[Notes] Supabase update error:', error);
+      throw error;
+    }
+
+    console.log('[Notes] Save OK, returned:', data);
     toast.success('Notes sauvegardées');
-  } catch {
+  } catch (e: any) {
+    console.error('[Notes] Save failed, fallback localStorage. Reason:', e?.message || e);
     try {
-      localStorage.setItem(LS_NOTES_KEY, JSON.stringify(payload));
+      localStorage.setItem(`campaign_notes_${player.id}`, JSON.stringify(payload));
       toast.success('Notes sauvegardées (localement)');
     } catch {
       toast.error('Impossible de sauvegarder les notes');
