@@ -100,15 +100,15 @@ export function CustomItemModal({
       meta.shield = { bonus: shieldBonus };
     } else if (type === 'weapon') {
       // Construire la chaîne properties depuis la checklist ou le fallback libre
-      const properties = (propTags.length ? propTags.join(', ') : wProps || '').trim();
-      meta.weapon = {
-        damageDice: wDice,
-        damageType: wType,
-        properties,
-        range: wRange,
-        category: wCategory, 
-        weapon_bonus: wBonus
-      };
+     const properties = (propTags.length ? propTags.join(', ') : wProps || '').trim();
+meta.weapon = {
+  damageDice: wDice,
+  damageType: wType,
+  properties,
+  range: wRange,
+  category: wCategory,
+  weapon_bonus: wBonus
+};
     }
 
     onAdd({ name: cleanName, description: description.trim(), meta });
