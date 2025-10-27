@@ -905,46 +905,48 @@ return (
               </button>
             </div>
 
-            <div className="flex gap-4 mt-3">
-              <button
-                onClick={() => setActiveTab('invitations')}
-                className={`pb-2 px-1 border-b-2 transition-colors ${
-                  activeTab === 'invitations'
-                    ? 'border-purple-500 text-purple-400'
-                    : 'border-transparent text-gray-400 hover:text-gray-300'
-                }`}
-              >
-                Invitations ({invitations.length})
-              </button>
-              <button
-                onClick={() => setActiveTab('gifts')}
-                className={`pb-2 px-1 border-b-2 transition-colors relative ${
-                  activeTab === 'gifts'
-                    ? 'border-purple-500 text-purple-400'
-                    : 'border-transparent text-gray-400 hover:text-gray-300'
-                }`}
-              >
-                <span className="flex items-center gap-2">
-                  Loots ({pendingGifts.length})
-                  {pendingGifts.length > 0 && (
-                    <span className="flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-green-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                    </span>
-                  )}
-                </span>
-              </button>
-            </div>
-            <button
-  onClick={() => setActiveTab('notes')}
-  className={`pb-2 px-1 border-b-2 transition-colors ${
-    activeTab === 'notes'
-      ? 'border-purple-500 text-purple-400'
-      : 'border-transparent text-gray-400 hover:text-gray-300'
-  }`}
->
-  Prise de notes
-</button>
+         <div className="flex gap-4 mt-3">
+  <button
+    onClick={() => setActiveTab('invitations')}
+    className={`pb-2 px-1 border-b-2 transition-colors ${
+      activeTab === 'invitations'
+        ? 'border-purple-500 text-purple-400'
+        : 'border-transparent text-gray-400 hover:text-gray-300'
+    }`}
+  >
+    Invitations ({invitations.length})
+  </button>
+
+  <button
+    onClick={() => setActiveTab('gifts')}
+    className={`pb-2 px-1 border-b-2 transition-colors relative ${
+      activeTab === 'gifts'
+        ? 'border-purple-500 text-purple-400'
+        : 'border-transparent text-gray-400 hover:text-gray-300'
+    }`}
+  >
+    <span className="flex items-center gap-2">
+      Loots ({pendingGifts.length})
+      {pendingGifts.length > 0 && (
+        <span className="flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-green-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+        </span>
+      )}
+    </span>
+  </button>
+
+  <button
+    onClick={() => setActiveTab('notes')}
+    className={`pb-2 px-1 border-b-2 transition-colors ${
+      activeTab === 'notes'
+        ? 'border-purple-500 text-purple-400'
+        : 'border-transparent text-gray-400 hover:text-gray-300'
+    }`}
+  >
+    Prise de notes
+  </button>
+</div>
           </div>
 
           {/* Content */}
