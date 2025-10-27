@@ -516,7 +516,12 @@ setActiveCampaigns(campaigns || []);
       setLoading(false);
     }
   };
-
+useEffect(() => {
+  if (open) {
+    loadData();
+  }
+}, [open]);
+  
   // Helpers Notes
 const LS_NOTES_KEY = `campaign_notes_${player.id}`;
 
