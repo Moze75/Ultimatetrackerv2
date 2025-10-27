@@ -1387,13 +1387,7 @@ return (
       </div>
     </div>
 
-    {showNotesModal && (
-  <CampaignNotesModal
-    open={showNotesModal}
-    onClose={() => setShowNotesModal(false)}
-    player={player}
-  />
-)}
+   
     
     {showDistributionModal && selectedGiftForDistribution && (
       <CurrencyDistributionModal
