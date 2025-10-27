@@ -516,7 +516,15 @@ setActiveCampaigns(campaigns || []);
       setLoading(false);
     }
   };
-useEffect(() => {
+
+  useEffect(() => {
+  (async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    setCurrentUserId(user?.id || '');
+  })();
+}, []);
+  
+  useEffect(() => {
   if (open) {
     loadData();
   }
