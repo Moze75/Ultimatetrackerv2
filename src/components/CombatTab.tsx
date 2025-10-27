@@ -7,7 +7,6 @@ import { DiceRoller } from '../components/DiceRoller';
 import { StandardActionsSection } from './StandardActionsSection';
 import { attackService } from '../services/attackService';
 import { supabase } from '../lib/supabase';
-import { inferWeaponAbilityMod } from '../utils/inferWeaponAbility';
 import './combat-tab.css';
 
 interface CombatTabProps {
