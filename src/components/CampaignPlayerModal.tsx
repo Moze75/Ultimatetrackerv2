@@ -523,9 +523,7 @@ setActiveCampaigns(campaigns || []);
     }
   };
 
-  const handleDistributeCurrency = async (distribution: { userId: string; playerId: string; gold: number; silver: number; copper: number }[]) => {
-
-    // Helpers Notes
+  // Helpers Notes
 const LS_NOTES_KEY = `campaign_notes_${player.id}`;
 
 const loadNotes = async () => {
@@ -595,6 +593,11 @@ const saveNotes = async () => {
     setSavingNotes(false);
   }
 };
+  
+  const handleDistributeCurrency = async (distribution: { userId: string; playerId: string; gold: number; silver: number; copper: number }[]) => {
+
+
+ 
     
     if (!selectedGiftForDistribution) return;
 
