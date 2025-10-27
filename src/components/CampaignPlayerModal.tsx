@@ -893,13 +893,7 @@ return (
                   </div>
                 )}
               </div>
-            <button
-  onClick={() => setShowNotesModal(true)}
-  className="px-3 py-2 rounded-lg border border-gray-600 text-gray-200 hover:bg-gray-700/50 mr-2"
-  title="Prise de notes"
->
-  Prise de notes
-</button>
+
               <button
                 onClick={onClose}
                 className="p-2 text-gray-400 hover:bg-gray-700/50 rounded-lg"
