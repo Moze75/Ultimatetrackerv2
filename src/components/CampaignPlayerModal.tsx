@@ -340,7 +340,7 @@ const [notesJournal, setNotesJournal] = useState('');
 const [notesNPCs, setNotesNPCs] = useState('');
 const [notesQuests, setNotesQuests] = useState('');
 const [savingNotes, setSavingNotes] = useState(false);
-  const [showNotesModal, setShowNotesModal] = useState(false);
+ 
 
   const getVisibleDescription = (description: string | null | undefined): string => {
     if (!description) return '';
