@@ -336,6 +336,7 @@ export function CampaignPlayerModal({
   // État pour empêcher les double-clics lors du claim
   const [claiming, setClaiming] = useState(false);
   const [selectedGiftIds, setSelectedGiftIds] = useState<string[]>([]);
+  const [showNotesModal, setShowNotesModal] = useState(false);
 
   const getVisibleDescription = (description: string | null | undefined): string => {
     if (!description) return '';
