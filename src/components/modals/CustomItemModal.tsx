@@ -3,7 +3,6 @@ import { X } from 'lucide-react';
 import { ImageUrlInput } from '../ImageUrlInput';
 import toast from 'react-hot-toast';
 
-/* Types locaux alignés */
 type MetaType = 'armor' | 'shield' | 'weapon' | 'potion' | 'equipment' | 'jewelry' | 'tool' | 'other';
 type WeaponCategory =
   | 'Armes courantes'
@@ -14,15 +13,13 @@ type WeaponCategory =
 interface WeaponMeta {
   damageDice: string;
   damageType: 'Tranchant' | 'Perforant' | 'Contondant';
-  properties: string;
-  range: string;
+  properties: string;            // string lisible, ex: "Finesse, Légère"
+  range: string;                 // libellé FR, ex: "Corps à corps", "6 m", etc.
   category?: WeaponCategory;
-  weapon_bonus?: number | null; // ✅ ajout
+  weapon_bonus?: number | null;
 }
-
 interface ArmorMeta { base: number; addDex: boolean; dexCap?: number | null; label: string; }
 interface ShieldMeta { bonus: number; }
-
 export interface ItemMeta {
   type: MetaType;
   quantity?: number;
@@ -30,7 +27,7 @@ export interface ItemMeta {
   weapon?: WeaponMeta;
   armor?: ArmorMeta;
   shield?: ShieldMeta;
-  imageUrl?: string; // ✅ ajout
+  imageUrl?: string;
 }
 
 const stripPriceParentheses = (name: string) =>
@@ -41,6 +38,9 @@ const smartCapitalize = (name: string) => {
   const lower = base.toLowerCase();
   return lower.charAt(0).toUpperCase() + lower.slice(1);
 };
+
+// Propriétés disponibles (cochent les règles STR/DEX en mêlée)
+const PROPERTY_TAGS = ['Finesse', 'Légère', 'Lancer', 'Polyvalente', 'Deux mains', 'Lourde', 'Allonge'] as const;
 
 export function CustomItemModal({
   onClose, onAdd,
@@ -60,11 +60,13 @@ export function CustomItemModal({
 
   const [wDice, setWDice] = React.useState('1d6');
   const [wType, setWType] = React.useState<'Tranchant' | 'Perforant' | 'Contondant'>('Tranchant');
-  const [wProps, setWProps] = React.useState('');
+  const [wProps, setWProps] = React.useState(''); // fallback libre si aucune case cochée
   const [wRange, setWRange] = React.useState('Corps à corps');
   const [wCategory, setWCategory] = React.useState<WeaponCategory>('Armes courantes');
   const [wBonus, setWBonus] = React.useState<number | null>(null);
   const [imageUrl, setImageUrl] = React.useState('');
+
+  const [propTags, setPropTags] = React.useState<string[]>([]);
 
   React.useEffect(() => {
     const prev = document.body.style.overflow;
@@ -72,51 +74,48 @@ export function CustomItemModal({
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-const add = () => {
-  const cleanNameRaw = name.trim();
-  if (!cleanNameRaw) return toast.error('Nom requis');
-  if (quantity <= 0) return toast.error('Quantité invalide');
+  const add = () => {
+    const cleanNameRaw = name.trim();
+    if (!cleanNameRaw) return toast.error('Nom requis');
+    if (quantity <= 0) return toast.error('Quantité invalide');
 
-  const cleanName = smartCapitalize(cleanNameRaw);
+    const cleanName = smartCapitalize(cleanNameRaw);
 
-  // ✅ Construire la méta complète et correcte
-  const meta: ItemMeta = {
-    type,
-    quantity,
-    equipped: false,
-    imageUrl: imageUrl.trim() || undefined
+    const meta: ItemMeta = {
+      type,
+      quantity,
+      equipped: false,
+      imageUrl: imageUrl.trim() || undefined
+    };
+
+    if (type === 'armor') {
+      const cap = armDexCap === '' ? null : Number(armDexCap);
+      meta.armor = {
+        base: armBase,
+        addDex: armAddDex,
+        dexCap: cap,
+        label: `${armBase}${armAddDex ? ` + modificateur de Dex${cap != null ? ` (max ${cap})` : ''}` : ''}`
+      };
+    } else if (type === 'shield') {
+      meta.shield = { bonus: shieldBonus };
+    } else if (type === 'weapon') {
+      // Construire la chaîne properties depuis la checklist ou le fallback libre
+      const properties = (propTags.length ? propTags.join(', ') : wProps || '').trim();
+      meta.weapon = {
+        damageDice: wDice,
+        damageType: wType,
+        properties,
+        range: wRange,
+        category: wCategory,
+        weapon_bonus: wBonus
+      };
+    }
+
+    onAdd({ name: cleanName, description: description.trim(), meta });
+    onClose();
   };
 
-  if (type === 'armor') {
-    const cap = armDexCap === '' ? null : Number(armDexCap);
-    meta.armor = {
-      base: armBase,
-      addDex: armAddDex,
-      dexCap: cap,
-      label: `${armBase}${armAddDex ? ` + modificateur de Dex${cap != null ? ` (max ${cap})` : ''}` : ''}`
-    };
-  } else if (type === 'shield') {
-    meta.shield = { bonus: shieldBonus };
-  } else if (type === 'weapon') {
-    meta.weapon = {
-      damageDice: wDice,
-      damageType: wType,
-      properties: wProps,
-      range: wRange,
-      category: wCategory,
-      weapon_bonus: wBonus
-    };
-  }
-
-  onAdd({ name: cleanName, description: description.trim(), meta });
-  onClose();
-};
-
-  return ( 
-
-
-
-    
+  return (
     <div className="fixed inset-0 z-[9999]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="fixed inset-0 bg-black/60" />
       <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(32rem,95vw)] max-h-[90vh] overflow-y-auto bg-gray-900/95 border border-gray-700 rounded-lg p-4">
@@ -130,6 +129,7 @@ const add = () => {
             <label className="block text-sm font-medium text-gray-300 mb-1">Nom</label>
             <input className="input-dark w-full px-3 py-2 rounded-md" value={name} onChange={e => setName(e.target.value)} placeholder="Nom de l'objet" />
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Type</label>
             <select className="input-dark w-full px-3 py-2 rounded-md" value={type} onChange={e => setType(e.target.value as MetaType)}>
@@ -145,16 +145,94 @@ const add = () => {
           </div>
         </div>
 
+        {type === 'weapon' && (
+          <div className="mt-4 space-y-3 border-t border-gray-700 pt-4">
+            <h4 className="text-sm font-medium text-gray-300">Propriétés d'arme</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Dés de dégâts</label>
+                <input className="input-dark w-full px-3 py-2 rounded-md" value={wDice} onChange={e => setWDice(e.target.value)} placeholder="ex: 1d6, 1d8..." />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Type de dégâts</label>
+                <select className="input-dark w-full px-3 py-2 rounded-md" value={wType} onChange={e => setWType(e.target.value as any)}>
+                  <option>Tranchant</option>
+                  <option>Perforant</option>
+                  <option>Contondant</option>
+                </select>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-xs text-gray-400 mb-1">Propriétés (cases à cocher)</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {PROPERTY_TAGS.map(tag => {
+                    const checked = propTags.includes(tag);
+                    return (
+                      <label key={tag} className="inline-flex items-center gap-2 text-xs text-gray-200">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            setPropTags(prev => e.target.checked ? [...prev, tag] : prev.filter(t => t !== tag));
+                          }}
+                        />
+                        <span>{tag}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-gray-500 mt-1">Finesse/Légère/Lancer/Polyvalente influencent l’attribut (STR/DEX) en mêlée.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Portée</label>
+                <input className="input-dark w-full px-3 py-2 rounded-md" value={wRange} onChange={e => setWRange(e.target.value)} placeholder="ex: Corps à corps, 6 m..." />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Catégorie</label>
+                <select className="input-dark w-full px-3 py-2 rounded-md" value={wCategory} onChange={e => setWCategory(e.target.value as WeaponCategory)}>
+                  <option>Armes courantes</option>
+                  <option>Armes de guerre</option>
+                  <option>Armes de guerre dotées de la propriété Légère</option>
+                  <option>Armes de guerre présentant la propriété Finesse ou Légère</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Bonus de l'arme (optionnel)</label>
+                <input
+                  type="number"
+                  className="input-dark w-full px-3 py-2 rounded-md"
+                  value={wBonus ?? ''}
+                  onChange={e => setWBonus(e.target.value ? parseInt(e.target.value) : null)}
+                  placeholder="Ex: 1, 2, 3"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Propriétés (libre, optionnel)</label>
+              <input
+                className="input-dark w-full px-3 py-2 rounded-md"
+                value={wProps}
+                onChange={e => setWProps(e.target.value)}
+                placeholder="Compléments éventuels (si aucune case cochée)"
+              />
+            </div>
+          </div>
+        )}
+
         {type === 'armor' && (
           <div className="mt-4 space-y-3 border-t border-gray-700 pt-4">
             <h4 className="text-sm font-medium text-gray-300">Propriétés d'armure</h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div><label className="block text-xs text-gray-400 mb-1">Base CA</label><input type="number" className="input-dark w-full px-3 py-2 rounded-md" value={armBase} onChange={e => setArmBase(parseInt(e.target.value) || 10)} /></div>
-              <div className="flex items-center gap-2"><input id="addDex" type="checkbox" checked={armAddDex} onChange={e => setArmAddDex(e.target.checked)} /><label htmlFor="addDex" className="text-sm text-gray-300">Ajoute mod DEX</label></div>
-              <div><label className="block text-xs text-gray-400 mb-1">Cap DEX (vide = illimité)</label><input type="number" className="input-dark w-full px-3 py-2 rounded-md" value={armDexCap} onChange={e => setArmDexCap(e.target.value === '' ? '' : parseInt(e.target.value))} /></div>
+              <div><label className="block text-xs text-gray-400 mb-1">Base CA</label><input type="number" className="input-dark w-full px-3 py-2 rounded-md" value={armBase} onChange={e => setArmBase(parseInt(e.target.value) || 0)} /></div>
+              <div className="flex items-center gap-2"><input id="addDex" type="checkbox" checked={armAddDex} onChange={e => setArmAddDex(e.target.checked)} /><label htmlFor="addDex" className="text-sm text-gray-300">Ajouter DEX</label></div>
+              <div><label className="block text-xs text-gray-400 mb-1">Cap DEX (vide = illimité)</label><input type="number" className="input-dark w-full px-3 py-2 rounded-md" value={armDexCap} onChange={e => setArmDexCap(e.target.value ? parseInt(e.target.value) : ('' as any))} /></div>
             </div>
           </div>
         )}
+
         {type === 'shield' && (
           <div className="mt-4 space-y-3 border-t border-gray-700 pt-4">
             <h4 className="text-sm font-medium text-gray-300">Propriétés de bouclier</h4>
@@ -164,43 +242,10 @@ const add = () => {
             </div>
           </div>
         )}
-        {type === 'weapon' && (
-          <div className="mt-4 space-y-3 border-t border-gray-700 pt-4">
-            <h4 className="text-sm font-medium text-gray-300">Propriétés d'arme</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div><label className="block text-xs text-gray-400 mb-1">Dés de dégâts</label><input className="input-dark w-full px-3 py-2 rounded-md" value={wDice} onChange={e => setWDice(e.target.value)} placeholder="1d6" /></div>
-              <div><label className="block text-xs text-gray-400 mb-1">Type de dégâts</label><select className="input-dark w-full px-3 py-2 rounded-md" value={wType} onChange={e => setWType(e.target.value as any)}><option>Tranchant</option><option>Perforant</option><option>Contondant</option></select></div>
-              <div><label className="block text-xs text-gray-400 mb-1">Propriété(s)</label><input className="input-dark w-full px-3 py-2 rounded-md" value={wProps} onChange={e => setWProps(e.target.value)} placeholder="Finesse, Polyvalente..." /></div>
-              <div><label className="block text-xs text-gray-400 mb-1">Portée</label><input className="input-dark w-full px-3 py-2 rounded-md" value={wRange} onChange={e => setWRange(e.target.value)} placeholder="Ex: Corps à corps, 18 m" /></div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Bonus de l'arme (optionnel)</label>
-                <input 
-                  type="number" 
-                  className="input-dark w-full px-3 py-2 rounded-md" 
-                  value={wBonus ?? ''} 
-                  onChange={e => setWBonus(e.target.value ? parseInt(e.target.value) : null)} 
-                  placeholder="Ex: 1, 2, 3 pour arme +1, +2, +3"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Catégorie d'arme</label>
-              <select className="input-dark w-full px-3 py-2 rounded-md" value={wCategory} onChange={e => setWCategory(e.target.value as WeaponCategory)}>
-                <option value="Armes courantes">Armes courantes</option>
-                <option value="Armes de guerre">Armes de guerre</option>
-                <option value="Armes de guerre dotées de la propriété Légère">Armes de guerre dotées de la propriété Légère</option>
-                <option value="Armes de guerre présentant la propriété Finesse ou Légère">Armes de guerre présentant la propriété Finesse ou Légère</option>
-              </select>
-              <p className="text-xs text-gray-500 mt-1">Cette catégorie détermine si votre bonus de maîtrise s'applique aux jets d'attaque</p>
-            </div>
-          </div>
-        )}
+
         <div className="mt-4 border-t border-gray-700 pt-4">
-  <ImageUrlInput
-    value={imageUrl}
-    onChange={setImageUrl}
-  />
-</div>
+          <ImageUrlInput value={imageUrl} onChange={setImageUrl} />
+        </div>
 
         <div className="mt-4">
           <label className="block text-sm font-medium text-gray-300 mb-1">Quantité</label>
