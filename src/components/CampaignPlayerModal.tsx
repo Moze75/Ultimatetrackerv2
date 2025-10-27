@@ -3,6 +3,7 @@ import { X, Gift, Users, Check, Package, Coins, AlertCircle } from 'lucide-react
 import { Player } from '../types/dnd';
 import { supabase } from '../lib/supabase';
 import { campaignService } from '../services/campaignService';
+import CampaignNotesModal from './modals/CampaignNotesModal';
 import {
   CampaignInvitation,
   CampaignGift,
