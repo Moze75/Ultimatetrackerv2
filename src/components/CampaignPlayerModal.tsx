@@ -631,6 +631,17 @@ const saveNotes = async () => {
     setSavingNotes(false);
   }
 };
+
+useEffect(() => {
+  if (open && activeTab === 'notes') {
+    loadNotes();
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [open, activeTab]);
+
+useEffect(() => {
+  if (open) setSavingNotes(false);
+}, [open]);
   
   const handleDistributeCurrency = async (distribution: { userId: string; playerId: string; gold: number; silver: number; copper: number }[]) => {
 
