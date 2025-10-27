@@ -1,16 +1,12 @@
-// Inférence de caractéristique STR/DEX pour une attaque basée sur ses propriétés, sa portée et son type
-// Règles FR:
+// Inférence de mod de caractéristique STR/DEX depuis propriétés/portée.
 // - Ranged => DEX
-// - Melee + (Finesse | Légère | Lancer | Polyvalente) => meilleur de STR/DEX
+// - Melee + (Finesse | Légère | Lancer | Polyvalente) => max(STR, DEX)
 // - Melee sinon => STR
-// override_ability est gérée dans l'appelant (CombatTab)
-
 export interface AbilityLike {
-  name: string;        // 'Force' | 'Dextérité' | ...
-  modifier: number;    // mod associé
+  name: string;     // 'Force' | 'Dextérité' | ...
+  modifier: number; // mod associé
 }
 
-// Signature souple pour ne pas coupler aux types locaux
 export function inferWeaponAbilityMod(attack: any, playerAbilities: AbilityLike[]): number {
   const normalize = (s?: string | null) => (s || '').toLowerCase();
 
@@ -21,43 +17,33 @@ export function inferWeaponAbilityMod(attack: any, playerAbilities: AbilityLike[
 
   const isMeleeRangeLabel = (range?: string | null) => {
     const r = normalize(range);
-    // Mêlée: "corps à corps", "contact" et reach 1,5 m / 3 m
-    return r.includes('corps à corps') || r.includes('contact') || r.includes('1,5') || r.includes('3 m');
+    // "corps à corps", "contact" et "1,5 m" => considérés comme mêlée
+    return r.includes('corps à corps') || r.includes('contact') || r.includes('1,5');
   };
 
   const strMod = playerAbilities?.find(a => a.name === 'Force')?.modifier || 0;
   const dexMod = playerAbilities?.find(a => a.name === 'Dextérité')?.modifier || 0;
 
-  // 1) Drapeaux depuis propriétés/catégorie/nom
+  // Ranged si ammo_type présent OU si label de portée non mêlée
+  const ammoType = (attack as any)?.ammo_type as string | undefined;
+  const rangedByAmmo = !!ammoType;
+  const meleeByLabel = isMeleeRangeLabel(attack?.range);
+  const isRanged = rangedByAmmo || !meleeByLabel;
+
+  if (isRanged) return dexMod;
+
+  // Mêlée: activer DEX possible si certaines propriétés
   const props = attack?.properties as string | undefined | null;
   const category = normalize((attack as any)?.category || '');
-  const nameLower = normalize((attack as any)?.name || '');
 
-  const thrown = hasProp(props, 'lancer') || hasProp(props, 'jet') || category.includes('lancer');
-  const hasMunitions = hasProp(props, 'munitions') || category.includes('munitions');
-  const hasChargement = hasProp(props, 'chargement') || category.includes('chargement');
-
-  // 2) Détection ranged
-  const ammoType = (attack as any)?.ammo_type as string | undefined;
-  const rangedByProps = !!ammoType || hasMunitions || hasChargement || nameLower.includes('arc') || nameLower.includes('arbalète');
-  // Si la portée n'est pas un libellé mêlée ET que ce n'est pas une arme "de lancer", on considère distance
-  const rangedByLabel = !isMeleeRangeLabel(attack?.range) && !thrown;
-
-  const isRanged = rangedByProps || rangedByLabel;
-
-  if (isRanged) {
-    return dexMod;
-  }
-
-  // 3) Mêlée: choisir la meilleure stat si propriétés suivantes
   const finesse = hasProp(props, 'finesse') || category.includes('finesse');
   const light = hasProp(props, 'légère') || category.includes('légère');
+  const thrown = hasProp(props, 'lancer') || hasProp(props, 'jet') || category.includes('lancer');
   const versatile = hasProp(props, 'polyvalente') || category.includes('polyvalente');
 
   if (finesse || light || thrown || versatile) {
     return Math.max(strMod, dexMod);
   }
 
-  // 4) Par défaut en mêlée: STR
   return strMod;
-} 
+}
