@@ -8,7 +8,7 @@ import { StandardActionsSection } from './StandardActionsSection';
 import { attackService } from '../services/attackService';
 import { supabase } from '../lib/supabase';
 import './combat-tab.css';
-import { inferWeaponAbilityMod } from '../utils/inferWeaponsAbility';
+import { inferWeaponAbilityMod } from '../utils/inferWeaponAbility';
 
 interface CombatTabProps {
   player: Player;
