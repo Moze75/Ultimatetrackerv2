@@ -212,15 +212,15 @@ meta.weapon = {
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Propriétés (libre, optionnel)</label>
-              <input
-                className="input-dark w-full px-3 py-2 rounded-md"
-                value={wProps}
-                onChange={e => setWProps(e.target.value)}
-                placeholder="Compléments éventuels (si aucune case cochée)"
-              />
-            </div>
+          <div>
+  <label className="block text-xs text-gray-400 mb-1">Propriétés (libre, optionnel)</label>
+  <input
+    className="input-dark w-full px-3 py-2 rounded-md"
+    value={wProps}
+    onChange={e => setWProps(e.target.value)}
+    placeholder="Compléments éventuels (si aucune case cochée)"
+  />
+</div>
           </div>
         )}
 
