@@ -935,6 +935,16 @@ return (
                 </span>
               </button>
             </div>
+            <button
+  onClick={() => setActiveTab('notes')}
+  className={`pb-2 px-1 border-b-2 transition-colors ${
+    activeTab === 'notes'
+      ? 'border-purple-500 text-purple-400'
+      : 'border-transparent text-gray-400 hover:text-gray-300'
+  }`}
+>
+  Prise de notes
+</button>
           </div>
 
           {/* Content */}
