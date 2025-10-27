@@ -21,34 +21,43 @@ export function inferWeaponAbilityMod(attack: any, playerAbilities: AbilityLike[
 
   const isMeleeRangeLabel = (range?: string | null) => {
     const r = normalize(range);
-    // "corps à corps", "contact", "1,5 m" => considérés comme mêlée
-    return r.includes('corps à corps') || r.includes('contact') || r.includes('1,5');
+    // Mêlée: "corps à corps", "contact" et reach 1,5 m / 3 m
+    return r.includes('corps à corps') || r.includes('contact') || r.includes('1,5') || r.includes('3 m');
   };
 
   const strMod = playerAbilities?.find(a => a.name === 'Force')?.modifier || 0;
   const dexMod = playerAbilities?.find(a => a.name === 'Dextérité')?.modifier || 0;
 
-  // 1) Ranged si munition (ammo_type) OU si libellé de portée non mêlée
-  const ammoType = (attack as any)?.ammo_type as string | undefined;
-  const rangedByAmmo = !!ammoType;
-  const meleeByLabel = isMeleeRangeLabel(attack?.range);
-  const isRanged = rangedByAmmo || !meleeByLabel;
-
-  if (isRanged) return dexMod;
-
-  // 2) Mêlée: flags depuis properties/category
+  // 1) Drapeaux depuis propriétés/catégorie/nom
   const props = attack?.properties as string | undefined | null;
-  const category = normalize((attack as any)?.category); // si un jour présent
+  const category = normalize((attack as any)?.category || '');
+  const nameLower = normalize((attack as any)?.name || '');
 
+  const thrown = hasProp(props, 'lancer') || hasProp(props, 'jet') || category.includes('lancer');
+  const hasMunitions = hasProp(props, 'munitions') || category.includes('munitions');
+  const hasChargement = hasProp(props, 'chargement') || category.includes('chargement');
+
+  // 2) Détection ranged
+  const ammoType = (attack as any)?.ammo_type as string | undefined;
+  const rangedByProps = !!ammoType || hasMunitions || hasChargement || nameLower.includes('arc') || nameLower.includes('arbalète');
+  // Si la portée n'est pas un libellé mêlée ET que ce n'est pas une arme "de lancer", on considère distance
+  const rangedByLabel = !isMeleeRangeLabel(attack?.range) && !thrown;
+
+  const isRanged = rangedByProps || rangedByLabel;
+
+  if (isRanged) {
+    return dexMod;
+  }
+
+  // 3) Mêlée: choisir la meilleure stat si propriétés suivantes
   const finesse = hasProp(props, 'finesse') || category.includes('finesse');
   const light = hasProp(props, 'légère') || category.includes('légère');
-  const thrown = hasProp(props, 'lancer') || hasProp(props, 'jet') || category.includes('lancer');
   const versatile = hasProp(props, 'polyvalente') || category.includes('polyvalente');
 
   if (finesse || light || thrown || versatile) {
     return Math.max(strMod, dexMod);
   }
 
-  // 3) Par défaut en mêlée: STR
+  // 4) Par défaut en mêlée: STR
   return strMod;
 }
