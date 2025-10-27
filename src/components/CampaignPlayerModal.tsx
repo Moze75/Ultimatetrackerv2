@@ -971,7 +971,7 @@ return (
   </button>
 
   <button
-    onClick={() => setActiveTab('notes')}
+ onClick={() => { setActiveTab('notes'); loadNotes(); }}
     className={`pb-2 px-1 border-b-2 transition-colors ${
       activeTab === 'notes'
         ? 'border-purple-500 text-purple-400'
