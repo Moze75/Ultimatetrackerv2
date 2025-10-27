@@ -1413,7 +1413,7 @@ function EditCampaignItemModal({
     '3 m', '6 m', '9 m', '12 m', '18 m',
     '24 m', '30 m', '36 m', '45 m', '60 m', '90 m', '120 m'
   ] as const;
-  const PROPERTY_TAGS = ['Finesse', 'Légère', 'Lancer', 'Polyvalente', 'Deux mains', 'Lourde', 'Allonge'] as const;
+  const PROPERTY_TAGS = ['Finesse', 'Légère', 'Lancer', 'Polyvalente', 'Deux mains', 'Lourde', 'Allonge', 'Munitions', 'Chargement'] as const;
 
   // Helpers meta
   const parseMeta = (description: string | null | undefined) => {
