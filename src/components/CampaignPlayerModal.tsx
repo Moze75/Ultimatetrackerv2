@@ -398,11 +398,12 @@ const handleClaimMultiple = async () => {
   }
 };
   
-  useEffect(() => {
-    if (open) {
-      loadData();
-    }
-  }, [open]);
+ useEffect(() => {
+  if (open && activeTab === 'notes') {
+    loadNotes();
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [open, activeTab]);
 
   const loadCampaignMembers = async (campaignId: string) => {
     try {
