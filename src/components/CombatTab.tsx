@@ -401,10 +401,9 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
 
 const getAttackBonus = (attack: Attack): number => {
   const weaponBonus = attack.weapon_bonus ?? 0;
-
   const proficiencyBonus = player.stats?.proficiency_bonus || 2;
 
-  // 2. Caractéristique forcée (override_ability)
+  // 1) override_ability prime
   if (attack.override_ability) {
     const ability = player.abilities?.find((a) => a.name === attack.override_ability);
     const abilityMod = ability?.modifier || 0;
@@ -412,72 +411,25 @@ const getAttackBonus = (attack: Attack): number => {
     return abilityMod + masteryBonus + weaponBonus;
   }
 
-  // 3. Calcul automatique selon la classe
-  let abilityModifier = 0;
-  if (player.abilities) {
-    if (player.class === 'Ensorceleur' || player.class === 'Barde' || player.class === 'Paladin') {
-      const chaAbility = player.abilities.find((a) => a.name === 'Charisme');
-      abilityModifier = chaAbility?.modifier || 0;
-    } else if (player.class === 'Moine' || player.class === 'Roublard') {
-      const dexAbility = player.abilities.find((a) => a.name === 'Dextérité');
-      abilityModifier = dexAbility?.modifier || 0;
-    } else {
-      if (attack.range?.toLowerCase().includes('distance') || attack.range?.toLowerCase().includes('portée')) {
-        const dexAbility = player.abilities.find((a) => a.name === 'Dextérité');
-        abilityModifier = dexAbility?.modifier || 0;
-      } else {
-        const strAbility = player.abilities.find((a) => a.name === 'Force');
-        abilityModifier = strAbility?.modifier || 0;
-      }
-    }
-  }
-
+  // 2) inférence depuis properties/portée
+  const abilityMod = inferWeaponAbilityMod(attack as any, player.abilities || []);
   const masteryBonus = attack.expertise ? proficiencyBonus : 0;
-  return abilityModifier + masteryBonus + weaponBonus;
+  return abilityMod + masteryBonus + weaponBonus;
 };
 
 const getDamageBonus = (attack: Attack): number => {
   const weaponBonus = attack.weapon_bonus ?? 0;
 
-  // 2. Caractéristique forcée (override_ability)
+  // 1) override_ability prime
   if (attack.override_ability) {
     const ability = player.abilities?.find((a) => a.name === attack.override_ability);
     return (ability?.modifier || 0) + weaponBonus;
   }
 
-  // 3. Calcul automatique selon la classe
-  let abilityModifier = 0;
-  if (player.abilities) {
-    if (player.class === 'Ensorceleur' || player.class === 'Barde' || player.class === 'Paladin') {
-      const chaAbility = player.abilities.find((a) => a.name === 'Charisme');
-      abilityModifier = chaAbility?.modifier || 0;
-    } else if (player.class === 'Moine' || player.class === 'Roublard') {
-      const dexAbility = player.abilities.find((a) => a.name === 'Dextérité');
-      abilityModifier = dexAbility?.modifier || 0;
-    } else {
-      if (attack.range?.toLowerCase().includes('distance') || attack.range?.toLowerCase().includes('portée')) {
-        const dexAbility = player.abilities.find((a) => a.name === 'Dextérité');
-        abilityModifier = dexAbility?.modifier || 0;
-      } else {
-        const strAbility = player.abilities.find((a) => a.name === 'Force');
-        abilityModifier = strAbility?.modifier || 0;
-      }
-    }
-  }
-
-  return abilityModifier + weaponBonus;
+  // 2) inférence depuis properties/portée
+  const abilityMod = inferWeaponAbilityMod(attack as any, player.abilities || []);
+  return abilityMod + weaponBonus;
 };
-
-  const rollAttack = (attack: Attack) => {
-    const attackBonus = getAttackBonus(attack);
-    setRollData({
-      type: 'attack',
-      attackName: attack.name,
-      diceFormula: '1d20',
-      modifier: attackBonus
-    });
-    setDiceRollerOpen(true);
-  };
 
   const rollDamage = (attack: Attack) => {
     const damageBonus = getDamageBonus(attack);
