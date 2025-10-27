@@ -1424,7 +1424,7 @@ return (
       <CurrencyDistributionModal
         gift={selectedGiftForDistribution}
         campaignMembers={campaignMembersForDistribution}
-        currentUserId={(async () => { const { data: { user } } = await supabase.auth.getUser(); return user?.id || ''; })() as any}
+   currentUserId={currentUserId}
         playerId={player.id}
         currentPlayer={player}
         onClose={() => {
