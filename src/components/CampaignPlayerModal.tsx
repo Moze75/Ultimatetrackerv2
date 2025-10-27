@@ -523,6 +523,7 @@ useEffect(() => {
 }, [open]);
   
  // Helpers Notes
+// Helpers Notes
 const LS_NOTES_KEY = `campaign_notes_${player.id}`;
 
 const loadNotes = async () => {
@@ -547,7 +548,7 @@ const loadNotes = async () => {
     setNotesNPCs(npcs);
     setNotesQuests(quests);
 
-    // aligne le cache local sur la BDD
+    // Synchronise le cache local
     try {
       localStorage.setItem(LS_NOTES_KEY, JSON.stringify({ journal, npcs, quests }));
     } catch {}
@@ -561,12 +562,11 @@ const loadNotes = async () => {
         setNotesNPCs(parsed.npcs || '');
         setNotesQuests(parsed.quests || '');
       } else {
-        // Pas de cache local: ne PAS écraser l’état existant avec des vides
-        // -> on laisse les valeurs actuelles (éventuellement celles que l’utilisateur vient de taper)
+        // Ne pas écraser l'état avec des vides si rien en cache
       }
     } catch (e) {
       console.error('[Notes] Fallback localStorage erreur:', e);
-      // idem: on n’écrase pas l’état
+      // Ne rien écraser
     }
   }
 };
@@ -596,7 +596,7 @@ const saveNotes = async () => {
       throw error;
     }
 
-    // mets à jour le cache local pour le prochain fallback
+    // Mets à jour le cache local pour un affichage immédiat en fallback
     try {
       localStorage.setItem(LS_NOTES_KEY, JSON.stringify({
         journal: payload.journal,
