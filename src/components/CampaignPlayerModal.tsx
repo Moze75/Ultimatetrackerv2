@@ -523,6 +523,78 @@ setActiveCampaigns(campaigns || []);
   };
 
   const handleDistributeCurrency = async (distribution: { userId: string; playerId: string; gold: number; silver: number; copper: number }[]) => {
+
+    // Helpers Notes
+const LS_NOTES_KEY = `campaign_notes_${player.id}`;
+
+const loadNotes = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('players')
+      .select('notes_json')
+      .eq('id', player.id)
+      .single();
+
+    if (!error && data?.notes_json) {
+      const { journal = '', npcs = '', quests = '' } = data.notes_json || {};
+      setNotesJournal(journal);
+      setNotesNPCs(npcs);
+      setNotesQuests(quests);
+      return;
+    }
+  } catch {
+    // fallback local
+  }
+
+  try {
+    const raw = localStorage.getItem(LS_NOTES_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      setNotesJournal(parsed.journal || '');
+      setNotesNPCs(parsed.npcs || '');
+      setNotesQuests(parsed.quests || '');
+    } else {
+      setNotesJournal('');
+      setNotesNPCs('');
+      setNotesQuests('');
+    }
+  } catch {
+    setNotesJournal('');
+    setNotesNPCs('');
+    setNotesQuests('');
+  }
+};
+
+const saveNotes = async () => {
+  if (savingNotes) return;
+  setSavingNotes(true);
+  const payload = {
+    journal: notesJournal,
+    npcs: notesNPCs,
+    quests: notesQuests,
+    updated_at: new Date().toISOString(),
+  };
+
+  try {
+    const { error } = await supabase
+      .from('players')
+      .update({ notes_json: payload })
+      .eq('id', player.id);
+
+    if (error) throw error;
+    toast.success('Notes sauvegardées');
+  } catch {
+    try {
+      localStorage.setItem(LS_NOTES_KEY, JSON.stringify(payload));
+      toast.success('Notes sauvegardées (localement)');
+    } catch {
+      toast.error('Impossible de sauvegarder les notes');
+    }
+  } finally {
+    setSavingNotes(false);
+  }
+};
+    
     if (!selectedGiftForDistribution) return;
 
     try {
