@@ -60,4 +60,4 @@ export function inferWeaponAbilityMod(attack: any, playerAbilities: AbilityLike[
 
   // 4) Par défaut en mêlée: STR
   return strMod;
-}
+} 
