@@ -40,7 +40,7 @@ const smartCapitalize = (name: string) => {
 };
 
 // Propriétés disponibles (cochent les règles STR/DEX en mêlée)
-const PROPERTY_TAGS = ['Finesse', 'Légère', 'Lancer', 'Polyvalente', 'Deux mains', 'Lourde', 'Allonge'] as const;
+const PROPERTY_TAGS = ['Finesse', 'Légère', 'Lancer', 'Polyvalente', 'Deux mains', 'Lourde', 'Allonge', 'Munitions', 'Chargement'] as const;
 
 export function CustomItemModal({
   onClose, onAdd,
