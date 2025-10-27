@@ -322,7 +322,7 @@ export function CampaignPlayerModal({
   const [activeCampaigns, setActiveCampaigns] = useState<Campaign[]>([]);
   const [pendingGifts, setPendingGifts] = useState<CampaignGift[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'invitations' | 'gifts'>('gifts');
+  const [activeTab, setActiveTab] = useState<'invitations' | 'gifts' | 'notes'>('gifts');
 
   // États pour les invitations simplifiées
   const [processingInvitation, setProcessingInvitation] = useState<string | null>(null);
