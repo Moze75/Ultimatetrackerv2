@@ -522,52 +522,52 @@ useEffect(() => {
   }
 }, [open]);
   
-  // Helpers Notes
+ // Helpers Notes
 const LS_NOTES_KEY = `campaign_notes_${player.id}`;
 
 const loadNotes = async () => {
   try {
     const { data, error } = await supabase
       .from('players')
-      .select('notes_json')
+      .select('id, notes_json')
       .eq('id', player.id)
       .single();
 
-    if (!error && data?.notes_json) {
-      const { journal = '', npcs = '', quests = '' } = data.notes_json || {};
-      setNotesJournal(journal);
-      setNotesNPCs(npcs);
-      setNotesQuests(quests);
-      return;
+    if (error) {
+      console.error('[Notes] SELECT error:', error);
+      throw error;
     }
-  } catch {
 
-    useEffect(() => {
-  if (open && activeTab === 'notes') {
-    loadNotes();
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [open, activeTab]);
-    
-    // fallback local
-  }
+    const notes = data?.notes_json || {};
+    const journal = typeof notes.journal === 'string' ? notes.journal : '';
+    const npcs = typeof notes.npcs === 'string' ? notes.npcs : '';
+    const quests = typeof notes.quests === 'string' ? notes.quests : '';
 
-  try {
-    const raw = localStorage.getItem(LS_NOTES_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      setNotesJournal(parsed.journal || '');
-      setNotesNPCs(parsed.npcs || '');
-      setNotesQuests(parsed.quests || '');
-    } else {
-      setNotesJournal('');
-      setNotesNPCs('');
-      setNotesQuests('');
+    setNotesJournal(journal);
+    setNotesNPCs(npcs);
+    setNotesQuests(quests);
+
+    // aligne le cache local sur la BDD
+    try {
+      localStorage.setItem(LS_NOTES_KEY, JSON.stringify({ journal, npcs, quests }));
+    } catch {}
+  } catch (err) {
+    console.warn('[Notes] BDD indisponible, fallback localStorage.', err);
+    try {
+      const raw = localStorage.getItem(LS_NOTES_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setNotesJournal(parsed.journal || '');
+        setNotesNPCs(parsed.npcs || '');
+        setNotesQuests(parsed.quests || '');
+      } else {
+        // Pas de cache local: ne PAS écraser l’état existant avec des vides
+        // -> on laisse les valeurs actuelles (éventuellement celles que l’utilisateur vient de taper)
+      }
+    } catch (e) {
+      console.error('[Notes] Fallback localStorage erreur:', e);
+      // idem: on n’écrase pas l’état
     }
-  } catch {
-    setNotesJournal('');
-    setNotesNPCs('');
-    setNotesQuests('');
   }
 };
 
@@ -596,12 +596,25 @@ const saveNotes = async () => {
       throw error;
     }
 
+    // mets à jour le cache local pour le prochain fallback
+    try {
+      localStorage.setItem(LS_NOTES_KEY, JSON.stringify({
+        journal: payload.journal,
+        npcs: payload.npcs,
+        quests: payload.quests,
+      }));
+    } catch {}
+
     console.log('[Notes] Save OK, returned:', data);
     toast.success('Notes sauvegardées');
   } catch (e: any) {
     console.error('[Notes] Save failed, fallback localStorage. Reason:', e?.message || e);
     try {
-      localStorage.setItem(`campaign_notes_${player.id}`, JSON.stringify(payload));
+      localStorage.setItem(LS_NOTES_KEY, JSON.stringify({
+        journal: payload.journal,
+        npcs: payload.npcs,
+        quests: payload.quests,
+      }));
       toast.success('Notes sauvegardées (localement)');
     } catch {
       toast.error('Impossible de sauvegarder les notes');
