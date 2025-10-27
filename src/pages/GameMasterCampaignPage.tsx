@@ -1360,6 +1360,9 @@ function InventoryTab({
 // =============================================
 // Modal d'édition d'objet de campagne
 // =============================================
+// =============================================
+// Modal d'édition d'objet de campagne (REMPLACER CE COMPOSANT EN ENTIER)
+// =============================================
 function EditCampaignItemModal({
   item,
   onClose,
@@ -1386,42 +1389,33 @@ function EditCampaignItemModal({
   // weapon
   const [weaponDamageDice, setWeaponDamageDice] = useState<string>('');
   const [weaponDamageType, setWeaponDamageType] = useState<string>('');
-  const [weaponProperties, setWeaponProperties] = useState<string>('');
+  const [weaponProperties, setWeaponProperties] = useState<string>(''); // fallback libre
   const [weaponRange, setWeaponRange] = useState<string>('');
   const [weaponCategory, setWeaponCategory] = useState<string>('');
   const [weaponBonus, setWeaponBonus] = useState<number | null>(null);
+  const [weaponPropTags, setWeaponPropTags] = useState<string[]>([]);
   // shield
   const [shieldBonus, setShieldBonus] = useState<number | null>(null);
   const [imageUrl, setImageUrl] = React.useState<string>('');
 
-// Listes de choix pour éviter les fautes de frappe
-const DAMAGE_TYPES = ['Tranchant', 'Perforant', 'Contondant'] as const;
+  // Listes de choix
+  const DAMAGE_TYPES = ['Tranchant', 'Perforant', 'Contondant'] as const;
+  const WEAPON_CATEGORIES = [
+    'Armes courantes',
+    'Armes de guerre',
+    'Armes de guerre dotées de la propriété Légère',
+    'Armes de guerre présentant la propriété Finesse ou Légère',
+  ] as const;
+  const RANGES = [
+    'Corps à corps',
+    'Contact',
+    '1,5 m',
+    '3 m', '6 m', '9 m', '12 m', '18 m',
+    '24 m', '30 m', '36 m', '45 m', '60 m', '90 m', '120 m'
+  ] as const;
+  const PROPERTY_TAGS = ['Finesse', 'Légère', 'Lancer', 'Polyvalente', 'Deux mains', 'Lourde', 'Allonge'] as const;
 
-const WEAPON_CATEGORIES = [
-  'Armes courantes',
-  'Armes de guerre',
-  'Armes de guerre dotées de la propriété Légère',
-  'Armes de guerre présentant la propriété Finesse ou Légère',
-] as const;
-
-const RANGES = [
-  'Corps à corps',
-  'Contact',
-  '1,5 m',
-  '3 m',
-  '6 m',
-  '9 m',
-  '12 m',
-  '18 m',
-  '24 m',
-  '30 m',
-  '36 m',
-  '45 m',
-  '60 m',
-  '90 m',
-] as const;
-  
-  // Helpers pour parser la description
+  // Helpers meta
   const parseMeta = (description: string | null | undefined) => {
     if (!description) return null;
     const lines = description.split('\n').map(l => l.trim());
@@ -1443,7 +1437,7 @@ const RANGES = [
       .trim();
   };
 
-  // Initialisation : extraire description visible et métadonnées existantes
+  // Initialisation (OK: hook à la racine)
   useEffect(() => {
     const vis = stripMetaFromDescription(item.description);
     setVisibleDescription(vis);
@@ -1452,80 +1446,69 @@ const RANGES = [
     if (meta) {
       setType(meta.type || null);
       setQuantity(meta.quantity ?? item.quantity ?? 1);
-      // Armor
+
       if (meta.type === 'armor' && meta.armor) {
         setArmorBase(meta.armor.base ?? null);
         setArmorAddDex(meta.armor.addDex ?? true);
         setArmorDexCap(meta.armor.dexCap ?? null);
       }
-    // Weapon
-if (meta.type === 'weapon' && meta.weapon) {
-  setWeaponDamageDice(meta.weapon.damageDice || '1d6');
-  setWeaponDamageType(
-    (meta.weapon.damageType && DAMAGE_TYPES.includes(meta.weapon.damageType as any))
-      ? meta.weapon.damageType
-      : 'Tranchant'
-  );
 
+      if (meta.type === 'weapon' && meta.weapon) {
+        setWeaponDamageDice(meta.weapon.damageDice || '1d6');
+        setWeaponDamageType(
+          (meta.weapon.damageType && (DAMAGE_TYPES as readonly string[]).includes(meta.weapon.damageType as any))
+            ? meta.weapon.damageType
+            : 'Tranchant'
+        );
+        const propRaw = meta.weapon.properties || '';
+        const initTags = PROPERTY_TAGS.filter(t => propRaw.toLowerCase().includes(t.toLowerCase()));
+        setWeaponPropTags(initTags);
+        setWeaponProperties(propRaw); // conservation texto
+        setWeaponRange(
+          (meta.weapon.range && (RANGES as readonly string[]).includes(meta.weapon.range as any))
+            ? meta.weapon.range
+            : 'Corps à corps'
+        );
+        setWeaponCategory(
+          (meta.weapon.category && (WEAPON_CATEGORIES as readonly string[]).includes(meta.weapon.category as any))
+            ? meta.weapon.category
+            : 'Armes courantes'
+        );
+        setWeaponBonus(meta.weapon.weapon_bonus ?? null);
+      } else {
+        // Si l'utilisateur bascule vers "weapon" ensuite, on mettra des défauts via le hook ci-dessous
+      }
 
-  
-  setWeaponProperties(meta.weapon.properties || '');
-  setWeaponRange(
-    (meta.weapon.range && RANGES.includes(meta.weapon.range as any))
-      ? meta.weapon.range
-      : 'Corps à corps'
-  );
-  setWeaponCategory(
-    (meta.weapon.category && WEAPON_CATEGORIES.includes(meta.weapon.category as any))
-      ? meta.weapon.category
-      : 'Armes courantes'
-  );
-  setWeaponBonus(meta.weapon.weapon_bonus ?? null);
-} else if (type === 'weapon') {
-  // Si pas de méta existante mais type = weapon, mettre des valeurs par défaut
-  setWeaponDamageDice((prev) => prev || '1d6');
-  setWeaponDamageType((prev) => (prev && DAMAGE_TYPES.includes(prev as any) ? prev : 'Tranchant'));
-  setWeaponRange((prev) => (prev && RANGES.includes(prev as any) ? prev : 'Corps à corps'));
-  setWeaponCategory((prev) => (prev && WEAPON_CATEGORIES.includes(prev as any) ? prev : 'Armes courantes'));
-}
-      // Shield
       if (meta.type === 'shield' && meta.shield) {
         setShieldBonus(meta.shield.bonus ?? null);
       }
-      // ✅ NOUVEAU : Récupérer l'URL d'image
-setImageUrl(meta.imageUrl || '');
+
+      setImageUrl(meta.imageUrl || '');
     } else {
-      // Pas de méta : on peut laisser type null (objet générique)
       setType(null);
       setQuantity(item.quantity || 1);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item]);
 
-  React.useEffect(() => {
-  if (type === 'weapon') {
-    setWeaponDamageDice((prev) => prev || '1d6');
-    setWeaponDamageType((prev) =>
-      prev && (DAMAGE_TYPES as readonly string[]).includes(prev as any) ? prev : 'Tranchant'
-    );
-    setWeaponRange((prev) =>
-      prev && (RANGES as readonly string[]).includes(prev as any) ? prev : 'Corps à corps'
-    );
-    setWeaponCategory((prev) =>
-      prev && (WEAPON_CATEGORIES as readonly string[]).includes(prev as any) ? prev : 'Armes courantes'
-    );
-  }
-}, [type]);
+  // Defaults si l'utilisateur change le Type => 'weapon'
+  useEffect(() => {
+    if (type === 'weapon') {
+      setWeaponDamageDice(prev => prev || '1d6');
+      setWeaponDamageType(prev => (prev && (DAMAGE_TYPES as readonly string[]).includes(prev as any) ? prev : 'Tranchant'));
+      setWeaponRange(prev => (prev && (RANGES as readonly string[]).includes(prev as any) ? prev : 'Corps à corps'));
+      setWeaponCategory(prev => (prev && (WEAPON_CATEGORIES as readonly string[]).includes(prev as any) ? prev : 'Armes courantes'));
+    }
+  }, [type]);
 
-  // Construire l'objet meta à partir des champs
+  // Construire meta depuis l'UI
   const buildMeta = () => {
     if (!type) return null;
-const baseMeta: any = {
-  type,
-  quantity: quantity || 1,
-  equipped: false,
-  imageUrl: imageUrl.trim() || undefined, // ✅ NOUVEAU
-};
+    const baseMeta: any = {
+      type,
+      quantity: quantity || 1,
+      equipped: false,
+      imageUrl: imageUrl.trim() || undefined,
+    };
 
     if (type === 'armor') {
       baseMeta.armor = {
@@ -1541,18 +1524,17 @@ const baseMeta: any = {
         })()
       };
     } else if (type === 'weapon') {
+      const properties = (weaponPropTags.length ? weaponPropTags.join(', ') : weaponProperties || '').trim();
       baseMeta.weapon = {
-        damageDice: weaponDamageDice || '',
-        damageType: weaponDamageType || '',
-        properties: weaponProperties || '',
-        range: weaponRange || '',
-        category: weaponCategory || '',
+        damageDice: weaponDamageDice || '1d6',
+        damageType: weaponDamageType || 'Tranchant',
+        properties,
+        range: weaponRange || 'Corps à corps',
+        category: weaponCategory || 'Armes courantes',
         weapon_bonus: weaponBonus
       };
     } else if (type === 'shield') {
-      baseMeta.shield = {
-        bonus: shieldBonus ?? 0
-      };
+      baseMeta.shield = { bonus: shieldBonus ?? 0 };
     }
 
     return baseMeta;
@@ -1592,7 +1574,7 @@ const baseMeta: any = {
   return (
     <div className="fixed inset-0 z-[10000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
-<div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(32rem,95vw)] max-h-[90vh] overflow-y-auto bg-gray-900/95 border border-gray-700 rounded-xl p-6">
+      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(32rem,95vw)] max-h-[90vh] overflow-y-auto bg-gray-900/95 border border-gray-700 rounded-xl p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-bold text-white">Modifier l'objet</h3>
           <button onClick={onClose} className="p-2 text-gray-400 hover:bg-gray-800 rounded-lg">
@@ -1640,7 +1622,7 @@ const baseMeta: any = {
             </div>
           </div>
 
-          {/* Champs pour armure */}
+          {/* Armor */}
           {type === 'armor' && (
             <div className="space-y-2 bg-gray-800/30 p-3 rounded">
               <div className="grid grid-cols-3 gap-2">
@@ -1663,86 +1645,71 @@ const baseMeta: any = {
             </div>
           )}
 
-          {/* Champs pour arme */}
-      {type === 'weapon' && (
-  <div className="space-y-2 bg-gray-800/30 p-3 rounded">
-    <div className="grid grid-cols-2 gap-2">
-      <div>
-        <label className="text-xs text-gray-400">Dégâts (ex: 1d6)</label>
-        <input
-          className="input-dark w-full px-2 py-1 rounded"
-          value={weaponDamageDice}
-          onChange={(e) => setWeaponDamageDice(e.target.value)}
-        />
-      </div>
+          {/* Weapon */}
+          {type === 'weapon' && (
+            <div className="space-y-2 bg-gray-800/30 p-3 rounded">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-gray-400">Dégâts (ex: 1d6)</label>
+                  <input className="input-dark w-full px-2 py-1 rounded" value={weaponDamageDice} onChange={(e) => setWeaponDamageDice(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400">Type de dégâts</label>
+                  <select className="input-dark w-full px-2 py-1 rounded" value={weaponDamageType || 'Tranchant'} onChange={(e) => setWeaponDamageType(e.target.value)}>
+                    {Array.from(DAMAGE_TYPES).map((dt) => (<option key={dt} value={dt}>{dt}</option>))}
+                  </select>
+                </div>
 
-      <div>
-        <label className="text-xs text-gray-400">Type de dégâts</label>
-        <select
-          className="input-dark w-full px-2 py-1 rounded"
-          value={weaponDamageType || 'Tranchant'}
-          onChange={(e) => setWeaponDamageType(e.target.value)}
-        >
-          {DAMAGE_TYPES.map((dt) => (
-            <option key={dt} value={dt}>{dt}</option>
-          ))}
-        </select>
-      </div>
+                <div className="col-span-2">
+                  <label className="text-xs text-gray-400">Propriétés (cases à cocher)</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {Array.from(PROPERTY_TAGS).map(tag => {
+                      const checked = weaponPropTags.includes(tag);
+                      return (
+                        <label key={tag} className="inline-flex items-center gap-2 text-xs text-gray-200">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => {
+                              setWeaponPropTags(prev => e.target.checked ? [...prev, tag] : prev.filter(t => t !== tag));
+                            }}
+                          />
+                          <span>{tag}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-1">Finesse/Légère/Lancer/Polyvalente influencent STR/DEX en mêlée.</p>
+                </div>
 
-      <div>
-        <label className="text-xs text-gray-400">Propriétés</label>
-        <input
-          className="input-dark w-full px-2 py-1 rounded"
-          value={weaponProperties}
-          onChange={(e) => setWeaponProperties(e.target.value)}
-          placeholder="Finesse, Légère…"
-        />
-      </div>
+                <div>
+                  <label className="text-xs text-gray-400">Portée</label>
+                  <select className="input-dark w-full px-2 py-1 rounded" value={weaponRange || 'Corps à corps'} onChange={(e) => setWeaponRange(e.target.value)}>
+                    {Array.from(RANGES).map((r) => (<option key={r} value={r}>{r}</option>))}
+                  </select>
+                </div>
 
-      <div>
-        <label className="text-xs text-gray-400">Portée</label>
-        <select
-          className="input-dark w-full px-2 py-1 rounded"
-          value={weaponRange || 'Corps à corps'}
-          onChange={(e) => setWeaponRange(e.target.value)}
-        >
-          {RANGES.map((r) => (
-            <option key={r} value={r}>{r}</option>
-          ))}
-        </select>
-      </div>
+                <div>
+                  <label className="text-xs text-gray-400">Catégorie</label>
+                  <select className="input-dark w-full px-2 py-1 rounded" value={weaponCategory || 'Armes courantes'} onChange={(e) => setWeaponCategory(e.target.value)}>
+                    {Array.from(WEAPON_CATEGORIES).map((c) => (<option key={c} value={c}>{c}</option>))}
+                  </select>
+                </div>
 
-      <div className="col-span-2">
-        <label className="text-xs text-gray-400">Catégorie</label>
-        <select
-          className="input-dark w-full px-2 py-1 rounded"
-          value={weaponCategory || 'Armes courantes'}
-          onChange={(e) => setWeaponCategory(e.target.value)}
-        >
-          {WEAPON_CATEGORIES.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
-        <p className="text-[10px] text-gray-500 mt-1">
-          La catégorie influence la maîtrise pour le calcul des attaques
-        </p>
-      </div>
+                <div>
+                  <label className="text-xs text-gray-400">Bonus de l'arme</label>
+                  <input type="number" className="input-dark w-full px-2 py-1 rounded" value={weaponBonus ?? ''} onChange={(e) => setWeaponBonus(e.target.value ? parseInt(e.target.value) : null)} />
+                </div>
 
-      <div>
-        <label className="text-xs text-gray-400">Bonus de l'arme</label>
-        <input
-          type="number"
-          className="input-dark w-full px-2 py-1 rounded"
-          value={weaponBonus ?? ''}
-          onChange={(e) => setWeaponBonus(e.target.value ? parseInt(e.target.value) : null)}
-          placeholder="Ex: 1, 2, 3"
-        />
-      </div>
-    </div>
-  </div>
-)}
+                <div className="col-span-2">
+                  <label className="text-xs text-gray-400">Propriétés (libre, optionnel)</label>
+                  <input className="input-dark w-full px-2 py-1 rounded" value={weaponProperties} onChange={(e) => setWeaponProperties(e.target.value)} placeholder="Compléments éventuels (si aucune case cochée)" />
+                </div>
+              </div>
+            </div>
+          )}
 
-          {/* Champs pour bouclier */}
+          {/* Shield */}
           {type === 'shield' && (
             <div className="space-y-2 bg-gray-800/30 p-3 rounded">
               <div>
@@ -1753,12 +1720,9 @@ const baseMeta: any = {
           )}
 
           <div>
-  <ImageUrlInput
-    value={imageUrl}
-    onChange={setImageUrl}
-  />
-</div>
-          
+            <ImageUrlInput value={imageUrl} onChange={setImageUrl} />
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">Description (visible)</label>
             <textarea
@@ -1768,23 +1732,13 @@ const baseMeta: any = {
               rows={4}
               placeholder="Description que verront les joueurs (les méta sont cachées ici)"
             />
-            <p className="text-xs text-gray-500 mt-1">Les propriétés techniques sont gérées séparément et ne s'affichent pas en brut dans la description.</p>
+            <p className="text-xs text-gray-500 mt-1">Les propriétés techniques sont sérialisées dans les méta.</p>
           </div>
         </div>
 
         <div className="flex justify-end gap-3 mt-6">
-          <button
-            onClick={onClose}
-            disabled={saving}
-            className="btn-secondary px-4 py-2 rounded-lg"
-          >
-            Annuler
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="btn-primary px-4 py-2 rounded-lg disabled:opacity-50"
-          >
+          <button onClick={onClose} disabled={saving} className="btn-secondary px-4 py-2 rounded-lg">Annuler</button>
+          <button onClick={handleSave} disabled={saving} className="btn-primary px-4 py-2 rounded-lg disabled:opacity-50">
             {saving ? 'Sauvegarde...' : 'Sauvegarder'}
           </button>
         </div>
