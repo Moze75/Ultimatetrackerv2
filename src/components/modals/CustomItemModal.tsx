@@ -162,27 +162,29 @@ meta.weapon = {
                 </select>
               </div>
 
-              <div className="md:col-span-2">
-                <label className="block text-xs text-gray-400 mb-1">Propriétés (cases à cocher)</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {PROPERTY_TAGS.map(tag => {
-                    const checked = propTags.includes(tag);
-                    return (
-                      <label key={tag} className="inline-flex items-center gap-2 text-xs text-gray-200">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={(e) => {
-                            setPropTags(prev => e.target.checked ? [...prev, tag] : prev.filter(t => t !== tag));
-                          }}
-                        />
-                        <span>{tag}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-                <p className="text-[10px] text-gray-500 mt-1">Finesse/Légère/Lancer/Polyvalente influencent l’attribut (STR/DEX) en mêlée.</p>
-              </div>
+             <div className="md:col-span-2">
+  <label className="block text-xs text-gray-400 mb-1">Propriétés (cases à cocher)</label>
+  <div className="grid grid-cols-2 gap-2">
+    {PROPERTY_TAGS.map(tag => {
+      const checked = propTags.includes(tag);
+      return (
+        <label key={tag} className="inline-flex items-center gap-2 text-xs text-gray-200">
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={(e) => {
+              setPropTags(prev => e.target.checked ? [...prev, tag] : prev.filter(t => t !== tag));
+            }}
+          />
+          <span>{tag}</span>
+        </label>
+      );
+    })}
+  </div>
+  <p className="text-[10px] text-gray-500 mt-1">
+    Finesse/Légère/Lancer/Polyvalente influencent STR/DEX en mêlée; Munitions/Chargement aident à détecter une arme à distance.
+  </p>
+</div>
 
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Portée</label>
