@@ -352,6 +352,16 @@ useEffect(() => {
     );
   }
 
+// ...
+<Toaster
+  position="top-right"
+  containerStyle={{ zIndex: 20000 }} // s’assure d’être au-dessus de la modale
+  toastOptions={{
+    // Optionnel: styles globaux
+    style: { zIndex: 20000 },
+  }}
+/>
+  
   // Rendu principal
   return (
     <>
