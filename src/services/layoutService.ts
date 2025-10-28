@@ -24,23 +24,25 @@ export const layoutService = {
     }
   },
 
-  async saveLayout(userId: string, layouts: any, isLocked: boolean): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('user_layout_preferences')
-        .upsert({
-          user_id: userId,
-          layouts,
-          is_locked: isLocked,
-          updated_at: new Date().toISOString(),
-        });
+async saveLayout(userId: string, layouts: any, isLocked: boolean): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('user_layout_preferences')
+      .upsert({
+        user_id: userId,
+        layouts,
+        is_locked: isLocked,
+        updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'user_id'  // ← AJOUT : spécifie la colonne de conflit
+      });
 
-      if (error) throw error;
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde du layout:', error);
-      throw error;
-    }
-  },
+    if (error) throw error;
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde du layout:', error);
+    throw error;
+  }
+},
 
   async resetLayout(userId: string): Promise<void> {
     try {
