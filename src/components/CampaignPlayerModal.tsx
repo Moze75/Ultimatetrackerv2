@@ -410,112 +410,126 @@ const handleClaimMultiple = async () => {
   };
 
   const loadData = async () => {
-    try {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+  try {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
-      console.log('🎯 DEBUG LOAD DATA:');
-      console.log('- user.id:', user.id);
-      console.log('- player.id:', player.id);
+    const cacheKey = `campaign_modal_${user.id}`;
+    const cached = readCache(cacheKey);
+    if (cached) {
+      // Afficher immédiatement le cache
+      setInvitations(cached.invitations);
+      setMyCampaigns(cached.myCampaigns);
+      setActiveCampaigns(cached.activeCampaigns);
+      setMembersByCampaign(cached.membersByCampaign);
+      setPendingGifts(cached.pendingGifts);
+    }
 
-      // Charger les invitations
+    // Rechargement silencieux (SWR)
+    (async () => {
+      // 1) Invitations
       const invites = await campaignService.getMyPendingInvitations();
-      setInvitations(invites);
 
-      // ✅ CORRECTION : Récupérer les campagnes via user_id
-      const { data: members, error: membershipError } = await supabase
+      // 2) Campagnes (via memberships)
+      const { data: memberships, error: membershipError } = await supabase
         .from('campaign_members')
         .select('campaign_id')
         .eq('user_id', user.id)
         .eq('is_active', true);
 
-      console.log('🏕️ QUERY campaign_members:');
-      console.log('  - Error:', membershipError);
-      console.log('  - Data brut:', members);
-      console.log('  - Nombre de memberships:', members?.length || 0);
+      if (membershipError) throw membershipError;
 
-      if (members && members.length > 0) {
-        const campaignIds = members.map(m => m.campaign_id);
-        
-        console.log('  - Campaign IDs:', campaignIds);
+      let myCamps: Campaign[] = [];
+      let membersMap: Record<string, CampaignMember[]> = {};
+      let giftsFiltered: CampaignGift[] = [];
 
-const { data: campaigns, error: campaignError } = await supabase
-  .from('campaigns')
-  .select('*')
-  .in('id', campaignIds);
+      if (memberships && memberships.length > 0) {
+        const campaignIds = memberships.map(m => m.campaign_id);
 
-console.log('📋 CAMPAIGNS CHARGÉES:', campaigns);
-console.log('❌ CAMPAIGNS ERROR:', campaignError); // ✅ AJOUTE CE LOG
+        // 3) Campagnes (ne sélectionne que les colonnes utiles)
+        const { data: campaigns, error: campaignError } = await supabase
+          .from('campaigns')
+          .select('id,name,description')
+          .in('id', campaignIds);
 
-setMyCampaigns(campaigns || []);
-setActiveCampaigns(campaigns || []);
+        if (campaignError) throw campaignError;
+        myCamps = campaigns || [];
 
-        // Charger les membres pour chaque campagne
-        const membersMap: Record<string, CampaignMember[]> = {};
-        await Promise.all(
-          campaignIds.map(async (campaignId) => {
-            const campaignMembers = await loadCampaignMembers(campaignId);
-            membersMap[campaignId] = campaignMembers;
-          })
-        );
-        setMembersByCampaign(membersMap);
+        // 4) Tous les membres de TOUTES les campagnes en UNE requête
+        const { data: allMembers, error: membersError } = await supabase
+          .from('campaign_members')
+          .select('campaign_id,user_id,player_id,player_name,email')
+          .in('campaign_id', campaignIds);
 
-        // Charger les gifts
-        const { data: gifts } = await supabase
+        if (membersError) throw membersError;
+
+        membersMap = (allMembers || []).reduce((acc, m) => {
+          (acc[m.campaign_id] ||= []).push(m as CampaignMember);
+          return acc;
+        }, {} as Record<string, CampaignMember[]>);
+
+        // 5) Gifts pour toutes les campagnes de l’utilisateur
+        const { data: gifts, error: giftsError } = await supabase
           .from('campaign_gifts')
-          .select('*')
+          .select('id,campaign_id,gift_type,distribution_mode,recipient_ids,item_name,item_quantity,item_description,message,gold,silver,copper,sent_at,status')
           .in('campaign_id', campaignIds)
           .eq('status', 'pending')
           .order('sent_at', { ascending: false });
 
-        console.log('📦 GIFTS BRUTS (avant filtrage):', gifts);
+        if (giftsError) throw giftsError;
 
-        const filteredGifts = (gifts || []).filter((gift) => {
-          console.log(`  → Gift "${gift.item_name || 'Argent'}":`, {
-            distribution_mode: gift.distribution_mode,
-            recipient_ids: gift.recipient_ids,
-            match_shared: gift.distribution_mode === 'shared',
-            match_individual: gift.distribution_mode === 'individual' && gift.recipient_ids?.includes(user.id)
-          });
-
-          if (gift.distribution_mode === 'shared') {
-            return true;
-          }
-          if (gift.distribution_mode === 'individual' && gift.recipient_ids) {
-            return gift.recipient_ids.includes(user.id);
+        // Filtrage: shared visible à tous, individual seulement si user.id est dedans
+        const visibleGifts = (gifts || []).filter(g => {
+          if (g.distribution_mode === 'shared') return true;
+          if (g.distribution_mode === 'individual' && g.recipient_ids) {
+            return (g.recipient_ids as string[]).includes(user.id);
           }
           return false;
-        }); 
+        });
 
-        console.log('📦 GIFTS FILTRÉS:', filteredGifts);
+        // 6) Récupérer TOUTES les claims d’un coup au lieu d’une par gift
+        const giftIds = visibleGifts.map(g => g.id);
+        let claimedByUser = new Set<string>();
+        if (giftIds.length > 0) {
+          const { data: claims, error: claimsError } = await supabase
+            .from('gift_claims')
+            .select('gift_id,user_id')
+            .in('gift_id', giftIds);
 
-        const giftsWithClaims = await Promise.all(
-          filteredGifts.map(async (gift) => {
-            const claims = await campaignService.getGiftClaims(gift.id);
-            const alreadyClaimed = claims.some(c => c.user_id === user.id);
-            return { gift, alreadyClaimed };
-          })
-        );
+          if (claimsError) throw claimsError;
+          claimedByUser = new Set(
+            (claims || [])
+              .filter(c => c.user_id === user.id)
+              .map(c => c.gift_id)
+          );
+        }
 
-        setPendingGifts(
-          giftsWithClaims
-            .filter(g => !g.alreadyClaimed)
-            .map(g => g.gift)
-        );
-      } else {
-        setMyCampaigns([]);
-        setActiveCampaigns([]);
-        setMembersByCampaign({});
-        setPendingGifts([]);
+        giftsFiltered = visibleGifts.filter(g => !claimedByUser.has(g.id));
       }
-    } catch (error) {
-      console.error('Erreur chargement campagnes:', error);
-      toast.error('Erreur lors du chargement');
-    } finally {
-      setLoading(false);
-    }
-  };
+
+      // 7) Écritures UI + cache
+      setInvitations(invites);
+      setMyCampaigns(myCamps);
+      setActiveCampaigns(myCamps);
+      setMembersByCampaign(membersMap);
+      setPendingGifts(giftsFiltered);
+
+      writeCache(cacheKey, {
+        invitations: invites,
+        myCampaigns: myCamps,
+        activeCampaigns: myCamps,
+        membersByCampaign: membersMap,
+        pendingGifts: giftsFiltered,
+      });
+    })();
+  } catch (error) {
+    console.error('Erreur chargement campagnes:', error);
+    toast.error('Erreur lors du chargement');
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
   (async () => {
