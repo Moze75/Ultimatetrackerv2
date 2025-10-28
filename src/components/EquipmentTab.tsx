@@ -1402,14 +1402,14 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
     onInventoryUpdate={onInventoryUpdate}
     inventory={inventory}
     onClose={() => {
-      // Assure une remontée des dernières données (au cas où la modale a écrit en BDD)
+      // Recharge depuis la BDD pour garantir la persistance visible
       refreshInventory(0);
       setEditingItem(null);
       setEditLockType(false);
       prevEditMetaRef.current = null;
     }}
     onSaved={() => {
-      // Recharge depuis la BDD pour garantir la persistance visible immédiatement
+      // Recharge depuis la BDD (au cas où d’autres vues ont modifié l’item)
       refreshInventory(0);
       setEditingItem(null);
       setEditLockType(false);
