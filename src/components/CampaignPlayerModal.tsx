@@ -489,51 +489,24 @@ const handleClaimMultiple = async () => {
         });
 
         // 6) Récupérer TOUTES les claims d’un coup au lieu d’une par gift
-  // 6) Récupérer TOUTES les claims d’un coup (robuste aux noms de tables)
-const giftIds = visibleGifts.map(g => g.id);
-let claimedByUser = new Set<string>();
+        const giftIds = visibleGifts.map(g => g.id);
+        let claimedByUser = new Set<string>(); 
+        if (giftIds.length > 0) {
+          const { data: claims, error: claimsError } = await supabase
+            .from('gift_claims')
+            .select('gift_id,user_id')
+            .in('gift_id', giftIds);
 
-if (giftIds.length > 0) {
-  // Essaie d'abord le nom "canonique" typique
-  let claimsRes = await supabase
-    .from('campaign_gift_claims')
-    .select('gift_id,user_id')
-    .in('gift_id', giftIds);
+          if (claimsError) throw claimsError;
+          claimedByUser = new Set(
+            (claims || [])
+              .filter(c => c.user_id === user.id)
+              .map(c => c.gift_id)
+          );
+        }
 
-  let claims = claimsRes.data as { gift_id: string; user_id: string }[] | null;
-  let claimsError = claimsRes.error;
-
-  // Si la table n'existe pas (42P01), essaie le nom avec tiret
-  if (claimsError && (claimsError as any).code === '42P01') {
-    claimsRes = await supabase
-      .from('Campaign_gift-claims') // attention au tiret
-      .select('gift_id,user_id')
-      .in('gift_id', giftIds);
-
-    claims = claimsRes.data as { gift_id: string; user_id: string }[] | null;
-    claimsError = claimsRes.error;
-  }
-
-  if (claimsError && (claimsError as any).code === '42P01') {
-    // Dernier recours: pas de table claims => fallback sur les colonnes du gift
-    console.warn('[Gifts] Aucune table de claims trouvée, fallback sur claimed_by/status.');
-    claimedByUser = new Set(
-      visibleGifts
-        .filter(g => (g as any).claimed_by === user.id || g.status !== 'pending')
-        .map(g => g.id)
-    );
-  } else if (claimsError) {
-    throw claimsError;
-  } else {
-    claimedByUser = new Set(
-      (claims || [])
-        .filter(c => c.user_id === user.id)
-        .map(c => c.gift_id)
-    );
-  }
-}
-
-const giftsFiltered = visibleGifts.filter(g => !claimedByUser.has(g.id));
+        giftsFiltered = visibleGifts.filter(g => !claimedByUser.has(g.id));
+      }
 
       // 7) Écritures UI + cache
       setInvitations(invites);
