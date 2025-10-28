@@ -863,29 +863,26 @@ return (
 
 <div className="w-full max-w-6xl mx-auto space-y-4 sm:space-y-6">
   {currentPlayer && (
-    <PlayerContext.Provider value={currentPlayer}>
-      {/* PlayerProfile affiché SEULEMENT en mode onglets (pas en mode grille) */}
-      {!isGridMode && <PlayerProfile player={currentPlayer} onUpdate={applyPlayerUpdate} />}
+<PlayerContext.Provider value={currentPlayer}>
+  {/* PlayerProfile toujours visible */}
+  <PlayerProfile player={currentPlayer} onUpdate={applyPlayerUpdate} />
 
-      {/* MODE GRILLE (tablette/desktop uniquement) */}
-      {isGridMode && !isMobile ? (
-  <ResponsiveGameLayout
-    player={currentPlayer}
-    userId={session?.user?.id}
-    onPlayerUpdate={applyPlayerUpdate}
-    inventory={inventory}
-    onInventoryUpdate={setInventory}
-    classSections={classSections}
-    renderPane={renderPane}
-    onToggleMode={() => {
-      setIsGridMode(false);
-      toast.success('Mode onglets activé');
-    }}
-    renderProfile={() => (
-      <PlayerProfile player={currentPlayer} onUpdate={applyPlayerUpdate} />
-    )}
-  />
-) : (
+  {/* MODE GRILLE */}
+  {isGridMode && !isMobile ? (
+    <ResponsiveGameLayout
+      player={currentPlayer}
+      userId={session?.user?.id}
+      onPlayerUpdate={applyPlayerUpdate}
+      inventory={inventory}
+      onInventoryUpdate={setInventory}
+      classSections={classSections}
+      renderPane={renderPane}
+      onToggleMode={() => {
+        setIsGridMode(false);
+        toast.success('Mode onglets activé');
+      }}
+    />
+  ) : (
   /* MODE ONGLETS CLASSIQUE */
   <>
     <PlayerProfile player={currentPlayer} onUpdate={applyPlayerUpdate} />
