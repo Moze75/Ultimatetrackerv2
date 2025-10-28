@@ -300,7 +300,7 @@ export function PlayerProfile({ player, onUpdate, onInventoryAdd }: PlayerProfil
         </SwipeNavigator>
       </div>
 
-      <div className="stat-card">
+    <div className="stat-card w-full">
         <div className="stat-header flex items-start justify-between">
           <div className="flex flex-col gap-4 w-full">
             {player.active_conditions && player.active_conditions.length > 0 && (
