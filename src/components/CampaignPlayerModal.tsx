@@ -466,23 +466,29 @@ const loadData = async () => {
       membersMap = map;
 
       // Gifts en attente
-      const { data: gifts, error: giftsError } = await supabase
-        .from('campaign_gifts')
-        .select('*')
-        .in('campaign_id', campaignIds)
-        .eq('status', 'pending')
-        .order('sent_at', { ascending: false });
+// Gifts "shared" visibles par tous
+const { data: giftsShared, error: giftsSharedError } = await supabase
+  .from('campaign_gifts')
+  .select('id,campaign_id,gift_type,distribution_mode,recipient_ids,item_name,item_quantity,item_description,message,gold,silver,copper,sent_at,status')
+  .in('campaign_id', campaignIds)
+  .eq('status', 'pending')
+  .eq('distribution_mode', 'shared');
 
-      if (giftsError) throw giftsError;
+if (giftsSharedError) throw giftsSharedError;
 
-      // Filtrage visibilité
-      const visibleGifts = (gifts || []).filter((g) => {
-        if (g.distribution_mode === 'shared') return true;
-        if (g.distribution_mode === 'individual' && Array.isArray(g.recipient_ids)) {
-          return g.recipient_ids.includes(user.id);
-        }
-        return false;
-      });
+// Gifts "individual" où l'utilisateur est destinataire
+const { data: giftsIndividual, error: giftsIndividualError } = await supabase
+  .from('campaign_gifts')
+  .select('id,campaign_id,gift_type,distribution_mode,recipient_ids,item_name,item_quantity,item_description,message,gold,silver,copper,sent_at,status')
+  .in('campaign_id', campaignIds)
+  .eq('status', 'pending')
+  .eq('distribution_mode', 'individual')
+  .contains('recipient_ids', [user.id]); // nécessite recipient_ids en array/jsonb
+
+if (giftsIndividualError) throw giftsIndividualError;
+
+const visibleGifts = [...(giftsShared || []), ...(giftsIndividual || [])]
+  .sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime());
 
       // Claims (version sûre via service, on optimisera ensuite)
       const giftsWithClaims = await Promise.all(
