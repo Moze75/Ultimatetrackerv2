@@ -867,24 +867,28 @@ return (
           <PlayerProfile player={currentPlayer} onUpdate={applyPlayerUpdate} />
 
           {/* MODE GRILLE (tablette/desktop uniquement) */}
-          {isGridMode && !isMobile ? (
-            <ResponsiveGameLayout
-              player={currentPlayer}
-              userId={session?.user?.id}
-              onPlayerUpdate={applyPlayerUpdate}
-              inventory={inventory}
-              onInventoryUpdate={setInventory}
-              classSections={classSections}
-              renderPane={renderPane}
-              onToggleMode={() => {
-                setIsGridMode(false);
-                toast.success('Mode onglets activé');
-              }}
-            />
-          ) : (
-            /* MODE ONGLETS CLASSIQUE */
-            <>
-              <TabNavigation activeTab={activeTab} onTabChange={handleTabClickChange} />
+         {isGridMode && !isMobile ? (
+  <ResponsiveGameLayout
+    player={currentPlayer}
+    userId={session?.user?.id}
+    onPlayerUpdate={applyPlayerUpdate}
+    inventory={inventory}
+    onInventoryUpdate={setInventory}
+    classSections={classSections}
+    renderPane={renderPane}
+    onToggleMode={() => {
+      setIsGridMode(false);
+      toast.success('Mode onglets activé');
+    }}
+    renderProfile={() => (
+      <PlayerProfile player={currentPlayer} onUpdate={applyPlayerUpdate} />
+    )}
+  />
+) : (
+  /* MODE ONGLETS CLASSIQUE */
+  <>
+    <PlayerProfile player={currentPlayer} onUpdate={applyPlayerUpdate} />
+    <TabNavigation activeTab={activeTab} onTabChange={handleTabClickChange} />
 
               <div
                 ref={stageRef}
