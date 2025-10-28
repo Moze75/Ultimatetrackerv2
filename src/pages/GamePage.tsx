@@ -97,6 +97,9 @@ export function GamePage({
   const [inventory, setInventory] = useState<any[]>([]);
   const [classSections, setClassSections] = useState<any[] | null>(null);
 
+  const [isGridMode, setIsGridMode] = useState(false);
+const [isMobile, setIsMobile] = useState(false);
+
   // --- START: Realtime subscription for inventory_items (GamePage) ---
 const lastInventoryCheckRef = useRef<string | null>(null);
 const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
