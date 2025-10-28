@@ -977,6 +977,19 @@ const saveNotes = async () => {
     }
   };
 
+  // Mémo pour éviter de re-parser les métadonnées à chaque render
+const metaByGift = React.useMemo(() => {
+  const map = new Map<string, any>();
+  for (const g of pendingGifts) {
+    try {
+      map.set(g.id, parseMeta(g.item_description));
+    } catch {
+      map.set(g.id, null);
+    }
+  }
+  return map;
+}, [pendingGifts]);
+  
  if (!open) return null;
 
 return (
@@ -1265,7 +1278,7 @@ return (
                 {pendingGifts.length > 0 ? (
                   <>
                     {pendingGifts.map((gift) => {
-                      const meta = parseMeta(gift.item_description); 
+                      const meta = metaByGift.get(gift.id); 
                       const isCurrencyShared = gift.gift_type === 'currency' && gift.distribution_mode === 'shared';
                       const campaignMembers = membersByCampaign[gift.campaign_id] || [];
                       const memberCount = campaignMembers.length;
