@@ -14,6 +14,9 @@ import { StatsTab } from '../components/StatsTab';
 import { ClassesTab } from '../components/ClassesTab';
 import { PlayerContext } from '../contexts/PlayerContext';
 
+import { ResponsiveGameLayout } from '../components/ResponsiveGameLayout';
+import { Grid3x3 } from 'lucide-react';
+
 import { inventoryService } from '../services/inventoryService';
 import PlayerProfileProfileTab from '../components/PlayerProfileProfileTab';
 import { loadAbilitySections } from '../services/classesContent';
@@ -93,6 +96,9 @@ export function GamePage({
   const [currentPlayer, setCurrentPlayer] = useState<Player | null>(selectedCharacter);
   const [inventory, setInventory] = useState<any[]>([]);
   const [classSections, setClassSections] = useState<any[] | null>(null);
+
+  const [isGridMode, setIsGridMode] = useState(false);
+const [isMobile, setIsMobile] = useState(false);
 
   // --- START: Realtime subscription for inventory_items (GamePage) ---
 const lastInventoryCheckRef = useRef<string | null>(null);
@@ -187,6 +193,23 @@ useEffect(() => {
 }, [inventory]);
   // --- END
 
+// Détection de la taille d'écran pour le mode grille
+useEffect(() => {
+  const checkMobile = () => {
+    const mobile = window.innerWidth < 768;
+    setIsMobile(mobile);
+    // Désactiver le mode grille sur mobile
+    if (mobile && isGridMode) {
+      setIsGridMode(false);
+      toast('Mode grille disponible uniquement sur tablette/desktop', { icon: '📱' });
+    }
+  };
+
+  checkMobile();
+  window.addEventListener('resize', checkMobile);
+  return () => window.removeEventListener('resize', checkMobile);
+}, [isGridMode]);
+  
   // Onglet initial
   const initialTab: TabKey = (() => {
     try {
@@ -784,82 +807,144 @@ useEffect(() => {
       : undefined;
   const showAsStatic = !isInteracting && !animating;
 
-  /* ---------------- Rendu principal ---------------- */
-  return (
-    <div className="min-h-screen p-2 sm:p-4 md:p-6 no-overflow-anchor">
-      {/* Zone de capture de SWIPE au bord gauche (ouvre la modale depuis la gauche) */}
-      {!settingsOpen && (
-        <div
-          className="fixed inset-y-0 left-0 w-4 sm:w-5 z-50"
-          onTouchStart={(e) => {
-            const t = e.touches[0];
-            (e.currentTarget as any).__sx = t.clientX;
-            (e.currentTarget as any).__sy = t.clientY;
-            (e.currentTarget as any).__edge = t.clientX <= 16;
+/* ---------------- Rendu principal ---------------- */
+return (
+  <div className="min-h-screen p-2 sm:p-4 md:p-6 no-overflow-anchor">
+    {/* Bouton toggle mode grille (visible uniquement sur tablette/desktop) */}
+    {!isMobile && !isGridMode && (
+      <div className="fixed top-4 right-4 z-50">
+        <button
+          onClick={() => {
+            setIsGridMode(true);
+            toast.success('Mode grille activé');
           }}
-          onTouchMove={(e) => {
-            const sx = (e.currentTarget as any).__sx ?? null;
-            const sy = (e.currentTarget as any).__sy ?? null;
-            const edge = (e.currentTarget as any).__edge ?? false;
-            if (!edge || sx == null || sy == null) return;
-            const t = e.touches[0];
-            const dx = t.clientX - sx;
-            const dy = t.clientY - sy;
-            if (Math.abs(dx) < 14) return;
-            if (Math.abs(dx) > Math.abs(dy) * 1.15 && dx > 48) {
-              e.stopPropagation();
-              e.preventDefault();
-              openSettings('left'); // ouverture depuis la gauche
-            }
-          }}
-          onTouchEnd={(e) => {
-            (e.currentTarget as any).__sx = null;
-            (e.currentTarget as any).__sy = null;
-            (e.currentTarget as any).__edge = false;
-          }}
+          className="px-4 py-2 rounded-lg bg-purple-600/20 border border-purple-500/40 text-purple-300 hover:bg-purple-600/30 flex items-center gap-2 shadow-lg transition-all hover:scale-105"
         >
-          <div className="w-full h-full" aria-hidden />
-        </div>
-      )}
+          <Grid3x3 className="w-5 h-5" />
+          Mode Grille
+        </button>
+      </div>
+    )}
 
-      <div className="w-full max-w-6xl mx-auto space-y-4 sm:space-y-6">
-        {currentPlayer && (
-          <PlayerContext.Provider value={currentPlayer}>
-            <PlayerProfile player={currentPlayer} onUpdate={applyPlayerUpdate} />
-            <TabNavigation activeTab={activeTab} onTabChange={handleTabClickChange} />
+    {/* Zone de capture de SWIPE au bord gauche (seulement en mode onglets) */}
+    {!settingsOpen && !isGridMode && (
+      <div
+        className="fixed inset-y-0 left-0 w-4 sm:w-5 z-50"
+        onTouchStart={(e) => {
+          const t = e.touches[0];
+          (e.currentTarget as any).__sx = t.clientX;
+          (e.currentTarget as any).__sy = t.clientY;
+          (e.currentTarget as any).__edge = t.clientX <= 16;
+        }}
+        onTouchMove={(e) => {
+          const sx = (e.currentTarget as any).__sx ?? null;
+          const sy = (e.currentTarget as any).__sy ?? null;
+          const edge = (e.currentTarget as any).__edge ?? false;
+          if (!edge || sx == null || sy == null) return;
+          const t = e.touches[0];
+          const dx = t.clientX - sx;
+          const dy = t.clientY - sy;
+          if (Math.abs(dx) < 14) return;
+          if (Math.abs(dx) > Math.abs(dy) * 1.15 && dx > 48) {
+            e.stopPropagation();
+            e.preventDefault();
+            openSettings('left');
+          }
+        }}
+        onTouchEnd={(e) => {
+          (e.currentTarget as any).__sx = null;
+          (e.currentTarget as any).__sy = null;
+          (e.currentTarget as any).__edge = false;
+        }}
+      >
+        <div className="w-full h-full" aria-hidden />
+      </div>
+    )}
 
-            <div
-              ref={stageRef}
-              className="relative"
-              onTouchStart={onTouchStart}
-              onTouchMove={onTouchMove}
-              onTouchEnd={onTouchEnd}
-              onTouchCancel={() => {
-                // En cas de cancel, on abort proprement
-                fullAbortInteraction();
-              }}
-              style={{
-                touchAction: 'pan-y',
-                height: (isInteracting || animating || heightLocking) ? containerH : undefined,
-                transition: heightLocking ? 'height 280ms ease' : undefined,
-              }}
-            >
-              {Array.from(visitedTabs).map((key) => {
-                const isActive = key === activeTab;
-                const isNeighbor =
-                  (neighborType === 'next' && key === nextKey) ||
-                  (neighborType === 'prev' && key === prevKey);
+<div className="w-full max-w-6xl mx-auto space-y-4 sm:space-y-6">
+  {currentPlayer && (
+<PlayerContext.Provider value={currentPlayer}>
+  {/* PlayerProfile toujours visible */}
+  <PlayerProfile player={currentPlayer} onUpdate={applyPlayerUpdate} />
 
-                if (showAsStatic) {
+{/* MODE GRILLE (tablette/desktop uniquement) */}
+{isGridMode && !isMobile ? (
+  <ResponsiveGameLayout
+    player={currentPlayer}
+    userId={session?.user?.id}
+    onPlayerUpdate={applyPlayerUpdate}
+    inventory={inventory}
+    onInventoryUpdate={setInventory}
+    classSections={classSections}
+    renderPane={renderPane}
+    onToggleMode={() => {
+      setIsGridMode(false);
+      toast.success('Mode onglets activé');
+    }}
+  />
+  ) : (
+  /* MODE ONGLETS CLASSIQUE */
+  <>
+    <PlayerProfile player={currentPlayer} onUpdate={applyPlayerUpdate} />
+    <TabNavigation activeTab={activeTab} onTabChange={handleTabClickChange} />
+
+              <div
+                ref={stageRef}
+                className="relative"
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                onTouchEnd={onTouchEnd}
+                onTouchCancel={() => {
+                  fullAbortInteraction();
+                }}
+                style={{
+                  touchAction: 'pan-y',
+                  height: (isInteracting || animating || heightLocking) ? containerH : undefined,
+                  transition: heightLocking ? 'height 280ms ease' : undefined,
+                }}
+              >
+                {Array.from(visitedTabs).map((key) => {
+                  const isActive = key === activeTab;
+                  const isNeighbor =
+                    (neighborType === 'next' && key === nextKey) ||
+                    (neighborType === 'prev' && key === prevKey);
+
+                  if (showAsStatic) {
+                    return (
+                      <div
+                        key={key}
+                        ref={(el) => { paneRefs.current[key] = el; }}
+                        data-tab={key}
+                        style={{
+                          display: isActive ? 'block' : 'none',
+                          position: 'relative',
+                          transform: 'none'
+                        }}
+                      >
+                        {key === 'class' && classSections === null
+                          ? <div className="py-12 text-center text-white/70">Chargement des aptitudes…</div>
+                          : renderPane(key)}
+                      </div>
+                    );
+                  }
+
+                  const display = isActive || isNeighbor ? 'block' : 'none';
+                  let transform = 'translate3d(0,0,0)';
+                  if (isActive) transform = currentTransform;
+                  if (isNeighbor && neighborTransform) transform = neighborTransform;
+
                   return (
                     <div
                       key={key}
                       ref={(el) => { paneRefs.current[key] = el; }}
                       data-tab={key}
+                      className={animating ? 'sv-anim' : undefined}
                       style={{
-                        display: isActive ? 'block' : 'none',
-                        position: 'relative',
-                        transform: 'none'
+                        position: 'absolute',
+                        inset: 0,
+                        display,
+                        transform,
+                        willChange: isActive || isNeighbor ? 'transform' : undefined
                       }}
                     >
                       {key === 'class' && classSections === null
@@ -867,60 +952,36 @@ useEffect(() => {
                         : renderPane(key)}
                     </div>
                   );
-                }
-
-                const display = isActive || isNeighbor ? 'block' : 'none';
-                let transform = 'translate3d(0,0,0)';
-                if (isActive) transform = currentTransform;
-                if (isNeighbor && neighborTransform) transform = neighborTransform;
-
-                return (
-                  <div
-                    key={key}
-                    ref={(el) => { paneRefs.current[key] = el; }}
-                    data-tab={key}
-                    className={animating ? 'sv-anim' : undefined}
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      display,
-                      transform,
-                      willChange: isActive || isNeighbor ? 'transform' : undefined
-                    }}
-                  >
-                    {key === 'class' && classSections === null
-                      ? <div className="py-12 text-center text-white/70">Chargement des aptitudes…</div>
-                      : renderPane(key)}
-                  </div>
-                );
-              })}
-            </div>
-          </PlayerContext.Provider>
-        )}
-      </div>
-
-      <div className="w-full max-w-md mx-auto mt-6 px-4">
-        <button
-          onClick={handleBackToSelection}
-          className="w-full btn-secondary px-4 py-2 rounded-lg flex items-center justify-center gap-2"
-        >
-          <LogOut size={20} />
-          Retour aux personnages
-        </button>
-      </div>
-
-      {/* Modale Paramètres (fond opaque, couvre tout) */}
-      {currentPlayer && (
-        <PlayerProfileSettingsModal
-          open={settingsOpen}
-          onClose={closeSettings}
-          player={currentPlayer}
-          onUpdate={applyPlayerUpdate}
-          slideFrom={settingsSlideFrom}
-        />
+                })}
+              </div>
+            </>
+          )}
+        </PlayerContext.Provider>
       )}
     </div>
-  );
+
+    <div className="w-full max-w-md mx-auto mt-6 px-4">
+      <button
+        onClick={handleBackToSelection}
+        className="w-full btn-secondary px-4 py-2 rounded-lg flex items-center justify-center gap-2"
+      >
+        <LogOut size={20} />
+        Retour aux personnages
+      </button>
+    </div>
+
+    {/* Modale Paramètres (fond opaque, couvre tout) */}
+    {currentPlayer && (
+      <PlayerProfileSettingsModal
+        open={settingsOpen}
+        onClose={closeSettings}
+        player={currentPlayer}
+        onUpdate={applyPlayerUpdate}
+        slideFrom={settingsSlideFrom}
+      />
+    )}
+  </div>
+);
 }
 
-export default GamePage;
+export default GamePage; 
