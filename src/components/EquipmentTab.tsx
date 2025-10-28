@@ -1401,14 +1401,14 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
     onInventoryUpdate={onInventoryUpdate}
     inventory={inventory}
     onClose={() => {
-      // Recharge depuis la BDD pour garantir la persistance visible
+      // Recharge depuis la BDD pour refléter immédiatement les changements
       refreshInventory(0);
       setEditingItem(null);
       setEditLockType(false);
       prevEditMetaRef.current = null;
     }}
     onSaved={() => {
-      // Recharge depuis la BDD (au cas où d’autres vues ont modifié l’item)
+      // Recharge depuis la BDD pour garantir la persistance visible
       refreshInventory(0);
       setEditingItem(null);
       setEditLockType(false);
