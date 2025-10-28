@@ -660,9 +660,8 @@ export function EquipmentTab({
     else await doFetch();
   };
 
-  useEffect(() => {
+useEffect(() => {
   const handler = (e: any) => {
-    // Si l’émetteur fournit playerId, on ne rafraîchit que pour ce joueur
     const pid = e?.detail?.playerId;
     if (!pid || pid === player.id) {
       refreshInventory(0);
