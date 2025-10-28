@@ -320,25 +320,25 @@ export function PlayerProfile({ player, onUpdate, onInventoryAdd }: PlayerProfil
             )}
 
             <div
-              className="grid grid-cols-1 sm:[grid-template-columns:minmax(0,1fr)_8rem] items-start gap-3 sm:gap-4"
+              className="grid items-start gap-3 sm:gap-4"
+              style={{ gridTemplateColumns: 'minmax(0,1fr) 8rem' }}
             >
-              <div className="relative w-full min-w-0 aspect-[7/10] sm:aspect-[2/3] max-h-[70vh] sm:max-h-[60vh] md:max-h-[56vh] rounded-lg overflow-hidden bg-gray-800/50 flex items-center justify-center">
+              <div className="relative w-full min-w-0 aspect-[7/10] sm:aspect-[2/3] rounded-lg overflow-hidden bg-gray-800/50 flex items-center justify-center">
                 <button
                   onClick={() => setEditing(true)}
-                  className="absolute top-2 left-2 w-9 h-9 rounded-full bg-gray-900/40 backdrop-blur-sm text-white hover:bg-gray-800/50 hover:text-white flex items-center justify-center z-10 transition-colors"
+                  className="absolute top-2 left-2 w-9 h-9 rounded-full bg-gray-900/40 backdrop-blur-sm text-white hover:bg-gray-800/50 hover:text-white flex items-center justify-center z-10 transition"
                   title="Profil et caractéristiques"
                 >
                   <Menu className="w-5 h-5" />
                 </button>
 
-                    <Avatar
-                   url={player.avatar_url || ''}
-                   playerId={player.id}
-                   size="lg"
-                   editable={false}
-                 fit="contain"
-                   onAvatarUpdate={() => {}}
-                 />
+                <Avatar
+                  url={player.avatar_url || ''}
+                  playerId={player.id}
+                  size="lg"
+                  editable={false}
+                  onAvatarUpdate={() => {}}
+                />
 
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4 pointer-events-none">
                   <div className="text-white">
@@ -359,7 +359,7 @@ export function PlayerProfile({ player, onUpdate, onInventoryAdd }: PlayerProfil
               {/* ✅ NOUVEAU : Bouton Campagnes */}
                 <button
                   onClick={() => setShowCampaignModal(true)}
-                  className="w-32 h-9 rounded text-sm bg-gradient-to-r from-purple-600/20 to-blue-600/20 border border-purple-500/40 text-purple-300 hover:from-purple-600/30 hover:to-blue-600/30 transition-colors flex items-center justify-between px-3"
+                  className="w-32 h-9 rounded text-sm bg-gradient-to-r from-purple-600/20 to-blue-600/20 border border-purple-500/40 text-purple-300 hover:from-purple-600/30 hover:to-blue-600/30 flex items-center px-2"
                 >
                   <span className="ml-1.5 flex-1 text-left">Campagnes</span>
                   <Scroll className="w-4 h-4" />
@@ -508,7 +508,7 @@ export function PlayerProfile({ player, onUpdate, onInventoryAdd }: PlayerProfil
               {activeTooltip === 'ac' && (
                 <>
                   <div className="fixed inset-0" onClick={() => setActiveTooltip(null)} />
-                  <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 bg-gray-900/95 backdrop-blur-sm text-sm text-gray-300 rounded-lg max-w-sm w:[90vw] shadow-xl border border-gray-700/60">
+                  <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 bg-gray-900/95 backdrop-blur-sm text-sm text-gray-300 rounded-lg max-w-sm w-[90vw] shadow-xl border border-gray-800">
                     <h4 className="font-semibold text-gray-100 mb-1">Classe d'Armure</h4>
                     <p className="mb-2">Détermine la difficulté pour vous toucher en combat.</p>
                     <p className="text-gray-400">Calcul actuel :</p>
@@ -543,7 +543,7 @@ export function PlayerProfile({ player, onUpdate, onInventoryAdd }: PlayerProfil
               {activeTooltip === 'speed' && (
                 <>
                   <div className="fixed inset-0" onClick={() => setActiveTooltip(null)} />
-                  <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 bg-gray-900/95 backdrop-blur-sm text-sm text-gray-300 rounded-lg max-w-sm w:[90vw] shadow-xl border border-gray-700/60">
+                  <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 bg-gray-900/95 backdrop-blur-sm text-sm text-gray-300 rounded-lg max-w-sm w-[90vw] shadow-xl border border-gray-800">
                     <h4 className="font-semibold text-gray-100 mb-1">Vitesse</h4>
                     <p className="mb-2">Distance que vous pouvez parcourir en un tour.</p>
                     <div className="text-gray-400">
