@@ -410,126 +410,112 @@ const handleClaimMultiple = async () => {
   };
 
   const loadData = async () => {
-  try {
-    setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    const cacheKey = `campaign_modal_${user.id}`;
-    const cached = readCache(cacheKey);
-    if (cached) {
-      // Afficher immédiatement le cache
-      setInvitations(cached.invitations);
-      setMyCampaigns(cached.myCampaigns);
-      setActiveCampaigns(cached.activeCampaigns);
-      setMembersByCampaign(cached.membersByCampaign);
-      setPendingGifts(cached.pendingGifts);
-    }
+      console.log('🎯 DEBUG LOAD DATA:');
+      console.log('- user.id:', user.id);
+      console.log('- player.id:', player.id);
 
-    // Rechargement silencieux (SWR)
-    (async () => {
-      // 1) Invitations
+      // Charger les invitations
       const invites = await campaignService.getMyPendingInvitations();
+      setInvitations(invites);
 
-      // 2) Campagnes (via memberships)
-      const { data: memberships, error: membershipError } = await supabase
+      // ✅ CORRECTION : Récupérer les campagnes via user_id
+      const { data: members, error: membershipError } = await supabase
         .from('campaign_members')
         .select('campaign_id')
         .eq('user_id', user.id)
         .eq('is_active', true);
 
-      if (membershipError) throw membershipError;
+      console.log('🏕️ QUERY campaign_members:');
+      console.log('  - Error:', membershipError);
+      console.log('  - Data brut:', members);
+      console.log('  - Nombre de memberships:', members?.length || 0);
 
-      let myCamps: Campaign[] = [];
-      let membersMap: Record<string, CampaignMember[]> = {};
-      let giftsFiltered: CampaignGift[] = [];
+      if (members && members.length > 0) {
+        const campaignIds = members.map(m => m.campaign_id);
+        
+        console.log('  - Campaign IDs:', campaignIds);
 
-      if (memberships && memberships.length > 0) {
-        const campaignIds = memberships.map(m => m.campaign_id);
+const { data: campaigns, error: campaignError } = await supabase
+  .from('campaigns')
+  .select('*')
+  .in('id', campaignIds);
 
-        // 3) Campagnes (ne sélectionne que les colonnes utiles)
-        const { data: campaigns, error: campaignError } = await supabase
-          .from('campaigns')
-          .select('id,name,description')
-          .in('id', campaignIds);
+console.log('📋 CAMPAIGNS CHARGÉES:', campaigns);
+console.log('❌ CAMPAIGNS ERROR:', campaignError); // ✅ AJOUTE CE LOG
 
-        if (campaignError) throw campaignError;
-        myCamps = campaigns || [];
+setMyCampaigns(campaigns || []);
+setActiveCampaigns(campaigns || []);
 
-        // 4) Tous les membres de TOUTES les campagnes en UNE requête
-        const { data: allMembers, error: membersError } = await supabase
-          .from('campaign_members')
-          .select('campaign_id,user_id,player_id,player_name,email')
-          .in('campaign_id', campaignIds);
+        // Charger les membres pour chaque campagne
+        const membersMap: Record<string, CampaignMember[]> = {};
+        await Promise.all(
+          campaignIds.map(async (campaignId) => {
+            const campaignMembers = await loadCampaignMembers(campaignId);
+            membersMap[campaignId] = campaignMembers;
+          })
+        );
+        setMembersByCampaign(membersMap);
 
-        if (membersError) throw membersError;
-
-        membersMap = (allMembers || []).reduce((acc, m) => {
-          (acc[m.campaign_id] ||= []).push(m as CampaignMember);
-          return acc;
-        }, {} as Record<string, CampaignMember[]>);
-
-        // 5) Gifts pour toutes les campagnes de l’utilisateur
-        const { data: gifts, error: giftsError } = await supabase
+        // Charger les gifts
+        const { data: gifts } = await supabase
           .from('campaign_gifts')
-          .select('id,campaign_id,gift_type,distribution_mode,recipient_ids,item_name,item_quantity,item_description,message,gold,silver,copper,sent_at,status')
+          .select('*')
           .in('campaign_id', campaignIds)
           .eq('status', 'pending')
           .order('sent_at', { ascending: false });
 
-        if (giftsError) throw giftsError;
+        console.log('📦 GIFTS BRUTS (avant filtrage):', gifts);
 
-        // Filtrage: shared visible à tous, individual seulement si user.id est dedans
-        const visibleGifts = (gifts || []).filter(g => {
-          if (g.distribution_mode === 'shared') return true;
-          if (g.distribution_mode === 'individual' && g.recipient_ids) {
-            return (g.recipient_ids as string[]).includes(user.id);
+        const filteredGifts = (gifts || []).filter((gift) => {
+          console.log(`  → Gift "${gift.item_name || 'Argent'}":`, {
+            distribution_mode: gift.distribution_mode,
+            recipient_ids: gift.recipient_ids,
+            match_shared: gift.distribution_mode === 'shared',
+            match_individual: gift.distribution_mode === 'individual' && gift.recipient_ids?.includes(user.id)
+          });
+
+          if (gift.distribution_mode === 'shared') {
+            return true;
+          }
+          if (gift.distribution_mode === 'individual' && gift.recipient_ids) {
+            return gift.recipient_ids.includes(user.id);
           }
           return false;
         });
 
-        // 6) Récupérer TOUTES les claims d’un coup au lieu d’une par gift
-        const giftIds = visibleGifts.map(g => g.id); 
-        let claimedByUser = new Set<string>(); 
-        if (giftIds.length > 0) {
-          const { data: claims, error: claimsError } = await supabase
-            .from('gift_claims')
-            .select('gift_id,user_id')
-            .in('gift_id', giftIds);
+        console.log('📦 GIFTS FILTRÉS:', filteredGifts);
 
-          if (claimsError) throw claimsError;
-          claimedByUser = new Set(
-            (claims || [])
-              .filter(c => c.user_id === user.id)
-              .map(c => c.gift_id)
-          );
-        }
+        const giftsWithClaims = await Promise.all(
+          filteredGifts.map(async (gift) => {
+            const claims = await campaignService.getGiftClaims(gift.id);
+            const alreadyClaimed = claims.some(c => c.user_id === user.id);
+            return { gift, alreadyClaimed };
+          })
+        );
 
-        giftsFiltered = visibleGifts.filter(g => !claimedByUser.has(g.id));
+        setPendingGifts(
+          giftsWithClaims
+            .filter(g => !g.alreadyClaimed)
+            .map(g => g.gift)
+        );
+      } else {
+        setMyCampaigns([]);
+        setActiveCampaigns([]);
+        setMembersByCampaign({});
+        setPendingGifts([]);
       }
-
-      // 7) Écritures UI + cache
-      setInvitations(invites);
-      setMyCampaigns(myCamps);
-      setActiveCampaigns(myCamps);
-      setMembersByCampaign(membersMap);
-      setPendingGifts(giftsFiltered);
-
-      writeCache(cacheKey, {
-        invitations: invites,
-        myCampaigns: myCamps,
-        activeCampaigns: myCamps,
-        membersByCampaign: membersMap,
-        pendingGifts: giftsFiltered,
-      });
-    })();
-  } catch (error) {
-    console.error('Erreur chargement campagnes:', error);
-    toast.error('Erreur lors du chargement');
-  } finally {
-    setLoading(false);
-  }
-};
+    } catch (error) {
+      console.error('Erreur chargement campagnes:', error);
+      toast.error('Erreur lors du chargement');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
   (async () => {
@@ -543,54 +529,12 @@ const handleClaimMultiple = async () => {
     loadData();
   }
 }, [open]);
-  
-
-// ===== Client cache (stale-while-revalidate) =====
-const CACHE_TTL = 30_000; // 30s: ajuste si besoin
-
-type CampaignModalCache = {
-  invitations: CampaignInvitation[];
-  myCampaigns: Campaign[];
-  activeCampaigns: Campaign[];
-  membersByCampaign: Record<string, CampaignMember[]>;
-  pendingGifts: CampaignGift[];
-  ts: number;
-};
-
-function readCache(key: string): CampaignModalCache | null {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as CampaignModalCache;
-    if (Date.now() - (parsed.ts || 0) > CACHE_TTL) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function writeCache(key: string, data: Omit<CampaignModalCache, 'ts'>) {
-  try {
-    localStorage.setItem(key, JSON.stringify({ ...data, ts: Date.now() }));
-  } catch {}
-}
-  
+   
+ // Helpers Notes
 // Helpers Notes
 const LS_NOTES_KEY = `campaign_notes_${player.id}`;
 
 const loadNotes = async () => {
-  // 1) Affiche instantanément depuis le local si dispo
-  try {
-    const raw = localStorage.getItem(LS_NOTES_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      setNotesJournal(parsed.journal || '');
-      setNotesNPCs(parsed.npcs || '');
-      setNotesQuests(parsed.quests || '');
-    }
-  } catch {}
-
-  // 2) Puis rafraîchis depuis la BDD en arrière-plan
   try {
     const { data, error } = await supabase
       .from('players')
@@ -600,7 +544,7 @@ const loadNotes = async () => {
 
     if (error) {
       console.error('[Notes] SELECT error:', error);
-      return;
+      throw error;
     }
 
     const notes = data?.notes_json || {};
@@ -612,11 +556,26 @@ const loadNotes = async () => {
     setNotesNPCs(npcs);
     setNotesQuests(quests);
 
+    // Synchronise le cache local
     try {
       localStorage.setItem(LS_NOTES_KEY, JSON.stringify({ journal, npcs, quests }));
     } catch {}
   } catch (err) {
-    console.warn('[Notes] BDD indisponible, on conserve les valeurs locales.');
+    console.warn('[Notes] BDD indisponible, fallback localStorage.', err);
+    try {
+      const raw = localStorage.getItem(LS_NOTES_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setNotesJournal(parsed.journal || '');
+        setNotesNPCs(parsed.npcs || '');
+        setNotesQuests(parsed.quests || '');
+      } else {
+        // Ne pas écraser l'état avec des vides si rien en cache
+      }
+    } catch (e) {
+      console.error('[Notes] Fallback localStorage erreur:', e);
+      // Ne rien écraser
+    }
   }
 };
 
