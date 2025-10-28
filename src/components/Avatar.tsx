@@ -10,9 +10,18 @@ interface AvatarProps {
   onAvatarUpdate: (url: string) => void;
   size?: 'sm' | 'md' | 'lg';
   editable?: boolean;
+  // NEW: contrôle du fitting de l’image (cover par défaut pour compat)
+  fit?: 'cover' | 'contain';
 }
 
-export function Avatar({ url, playerId, onAvatarUpdate, size = 'md', editable = false }: AvatarProps) {
+export function Avatar({
+  url,
+  playerId,
+  onAvatarUpdate,
+  size = 'md',
+  editable = false,
+  fit = 'cover'
+}: AvatarProps) {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showModal, setShowModal] = useState(false);
@@ -96,10 +105,10 @@ export function Avatar({ url, playerId, onAvatarUpdate, size = 'md', editable = 
       {isUploading ? (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50">
           <img 
-  src="/icons/wmremove-transformed.png" 
-  alt="Chargement..." 
-  className="animate-spin rounded-full h-6 w-6 object-cover" 
-/>
+            src="/icons/wmremove-transformed.png" 
+            alt="Chargement..." 
+            className="animate-spin rounded-full h-6 w-6 object-cover" 
+          />
         </div>
       ) : url ? (
         <div 
@@ -118,7 +127,7 @@ export function Avatar({ url, playerId, onAvatarUpdate, size = 'md', editable = 
           <img
             src={url}
             alt="Avatar" 
-            className="w-full h-full object-cover select-none"
+            className={`w-full h-full ${fit === 'cover' ? 'object-cover' : 'object-contain object-center'} select-none`}
           />
           {editable && (
             <div 
