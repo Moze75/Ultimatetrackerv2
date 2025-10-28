@@ -551,8 +551,8 @@ const visibleGifts = [...(giftsShared || []), ...(giftsIndividual || [])]
 }, [open]);
    
 
-// ===== Client cache (stale-while-revalidate) =====
-const CACHE_TTL = 30_000; // 30s: ajuste si besoin
+// ===== Client cache (stale-while-revalidate) — non invasif =====
+const CACHE_TTL = 30_000; // 30s (ajuste si besoin)
 
 type CampaignModalCache = {
   invitations: CampaignInvitation[];
@@ -568,7 +568,35 @@ function readCache(key: string): CampaignModalCache | null {
     const raw = localStorage.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CampaignModalCache;
-    if (Date.now() - (parsed.ts || 0) > CACHE_TTL) return null;
+    if (!parsed.ts || Date.now() - parsed.ts > CACHE_TTL) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(key: string, data: Omit<CampaignModalCache, 'ts'>) {
+  try {
+    localStorage.setItem(key, JSON.stringify({ ...data, ts: Date.now() }));
+  } catch {}
+}// ===== Client cache (stale-while-revalidate) — non invasif =====
+const CACHE_TTL = 30_000; // 30s (ajuste si besoin)
+
+type CampaignModalCache = {
+  invitations: CampaignInvitation[];
+  myCampaigns: Campaign[];
+  activeCampaigns: Campaign[];
+  membersByCampaign: Record<string, CampaignMember[]>;
+  pendingGifts: CampaignGift[];
+  ts: number;
+};
+
+function readCache(key: string): CampaignModalCache | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as CampaignModalCache;
+    if (!parsed.ts || Date.now() - parsed.ts > CACHE_TTL) return null;
     return parsed;
   } catch {
     return null;
