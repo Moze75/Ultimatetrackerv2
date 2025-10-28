@@ -180,7 +180,7 @@ export function ResponsiveGameLayout({
         </div>
       </div>
 
-      {/* Grille responsive */}
+    {/* Grille responsive */}
       <ResponsiveGridLayout
         className="layout"
         layouts={layouts}
@@ -196,6 +196,40 @@ export function ResponsiveGameLayout({
         margin={[16, 16]}
         containerPadding={[0, 0]}
       >
+        {/* AJOUT : Bloc Profile dans la grille */}
+        <div
+          key="profile"
+          className="bg-gray-800/50 rounded-lg overflow-hidden border border-gray-700 flex flex-col shadow-xl"
+        >
+          <div
+            className={`bg-gray-900/80 px-4 py-3 border-b border-gray-700 flex items-center justify-between ${
+              !isLocked ? 'drag-handle cursor-move hover:bg-gray-900/90' : ''
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-lg">👤</span>
+              <h3 className="text-sm font-semibold text-gray-200 uppercase tracking-wide">
+                Profil
+              </h3>
+            </div>
+
+            {!isLocked && (
+              <div className="flex items-center gap-1 text-gray-500">
+                <GripVertical className="w-4 h-4" />
+                <GripVertical className="w-4 h-4 -ml-2" />
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
+            {/* Le contenu du PlayerProfile sans le wrapper stat-card */}
+            <div className="p-4">
+              {renderPane('profile')}
+            </div>
+          </div>
+        </div>
+
+        {/* Les autres blocs */}
         {['combat', 'class', 'abilities', 'stats', 'equipment'].map((key) => (
           <div
             key={key}
