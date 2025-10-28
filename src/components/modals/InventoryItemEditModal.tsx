@@ -241,12 +241,25 @@ const handleSave = async () => {
     const meta = buildMeta();
     const finalDesc = injectMetaIntoDescription((visibleDescription || '').trim(), meta);
 
-    const { error } = await supabase
+    // DEBUG utile temporaire
+    console.log('[EditModal] handleSave → payload', {
+      id: item.id,
+      player_id: (item as any).player_id,
+      name: name.trim(),
+      finalDescMeta: meta
+    });
+
+    const { data: updatedRow, error } = await supabase
       .from('inventory_items')
       .update({ name: name.trim(), description: finalDesc })
-      .eq('id', item.id);
+      .eq('id', item.id)
+      .select('*')
+      .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('[EditModal] UPDATE error', error);
+      throw error;
+    }
 
     // Mettre à jour localement
     const updated = inventory.map(it =>
@@ -254,17 +267,20 @@ const handleSave = async () => {
     );
     onInventoryUpdate(updated);
 
-    // Notifier globalement pour forcer un reload côté EquipmentTab / autres vues
+    // Notifier globalement pour recharger côté EquipmentTab (et autres)
     try {
       window.dispatchEvent(
-        new CustomEvent('inventory:refresh', { detail: { playerId: item.player_id } })
+        new CustomEvent('inventory:refresh', { detail: { playerId: (item as any).player_id } })
       );
-    } catch {}
+    } catch (e) {
+      console.warn('[EditModal] dispatch inventory:refresh failed', e);
+    }
 
+    console.log('[EditModal] UPDATE ok, row:', updatedRow);
     toast.success('Objet mis à jour');
     onSaved();
   } catch (e) {
-    console.error(e);
+    console.error('[EditModal] Sauvegarde échouée', e);
     toast.error('Erreur lors de la sauvegarde');
   }
 };
