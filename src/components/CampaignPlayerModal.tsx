@@ -411,97 +411,124 @@ const handleClaimMultiple = async () => {
 
 const loadData = async () => {
   try {
-    setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
-    // 1) Affiche immédiatement le cache si présent
+    // 0) Afficher instantanément le cache si présent (SWR)
     const cacheKey = `campaign_modal_${user.id}`;
-    const cached = typeof readCache === 'function' ? readCache(cacheKey) : null;
+    const cached = readCache(cacheKey);
     if (cached) {
       setInvitations(cached.invitations);
       setMyCampaigns(cached.myCampaigns);
       setActiveCampaigns(cached.activeCampaigns);
       setMembersByCampaign(cached.membersByCampaign);
       setPendingGifts(cached.pendingGifts);
+      // Pas de spinner si cache dispo
+      setLoading(false);
+    } else {
+      // Spinner seulement si pas de cache
+      setLoading(true);
     }
 
-    // 2) Rechargement silencieux (SWR)
+    // 1) Logs debug identiques (préservent ton workflow)
+    console.log('🎯 DEBUG LOAD DATA:');
+    console.log('- user.id:', user.id);
+    console.log('- player.id:', player.id);
+
+    // 2) Invitations (en parallèle du reste)
     const invitesPromise = campaignService.getMyPendingInvitations();
 
-    // Memberships actifs de l’utilisateur
-    const { data: memberships, error: membershipError } = await supabase
+    // 3) Memberships actifs
+    const { data: members, error: membershipError } = await supabase
       .from('campaign_members')
       .select('campaign_id')
       .eq('user_id', user.id)
       .eq('is_active', true);
 
-    if (membershipError) throw membershipError;
+    console.log('🏕️ QUERY campaign_members:');
+    console.log('  - Error:', membershipError);
+    console.log('  - Data brut:', members);
+    console.log('  - Nombre de memberships:', members?.length || 0);
 
     let myCamps: Campaign[] = [];
     let membersMap: Record<string, CampaignMember[]> = {};
     let giftsFiltered: CampaignGift[] = [];
 
-    if (memberships && memberships.length > 0) {
-      // Déduplique les campagnes (il y a parfois des doublons)
-      const campaignIds = Array.from(new Set(memberships.map(m => m.campaign_id)));
+    if (members && members.length > 0) {
+      // 4) Déduplique les ids
+      const campaignIds = Array.from(new Set(members.map(m => m.campaign_id)));
+      console.log('  - Campaign IDs:', campaignIds);
 
-      // Campagnes (reprend select('*') pour garder les colonnes dont l’UI a besoin)
+      // 5) Campagnes (garde select('*') pour le badge/colonnes UI)
       const { data: campaigns, error: campaignError } = await supabase
         .from('campaigns')
         .select('*')
         .in('id', campaignIds);
 
-      if (campaignError) throw campaignError;
-      myCamps = campaigns || [];
+      console.log('📋 CAMPAIGNS CHARGÉES:', campaigns);
+      console.log('❌ CAMPAIGNS ERROR:', campaignError);
 
-      // Membres par campagne (garde le service existant pour cohérence UI)
+      myCamps = campaigns || [];
+      setMyCampaigns(myCamps);
+      setActiveCampaigns(myCamps); // Necessaire au badge “Active”
+
+      // 6) Membres par campagne (garde ton service pour cohérence UI)
       const map: Record<string, CampaignMember[]> = {};
       await Promise.all(
-        campaignIds.map(async (id) => {
-          const cm = await loadCampaignMembers(id);
-          map[id] = cm;
+        campaignIds.map(async (campaignId) => {
+          const cm = await loadCampaignMembers(campaignId);
+          map[campaignId] = cm;
         })
       );
       membersMap = map;
+      setMembersByCampaign(membersMap);
 
-      // Gifts en attente
-// Gifts "shared" visibles par tous
-const { data: giftsShared, error: giftsSharedError } = await supabase
-  .from('campaign_gifts')
-  .select('id,campaign_id,gift_type,distribution_mode,recipient_ids,item_name,item_quantity,item_description,message,gold,silver,copper,sent_at,status')
-  .in('campaign_id', campaignIds)
-  .eq('status', 'pending')
-  .eq('distribution_mode', 'shared');
+      // 7) Gifts en attente (identique à ton code)
+      const { data: gifts } = await supabase
+        .from('campaign_gifts')
+        .select('*')
+        .in('campaign_id', campaignIds)
+        .eq('status', 'pending')
+        .order('sent_at', { ascending: false });
 
-if (giftsSharedError) throw giftsSharedError;
+      console.log('📦 GIFTS BRUTS (avant filtrage):', gifts);
 
-// Gifts "individual" où l'utilisateur est destinataire
-const { data: giftsIndividual, error: giftsIndividualError } = await supabase
-  .from('campaign_gifts')
-  .select('id,campaign_id,gift_type,distribution_mode,recipient_ids,item_name,item_quantity,item_description,message,gold,silver,copper,sent_at,status')
-  .in('campaign_id', campaignIds)
-  .eq('status', 'pending')
-  .eq('distribution_mode', 'individual')
-  .contains('recipient_ids', [user.id]); // nécessite recipient_ids en array/jsonb
+      const filteredGifts = (gifts || []).filter((gift) => {
+        console.log(`  → Gift "${gift.item_name || 'Argent'}":`, {
+          distribution_mode: gift.distribution_mode,
+          recipient_ids: gift.recipient_ids,
+          match_shared: gift.distribution_mode === 'shared',
+          match_individual: gift.distribution_mode === 'individual' && gift.recipient_ids?.includes(user.id)
+        });
 
-if (giftsIndividualError) throw giftsIndividualError;
+        if (gift.distribution_mode === 'shared') return true;
+        if (gift.distribution_mode === 'individual' && gift.recipient_ids) {
+          return gift.recipient_ids.includes(user.id);
+        }
+        return false;
+      });
 
-const visibleGifts = [...(giftsShared || []), ...(giftsIndividual || [])]
-  .sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime());
+      console.log('📦 GIFTS FILTRÉS:', filteredGifts);
 
-      // Claims (version sûre via service, on optimisera ensuite)
+      // 8) Claims — conserve la version service (fiable, zéro régression)
       const giftsWithClaims = await Promise.all(
-        visibleGifts.map(async (gift) => {
+        filteredGifts.map(async (gift) => {
           const claims = await campaignService.getGiftClaims(gift.id);
-          const already = claims.some((c) => c.user_id === user.id);
-          return { gift, already };
+          const alreadyClaimed = claims.some(c => c.user_id === user.id);
+          return { gift, alreadyClaimed };
         })
-      ); 
+      );
 
-      giftsFiltered = giftsWithClaims.filter(x => !x.already).map(x => x.gift);
+      giftsFiltered = giftsWithClaims
+        .filter(g => !g.alreadyClaimed)
+        .map(g => g.gift);
+
+      setPendingGifts(giftsFiltered);
     } else {
-      // Pas de memberships actifs -> on n’écrase pas l’état si on avait du cache
+      // Pas de memberships: si pas de cache, nettoie l’état
       if (!cached) {
         setMyCampaigns([]);
         setActiveCampaigns([]);
@@ -510,25 +537,18 @@ const visibleGifts = [...(giftsShared || []), ...(giftsIndividual || [])]
       }
     }
 
+    // 9) Invitations (récupération puis set)
     const invites = await invitesPromise;
-
-    // 3) Met à jour l’UI
     setInvitations(invites);
-    setMyCampaigns(myCamps);
-    setActiveCampaigns(myCamps); // => Restaure le badge "Active"
-    setMembersByCampaign(membersMap);
-    setPendingGifts(giftsFiltered);
 
-    // 4) Écrit dans le cache si dispo
-    if (typeof writeCache === 'function') {
-      writeCache(cacheKey, {
-        invitations: invites,
-        myCampaigns: myCamps,
-        activeCampaigns: myCamps,
-        membersByCampaign: membersMap,
-        pendingGifts: giftsFiltered,
-      });
-    }
+    // 10) Écrit le cache (toujours à la fin)
+    writeCache(cacheKey, {
+      invitations: invites,
+      myCampaigns: myCamps,
+      activeCampaigns: myCamps,
+      membersByCampaign: membersMap,
+      pendingGifts: giftsFiltered,
+    });
   } catch (error) {
     console.error('Erreur chargement campagnes:', error);
     toast.error('Erreur lors du chargement');
