@@ -532,20 +532,19 @@ const loadData = async () => {
       console.log('📦 GIFTS FILTRÉS:', filteredGifts);
 
       // 8) Claims — conserve la version service (fiable, zéro régression)
-// Claims — version service (fiable) avec cache mémoire 30s
-const giftsWithClaims = await Promise.all(
-  filteredGifts.map(async (gift) => {
-    const claims = await getClaimsCached(gift.id, campaignService.getGiftClaims);
-    const alreadyClaimed = claims.some(c => c.user_id === user.id);
-    return { gift, alreadyClaimed };
-  })
-);
+      const giftsWithClaims = await Promise.all(
+        filteredGifts.map(async (gift) => {
+          const claims = await campaignService.getGiftClaims(gift.id);
+          const alreadyClaimed = claims.some(c => c.user_id === user.id);
+          return { gift, alreadyClaimed };
+        })
+      );
 
-const giftsFiltered = giftsWithClaims
-  .filter(g => !g.alreadyClaimed)
-  .map(g => g.gift);
+      giftsFiltered = giftsWithClaims
+        .filter(g => !g.alreadyClaimed)
+        .map(g => g.gift);
 
-setPendingGifts(giftsFiltered);
+      setPendingGifts(giftsFiltered); 
     } else {
       // Pas de memberships: si pas de cache, nettoie l’état
       if (!cached) {
