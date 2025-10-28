@@ -225,8 +225,8 @@ export function ResponsiveGameLayout({
 
           <div className="flex-1 overflow-y-auto custom-scrollbar">
             {/* Le contenu du PlayerProfile sans le wrapper stat-card */}
-          <div className="p-4">
-  {renderPane('profile')}
+<div className="p-4">
+  {renderProfile()}
 </div>
           </div>
         </div>
