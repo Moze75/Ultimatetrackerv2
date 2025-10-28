@@ -18,11 +18,11 @@ export interface LayoutPreferences {
 
 export const DEFAULT_LAYOUT = {
   lg: [
-    { i: 'profile', x: 0, y: 0, w: 4, h: 8, minW: 3, minH: 6 },
-    { i: 'combat', x: 4, y: 0, w: 4, h: 8, minW: 3, minH: 6 },
-    { i: 'class', x: 8, y: 0, w: 4, h: 8, minW: 3, minH: 6 },
-    { i: 'abilities', x: 0, y: 8, w: 4, h: 8, minW: 3, minH: 6 },
-    { i: 'stats', x: 4, y: 8, w: 4, h: 8, minW: 3, minH: 6 },
-    { i: 'equipment', x: 8, y: 8, w: 4, h: 8, minW: 3, minH: 6 },
+    { i: 'profile', x: 0, y: 0, w: 4, h: 6, minW: 3, minH: 5 },
+    { i: 'combat', x: 4, y: 0, w: 4, h: 6, minW: 3, minH: 5 },
+    { i: 'class', x: 8, y: 0, w: 4, h: 6, minW: 3, minH: 5 },
+    { i: 'abilities', x: 0, y: 6, w: 4, h: 6, minW: 3, minH: 5 },
+    { i: 'stats', x: 4, y: 6, w: 4, h: 6, minW: 3, minH: 5 },
+    { i: 'equipment', x: 8, y: 6, w: 4, h: 6, minW: 3, minH: 5 },
   ],
 };
