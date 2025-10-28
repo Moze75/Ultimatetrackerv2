@@ -11,6 +11,24 @@ import {
 } from '../types/campaign';
 import toast from 'react-hot-toast';
 
+// Cache claims simple (TTL 30s) — au niveau module
+const CLAIMS_TTL = 30_000;
+const claimsCache = new Map<string, { ts: number; list: any[] }>();
+
+async function getClaimsCached(
+  giftId: string,
+  fetcher: (id: string) => Promise<any[]>
+) {
+  const cached = claimsCache.get(giftId);
+  const now = Date.now();
+  if (cached && now - cached.ts < CLAIMS_TTL) {
+    return cached.list;
+  }
+  const list = await fetcher(giftId);
+  claimsCache.set(giftId, { ts: now, list });
+  return list;
+}
+
 // =============================================
 // Modal de distribution équitable d'argent
 // =============================================
