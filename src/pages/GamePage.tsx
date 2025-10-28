@@ -14,6 +14,9 @@ import { StatsTab } from '../components/StatsTab';
 import { ClassesTab } from '../components/ClassesTab';
 import { PlayerContext } from '../contexts/PlayerContext';
 
+import { ResponsiveGameLayout } from '../components/ResponsiveGameLayout';
+import { Grid3x3 } from 'lucide-react';
+
 import { inventoryService } from '../services/inventoryService';
 import PlayerProfileProfileTab from '../components/PlayerProfileProfileTab';
 import { loadAbilitySections } from '../services/classesContent';
