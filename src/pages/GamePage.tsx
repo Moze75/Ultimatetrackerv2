@@ -883,9 +883,9 @@ return (
     }}
   />
   ) : (
+  ) : (
   /* MODE ONGLETS CLASSIQUE */
   <>
-    <PlayerProfile player={currentPlayer} onUpdate={applyPlayerUpdate} />
     <TabNavigation activeTab={activeTab} onTabChange={handleTabClickChange} />
 
               <div
