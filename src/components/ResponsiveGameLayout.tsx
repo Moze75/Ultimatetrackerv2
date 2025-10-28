@@ -39,7 +39,7 @@ export function ResponsiveGameLayout({
   classSections,
   renderPane,
   onToggleMode,
-  renderProfile,  // ← AJOUT
+
 }: ResponsiveGameLayoutProps) {
   const [layouts, setLayouts] = useState(DEFAULT_LAYOUT);
   const [isLocked, setIsLocked] = useState(false);
