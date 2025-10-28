@@ -1269,12 +1269,15 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
       </div>
     )}
     
-    {/* Description pour les autres types d'items */}
-    {!(isArmor || isShield || isWeapon) && (
-      <div className="text-sm text-gray-300 whitespace-pre-wrap">
-        {visibleDescription(item.description)}
-      </div>
-    )}
+{/* Description visible (tous types) */}
+{(() => {
+  const desc = visibleDescription(item.description);
+  return desc ? (
+    <div className="text-sm text-gray-300 whitespace-pre-wrap mt-2">
+      {desc}
+    </div>
+  ) : null;
+})()}
   </div>
 )}
                     </div>
