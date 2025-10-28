@@ -867,21 +867,21 @@ return (
   {/* PlayerProfile toujours visible */}
   <PlayerProfile player={currentPlayer} onUpdate={applyPlayerUpdate} />
 
-  {/* MODE GRILLE */}
-  {isGridMode && !isMobile ? (
-    <ResponsiveGameLayout
-      player={currentPlayer}
-      userId={session?.user?.id}
-      onPlayerUpdate={applyPlayerUpdate}
-      inventory={inventory}
-      onInventoryUpdate={setInventory}
-      classSections={classSections}
-      renderPane={renderPane}
-      onToggleMode={() => {
-        setIsGridMode(false);
-        toast.success('Mode onglets activé');
-      }}
-    />
+{/* MODE GRILLE (tablette/desktop uniquement) */}
+{isGridMode && !isMobile ? (
+  <ResponsiveGameLayout
+    player={currentPlayer}
+    userId={session?.user?.id}
+    onPlayerUpdate={applyPlayerUpdate}
+    inventory={inventory}
+    onInventoryUpdate={setInventory}
+    classSections={classSections}
+    renderPane={renderPane}
+    onToggleMode={() => {
+      setIsGridMode(false);
+      toast.success('Mode onglets activé');
+    }}
+  />
   ) : (
   /* MODE ONGLETS CLASSIQUE */
   <>
