@@ -19,7 +19,6 @@ interface ResponsiveGameLayoutProps {
   classSections: any[] | null;
   renderPane: (key: string) => React.ReactNode;
   onToggleMode: () => void;
-  renderProfile: () => React.ReactNode;  // ← AJOUT
 }
 
 const TAB_LABELS: Record<string, { icon: string; label: string }> = {
