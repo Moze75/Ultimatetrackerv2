@@ -233,32 +233,41 @@ export function InventoryItemEditModal({
     return base;
   };
 
-  const handleSave = async () => {
-    if (!name.trim()) return toast.error('Nom requis');
-    if (quantity <= 0) return toast.error('Quantité invalide');
+const handleSave = async () => {
+  if (!name.trim()) return toast.error('Nom requis');
+  if (quantity <= 0) return toast.error('Quantité invalide');
 
+  try {
+    const meta = buildMeta();
+    const finalDesc = injectMetaIntoDescription((visibleDescription || '').trim(), meta);
+
+    const { error } = await supabase
+      .from('inventory_items')
+      .update({ name: name.trim(), description: finalDesc })
+      .eq('id', item.id);
+
+    if (error) throw error;
+
+    // Mettre à jour localement
+    const updated = inventory.map(it =>
+      it.id === item.id ? { ...it, name: name.trim(), description: finalDesc } : it
+    );
+    onInventoryUpdate(updated);
+
+    // Notifier globalement pour forcer un reload côté EquipmentTab / autres vues
     try {
-      const meta = buildMeta();
-      const finalDesc = injectMetaIntoDescription((visibleDescription || '').trim(), meta);
+      window.dispatchEvent(
+        new CustomEvent('inventory:refresh', { detail: { playerId: item.player_id } })
+      );
+    } catch {}
 
-      const { error } = await supabase
-        .from('inventory_items')
-        .update({ name: name.trim(), description: finalDesc })
-        .eq('id', item.id);
-
-      if (error) throw error;
-
-      // Mettre à jour localement
-      const updated = inventory.map(it => it.id === item.id ? { ...it, name: name.trim(), description: finalDesc } : it);
-      onInventoryUpdate(updated);
-
-      toast.success('Objet mis à jour');
-      onSaved();
-    } catch (e) {
-      console.error(e);
-      toast.error('Erreur lors de la sauvegarde');
-    }
-  };
+    toast.success('Objet mis à jour');
+    onSaved();
+  } catch (e) {
+    console.error(e);
+    toast.error('Erreur lors de la sauvegarde');
+  }
+};
 
   return (
     <div className="fixed inset-0 z-[11000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
