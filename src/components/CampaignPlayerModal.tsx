@@ -1236,7 +1236,7 @@ return (
                           {pendingGifts.length} loot{pendingGifts.length > 1 ? 's' : ''} en attente !
                         </h3>
                         <p className="text-sm text-gray-300">
-                           {pendingGifts.length > 1 ? 'des objets' : 'un objet'}  
+                          Votre Maître du Jeu a envoyé {pendingGifts.length > 1 ? 'des objets' : 'un objet'} pour votre aventure. 
                           Récupérez-{pendingGifts.length > 1 ? 'les' : 'le'} ci-dessous.
                         </p>
                       </div>
