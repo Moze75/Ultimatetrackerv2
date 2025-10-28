@@ -431,6 +431,17 @@ const getDamageBonus = (attack: Attack): number => {
   return abilityMod + weaponBonus;
 };
 
+const rollAttack = (attack: Attack) => {
+  const attackBonus = getAttackBonus(attack);
+  setRollData({
+    type: 'attack',
+    attackName: attack.name,
+    diceFormula: '1d20',
+    modifier: attackBonus
+  });
+  setDiceRollerOpen(true);
+};
+  
   const rollDamage = (attack: Attack) => {
     const damageBonus = getDamageBonus(attack);
     setRollData({
