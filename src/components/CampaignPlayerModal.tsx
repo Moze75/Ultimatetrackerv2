@@ -679,7 +679,7 @@ const loadNotes = async () => {
       localStorage.setItem(LS_NOTES_KEY, JSON.stringify({ journal, npcs, quests }));
     } catch {} 
   } catch (err) {
-    console.warn('[Notes] BDD indisponible, fallback localStorage.', err);
+    console.warn('[Notes] BDD indisponible, fallback localStorage.', err); 
     try {
       const raw = localStorage.getItem(LS_NOTES_KEY);
       if (raw) {
