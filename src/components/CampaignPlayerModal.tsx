@@ -670,11 +670,13 @@ const loadNotes = async () => {
     const npcs = typeof notes.npcs === 'string' ? notes.npcs : '';
     const quests = typeof notes.quests === 'string' ? notes.quests : '';
 
+// ... après setNotesJournal/NPcs/Quests (succès BDD)
 setNotesJournal(journal);
 setNotesNPCs(npcs);
 setNotesQuests(quests);
 
-// Synchronise le cache local
+// aligne le cache mémoire et local
+notesCacheRef.current = { journal, npcs, quests };
 try {
   localStorage.setItem(LS_NOTES_KEY, JSON.stringify({ journal, npcs, quests }));
 } catch {}
