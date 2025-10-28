@@ -22,12 +22,12 @@ interface ResponsiveGameLayoutProps {
 }
 
 const TAB_LABELS: Record<string, { icon: string; label: string }> = {
+  profile: { icon: '👤', label: 'Profil' },  // ← AJOUTEZ cette ligne
   combat: { icon: '⚔️', label: 'Combat' },
   class: { icon: '📜', label: 'Classe' },
   abilities: { icon: '🎯', label: 'Capacités' },
   stats: { icon: '📊', label: 'Statistiques' },
   equipment: { icon: '🎒', label: 'Équipement' },
-  profile: { icon: '👤', label: 'Profil' },
 };
 
 export function ResponsiveGameLayout({
