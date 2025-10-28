@@ -685,10 +685,15 @@ try {
     try {
       const raw = localStorage.getItem(LS_NOTES_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw);
-        setNotesJournal(parsed.journal || '');
-        setNotesNPCs(parsed.npcs || '');
-        setNotesQuests(parsed.quests || '');
+       const parsed = JSON.parse(raw);
+const journal = parsed.journal || '';
+const npcs = parsed.npcs || '';
+const quests = parsed.quests || '';
+
+setNotesJournal(journal);
+setNotesNPCs(npcs);
+setNotesQuests(quests);
+notesCacheRef.current = { journal, npcs, quests };
       } else {
         // Ne pas écraser l'état avec des vides si rien en cache
       }
