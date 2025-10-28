@@ -552,6 +552,7 @@ const visibleGifts = [...(giftsShared || []), ...(giftsIndividual || [])]
    
 
 // ===== Client cache (stale-while-revalidate) — non invasif =====
+// ===== Client cache (stale-while-revalidate) — non invasif =====
 const CACHE_TTL = 30_000; // 30s (ajuste si besoin)
 
 type CampaignModalCache = {
@@ -579,7 +580,7 @@ function writeCache(key: string, data: Omit<CampaignModalCache, 'ts'>) {
   try {
     localStorage.setItem(key, JSON.stringify({ ...data, ts: Date.now() }));
   } catch {}
-} 
+}
 
 // Helpers Notes
 const LS_NOTES_KEY = `campaign_notes_${player.id}`;
