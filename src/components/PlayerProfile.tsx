@@ -323,7 +323,7 @@ export function PlayerProfile({ player, onUpdate, onInventoryAdd }: PlayerProfil
               className="grid items-start gap-3 sm:gap-4"
               style={{ gridTemplateColumns: 'minmax(0,1fr) 8rem' }}
             >
-              <div className="relative w-full min-w-0 aspect-[7/10] sm:aspect-[2/3] rounded-lg overflow-hidden bg-gray-800/50 flex items-center justify-center">
+            <div className="relative w-full min-w-0 aspect-[7/10] sm:aspect-[2/3] md:aspect-[auto] md:h-[60vh] lg:h-[70vh] rounded-lg overflow-hidden bg-gray-800/50 flex items-center justify-center md:[&_img]:object-contain md:[&_img]:object-center">
                 <button
                   onClick={() => setEditing(true)}
                   className="absolute top-2 left-2 w-9 h-9 rounded-full bg-gray-900/40 backdrop-blur-sm text-white hover:bg-gray-800/50 hover:text-white flex items-center justify-center z-10 transition"
