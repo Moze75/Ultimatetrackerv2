@@ -861,13 +861,14 @@ return (
       </div>
     )}
 
-    <div className="w-full max-w-6xl mx-auto space-y-4 sm:space-y-6">
-      {currentPlayer && (
-        <PlayerContext.Provider value={currentPlayer}>
-          <PlayerProfile player={currentPlayer} onUpdate={applyPlayerUpdate} />
+<div className="w-full max-w-6xl mx-auto space-y-4 sm:space-y-6">
+  {currentPlayer && (
+    <PlayerContext.Provider value={currentPlayer}>
+      {/* PlayerProfile affiché SEULEMENT en mode onglets (pas en mode grille) */}
+      {!isGridMode && <PlayerProfile player={currentPlayer} onUpdate={applyPlayerUpdate} />}
 
-          {/* MODE GRILLE (tablette/desktop uniquement) */}
-         {isGridMode && !isMobile ? (
+      {/* MODE GRILLE (tablette/desktop uniquement) */}
+      {isGridMode && !isMobile ? (
   <ResponsiveGameLayout
     player={currentPlayer}
     userId={session?.user?.id}
