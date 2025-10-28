@@ -193,6 +193,23 @@ useEffect(() => {
 }, [inventory]);
   // --- END
 
+// Détection de la taille d'écran pour le mode grille
+useEffect(() => {
+  const checkMobile = () => {
+    const mobile = window.innerWidth < 768;
+    setIsMobile(mobile);
+    // Désactiver le mode grille sur mobile
+    if (mobile && isGridMode) {
+      setIsGridMode(false);
+      toast('Mode grille disponible uniquement sur tablette/desktop', { icon: '📱' });
+    }
+  };
+
+  checkMobile();
+  window.addEventListener('resize', checkMobile);
+  return () => window.removeEventListener('resize', checkMobile);
+}, [isGridMode]);
+  
   // Onglet initial
   const initialTab: TabKey = (() => {
     try {
