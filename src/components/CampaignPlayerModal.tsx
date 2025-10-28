@@ -579,6 +579,18 @@ function writeCache(key: string, data: Omit<CampaignModalCache, 'ts'>) {
 const LS_NOTES_KEY = `campaign_notes_${player.id}`;
 
 const loadNotes = async () => {
+  // 1) Affiche instantanément depuis le local si dispo
+  try {
+    const raw = localStorage.getItem(LS_NOTES_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      setNotesJournal(parsed.journal || '');
+      setNotesNPCs(parsed.npcs || '');
+      setNotesQuests(parsed.quests || '');
+    }
+  } catch {}
+
+  // 2) Puis rafraîchis depuis la BDD en arrière-plan
   try {
     const { data, error } = await supabase
       .from('players')
@@ -588,7 +600,7 @@ const loadNotes = async () => {
 
     if (error) {
       console.error('[Notes] SELECT error:', error);
-      throw error;
+      return;
     }
 
     const notes = data?.notes_json || {};
@@ -600,26 +612,11 @@ const loadNotes = async () => {
     setNotesNPCs(npcs);
     setNotesQuests(quests);
 
-    // Synchronise le cache local
     try {
       localStorage.setItem(LS_NOTES_KEY, JSON.stringify({ journal, npcs, quests }));
     } catch {}
   } catch (err) {
-    console.warn('[Notes] BDD indisponible, fallback localStorage.', err);
-    try {
-      const raw = localStorage.getItem(LS_NOTES_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        setNotesJournal(parsed.journal || '');
-        setNotesNPCs(parsed.npcs || '');
-        setNotesQuests(parsed.quests || '');
-      } else {
-        // Ne pas écraser l'état avec des vides si rien en cache
-      }
-    } catch (e) {
-      console.error('[Notes] Fallback localStorage erreur:', e);
-      // Ne rien écraser
-    }
+    console.warn('[Notes] BDD indisponible, on conserve les valeurs locales.');
   }
 };
 
