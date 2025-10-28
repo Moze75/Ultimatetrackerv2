@@ -490,14 +490,65 @@ if (giftsIndividualError) throw giftsIndividualError;
 const visibleGifts = [...(giftsShared || []), ...(giftsIndividual || [])]
   .sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime());
 
-      // Claims (version sûre via service, on optimisera ensuite)
-      const giftsWithClaims = await Promise.all(
-        visibleGifts.map(async (gift) => {
-          const claims = await campaignService.getGiftClaims(gift.id);
-          const already = claims.some((c) => c.user_id === user.id);
-          return { gift, already };
-        })
-      );
+// Claims par batch (alias/table stable si dispo), puis fallbacks
+const giftIds = visibleGifts.map(g => g.id);
+let claimedByUser = new Set<string>();
+let giftsFiltered: CampaignGift[] = [];
+
+if (giftIds.length === 0) {
+  giftsFiltered = [];
+} else {
+  // 1) Tentative via alias sans tiret (recommandé si tu crées la vue "campaign_gift_claims")
+  let claimsData: { gift_id: string; user_id: string }[] | null = null;
+  let claimsError: any = null;
+
+  {
+    const { data, error } = await supabase
+      .from('campaign_gift_claims')
+      .select('gift_id,user_id')
+      .eq('user_id', user.id)
+      .in('gift_id', giftIds);
+    claimsData = data as any;
+    claimsError = error;
+  }
+
+  // 2) Si la vue/alias n’existe pas (42P01), tente la table avec tiret
+  if (claimsError && claimsError.code === '42P01') {
+    const { data, error } = await supabase
+      .from('Campaign_gift-claims') // nom exact avec tiret
+      .select('gift_id,user_id')
+      .eq('user_id', user.id)
+      .in('gift_id', giftIds);
+    claimsData = data as any;
+    claimsError = error;
+  }
+
+  if (!claimsError && claimsData) {
+    claimedByUser = new Set(
+      claimsData.filter(c => c.user_id === user.id).map(c => c.gift_id)
+    );
+    giftsFiltered = visibleGifts.filter(g => !claimedByUser.has(g.id));
+  } else if (claimsError && claimsError.code !== '42P01') {
+    // 3) Erreur autre que "relation n'existe pas" -> fallback service
+    const giftsWithClaims = await Promise.all(
+      visibleGifts.map(async (gift) => {
+        const claims = await campaignService.getGiftClaims(gift.id);
+        const already = claims.some((c) => c.user_id === user.id);
+        return { gift, already };
+      })
+    );
+    giftsFiltered = giftsWithClaims.filter(x => !x.already).map(x => x.gift);
+  } else {
+    // 4) Ni vue ni table claims -> fallback minimal via champs du gift (claimed_by/status)
+    console.warn('[Gifts] Aucune table/alias de claims, fallback claimed_by/status.');
+    claimedByUser = new Set(
+      visibleGifts
+        .filter((g: any) => g.claimed_by === user.id || g.status !== 'pending')
+        .map(g => g.id)
+    );
+    giftsFiltered = visibleGifts.filter(g => !claimedByUser.has(g.id));
+  }
+}
 
       giftsFiltered = giftsWithClaims.filter(x => !x.already).map(x => x.gift);
     } else {
