@@ -24,25 +24,45 @@ export const layoutService = {
     }
   },
 
-async saveLayout(userId: string, layouts: any, isLocked: boolean): Promise<void> {
-  try {
-    const { error } = await supabase
-      .from('user_layout_preferences')
-      .upsert({
-        user_id: userId,
-        layouts,
-        is_locked: isLocked,
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'user_id'  // ← AJOUT : spécifie la colonne de conflit
-      });
+  async saveLayout(userId: string, layouts: any, isLocked: boolean): Promise<void> {
+    try {
+      // Vérifier si un enregistrement existe déjà
+      const { data: existing } = await supabase
+        .from('user_layout_preferences')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
 
-    if (error) throw error;
-  } catch (error) {
-    console.error('Erreur lors de la sauvegarde du layout:', error);
-    throw error;
-  }
-},
+      if (existing) {
+        // UPDATE si existe
+        const { error } = await supabase
+          .from('user_layout_preferences')
+          .update({
+            layouts,
+            is_locked: isLocked,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', userId);
+
+        if (error) throw error;
+      } else {
+        // INSERT si n'existe pas
+        const { error } = await supabase
+          .from('user_layout_preferences')
+          .insert({
+            user_id: userId,
+            layouts,
+            is_locked: isLocked,
+            updated_at: new Date().toISOString(),
+          });
+
+        if (error) throw error;
+      }
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde du layout:', error);
+      throw error;
+    }
+  },
 
   async resetLayout(userId: string): Promise<void> {
     try {
