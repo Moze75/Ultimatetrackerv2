@@ -358,6 +358,35 @@ const [notesJournal, setNotesJournal] = useState('');
 const [notesNPCs, setNotesNPCs] = useState('');
 const [notesQuests, setNotesQuests] = useState('');
 const [savingNotes, setSavingNotes] = useState(false);
+  // Cache in-memory des notes pour affichage instantané
+const notesCacheRef = React.useRef<{ journal: string; npcs: string; quests: string } | null>(null);
+
+// Pré-hydrate depuis localStorage dès que le player change (sync, pas d'attente)
+useEffect(() => {
+  try {
+    const raw = localStorage.getItem(LS_NOTES_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const journal = parsed.journal || '';
+      const npcs = parsed.npcs || '';
+      const quests = parsed.quests || '';
+      setNotesJournal(journal);
+      setNotesNPCs(npcs);
+      setNotesQuests(quests);
+      notesCacheRef.current = { journal, npcs, quests };
+    }
+  } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [player.id]);
+
+// Prefetch silencieux dès l'ouverture du modal (même si onglet non "notes")
+useEffect(() => {
+  if (open) {
+    // ne bloque pas l'UI; si déjà hydraté, ça ne flashera pas
+    loadNotes();
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [open]);
  const [currentUserId, setCurrentUserId] = useState('');
 
   const getVisibleDescription = (description: string | null | undefined): string => {
