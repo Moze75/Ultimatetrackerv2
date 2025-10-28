@@ -1265,7 +1265,7 @@ return (
                 {pendingGifts.length > 0 ? (
                   <>
                     {pendingGifts.map((gift) => {
-                      const meta = parseMeta(gift.item_description);
+                      const meta = metaByGift.get(gift.id);
                       const isCurrencyShared = gift.gift_type === 'currency' && gift.distribution_mode === 'shared';
                       const campaignMembers = membersByCampaign[gift.campaign_id] || [];
                       const memberCount = campaignMembers.length;
