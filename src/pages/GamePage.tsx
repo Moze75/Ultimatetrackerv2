@@ -882,8 +882,7 @@ return (
       toast.success('Mode onglets activé');
     }}
   />
-  ) : (
-  ) : (
+   ) : (
   /* MODE ONGLETS CLASSIQUE */
   <>
     <TabNavigation activeTab={activeTab} onTabChange={handleTabClickChange} />
