@@ -660,6 +660,18 @@ export function EquipmentTab({
     else await doFetch();
   };
 
+  useEffect(() => {
+  const handler = (e: any) => {
+    // Si l’émetteur fournit playerId, on ne rafraîchit que pour ce joueur
+    const pid = e?.detail?.playerId;
+    if (!pid || pid === player.id) {
+      refreshInventory(0);
+    }
+  };
+  window.addEventListener('inventory:refresh', handler);
+  return () => window.removeEventListener('inventory:refresh', handler);
+}, [player.id]);
+
   const notifyAttacksChanged = () => {
     try { window.dispatchEvent(new CustomEvent('attacks:changed', { detail: { playerId: player.id } })); } catch {}
   };
