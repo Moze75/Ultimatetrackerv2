@@ -10,8 +10,8 @@ interface AvatarProps {
   onAvatarUpdate: (url: string) => void;
   size?: 'sm' | 'md' | 'lg';
   editable?: boolean;
-  // NEW: contrôle du fitting de l’image (cover par défaut pour compat)
-  fit?: 'cover' | 'contain';
+  // NEW: cover sur mobile, contain à partir de md
+  containOnMdUp?: boolean;
 }
 
 export function Avatar({
@@ -20,7 +20,7 @@ export function Avatar({
   onAvatarUpdate,
   size = 'md',
   editable = false,
-  fit = 'cover'
+  containOnMdUp = false
 }: AvatarProps) {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -33,11 +33,10 @@ export function Avatar({
   };
 
   const extractSupabaseAvatarPath = (publicUrl: string): string | null => {
-    // Forme attendue: https://<project>.supabase.co/storage/v1/object/public/avatars/<playerId>/<file>
     const marker = '/storage/v1/object/public/avatars/';
     const i = publicUrl.indexOf(marker);
     if (i === -1) return null;
-    return publicUrl.slice(i + marker.length); // => "<playerId>/<file>"
+    return publicUrl.slice(i + marker.length);
   };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,7 +49,7 @@ export function Avatar({
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('L\'image ne doit pas dépasser 5MB');
+      toast.error("L'image ne doit pas dépasser 5MB");
       return;
     }
 
@@ -90,8 +89,8 @@ export function Avatar({
       onAvatarUpdate(publicUrl);
       toast.success('Avatar mis à jour');
     } catch (error: any) {
-      console.error('Erreur lors de la mise à jour de l\'avatar:', error);
-      toast.error('Erreur lors de la mise à jour de l\'avatar');
+      console.error("Erreur lors de la mise à jour de l'avatar:", error);
+      toast.error("Erreur lors de la mise à jour de l'avatar");
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -126,8 +125,10 @@ export function Avatar({
         >
           <img
             src={url}
-            alt="Avatar" 
-            className={`w-full h-full ${fit === 'cover' ? 'object-cover' : 'object-contain object-center'} select-none`}
+            alt="Avatar"
+            className={`w-full h-full select-none ${
+              containOnMdUp ? 'object-cover md:object-contain' : 'object-cover'
+            }`}
           />
           {editable && (
             <div 
