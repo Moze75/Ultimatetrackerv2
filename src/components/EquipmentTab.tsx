@@ -1395,24 +1395,28 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
           }}
         />
       )}
-      {editingItem && (
-        <InventoryItemEditModal
-          item={editingItem}
-          lockType={editLockType}
-          onInventoryUpdate={onInventoryUpdate}
-          inventory={inventory}
-          onClose={() => {
-            setEditingItem(null);
-            setEditLockType(false);
-            prevEditMetaRef.current = null;
-          }}
-          onSaved={() => {
-            setEditingItem(null);
-            setEditLockType(false);
-            prevEditMetaRef.current = null;
-          }}
-        />
-      )}
+{editingItem && (
+  <InventoryItemEditModal
+    item={editingItem}
+    lockType={editLockType}
+    onInventoryUpdate={onInventoryUpdate}
+    inventory={inventory}
+    onClose={() => {
+      // Assure une remontée des dernières données (au cas où la modale a écrit en BDD)
+      refreshInventory(0);
+      setEditingItem(null);
+      setEditLockType(false);
+      prevEditMetaRef.current = null;
+    }}
+    onSaved={() => {
+      // Recharge depuis la BDD pour garantir la persistance visible immédiatement
+      refreshInventory(0);
+      setEditingItem(null);
+      setEditLockType(false);
+      prevEditMetaRef.current = null;
+    }}
+  />
+)}
 
       {showWeaponsModal && (
         <WeaponsManageModal
