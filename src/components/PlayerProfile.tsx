@@ -331,13 +331,14 @@ export function PlayerProfile({ player, onUpdate, onInventoryAdd }: PlayerProfil
                   <Menu className="w-5 h-5" />
                 </button>
 
-                <Avatar
-                  url={player.avatar_url || ''}
-                  playerId={player.id}
-                  size="lg"
-                  editable={false}
-                  onAvatarUpdate={() => {}}
-                />
+                    <Avatar
+                   url={player.avatar_url || ''}
+                   playerId={player.id}
+                   size="lg"
+                   editable={false}
+                 fit="contain"
+                   onAvatarUpdate={() => {}}
+                 />
 
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4 pointer-events-none">
                   <div className="text-white">
