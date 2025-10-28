@@ -674,13 +674,12 @@ setNotesJournal(journal);
 setNotesNPCs(npcs);
 setNotesQuests(quests);
 
-// aligne le cache mémoire et local
-notesCacheRef.current = { journal, npcs, quests };
+// Synchronise le cache local
 try {
   localStorage.setItem(LS_NOTES_KEY, JSON.stringify({ journal, npcs, quests }));
 } catch {}
   } catch (err) {
-    console.warn('[Notes] BDD indisponible, fallback localStorage.', err); 
+    console.warn('[Notes] BDD indisponible, fallback localStorage.', err);
     try {
       const raw = localStorage.getItem(LS_NOTES_KEY);
       if (raw) {
