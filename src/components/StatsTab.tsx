@@ -98,7 +98,7 @@ const getExpertiseLimit = (playerClass: string | null | undefined, level: number
       return 0;
     case 'Barde':
       if (level >= 10) return 4;
-      if (level >= 2) return 2;  // ✅ Expertise dès niveau 2
+      if (level >= 2) return 2;
       return 0;
     case 'Rôdeur':
       if (level >= 6) return 1;
@@ -237,13 +237,13 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
     setAbilities(updateAbilityModifiers(newAbilities, stats, effectiveProficiency));
   };
 
-  // ✅ Fonctions pour lancer les dés
+  // ✅ Fonctions pour lancer les dés avec les bons libellés
   const rollAbilityCheck = (ability: Ability) => {
-    if (editing) return; // Ne pas lancer de dés en mode édition
+    if (editing) return;
     
     setRollData({
       type: 'ability',
-      attackName: `Test de ${ability.name}`,
+      attackName: `Test de ${ability.name}`, // ✅ Affichage "Test de X"
       diceFormula: '1d20',
       modifier: ability.modifier
     });
@@ -251,23 +251,23 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
   };
 
   const rollSavingThrow = (ability: Ability) => {
-    if (editing) return; // Ne pas lancer de dés en mode édition
+    if (editing) return;
     
     setRollData({
       type: 'saving-throw',
-      attackName: `Jet de sauvegarde de ${ability.name}`,
+      attackName: `Jet de sauvegarde de ${ability.name}`, // ✅ Affichage "Jet de sauvegarde de X"
       diceFormula: '1d20',
       modifier: ability.savingThrow
     });
     setDiceRollerOpen(true);
   };
 
-  const rollSkillCheck = (skillName: string, bonus: number, abilityShort: string) => {
-    if (editing) return; // Ne pas lancer de dés en mode édition
+  const rollSkillCheck = (skillName: string, bonus: number) => {
+    if (editing) return;
     
     setRollData({
       type: 'skill',
-      attackName: `${skillName} (${abilityShort})`,
+      attackName: `Test de compétence\n${skillName}`, // ✅ "Test de compétence" + retour à la ligne + nom
       diceFormula: '1d20',
       modifier: bonus
     });
@@ -467,7 +467,7 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
                     className={`flex items-center justify-between px-3 py-2 bg-gray-800/50 rounded ${
                       !editing ? 'cursor-pointer hover:bg-gray-700/50 transition-colors' : ''
                     }`}
-                    onClick={() => !editing && rollSkillCheck(skill.skillName, skill.bonus, skill.abilityShort)}
+                    onClick={() => !editing && rollSkillCheck(skill.skillName, skill.bonus)}
                     title={!editing ? `Test de ${skill.skillName} 1d20+${skill.bonus}` : ''}
                   >
                     <div className="flex items-center gap-3 flex-1">
