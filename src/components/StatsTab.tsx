@@ -396,7 +396,7 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
           {/* Tableau des compétences sur une seule colonne centrée */}
           <div className="flex justify-center mt-6">
             <div className="w-full max-w-2xl bg-gray-800/30 rounded-lg p-4 border border-gray-700/50">
-              <h4 className="text-sm font-semibold text-gray-300 mb-3 text-center">Compétences</h4>
+           <h4 className="text-lg font-semibold text-gray-300 mb-3 text-left">Compétences</h4>
               <div className="space-y-1.5">
                 {allSkills.map((skill) => (
                   <div
