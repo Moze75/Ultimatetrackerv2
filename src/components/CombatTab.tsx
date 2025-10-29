@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Heart, Plus, Sword, Swords, Shield, Settings, Trash2 } from 'lucide-react';
-import { Player, Attack } from '../types/dnd';
+import React, { useState } from 'react';
+import { Heart, Plus, Sword, Swords, Shield, Settings, Trash2, Brain } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ConditionsSection } from './ConditionsSection';
 import { DiceRoller } from '../components/DiceRoller';
