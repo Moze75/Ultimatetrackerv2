@@ -683,18 +683,23 @@ useEffect(() => {
 
   /* ---------------- Rendu d'un pane ---------------- */
 /* ---------------- Rendu d'un pane ---------------- */
-const renderPane = (key: TabKey | 'profile-details') => {
+const renderPane = (key: TabKey | 'hp-manager' | 'inventory') => {
   if (!currentPlayer) return null;
   
-  // Profil simple (avatar)
-  if (key === 'profile') {
-    if (isGridMode) {
-      return (
-        <div className="-m-4">
-          <PlayerProfile player={currentPlayer} onUpdate={applyPlayerUpdate} />
-        </div>
-      );
-    }
+  if (key === 'hp-manager') {
+    return <HPManager player={currentPlayer} onUpdate={applyPlayerUpdate} />;
+  }
+  
+  if (key === 'inventory') {
+    return (
+      <InventoryManager
+        player={currentPlayer}
+        inventory={inventory}
+        onInventoryUpdate={setInventory}
+        onPlayerUpdate={applyPlayerUpdate}
+      />
+    );
+  }
     // En mode onglets : afficher le PlayerProfileProfileTab
     return <PlayerProfileProfileTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
   }
