@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Heart, Plus, Sword, Swords, Shield, Settings, Trash2, brain } from 'lucide-react';
+import { Heart, Plus, Sword, Swords, Shield, Settings, Trash2, Brain } from 'lucide-react';
 import { Player, Attack } from '../types/dnd'; 
 import toast from 'react-hot-toast';
 import { ConditionsSection } from './ConditionsSection';
