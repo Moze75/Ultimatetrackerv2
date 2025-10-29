@@ -342,7 +342,7 @@ const getPlanColor = (color: string) => {
     </p>
   </div>
 )}
-
+{/* Fonctionnalités */}
                   <ul className="space-y-3 mb-8">
                     {plan.features.map((feature, index) => (
                       <li key={index} className="flex items-start gap-3">
@@ -352,6 +352,17 @@ const getPlanColor = (color: string) => {
                     ))}
                   </ul>
 
+{/* ✅ COLLEZ ICI LE BLOC "Message personnalisé pour Céleste" */}
+{plan.id === 'celestial' && (
+  <div className="mb-6 p-4 bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border border-yellow-500/30 rounded-lg">
+    <p className="text-sm text-yellow-200 text-center leading-relaxed">
+      <span className="font-semibold">✨ En choisissant Céleste</span>, vous soutenez directement le développement de D&D Ultimate Tracker. 
+      Votre contribution permet d'ajouter de nouvelles fonctionnalités, d'améliorer l'expérience utilisateur et de maintenir l'application à jour. 
+      <span className="block mt-2 font-semibold text-yellow-100">Merci de faire partie de cette aventure ! 🙏</span>
+    </p>
+  </div>
+)}
+                  
                   {isCurrentPlan ? (
                     <button
                       disabled
