@@ -262,9 +262,9 @@ const getPlanColor = (color: string) => {
           </div>
         </div>
 
-        {/* Plans d'abonnement */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          {SUBSCRIPTION_PLANS.map((plan) => {
+     {/* Plans d'abonnement */}
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+  {SUBSCRIPTION_PLANS.map((plan) => {
             const colors = getPlanColor(plan.color);
             const isCurrentPlan = currentSubscription?.tier === plan.id && currentSubscription?.status === 'active';
             const isExpiredTrial = plan.id === 'free' && isTrialExpired;
