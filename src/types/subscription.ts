@@ -66,10 +66,10 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     name: 'Maître du Jeu',
     price: 15,
     priceLabel: '15€/an',
-    maxCharacters: 999,
+    maxCharacters: 15, // ✅ MODIFIÉ : 15 au lieu de 999
     color: 'purple',
     features: [
-      'Personnages illimités pour votre campagne',
+      '15 personnages maximum pour votre campagne', // ✅ MODIFIÉ
       'Gestion complète des joueurs',
       'Envoi d\'items et d\'or aux joueurs',
       'Système de campagnes partagées',
