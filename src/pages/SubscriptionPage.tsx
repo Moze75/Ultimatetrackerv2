@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Check, Crown, Shield, Sparkles, Users, Coins, Zap, Clock, Calendar } from 'lucide-react';
+import { ArrowLeft, Check, Crown, Shield, Sparkles, Users, Coins, Zap, Clock, Calendar, Star } from 'lucide-react';
 import { subscriptionService } from '../services/subscriptionService';
 import { SUBSCRIPTION_PLANS, UserSubscription } from '../types/subscription';
 import toast from 'react-hot-toast';
