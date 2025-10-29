@@ -378,15 +378,15 @@ const getPlanColor = (color: string) => {
           })}
         </div>
 
-        {/* Note de paiement sécurisé */}
-        <div className="mt-8 text-center">
-          <p className="text-sm text-gray-400">
-            🔒 Paiements sécurisés via <span className="font-semibold text-white">Mollie</span>
-          </p>
-          <p className="text-xs text-gray-500 mt-2">
-            Abonnement annuel • Renouvellement automatique • Annulation possible à tout moment
-          </p>
-        </div>
+{/* Note de paiement sécurisé */}
+<div className="mt-8 text-center">
+  <p className="text-sm text-gray-400">
+    🔒 Paiements sécurisés via <span className="font-semibold text-white">Mollie</span>
+  </p>
+  <p className="text-xs text-gray-500 mt-2">
+    Abonnement annuel • Annulation possible à tout moment
+  </p>
+</div>
       </div>
     </div>
   );
