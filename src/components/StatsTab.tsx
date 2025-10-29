@@ -335,7 +335,7 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
                   </div>
 
                   {/* Modificateur au centre */}
-                  <div className="absolute top-[40%] left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                  <div className="absolute top-[55%] left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                     <div className="text-3xl font-normal text-gray-100">
                       {ability.modifier >= 0 ? '+' : ''}{ability.modifier}
                     </div>
