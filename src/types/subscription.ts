@@ -1,14 +1,14 @@
-export type SubscriptionTier = 'free' | 'hero' | 'game_master';
+export type SubscriptionTier = 'free' | 'hero' | 'game_master' | 'celestial'; // ✅ Ajout de 'celestial'
 
 export interface SubscriptionPlan {
   id: SubscriptionTier;
   name: string;
   price: number;
-  priceLabel: string; // ← NOUVEAU
+  priceLabel: string;
   maxCharacters: number;
   features: string[];
   popular?: boolean;
-  color: 'gray' | 'blue' | 'purple';
+  color: 'gray' | 'blue' | 'purple' | 'gold'; // ✅ Ajout de 'gold'
 }
 
 export interface UserSubscription {
@@ -19,7 +19,7 @@ export interface UserSubscription {
   start_date: string;
   end_date?: string | null;
   trial_end_date?: string | null;
-  subscription_end_date?: string | null; // ← NOUVEAU : date de fin d'abonnement annuel
+  subscription_end_date?: string | null;
   mollie_customer_id?: string | null;
   mollie_subscription_id?: string | null;
   created_at?: string;
@@ -36,10 +36,10 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     color: 'gray',
     features: [
       '1 personnage maximum',
-      'Accès aux fonctionnalités de base',
-      'Création de personnage',
+      'Création de personnage complète',
       'Gestion du combat et des PV',
       'Inventaire et équipement',
+      'Calculs automatiques des bonus',
       '15 jours d\'essai gratuit',
     ],
   },
@@ -52,13 +52,13 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     color: 'blue',
     popular: true,
     features: [
-      '5 personnages maximum',
-      'Toutes les fonctionnalités de base',
-      'Sauvegarde automatique',
+      'Jusqu\'à 5 personnages',
       'Mode grille personnalisable',
-      'Historique des jets de dés',
-      'Support prioritaire',
-      'Renouvellement automatique annuel',
+      'Gestion avancée de l\'équipement',
+      'Création d\'objets personnalisés',
+      'Calculs automatiques (CA, jets, dégâts)',
+      'Système de munitions intégré',
+      'Support par email',
     ],
   },
   {
@@ -66,17 +66,34 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     name: 'Maître du Jeu',
     price: 15,
     priceLabel: '15€/an',
-    maxCharacters: 15, // ✅ MODIFIÉ : 15 au lieu de 999
+    maxCharacters: 15,
     color: 'purple',
     features: [
-      '15 personnages maximum pour votre campagne', // ✅ MODIFIÉ
+      'Jusqu\'à 15 personnages',
       'Gestion complète des joueurs',
       'Envoi d\'items et d\'or aux joueurs',
       'Système de campagnes partagées',
-      'Tableaux de bord avancés pour MJ',
-      'Outils de narration',
+      'Suivi des notes de campagne',
+      'Outils de narration avancés',
       'Support prioritaire VIP',
-      'Renouvellement automatique annuel',
+    ],
+  },
+  {
+    id: 'celestial',
+    name: 'Céleste',
+    price: 25,
+    priceLabel: '25€/an',
+    maxCharacters: 999,
+    color: 'gold',
+    features: [
+      'Personnages illimités',
+      'Accès à toutes les fonctionnalités',
+      'Gestion multi-campagnes',
+      'Outils de création avancés',
+      'Import/Export de personnages',
+      'Automatisation complète des calculs',
+      'Support VIP ultra-prioritaire',
+      'Accès anticipé aux nouvelles features',
     ],
   },
 ];
