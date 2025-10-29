@@ -18,13 +18,16 @@ export interface LayoutPreferences {
 
 export const DEFAULT_LAYOUT = {
   lg: [
-    { i: 'combat', x: 0, y: 0, w: 4, h: 17, minW: 3, minH: 5 },
-    { i: 'profile', x: 4, y: 0, w: 4, h: 17, minW: 2, minH: 4 },
-    { i: 'equipment', x: 8, y: 0, w: 4, h: 17, minW: 3, minH: 5 },
-    { i: 'abilities', x: 0, y: 17, w: 4, h: 14, minW: 3, minH: 5 },
-    { i: 'stats', x: 4, y: 17, w: 4, h: 14, minW: 3, minH: 5 },
-    { i: 'class', x: 8, y: 17, w: 4, h: 14, minW: 3, minH: 5 },
-    { i: 'profile-details', x: 0, y: 31, w: 12, h: 10, minW: 4, minH: 6 }, // ← NOUVEAU
+    { i: 'combat', x: 0, y: 0, w: 3, h: 12, minW: 2, minH: 8 },
+    { i: 'hp-manager', x: 3, y: 0, w: 3, h: 12, minW: 2, minH: 8 },  // ← NOUVEAU
+    { i: 'profile', x: 6, y: 0, w: 3, h: 12, minW: 2, minH: 4 },
+    { i: 'equipment', x: 9, y: 0, w: 3, h: 12, minW: 3, minH: 5 },
+    
+    { i: 'inventory', x: 0, y: 12, w: 4, h: 14, minW: 3, minH: 8 },  // ← NOUVEAU
+    { i: 'abilities', x: 4, y: 12, w: 4, h: 14, minW: 3, minH: 5 },
+    { i: 'stats', x: 8, y: 12, w: 4, h: 14, minW: 3, minH: 5 },
+    
+    { i: 'class', x: 0, y: 26, w: 12, h: 10, minW: 4, minH: 6 },
   ],
   md: [
     { i: 'profile', x: 0, y: 0, w: 6, h: 12, minW: 2, minH: 4 },
