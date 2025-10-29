@@ -683,27 +683,9 @@ useEffect(() => {
 
   /* ---------------- Rendu d'un pane ---------------- */
 /* ---------------- Rendu d'un pane ---------------- */
-const renderPane = (key: TabKey | 'hp-manager' | 'inventory') => {
+const renderPane = (key: TabKey | 'profile-details') => { 
   if (!currentPlayer) return null;
-  
-  if (key === 'hp-manager') {
-    return <HPManager player={currentPlayer} onUpdate={applyPlayerUpdate} />;
-  }
-  
-  if (key === 'inventory') {
-    return (
-      <InventoryManager
-        player={currentPlayer}
-        inventory={inventory}
-        onInventoryUpdate={setInventory}
-        onPlayerUpdate={applyPlayerUpdate}
-      />
-    );
-  }
-  
-  // ... reste du code
-};
-  
+   
   // Profil simple (avatar)
   if (key === 'profile') {
     if (isGridMode) {
