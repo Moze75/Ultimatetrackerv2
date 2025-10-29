@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dices, Settings, Save, Star } from 'lucide-react';
+import { Dices, Settings, Save, Dumbbell, Wind, Heart, Brain, Eye, Crown, Star } from 'lucide-react';
 import { Player, Ability } from '../types/dnd';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
@@ -113,25 +113,6 @@ const hasJackOfAllTrades = (playerClass: string | null | undefined, level: numbe
 
 const getJackOfAllTradesBonus = (proficiencyBonus: number): number => {
   return Math.floor(proficiencyBonus / 2);
-};
-
-const getAbilityShortName = (abilityName: string): string => {
-  switch (abilityName) {
-    case 'Force':
-      return 'For.';
-    case 'Dextérité':
-      return 'Dex.';
-    case 'Constitution':
-      return 'Cons.';
-    case 'Intelligence':
-      return 'Int.';
-    case 'Sagesse':
-      return 'Sag.';
-    case 'Charisme':
-      return 'Cha.';
-    default:
-      return abilityName.substring(0, 4) + '.';
-  }
 };
 
 export function StatsTab({ player, onUpdate }: StatsTabProps) {
@@ -270,23 +251,6 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
     }
   };
 
-  // Collecter toutes les compétences avec leur caractéristique associée
-  const allSkills: Array<{abilityIndex: number; skillIndex: number; abilityShort: string; skillName: string; bonus: number; isProficient: boolean; hasExpertise: boolean}> = [];
-  
-  abilities.forEach((ability, abilityIndex) => {
-    ability.skills.forEach((skill, skillIndex) => {
-      allSkills.push({
-        abilityIndex,
-        skillIndex,
-        abilityShort: getAbilityShortName(ability.name),
-        skillName: skill.name,
-        bonus: skill.bonus,
-        isProficient: skill.isProficient,
-        hasExpertise: skill.hasExpertise
-      });
-    });
-  });
-
   return (
     <div className="space-y-6">
       <div className="stats-card">
@@ -313,149 +277,129 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
           </div>
         </div>
         <div className="p-4">
-          {/* Contenants des caractéristiques - 3 par ligne sur 2 lignes */}
-          <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {abilities.map((ability, abilityIndex) => (
-              <div key={ability.name} className="flex flex-col items-center">
-                {/* Contenant principal avec l'image de fond */}
-                <div 
-                  className="relative w-28 h-36 flex flex-col items-center justify-start"
-                  style={{
-                    backgroundImage: 'url(/background/contenant_stats.png)',
-                    backgroundSize: 'contain',
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'center'
-                  }}
-                >
-                  {/* Nom de la caractéristique en haut */}
-                  <div className="absolute top-7 left-0 right-0 flex flex-col items-center">
-                    <h4 className="text-[9px] font-normal text-gray-100 uppercase tracking-wide">
+              <div key={ability.name} className="stat-block p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    {ability.name === 'Force' && <Dumbbell className="w-5 h-5 text-red-500" />}
+                    {ability.name === 'Dextérité' && <Wind className="w-5 h-5 text-green-500" />}
+                    {ability.name === 'Constitution' && <Heart className="w-5 h-5 text-orange-500" />}
+                    {ability.name === 'Intelligence' && <Brain className="w-5 h-5 text-blue-500" />}
+                    {ability.name === 'Sagesse' && <Eye className="w-5 h-5 text-purple-500" />}
+                    {ability.name === 'Charisme' && <Crown className="w-5 h-5 text-yellow-500" />}
+                    <h4 className="text-lg font-medium text-gray-200">
                       {ability.name}
                     </h4>
                   </div>
-
-                  {/* Modificateur au centre */}
-                  <div className="absolute top-[48%] left-[48%] transform -translate-x-1/2 -translate-y-1/2">
-                    <div className="text-3xl font-normal text-gray-100">
-                      {ability.modifier >= 0 ? '+' : ''}{ability.modifier}
+                  {editing ? (
+                    <input
+                      type="number"
+                      value={ability.score}
+                      onChange={(e) => handleScoreChange(abilityIndex, parseInt(e.target.value) || 0)}
+                      className="input-dark w-16 px-2 py-1 text-center rounded-md"
+                      min="1"
+                      max="20"
+                    />
+                  ) : (
+                    <div className="text-lg font-bold text-gray-100">
+                      {ability.score}
                     </div>
-                  </div>
-
-                  {/* Valeur de la caractéristique (bulle invisible) */}
-                  <div className="absolute bottom-4 left-[48%] transform -translate-x-1/2">
+                  )}
+                </div>
+                <div className="flex items-center justify-between mb-3 px-3 py-1 bg-gray-800/50 rounded-md">
+                  <span className="text-sm text-gray-400">Modificateur</span>
+                  <span className="font-medium text-gray-200">
+                    {ability.modifier >= 0 ? '+' : ''}{ability.modifier}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between mb-3 px-3 py-1 bg-gray-800/50 rounded-md">
+                  <div className="flex items-center gap-2">
                     {editing ? (
-                      <input
-                        type="number"
-                        value={ability.score}
-                        onChange={(e) => handleScoreChange(abilityIndex, parseInt(e.target.value) || 0)}
-                        className="w-10 h-10 text-center text-base font-normal bg-transparent text-gray-100 focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded"
-                        min="1"
-                        max="20"
+                      <button
+                        onClick={() => handleSavingThrowChange(abilityIndex)}
+                        className={`w-4 h-4 rounded border ${
+                          ability.savingThrow !== ability.modifier
+                            ? 'bg-red-500 border-red-600'
+                            : 'border-gray-600 hover:border-gray-500'
+                        }`}
                       />
                     ) : (
-                      <div className="w-10 h-10 flex items-center justify-center text-base font-normal text-gray-100">
-                        {ability.score}
-                      </div>
+                      <div
+                        className={`w-4 h-4 rounded border ${
+                          ability.savingThrow !== ability.modifier
+                            ? 'bg-red-500 border-red-600'
+                            : 'border-gray-600'
+                        }`}
+                      />
                     )}
+                    <span className="text-sm text-gray-400">Sauvegarde</span>
                   </div>
+                  <span className="font-medium text-gray-200">
+                    {ability.savingThrow >= 0 ? '+' : ''}{ability.savingThrow}
+                  </span>
                 </div>
-
-                {/* Sauvegarde en dessous du contenant */}
-                <div className="mt-2 w-full max-w-[130px]">
-                  <div className="flex items-center justify-between px-2 py-1.5 bg-gray-800/50 rounded-md border border-gray-700/50">
-                    <div className="flex items-center gap-2">
-                      {editing ? (
-                        <button
-                          onClick={() => handleSavingThrowChange(abilityIndex)}
-                          className={`w-3.5 h-3.5 rounded border ${
-                            ability.savingThrow !== ability.modifier
-                              ? 'bg-red-500 border-red-600'
-                              : 'border-gray-600 hover:border-gray-500'
-                          }`}
-                        />
-                      ) : (
-                        <div
-                          className={`w-3.5 h-3.5 rounded border ${
-                            ability.savingThrow !== ability.modifier
-                              ? 'bg-red-500 border-red-600'
-                              : 'border-gray-600'
-                          }`}
-                        />
-                      )}
-                      <span className="text-xs text-gray-400">Sauv.</span>
-                    </div>
-                    <span className="text-sm font-medium text-gray-200">
-                      {ability.savingThrow >= 0 ? '+' : ''}{ability.savingThrow}
-                    </span>
+                {ability.skills.length > 0 && (
+                  <div className="space-y-2 mt-4">
+                    {ability.skills.map((skill, skillIndex) => (
+                      <div
+                        key={skill.name}
+                        className="flex items-center justify-between px-3 py-1"
+                      >
+                        <div className="flex items-center gap-2">
+                          {editing ? (
+                            <button
+                              onClick={() => handleProficiencyChange(abilityIndex, skillIndex)}
+                              className={`w-4 h-4 rounded border ${
+                                skill.isProficient
+                                  ? 'bg-red-500 border-red-600'
+                                  : 'border-gray-600 hover:border-gray-500'
+                              }`}
+                            />
+                          ) : (
+                            <div
+                              className={`w-4 h-4 rounded border ${
+                                skill.isProficient
+                                  ? 'bg-red-500 border-red-600'
+                                  : 'border-gray-600'
+                              }`}
+                            />
+                          )}
+                          {editing && skill.isProficient && expertiseLimit > 0 ? (
+                            <button
+                              onClick={() => handleExpertiseChange(abilityIndex, skillIndex)}
+                              className={`w-4 h-4 flex items-center justify-center rounded ${
+                                skill.hasExpertise
+                                  ? 'text-yellow-500 hover:text-yellow-400'
+                                  : 'text-gray-600 hover:text-yellow-500'
+                              }`}
+                              title={skill.hasExpertise ? 'Retirer l\'expertise' : 'Ajouter l\'expertise'}
+                            >
+                              <Star size={12} />
+                            </button>
+                          ) : skill.hasExpertise ? (
+                            <Star size={12} className="text-yellow-500" />
+                          ) : (
+                            <div className="w-4" />
+                          )}
+                          <span className="text-sm text-gray-300">
+                            {skill.name}
+                            {!skill.isProficient && stats.jack_of_all_trades && (
+                              <span className="text-xs text-blue-400 ml-1" title="Touche-à-tout">
+                                (T)
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        <span className="text-sm font-medium text-gray-300">
+                          {skill.bonus >= 0 ? '+' : ''}{skill.bonus}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                </div>
+                )}
               </div>
             ))}
-          </div>
-
-          {/* Tableau des compétences sur une seule colonne centrée */}
-          <div className="flex justify-center mt-6">
-            <div className="w-full max-w-2xl bg-gray-800/30 rounded-lg p-4 border border-gray-700/50">
-           <h4 className="text-lg font-semibold text-gray-300 mb-3 text-left">Compétences</h4>
-              <div className="space-y-1.5">
-                {allSkills.map((skill) => (
-                  <div
-                    key={`${skill.abilityIndex}-${skill.skillIndex}`}
-                    className="flex items-center justify-between px-3 py-2 bg-gray-800/50 rounded"
-                  >
-                    <div className="flex items-center gap-3 flex-1">
-                      {editing ? (
-                        <button
-                          onClick={() => handleProficiencyChange(skill.abilityIndex, skill.skillIndex)}
-                          className={`w-4 h-4 rounded border flex-shrink-0 ${
-                            skill.isProficient
-                              ? 'bg-red-500 border-red-600'
-                              : 'border-gray-600 hover:border-gray-500'
-                          }`}
-                        />
-                      ) : (
-                        <div
-                          className={`w-4 h-4 rounded border flex-shrink-0 ${
-                            skill.isProficient
-                              ? 'bg-red-500 border-red-600'
-                              : 'border-gray-600'
-                          }`}
-                        />
-                      )}
-                      {editing && skill.isProficient && expertiseLimit > 0 ? (
-                        <button
-                          onClick={() => handleExpertiseChange(skill.abilityIndex, skill.skillIndex)}
-                          className={`w-4 h-4 flex items-center justify-center rounded flex-shrink-0 ${
-                            skill.hasExpertise
-                              ? 'text-yellow-500 hover:text-yellow-400'
-                              : 'text-gray-600 hover:text-yellow-500'
-                          }`}
-                          title={skill.hasExpertise ? 'Retirer l\'expertise' : 'Ajouter l\'expertise'}
-                        >
-                          <Star size={12} />
-                        </button>
-                      ) : skill.hasExpertise ? (
-                        <Star size={12} className="text-yellow-500 flex-shrink-0" />
-                      ) : (
-                        <div className="w-4 flex-shrink-0" />
-                      )}
-                      <span className="text-sm text-gray-500 min-w-[40px]">{skill.abilityShort}</span>
-                      <span className="text-sm text-gray-300 flex-1">
-                        {skill.skillName}
-                        {!skill.isProficient && stats.jack_of_all_trades && (
-                          <span className="text-xs text-blue-400 ml-1" title="Touche-à-tout">
-                            (T)
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                    <span className="text-sm font-medium text-gray-300 ml-3">
-                      {skill.bonus >= 0 ? '+' : ''}{skill.bonus}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
           
           {/* Section Touche-à-tout pour les bardes */}
@@ -508,7 +452,7 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
             </div> 
           )}
 
-          {/* Bouton Sauvegarder en bas de section (visible seulement en mode édition) */}
+          {/* ✅ AJOUT : Bouton Sauvegarder en bas de section (visible seulement en mode édition) */}
           {editing && (
             <div className="mt-6 pt-4 border-t border-gray-700/50">
               <button
