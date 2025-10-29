@@ -396,7 +396,7 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
           {/* Tableau des compétences sur une seule colonne centrée */}
           <div className="flex justify-center mt-6">
             <div className="w-full max-w-2xl bg-gray-800/30 rounded-lg p-4 border border-gray-700/50">
-           <h4 className="text-lg font-semibold text-gray-300 mb-3 text-left">Compétences</h4>
+              <h4 className="text-lg font-semibold text-gray-300 mb-3 text-left">Compétences</h4>
               <div className="space-y-1.5">
                 {allSkills.map((skill) => (
                   <div
@@ -404,6 +404,7 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
                     className="flex items-center justify-between px-3 py-2 bg-gray-800/50 rounded"
                   >
                     <div className="flex items-center gap-3 flex-1">
+                      {/* Checkbox de maîtrise */}
                       {editing ? (
                         <button
                           onClick={() => handleProficiencyChange(skill.abilityIndex, skill.skillIndex)}
@@ -422,6 +423,8 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
                           }`}
                         />
                       )}
+                      
+                      {/* Bouton d'expertise (étoile) */}
                       {editing && skill.isProficient && expertiseLimit > 0 ? (
                         <button
                           onClick={() => handleExpertiseChange(skill.abilityIndex, skill.skillIndex)}
@@ -432,13 +435,14 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
                           }`}
                           title={skill.hasExpertise ? 'Retirer l\'expertise' : 'Ajouter l\'expertise'}
                         >
-                          <Star size={12} />
+                          <Star size={12} fill={skill.hasExpertise ? 'currentColor' : 'none'} />
                         </button>
                       ) : skill.hasExpertise ? (
-                        <Star size={12} className="text-yellow-500 flex-shrink-0" />
+                        <Star size={12} className="text-yellow-500 flex-shrink-0" fill="currentColor" />
                       ) : (
                         <div className="w-4 flex-shrink-0" />
                       )}
+                      
                       <span className="text-sm text-gray-500 min-w-[40px]">{skill.abilityShort}</span>
                       <span className="text-sm text-gray-300 flex-1">
                         {skill.skillName}
@@ -522,6 +526,6 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
           )}
         </div>
       </div>
-    </div> 
+    </div>
   );
 }
