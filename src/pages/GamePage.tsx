@@ -683,9 +683,9 @@ useEffect(() => {
 
   /* ---------------- Rendu d'un pane ---------------- */
 
-const renderPane = (key: TabKey | 'profile-details') => {  // ← Retirez | 'hp-manager' | 'inventory'
+const renderPane = (key: TabKey | 'profile-details') => { 
   if (!currentPlayer) return null;
-  
+   
   // Profil simple (avatar)
   if (key === 'profile') {
     if (isGridMode) {
@@ -695,32 +695,14 @@ const renderPane = (key: TabKey | 'profile-details') => {  // ← Retirez | 'hp-
         </div>
       );
     }
+    // En mode onglets : afficher le PlayerProfileProfileTab
     return <PlayerProfileProfileTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
   }
   
   // Profil détaillé (historique, dons, etc.)
   if (key === 'profile-details') {
     return <PlayerProfileProfileTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
-  }
-  
-  // ❌ COMMENTEZ CES BLOCS TEMPORAIREMENT
-  /*
-  // Gestionnaire de PV
-  if (key === 'hp-manager') {
-    return <HPManager player={currentPlayer} onUpdate={applyPlayerUpdate} />;
-  }
-  
-  // Inventaire (sac)
-  if (key === 'inventory') {
-    return (
-      <InventoryManager
-        player={currentPlayer}
-        inventory={inventory}
-        onInventoryUpdate={setInventory}
-        onPlayerUpdate={applyPlayerUpdate}
-      />
-    );
-  }
+  } 
   
   switch (key) {
     case 'combat': {
