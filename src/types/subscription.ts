@@ -58,7 +58,6 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
       'Création d\'objets personnalisés',
       'Calculs automatiques (CA, jets, dégâts)',
       'Système de munitions intégré',
-      'Support par email',
     ],
   },
   {
@@ -74,26 +73,23 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
       'Envoi d\'items et d\'or aux joueurs',
       'Système de campagnes partagées',
       'Suivi des notes de campagne',
-      'Outils de narration avancés',
-      'Support prioritaire VIP',
+      'Toutes les fonctionnalités Héros',
     ],
   },
   {
     id: 'celestial',
     name: 'Céleste',
-    price: 25,
-    priceLabel: '25€/an',
-    maxCharacters: 999,
+    price: 30, // ✅ 30€/an
+    priceLabel: '30€/an',
+    maxCharacters: Infinity, // ✅ Infinity au lieu de 999
     color: 'gold',
     features: [
       'Personnages illimités',
-      'Accès à toutes les fonctionnalités',
-      'Gestion multi-campagnes',
-      'Outils de création avancés',
-      'Import/Export de personnages',
-      'Automatisation complète des calculs',
+      'Toutes les fonctionnalités MJ',
       'Support VIP ultra-prioritaire',
       'Accès anticipé aux nouvelles features',
+      '💝 Soutenez le développement de l\'app',
+      '🙏 Vous participez activement à l\'évolution du projet',
     ],
   },
 ];
