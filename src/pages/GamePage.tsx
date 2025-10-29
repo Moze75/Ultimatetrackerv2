@@ -707,6 +707,29 @@ const renderPane = (key: TabKey | 'profile-details' | 'hp-manager' | 'inventory'
   if (key === 'profile-details') {
     return <PlayerProfileProfileTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
   } 
+
+  // Profil détaillé (historique, dons, etc.)
+  if (key === 'profile-details') {
+    return <PlayerProfileProfileTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
+  }
+  
+  // ===== AJOUTEZ CES LIGNES =====
+  // Gestionnaire de PV
+  if (key === 'hp-manager') {
+    return <HPManager player={currentPlayer} onUpdate={applyPlayerUpdate} />;
+  }
+  
+  // Inventaire (sac)
+  if (key === 'inventory') {
+    return (
+      <InventoryManager
+        player={currentPlayer}
+        inventory={inventory}
+        onInventoryUpdate={setInventory}
+        onPlayerUpdate={applyPlayerUpdate}
+      />
+    );
+  }
   
   switch (key) {
     case 'combat': {
