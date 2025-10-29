@@ -4,26 +4,26 @@ export interface SubscriptionPlan {
   id: SubscriptionTier;
   name: string;
   price: number;
+  priceLabel: string; // ← NOUVEAU
   maxCharacters: number;
   features: string[];
   popular?: boolean;
-  color: string;
-  trialDays?: number;
-  lifetime?: boolean;
+  color: 'gray' | 'blue' | 'purple';
 }
 
 export interface UserSubscription {
   id: string;
   user_id: string;
   tier: SubscriptionTier;
-  status: 'active' | 'cancelled' | 'expired' | 'trial';
+  status: 'trial' | 'active' | 'cancelled' | 'expired';
   start_date: string;
-  end_date?: string;
-  trial_end_date?: string;
-  mollie_customer_id?: string;
-  mollie_subscription_id?: string;
-  created_at: string;
-  updated_at: string;
+  end_date?: string | null;
+  trial_end_date?: string | null;
+  subscription_end_date?: string | null; // ← NOUVEAU : date de fin d'abonnement annuel
+  mollie_customer_id?: string | null;
+  mollie_subscription_id?: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
@@ -31,51 +31,52 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     id: 'free',
     name: 'Essai Gratuit',
     price: 0,
+    priceLabel: '15 jours',
     maxCharacters: 1,
     color: 'gray',
-    trialDays: 15,
     features: [
+      '1 personnage maximum',
+      'Accès aux fonctionnalités de base',
+      'Création de personnage',
+      'Gestion du combat et des PV',
+      'Inventaire et équipement',
       '15 jours d\'essai gratuit',
-      '1 personnage',
-      'Gestion de base',
-      'Sauvegarde automatique',
-      'Accès aux fonctionnalités essentielles',
     ],
   },
   {
     id: 'hero',
-    name: 'Héro',
+    name: 'Héros',
     price: 10,
+    priceLabel: '10€/an',
     maxCharacters: 5,
     color: 'blue',
     popular: true,
-    lifetime: true,
     features: [
-      'Accès à vie (paiement unique)',
-      'Jusqu\'à 5 personnages',
+      '5 personnages maximum',
       'Toutes les fonctionnalités de base',
-      'Gestion avancée des personnages',
+      'Sauvegarde automatique',
+      'Mode grille personnalisable',
+      'Historique des jets de dés',
       'Support prioritaire',
-      'Mises à jour incluses',
+      'Renouvellement automatique annuel',
     ],
   },
   {
     id: 'game_master',
     name: 'Maître du Jeu',
     price: 15,
-    maxCharacters: 15,
+    priceLabel: '15€/an',
+    maxCharacters: 999,
     color: 'purple',
-    lifetime: true,
     features: [
-      'Accès à vie (paiement unique)',
-      'Personnages illimités pour vos campagnes',
-      'Toutes les fonctionnalités Héro',
-      '🎭 Gestion de campagnes complètes',
-      '👥 Gestion des joueurs',
-      '⚔️ Envoi d\'items et d\'or aux joueurs',
-      '📊 Tableaux de bord MJ avancés',
-      '🎲 Outils pour Maître du Jeu',
-      '🌟 Support premium',
+      'Personnages illimités pour votre campagne',
+      'Gestion complète des joueurs',
+      'Envoi d\'items et d\'or aux joueurs',
+      'Système de campagnes partagées',
+      'Tableaux de bord avancés pour MJ',
+      'Outils de narration',
+      'Support prioritaire VIP',
+      'Renouvellement automatique annuel',
     ],
   },
 ];
