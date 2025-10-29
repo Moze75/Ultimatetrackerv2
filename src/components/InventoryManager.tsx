@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Backpack, Search, Settings, Trash2, X, Filter as FilterIcon, Plus } from 'lucide-react';
+import { Backpack, Search, Trash2, X, Filter as FilterIcon } from 'lucide-react';
 import { Player, InventoryItem } from '../types/dnd';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
@@ -64,9 +64,17 @@ export function InventoryManager({ player, inventory, onInventoryUpdate }: Inven
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
+  // Filtrer seulement equipment et other (= contenu du sac)
+  const bagItems = useMemo(() => {
+    return inventory.filter(item => {
+      const meta = parseMeta(item.description);
+      return meta?.type === 'equipment' || meta?.type === 'other';
+    });
+  }, [inventory]);
+
   const filteredInventory = useMemo(() => {
     const q = bagFilter.trim().toLowerCase();
-    return inventory.filter(i => {
+    return bagItems.filter(i => {
       const meta = parseMeta(i.description);
       const kind: MetaType = (meta?.type || 'equipment') as MetaType;
       if (!bagKinds[kind]) return false;
@@ -75,12 +83,22 @@ export function InventoryManager({ player, inventory, onInventoryUpdate }: Inven
       const desc = visibleDescription(i.description).toLowerCase();
       return name.includes(q) || desc.includes(q);
     });
-  }, [inventory, bagFilter, bagKinds]);
+  }, [bagItems, bagFilter, bagKinds]);
 
   const toggleExpand = (id: string) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
 
   return (
     <div className="space-y-4">
+      {/* En-tête avec compteur */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Backpack className="w-5 h-5 text-purple-400" />
+          <h3 className="text-lg font-semibold text-gray-100">
+            Contenu du sac ({bagItems.length} {bagItems.length > 1 ? 'objets' : 'objet'})
+          </h3>
+        </div>
+      </div>
+
       {/* Filtres */}
       <div className="flex items-center gap-2 flex-wrap">
         <button
@@ -94,7 +112,7 @@ export function InventoryManager({ player, inventory, onInventoryUpdate }: Inven
           <input
             value={bagFilter}
             onChange={(e) => setBagFilter(e.target.value)}
-            placeholder="Rechercher..."
+            placeholder="Rechercher dans le sac..."
             className="input-dark px-3 py-2 rounded-md w-full"
           />
         </div>
@@ -105,18 +123,23 @@ export function InventoryManager({ player, inventory, onInventoryUpdate }: Inven
         {filteredInventory.length === 0 ? (
           <div className="text-center py-8 text-gray-400">
             <Backpack className="w-12 h-12 mx-auto mb-2 opacity-50" />
-            <p>Aucun objet trouvé</p>
+            <p>
+              {bagItems.length === 0 
+                ? 'Sac vide' 
+                : 'Aucun objet ne correspond aux filtres'}
+            </p>
           </div>
         ) : (
           filteredInventory.map(item => {
             const meta = parseMeta(item.description);
             const qty = meta?.quantity ?? 1;
+            const isEquipment = meta?.type === 'equipment';
 
             return (
-              <div key={item.id} className="bg-gray-800/40 border border-gray-700/40 rounded-md">
-                <div className="flex items-start justify-between p-2">
+              <div key={item.id} className="bg-gray-800/40 border border-gray-700/40 rounded-md hover:bg-gray-800/60 transition-colors">
+                <div className="flex items-start justify-between p-3">
                   <div className="flex-1 mr-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <button
                         onClick={() => toggleExpand(item.id)}
                         className="text-left text-gray-100 font-medium hover:underline break-words"
@@ -125,14 +148,16 @@ export function InventoryManager({ player, inventory, onInventoryUpdate }: Inven
                       </button>
                       {qty > 1 && (
                         <span className="text-xs px-2 py-0.5 rounded bg-gray-700/60 text-gray-300">
-                          x{qty}
+                          ×{qty}
                         </span>
                       )}
-                      {meta?.type && (
-                        <span className="text-xs px-2 py-0.5 rounded bg-purple-900/30 text-purple-300">
-                          {meta.type}
-                        </span>
-                      )}
+                      <span className={`text-xs px-2 py-0.5 rounded ${
+                        isEquipment 
+                          ? 'bg-gray-800/60 text-gray-300' 
+                          : 'bg-slate-900/30 text-slate-300'
+                      }`}>
+                        {isEquipment ? 'Équipement' : 'Autre'}
+                      </span>
                     </div>
 
                     {expanded[item.id] && (
@@ -142,31 +167,29 @@ export function InventoryManager({ player, inventory, onInventoryUpdate }: Inven
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        if (!window.confirm('Supprimer cet objet ?')) return;
-                        (async () => {
-                          try {
-                            const { error } = await supabase
-                              .from('inventory_items')
-                              .delete()
-                              .eq('id', item.id);
-                            if (error) throw error;
-                            onInventoryUpdate(inventory.filter(i => i.id !== item.id));
-                            toast.success('Objet supprimé');
-                          } catch (e) {
-                            console.error(e);
-                            toast.error('Erreur suppression');
-                          }
-                        })();
-                      }}
-                      className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-900/30 rounded-full"
-                      title="Supprimer l'objet"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => {
+                      if (!window.confirm(`Supprimer "${smartCapitalize(item.name)}" du sac ?`)) return;
+                      (async () => {
+                        try {
+                          const { error } = await supabase
+                            .from('inventory_items')
+                            .delete()
+                            .eq('id', item.id);
+                          if (error) throw error;
+                          onInventoryUpdate(inventory.filter(i => i.id !== item.id));
+                          toast.success('Objet supprimé du sac');
+                        } catch (e) {
+                          console.error(e);
+                          toast.error('Erreur lors de la suppression');
+                        }
+                      })();
+                    }}
+                    className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-900/30 rounded-full transition-colors"
+                    title="Supprimer du sac"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </div>
             );
@@ -174,7 +197,7 @@ export function InventoryManager({ player, inventory, onInventoryUpdate }: Inven
         )}
       </div>
 
-      {/* Modal Filtres */}
+      {/* Modal Filtres (simplifié pour equipment/other uniquement) */}
       {filtersOpen && (
         <div
           className="fixed inset-0 z-[11000]"
@@ -185,7 +208,7 @@ export function InventoryManager({ player, inventory, onInventoryUpdate }: Inven
           <div className="fixed inset-0 bg-black/60" />
           <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(22rem,92vw)] bg-gray-900/95 border border-gray-700 rounded-lg p-3">
             <div className="flex items-center justify-between mb-2">
-              <h4 className="text-gray-100 font-semibold">Filtres</h4>
+              <h4 className="text-gray-100 font-semibold">Filtres du sac</h4>
               <button
                 onClick={() => setFiltersOpen(false)}
                 className="p-2 text-gray-400 hover:bg-gray-800 rounded-lg"
@@ -195,38 +218,24 @@ export function InventoryManager({ player, inventory, onInventoryUpdate }: Inven
               </button>
             </div>
             <div className="space-y-1">
-              {(
-                ['armor', 'shield', 'weapon', 'equipment', 'potion', 'jewelry', 'tool', 'other'] as MetaType[]
-              ).map(k => (
-                <label
-                  key={k}
-                  className="flex items-center justify-between text-sm text-gray-200 px-2 py-1 rounded hover:bg-gray-800/60 cursor-pointer"
-                >
-                  <span>
-                    {k === 'armor'
-                      ? 'Armure'
-                      : k === 'shield'
-                      ? 'Bouclier'
-                      : k === 'weapon'
-                      ? 'Arme'
-                      : k === 'potion'
-                      ? 'Potion/Poison'
-                      : k === 'jewelry'
-                      ? 'Bijoux'
-                      : k === 'tool'
-                      ? 'Outils'
-                      : k === 'other'
-                      ? 'Autre'
-                      : 'Équipement'}
-                  </span>
-                  <input
-                    type="checkbox"
-                    className="accent-red-500"
-                    checked={bagKinds[k]}
-                    onChange={() => setBagKinds(prev => ({ ...prev, [k]: !prev[k] }))}
-                  />
-                </label>
-              ))}
+              <label className="flex items-center justify-between text-sm text-gray-200 px-2 py-1 rounded hover:bg-gray-800/60 cursor-pointer">
+                <span>Équipements</span>
+                <input
+                  type="checkbox"
+                  className="accent-purple-500"
+                  checked={bagKinds.equipment}
+                  onChange={() => setBagKinds(prev => ({ ...prev, equipment: !prev.equipment }))}
+                />
+              </label>
+              <label className="flex items-center justify-between text-sm text-gray-200 px-2 py-1 rounded hover:bg-gray-800/60 cursor-pointer">
+                <span>Autres</span>
+                <input
+                  type="checkbox"
+                  className="accent-purple-500"
+                  checked={bagKinds.other}
+                  onChange={() => setBagKinds(prev => ({ ...prev, other: !prev.other }))}
+                />
+              </label>
             </div>
             <div className="mt-3 text-right">
               <button onClick={() => setFiltersOpen(false)} className="btn-primary px-3 py-2 rounded-lg">
