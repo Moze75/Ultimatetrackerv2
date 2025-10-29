@@ -292,25 +292,25 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
                     )}
                   </div>
 
-                  {plan.id !== 'game_master' ? (
-                    <div className={`${colors.bg} border ${colors.border} rounded-lg p-4 mb-6`}>
-                      <p className="text-center">
-                        <span className="text-2xl font-bold text-white">{plan.maxCharacters}</span>
-                        <span className="text-gray-300 ml-2">
-                          personnage{plan.maxCharacters > 1 ? 's' : ''} max
-                        </span>
-                      </p>
-                    </div>
-                  ) : (
-                    <div className={`${colors.bg} border ${colors.border} rounded-lg p-4 mb-6`}>
-                      <p className="text-center">
-                        <span className="text-2xl font-bold text-purple-300">♾️</span>
-                        <span className="text-gray-300 ml-2">
-                          Personnages illimités
-                        </span>
-                      </p>
-                    </div>
-                  )}
+{plan.id !== 'game_master' ? (
+  <div className={`${colors.bg} border ${colors.border} rounded-lg p-4 mb-6`}>
+    <p className="text-center">
+      <span className="text-2xl font-bold text-white">{plan.maxCharacters}</span>
+      <span className="text-gray-300 ml-2">
+        personnage{plan.maxCharacters > 1 ? 's' : ''} max
+      </span>
+    </p>
+  </div>
+) : (
+  <div className={`${colors.bg} border ${colors.border} rounded-lg p-4 mb-6`}>
+    <p className="text-center">
+      <span className="text-2xl font-bold text-purple-300">15</span>
+      <span className="text-gray-300 ml-2">
+        personnages max
+      </span>
+    </p>
+  </div>
+)}
 
                   <ul className="space-y-3 mb-8">
                     {plan.features.map((feature, index) => (
