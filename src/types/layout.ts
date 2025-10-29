@@ -19,11 +19,11 @@ export interface LayoutPreferences {
 export const DEFAULT_LAYOUT = {
   lg: [
     { i: 'combat', x: 0, y: 0, w: 3, h: 12, minW: 2, minH: 8 },
-    { i: 'hp-manager', x: 3, y: 0, w: 3, h: 12, minW: 2, minH: 8 },  // ← NOUVEAU
+
     { i: 'profile', x: 6, y: 0, w: 3, h: 12, minW: 2, minH: 4 },
     { i: 'equipment', x: 9, y: 0, w: 3, h: 12, minW: 3, minH: 5 },
     
-    { i: 'inventory', x: 0, y: 12, w: 4, h: 14, minW: 3, minH: 8 },  // ← NOUVEAU
+
     { i: 'abilities', x: 4, y: 12, w: 4, h: 14, minW: 3, minH: 5 },
     { i: 'stats', x: 8, y: 12, w: 4, h: 14, minW: 3, minH: 5 },
     
