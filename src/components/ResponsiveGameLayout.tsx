@@ -24,12 +24,12 @@ interface ResponsiveGameLayoutProps {
 const TAB_LABELS: Record<string, { icon: string; label: string }> = {
   profile: { icon: '👤', label: 'Profil' },
   combat: { icon: '⚔️', label: 'Combat' },
-  'hp-manager': { icon: '❤️', label: 'PV & Ressources' },  // ← NOUVEAU
+
   class: { icon: '📜', label: 'Classe' },
   abilities: { icon: '🎯', label: 'Capacités' },
   stats: { icon: '📊', label: 'Statistiques' },
   equipment: { icon: '👕', label: 'Équipement porté' },
-  inventory: { icon: '🎒', label: 'Inventaire' },  // ← NOUVEAU
+
 };
 
 export function ResponsiveGameLayout({
