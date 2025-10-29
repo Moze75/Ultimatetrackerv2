@@ -729,11 +729,7 @@ useEffect(() => {
             onInventoryUpdate={setInventory}
           />
         );
-      case 'profile': return (
-  <div className="-m-4">
-    <PlayerProfile player={currentPlayer} onUpdate={applyPlayerUpdate} />
-  </div>
-);
+case 'profile': return <PlayerProfileProfileTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
       default: return null;
     }
   };
