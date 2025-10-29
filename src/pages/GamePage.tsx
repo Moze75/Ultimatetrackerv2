@@ -684,7 +684,7 @@ useEffect(() => {
 
   /* ---------------- Rendu d'un pane ---------------- */
 
-const renderPane = (key: TabKey | 'profile-details') => {
+const renderPane = (key: TabKey | 'profile-details') => { 
   if (!currentPlayer) return null;
    
   // Profil simple (avatar)
@@ -699,33 +699,6 @@ const renderPane = (key: TabKey | 'profile-details') => {
     // En mode onglets : afficher le PlayerProfileProfileTab
     return <PlayerProfileProfileTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
   }
-  
-  // Profil détaillé (historique, dons, etc.)
-  if (key === 'profile-details') {
-    return <PlayerProfileProfileTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
-  } 
-
-  // Profil détaillé (historique, dons, etc.)
-  if (key === 'profile-details') {
-    return <PlayerProfileProfileTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
-  }
-  
-// Gestionnaire de PV (utilise temporairement CombatTab)
-if (key === 'hp-manager') {
-  return <CombatTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
-}
-
-// Inventaire (utilise temporairement EquipmentTab)
-if (key === 'inventory') {
-  return (
-    <EquipmentTab
-      player={currentPlayer}
-      inventory={inventory}
-      onPlayerUpdate={applyPlayerUpdate}
-      onInventoryUpdate={setInventory}
-    />
-  );
-}
   
   switch (key) {
     case 'combat': {
