@@ -86,54 +86,64 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
   };
 
   const getPlanIcon = (planId: string) => {
-    switch (planId) {
-      case 'free':
-        return <Clock className="w-8 h-8" />;
-      case 'hero':
-        return <Sparkles className="w-8 h-8" />;
-      case 'game_master':
-        return <Crown className="w-8 h-8" />;
-      default:
-        return <Shield className="w-8 h-8" />;
-    }
-  };
+  switch (planId) {
+    case 'free':
+      return <Clock className="w-8 h-8" />;
+    case 'hero':
+      return <Sparkles className="w-8 h-8" />;
+    case 'game_master':
+      return <Crown className="w-8 h-8" />;
+    case 'celestial':
+      return <Star className="w-8 h-8" />; // ✅ Nouveau
+    default:
+      return <Shield className="w-8 h-8" />;
+  }
+};
 
-  const getPlanColor = (color: string) => {
-    switch (color) {
-      case 'gray':
-        return {
-          border: 'border-gray-500/30',
-          bg: 'bg-gray-500/10',
-          text: 'text-gray-400',
-          button: 'bg-gray-600 hover:bg-gray-700',
-          iconBg: 'bg-gray-500/20',
-        };
-      case 'blue':
-        return {
-          border: 'border-blue-500/50',
-          bg: 'bg-blue-500/10',
-          text: 'text-blue-400',
-          button: 'bg-blue-600 hover:bg-blue-700',
-          iconBg: 'bg-blue-500/20',
-        };
-      case 'purple':
-        return {
-          border: 'border-purple-500/50',
-          bg: 'bg-purple-500/10',
-          text: 'text-purple-400',
-          button: 'bg-purple-600 hover:bg-purple-700',
-          iconBg: 'bg-purple-500/20',
-        };
-      default:
-        return {
-          border: 'border-gray-500/30',
-          bg: 'bg-gray-500/10',
-          text: 'text-gray-400',
-          button: 'bg-gray-600 hover:bg-gray-700',
-          iconBg: 'bg-gray-500/20',
-        };
-    }
-  };
+const getPlanColor = (color: string) => {
+  switch (color) {
+    case 'gray':
+      return {
+        border: 'border-gray-500/30',
+        bg: 'bg-gray-500/10',
+        text: 'text-gray-400',
+        button: 'bg-gray-600 hover:bg-gray-700',
+        iconBg: 'bg-gray-500/20',
+      };
+    case 'blue':
+      return {
+        border: 'border-blue-500/50',
+        bg: 'bg-blue-500/10',
+        text: 'text-blue-400',
+        button: 'bg-blue-600 hover:bg-blue-700',
+        iconBg: 'bg-blue-500/20',
+      };
+    case 'purple':
+      return {
+        border: 'border-purple-500/50',
+        bg: 'bg-purple-500/10',
+        text: 'text-purple-400',
+        button: 'bg-purple-600 hover:bg-purple-700',
+        iconBg: 'bg-purple-500/20',
+      };
+    case 'gold': // ✅ Nouveau
+      return {
+        border: 'border-yellow-500/50',
+        bg: 'bg-yellow-500/10',
+        text: 'text-yellow-400',
+        button: 'bg-yellow-600 hover:bg-yellow-700',
+        iconBg: 'bg-yellow-500/20',
+      };
+    default:
+      return {
+        border: 'border-gray-500/30',
+        bg: 'bg-gray-500/10',
+        text: 'text-gray-400',
+        button: 'bg-gray-600 hover:bg-gray-700',
+        iconBg: 'bg-gray-500/20',
+      };
+  }
+};
 
   if (loading) {
     return (
