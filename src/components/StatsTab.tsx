@@ -3,6 +3,7 @@ import { Dices, Settings, Save, Star } from 'lucide-react';
 import { Player, Ability } from '../types/dnd';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import { DiceRoller } from './DiceRoller';
 
 interface StatsTabProps {
   player: Player;
@@ -97,7 +98,7 @@ const getExpertiseLimit = (playerClass: string | null | undefined, level: number
       return 0;
     case 'Barde':
       if (level >= 10) return 4;
-      if (level >= 2) return 2;
+      if (level >= 2) return 2;  // ✅ Expertise dès niveau 2
       return 0;
     case 'Rôdeur':
       if (level >= 6) return 1;
@@ -156,6 +157,15 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
     }
     return DEFAULT_ABILITIES;
   });
+
+  // ✅ États pour le dice roller
+  const [diceRollerOpen, setDiceRollerOpen] = useState(false);
+  const [rollData, setRollData] = useState<{
+    type: 'ability' | 'saving-throw' | 'skill';
+    attackName: string;
+    diceFormula: string;
+    modifier: number;
+  } | null>(null);
 
   const expertiseLimit = getExpertiseLimit(player.class, player.level);
   const currentExpertiseCount = abilities.reduce((count, ability) => 
@@ -225,6 +235,43 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
     
     skill.hasExpertise = !skill.hasExpertise;
     setAbilities(updateAbilityModifiers(newAbilities, stats, effectiveProficiency));
+  };
+
+  // ✅ Fonctions pour lancer les dés
+  const rollAbilityCheck = (ability: Ability) => {
+    if (editing) return; // Ne pas lancer de dés en mode édition
+    
+    setRollData({
+      type: 'ability',
+      attackName: `Test de ${ability.name}`,
+      diceFormula: '1d20',
+      modifier: ability.modifier
+    });
+    setDiceRollerOpen(true);
+  };
+
+  const rollSavingThrow = (ability: Ability) => {
+    if (editing) return; // Ne pas lancer de dés en mode édition
+    
+    setRollData({
+      type: 'saving-throw',
+      attackName: `Jet de sauvegarde de ${ability.name}`,
+      diceFormula: '1d20',
+      modifier: ability.savingThrow
+    });
+    setDiceRollerOpen(true);
+  };
+
+  const rollSkillCheck = (skillName: string, bonus: number, abilityShort: string) => {
+    if (editing) return; // Ne pas lancer de dés en mode édition
+    
+    setRollData({
+      type: 'skill',
+      attackName: `${skillName} (${abilityShort})`,
+      diceFormula: '1d20',
+      modifier: bonus
+    });
+    setDiceRollerOpen(true);
   };
 
   const handleSave = async () => {
@@ -317,32 +364,39 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
           <div className="grid grid-cols-3 gap-4 mb-6">
             {abilities.map((ability, abilityIndex) => (
               <div key={ability.name} className="flex flex-col items-center">
-                {/* Contenant principal avec l'image de fond */}
+                {/* Contenant principal avec l'image de fond - ✅ Cliquable pour lancer le dé */}
                 <div 
-                  className="relative w-28 h-36 flex flex-col items-center justify-start"
+                  className={`relative w-28 h-36 flex flex-col items-center justify-start ${
+                    !editing ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''
+                  }`}
                   style={{
                     backgroundImage: 'url(/background/contenant_stats.png)',
                     backgroundSize: 'contain',
                     backgroundRepeat: 'no-repeat',
                     backgroundPosition: 'center'
                   }}
+                  onClick={() => rollAbilityCheck(ability)}
+                  title={!editing ? `Cliquer pour lancer 1d20+${ability.modifier}` : ''}
                 >
                   {/* Nom de la caractéristique en haut */}
-                  <div className="absolute top-7 left-0 right-0 flex flex-col items-center">
+                  <div className="absolute top-7 left-0 right-0 flex flex-col items-center pointer-events-none">
                     <h4 className="text-[9px] font-normal text-gray-100 uppercase tracking-wide">
                       {ability.name}
                     </h4>
                   </div>
 
                   {/* Modificateur au centre */}
-                  <div className="absolute top-[48%] left-[48%] transform -translate-x-1/2 -translate-y-1/2">
+                  <div className="absolute top-[48%] left-[48%] transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
                     <div className="text-3xl font-normal text-gray-100">
                       {ability.modifier >= 0 ? '+' : ''}{ability.modifier}
                     </div>
                   </div>
 
                   {/* Valeur de la caractéristique (bulle invisible) */}
-                  <div className="absolute bottom-4 left-[48%] transform -translate-x-1/2">
+                  <div 
+                    className="absolute bottom-4 left-[48%] transform -translate-x-1/2"
+                    onClick={(e) => editing && e.stopPropagation()}
+                  >
                     {editing ? (
                       <input
                         type="number"
@@ -360,13 +414,22 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
                   </div>
                 </div>
 
-                {/* Sauvegarde en dessous du contenant */}
+                {/* Sauvegarde en dessous du contenant - ✅ Cliquable pour lancer le dé */}
                 <div className="mt-2 w-full max-w-[130px]">
-                  <div className="flex items-center justify-between px-2 py-1.5 bg-gray-800/50 rounded-md border border-gray-700/50">
+                  <div 
+                    className={`flex items-center justify-between px-2 py-1.5 bg-gray-800/50 rounded-md border border-gray-700/50 ${
+                      !editing ? 'cursor-pointer hover:bg-gray-700/50 transition-colors' : ''
+                    }`}
+                    onClick={() => !editing && rollSavingThrow(ability)}
+                    title={!editing ? `Jet de sauvegarde 1d20+${ability.savingThrow}` : ''}
+                  >
                     <div className="flex items-center gap-2">
                       {editing ? (
                         <button
-                          onClick={() => handleSavingThrowChange(abilityIndex)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSavingThrowChange(abilityIndex);
+                          }}
                           className={`w-3.5 h-3.5 rounded border ${
                             ability.savingThrow !== ability.modifier
                               ? 'bg-red-500 border-red-600'
@@ -401,13 +464,20 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
                 {allSkills.map((skill) => (
                   <div
                     key={`${skill.abilityIndex}-${skill.skillIndex}`}
-                    className="flex items-center justify-between px-3 py-2 bg-gray-800/50 rounded"
+                    className={`flex items-center justify-between px-3 py-2 bg-gray-800/50 rounded ${
+                      !editing ? 'cursor-pointer hover:bg-gray-700/50 transition-colors' : ''
+                    }`}
+                    onClick={() => !editing && rollSkillCheck(skill.skillName, skill.bonus, skill.abilityShort)}
+                    title={!editing ? `Test de ${skill.skillName} 1d20+${skill.bonus}` : ''}
                   >
                     <div className="flex items-center gap-3 flex-1">
                       {/* Checkbox de maîtrise */}
                       {editing ? (
                         <button
-                          onClick={() => handleProficiencyChange(skill.abilityIndex, skill.skillIndex)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleProficiencyChange(skill.abilityIndex, skill.skillIndex);
+                          }}
                           className={`w-4 h-4 rounded border flex-shrink-0 ${
                             skill.isProficient
                               ? 'bg-red-500 border-red-600'
@@ -427,7 +497,10 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
                       {/* Bouton d'expertise (étoile) */}
                       {editing && skill.isProficient && expertiseLimit > 0 ? (
                         <button
-                          onClick={() => handleExpertiseChange(skill.abilityIndex, skill.skillIndex)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleExpertiseChange(skill.abilityIndex, skill.skillIndex);
+                          }}
                           className={`w-4 h-4 flex items-center justify-center rounded flex-shrink-0 ${
                             skill.hasExpertise
                               ? 'text-yellow-500 hover:text-yellow-400'
@@ -526,6 +599,13 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
           )}
         </div>
       </div>
+
+      {/* ✅ DiceRoller */}
+      <DiceRoller 
+        isOpen={diceRollerOpen} 
+        onClose={() => setDiceRollerOpen(false)} 
+        rollData={rollData} 
+      />
     </div>
   );
 }
