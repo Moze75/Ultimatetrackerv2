@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dice6, Target, Sword, X, RotateCcw } from 'lucide-react';
+import { Dice6, Target, Sword, X, RotateCcw, Dices } from 'lucide-react';
 import { createPortal } from 'react-dom';
 
 interface DiceResult {
@@ -13,7 +13,7 @@ interface RollResult {
   dice: DiceResult[];
   modifier: number;
   total: number;
-  type: 'attack' | 'damage';
+  type: 'attack' | 'damage' | 'ability' | 'saving-throw' | 'skill';
   attackName: string;
 }
 
@@ -21,7 +21,7 @@ interface DiceRollerProps {
   isOpen: boolean;
   onClose: () => void;
   rollData: {
-    type: 'attack' | 'damage';
+    type: 'attack' | 'damage' | 'ability' | 'saving-throw' | 'skill';
     attackName: string;
     diceFormula: string;
     modifier: number;
@@ -72,6 +72,48 @@ const getDiceIcon = (sides: number) => {
         style={{ backgroundColor: 'transparent' }}
       />
     ); // Utilise aussi votre icône par défaut
+  }
+};
+
+// ✅ Fonction pour obtenir l'icône et la couleur selon le type
+const getRollTypeInfo = (type: string) => {
+  switch (type) {
+    case 'attack':
+      return {
+        icon: <Target className="w-6 h-6 text-blue-400" />,
+        title: 'Jet d\'attaque',
+        color: 'text-blue-400'
+      };
+    case 'damage':
+      return {
+        icon: <Sword className="w-6 h-6 text-red-400" />,
+        title: 'Jet de dégâts',
+        color: 'text-red-400'
+      };
+    case 'ability':
+      return {
+        icon: <Dices className="w-6 h-6 text-purple-400" />,
+        title: '', // Le titre sera le nom de la caractéristique (ex: "Test de Force")
+        color: 'text-purple-400'
+      };
+    case 'saving-throw':
+      return {
+        icon: <Target className="w-6 h-6 text-orange-400" />,
+        title: '', // Le titre sera "Jet de sauvegarde de X"
+        color: 'text-orange-400'
+      };
+    case 'skill':
+      return {
+        icon: <Dices className="w-6 h-6 text-green-400" />,
+        title: '', // Le titre sera "Test de compétence\nNom"
+        color: 'text-green-400'
+      };
+    default:
+      return {
+        icon: <Dice6 className="w-6 h-6 text-gray-400" />,
+        title: 'Jet de dés',
+        color: 'text-gray-400'
+      };
   }
 };
 
@@ -131,6 +173,8 @@ export function DiceRoller({ isOpen, onClose, rollData }: DiceRollerProps) {
 
   if (!isOpen || !rollData) return null;
 
+  const typeInfo = getRollTypeInfo(rollData.type);
+
   const modalContent = (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-2xl max-w-md w-full border border-gray-700/50 overflow-hidden">
@@ -138,16 +182,20 @@ export function DiceRoller({ isOpen, onClose, rollData }: DiceRollerProps) {
         <div className="bg-gradient-to-r from-red-600/20 to-orange-600/20 border-b border-gray-700/50 p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {rollData.type === 'attack' ? (
-                <Target className="w-6 h-6 text-blue-400" />
-              ) : (
-                <Sword className="w-6 h-6 text-red-400" />
-              )}
+              {typeInfo.icon}
               <div>
-                <h3 className="text-lg font-semibold text-gray-100">
-                  {rollData.type === 'attack' ? 'Jet d\'attaque' : 'Jet de dégâts'}
-                </h3>
-                <p className="text-sm text-gray-400">{rollData.attackName}</p>
+                {typeInfo.title ? (
+                  <>
+                    <h3 className="text-lg font-semibold text-gray-100">
+                      {typeInfo.title}
+                    </h3>
+                    <p className="text-sm text-gray-400">{rollData.attackName}</p>
+                  </>
+                ) : (
+                  <h3 className="text-lg font-semibold text-gray-100 whitespace-pre-line">
+                    {rollData.attackName}
+                  </h3>
+                )}
               </div>
             </div>
             <button
@@ -225,9 +273,7 @@ export function DiceRoller({ isOpen, onClose, rollData }: DiceRollerProps) {
                 </div>
                 
                 {/* Total Result */}
-                <div className={`text-4xl font-bold ${
-                  rollData.type === 'attack' ? 'text-blue-400' : 'text-red-400'
-                }`}>
+                <div className={`text-4xl font-bold ${typeInfo.color}`}>
                   {rollResult.total}
                 </div>
               </div>
@@ -239,7 +285,7 @@ export function DiceRoller({ isOpen, onClose, rollData }: DiceRollerProps) {
             <button
               onClick={reroll}
               disabled={isRolling}
-              className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               <RotateCcw size={18} />
               Relancer
