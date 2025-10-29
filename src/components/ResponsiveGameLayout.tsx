@@ -202,7 +202,7 @@ export function ResponsiveGameLayout({
       
 
         {/* Les autres blocs */}
-       {['profile', 'combat', 'class', 'abilities', 'stats', 'equipment', 'profile-details'].map((key) => (
+     {['profile', 'combat', 'hp-manager', 'class', 'abilities', 'stats', 'equipment', 'inventory'].map((key) => (
           <div
             key={key}
             className="bg-gray-800/50 rounded-lg overflow-hidden border border-gray-700 flex flex-col shadow-xl"
