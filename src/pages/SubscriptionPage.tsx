@@ -378,6 +378,45 @@ const getPlanColor = (color: string) => {
           })}
         </div>
 
+
+{/* Fonctionnalités clés */}
+<div className="mt-16 max-w-4xl mx-auto">
+  <div className="bg-gradient-to-r from-purple-900/40 to-blue-900/40 backdrop-blur-sm border border-purple-500/30 rounded-xl p-8">
+    <div className="flex items-start gap-4 mb-6">
+      <div className="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+        <Sparkles className="w-6 h-6 text-purple-400" />
+      </div>
+      <div>
+        <h3 className="text-2xl font-bold text-white mb-2">
+          Fonctionnalités principales
+        </h3>
+        <p className="text-gray-300">
+          D&D Ultimate Tracker automatise vos calculs et simplifie la gestion de vos personnages
+        </p>
+      </div>
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="flex items-center gap-3 bg-gray-900/50 rounded-lg p-4">
+        <Zap className="w-6 h-6 text-blue-400" />
+        <span className="text-gray-200">Calculs automatiques des bonus et dégâts</span>
+      </div>
+      <div className="flex items-center gap-3 bg-gray-900/50 rounded-lg p-4">
+        <Shield className="w-6 h-6 text-green-400" />
+        <span className="text-gray-200">Gestion intelligente de l'équipement</span>
+      </div>
+      <div className="flex items-center gap-3 bg-gray-900/50 rounded-lg p-4">
+        <Sparkles className="w-6 h-6 text-purple-400" />
+        <span className="text-gray-200">Création d'objets personnalisés</span>
+      </div>
+      <div className="flex items-center gap-3 bg-gray-900/50 rounded-lg p-4">
+        <Users className="w-6 h-6 text-yellow-400" />
+        <span className="text-gray-200">Système de campagnes partagées (MJ)</span>
+      </div>
+    </div>
+  </div>
+</div>
+        
 {/* Note de paiement sécurisé */}
 <div className="mt-8 text-center">
   <p className="text-sm text-gray-400">
