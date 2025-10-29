@@ -21,6 +21,9 @@ import { inventoryService } from '../services/inventoryService';
 import PlayerProfileProfileTab from '../components/PlayerProfileProfileTab';
 import { loadAbilitySections } from '../services/classesContent';
 
+import { HPManager } from '../components/HPManager';
+import { InventoryManager } from '../components/InventoryManager';
+
 
 import { PlayerProfileSettingsModal } from '../components/PlayerProfileSettingsModal';  
 
