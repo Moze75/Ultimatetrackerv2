@@ -87,32 +87,39 @@ export const subscriptionService = {
     return data;
   },
 
-  /**
-   * Vérifie si l'utilisateur peut créer un nouveau personnage
-   */
-  async canCreateCharacter(userId: string, currentCharacterCount: number): Promise<boolean> {
-    const subscription = await this.getCurrentSubscription(userId);
-    if (!subscription) return false;
+ /**
+ * Vérifie si l'utilisateur peut créer un nouveau personnage
+ */
+async canCreateCharacter(userId: string, currentCharacterCount: number): Promise<boolean> {
+  const subscription = await this.getCurrentSubscription(userId);
+  if (!subscription) return false;
 
-    // Bloquer si l'essai gratuit ou l'abonnement a expiré
-    if (subscription.status === 'expired') {
-      return false;
-    }
+  // Bloquer si l'essai gratuit ou l'abonnement a expiré
+  if (subscription.status === 'expired') {
+    return false;
+  }
 
-    const plan = SUBSCRIPTION_PLANS.find(p => p.id === subscription.tier);
-    if (!plan) return false;
+  const plan = SUBSCRIPTION_PLANS.find(p => p.id === subscription.tier);
+  if (!plan) return false;
 
-    return currentCharacterCount < plan.maxCharacters;
-  },
+  // ✅ Si maxCharacters est Infinity, autoriser
+  if (plan.maxCharacters === Infinity) return true;
 
-  /**
-   * Obtient la limite de personnages pour l'utilisateur
-   */
-  async getCharacterLimit(userId: string): Promise<number> {
-    const subscription = await this.getCurrentSubscription(userId);
-    const plan = SUBSCRIPTION_PLANS.find(p => p.id === subscription?.tier || 'free');
-    return plan?.maxCharacters || 1;
-  },
+  return currentCharacterCount < plan.maxCharacters;
+},
+
+/**
+ * Obtient la limite de personnages pour l'utilisateur
+ */
+async getCharacterLimit(userId: string): Promise<number> {
+  const subscription = await this.getCurrentSubscription(userId);
+  const plan = SUBSCRIPTION_PLANS.find(p => p.id === subscription?.tier || 'free');
+  
+  // ✅ Si Infinity, retourner 999 pour l'affichage
+  if (plan?.maxCharacters === Infinity) return 999;
+  
+  return plan?.maxCharacters || 1;
+},
 
   /**
    * Obtient les jours restants de l'essai gratuit
