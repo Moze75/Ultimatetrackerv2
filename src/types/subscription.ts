@@ -35,7 +35,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     maxCharacters: 1,
     color: 'gray',
     features: [
-      '1 personnage maximum',
+      // ❌ ENLEVÉ : 'Jusqu\'à 1 personnage',
       'Création de personnage complète',
       'Gestion du combat et des PV',
       'Inventaire et équipement',
@@ -52,7 +52,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     color: 'blue',
     popular: true,
     features: [
-      'Jusqu\'à 5 personnages',
+      // ❌ ENLEVÉ : 'Jusqu\'à 5 personnages',
       'Mode grille personnalisable',
       'Gestion avancée de l\'équipement',
       'Création d\'objets personnalisés',
@@ -68,7 +68,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     maxCharacters: 15,
     color: 'purple',
     features: [
-      'Jusqu\'à 15 personnages',
+      // ❌ ENLEVÉ : 'Jusqu\'à 15 personnages',
       'Gestion complète des joueurs',
       'Envoi d\'items et d\'or aux joueurs',
       'Système de campagnes partagées',
@@ -79,12 +79,12 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
     id: 'celestial',
     name: 'Céleste',
-    price: 30, // ✅ 30€/an
+    price: 30,
     priceLabel: '30€/an',
-    maxCharacters: Infinity, // ✅ Infinity au lieu de 999
+    maxCharacters: Infinity,
     color: 'gold',
     features: [
-      'Personnages illimités',
+      // ❌ ENLEVÉ : 'Personnages illimités',
       'Toutes les fonctionnalités MJ',
       'Support VIP ultra-prioritaire',
       'Accès anticipé aux nouvelles features',
