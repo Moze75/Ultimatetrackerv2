@@ -683,12 +683,11 @@ useEffect(() => {
 
   /* ---------------- Rendu d'un pane ---------------- */
 /* ---------------- Rendu d'un pane ---------------- */
-const renderPane = (key: TabKey) => {
+const renderPane = (key: TabKey | 'profile-details') => {
   if (!currentPlayer) return null;
   
-  // Cas spécial pour l'onglet 'profile'
+  // Profil simple (avatar)
   if (key === 'profile') {
-    // En mode grille : afficher le PlayerProfile (avec avatar)
     if (isGridMode) {
       return (
         <div className="-m-4">
@@ -696,7 +695,12 @@ const renderPane = (key: TabKey) => {
         </div>
       );
     }
-    // En mode onglets : afficher le PlayerProfileProfileTab (détails)
+    // En mode onglets : afficher le PlayerProfileProfileTab
+    return <PlayerProfileProfileTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
+  }
+  
+  // Profil détaillé (historique, dons, etc.)
+  if (key === 'profile-details') {
     return <PlayerProfileProfileTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
   }
   
