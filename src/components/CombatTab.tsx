@@ -612,35 +612,42 @@ const rollAttack = (attack: Attack) => {
   };
 
   const applyDamage = async () => {
-    const damage = parseInt(damageValue) || 0;
-    if (damage <= 0) return;
+  const damage = parseInt(damageValue) || 0;
+  if (damage <= 0) return;
 
-    let newCurrentHP = player.current_hp;
-    let newTempHP = player.temporary_hp;
+  let newCurrentHP = player.current_hp;
+  let newTempHP = player.temporary_hp;
 
-    if (newTempHP > 0) {
-      if (damage >= newTempHP) {
-        const remainingDamage = damage - newTempHP;
-        newTempHP = 0;
-        newCurrentHP = Math.max(0, newCurrentHP - remainingDamage);
-      } else {
-        newTempHP = newTempHP - damage;
-      }
+  if (newTempHP > 0) {
+    if (damage >= newTempHP) {
+      const remainingDamage = damage - newTempHP;
+      newTempHP = 0;
+      newCurrentHP = Math.max(0, newCurrentHP - remainingDamage);
     } else {
-      newCurrentHP = Math.max(0, newCurrentHP - damage);
+      newTempHP = newTempHP - damage;
     }
+  } else {
+    newCurrentHP = Math.max(0, newCurrentHP - damage);
+  }
 
-    await updateHP(newCurrentHP, newTempHP);
-    setDamageValue('');
+  await updateHP(newCurrentHP, newTempHP);
+  setDamageValue('');
 
-    const hpElement = document.querySelector('.hp-bar');
-    if (hpElement) {
-      hpElement.classList.add('damage-animation');
-      setTimeout(() => hpElement.classList.remove('damage-animation'), 600);
-    }
+  const hpElement = document.querySelector('.hp-bar');
+  if (hpElement) {
+    hpElement.classList.add('damage-animation');
+    setTimeout(() => hpElement.classList.remove('damage-animation'), 600);
+  }
 
-    toast.success(`${damage} dégâts appliqués`);
-  };
+  toast.success(`${damage} dégâts appliqués`);
+
+  // ✅ NOUVEAU : Vérifier la concentration
+  if (player.is_concentrating) {
+    const dc = Math.max(10, Math.floor(damage / 2));
+    setConcentrationDC(dc);
+    setShowConcentrationCheck(true);
+  }
+};
 
   const applyHealing = async () => {
     const healing = parseInt(healValue) || 0;
