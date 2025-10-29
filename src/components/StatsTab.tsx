@@ -328,7 +328,7 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
                   }}
                 >
                   {/* Nom de la caractéristique en haut */}
-                  <div className="absolute top-6 left-0 right-0 flex flex-col items-center">
+                  <div className="absolute top-5 left-0 right-0 flex flex-col items-center">
                     <h4 className="text-xs font-normal text-gray-100 uppercase tracking-wide">
                       {ability.name}
                     </h4>
