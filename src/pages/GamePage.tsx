@@ -682,11 +682,12 @@ useEffect(() => {
     loadInventory();
   }, [selectedCharacter?.id]);
 
- /* ---------------- Rendu d'un pane ---------------- */
-const renderPane = (key: TabKey | 'profile-details' | 'hp-manager' | 'inventory') => {
+  /* ---------------- Rendu d'un pane ---------------- */
+
+const renderPane = (key: TabKey | 'profile-details') => { 
   if (!currentPlayer) return null;
-  
-  // ===== Profil simple (avatar) =====
+   
+  // Profil simple (avatar)
   if (key === 'profile') {
     if (isGridMode) {
       return (
@@ -699,32 +700,13 @@ const renderPane = (key: TabKey | 'profile-details' | 'hp-manager' | 'inventory'
     return <PlayerProfileProfileTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
   }
   
-  // ===== Profil détaillé (historique, dons, etc.) =====
+  // Profil détaillé (historique, dons, etc.)
   if (key === 'profile-details') {
     return <PlayerProfileProfileTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
-  }
+  } 
   
-  // ===== Gestionnaire de PV =====
-  if (key === 'hp-manager') {
-    return <HPManager player={currentPlayer} onUpdate={applyPlayerUpdate} />;
-  }
-  
-  // ===== Inventaire (sac) =====
-  if (key === 'inventory') {
-    return (
-      <InventoryManager
-        player={currentPlayer}
-        inventory={inventory}
-        onInventoryUpdate={setInventory}
-        onPlayerUpdate={applyPlayerUpdate}
-      />
-    );
-  }
-  
-  // ===== Autres onglets classiques =====
   switch (key) {
     case 'combat': {
-      // Wrapper pour swipe vers paramètres
       return (
         <div
           onTouchStart={(e) => {
@@ -734,7 +716,7 @@ const renderPane = (key: TabKey | 'profile-details' | 'hp-manager' | 'inventory'
           }}
           onTouchMove={(e) => {
             const sx = (e.currentTarget as any).__sx ?? null;
-            const sy = (e.currentTarget as any).__sy ?? null;
+            const sy = (e.currentTarget as any).__sy ?? null; 
             if (sx == null || sy == null) return;
             const t = e.touches[0];
             const dx = t.clientX - sx;
@@ -746,24 +728,17 @@ const renderPane = (key: TabKey | 'profile-details' | 'hp-manager' | 'inventory'
             }
           }}
           onTouchEnd={(e) => {
-            (e.currentTarget as any).__sx = null;
+            (e.currentTarget as any).__sx = null; 
             (e.currentTarget as any).__sy = null;
           }}
         >
           <CombatTab player={currentPlayer} onUpdate={applyPlayerUpdate} />
         </div>
-      );
+      ); 
     }
-    
-    case 'class':
-      return <ClassesTab player={currentPlayer} onUpdate={applyPlayerUpdate} sections={classSections} />;
-    
-    case 'abilities':
-      return <AbilitiesTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
-    
-    case 'stats':
-      return <StatsTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
-    
+    case 'class': return <ClassesTab player={currentPlayer} onUpdate={applyPlayerUpdate} sections={classSections} />;
+    case 'abilities': return <AbilitiesTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
+    case 'stats': return <StatsTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
     case 'equipment':
       return (
         <EquipmentTab
@@ -773,13 +748,11 @@ const renderPane = (key: TabKey | 'profile-details' | 'hp-manager' | 'inventory'
           onInventoryUpdate={setInventory}
         />
       );
-    
-    default:
-      return null;
+    default: return null; 
   }
-};
+}; 
 
-/* ---------------- Loading / Error ---------------- */
+  /* ---------------- Loading / Error ---------------- */
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
