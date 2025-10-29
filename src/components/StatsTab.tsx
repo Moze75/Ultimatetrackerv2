@@ -97,7 +97,7 @@ const getExpertiseLimit = (playerClass: string | null | undefined, level: number
       return 0;
     case 'Barde':
       if (level >= 10) return 4;
-      if (level >= 3) return 2;
+      if (level >= 2) return 2;
       return 0;
     case 'Rôdeur':
       if (level >= 6) return 1;
