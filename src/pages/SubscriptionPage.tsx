@@ -302,6 +302,27 @@ const getPlanColor = (color: string) => {
                     )}
                   </div>
 
+{/* Limite de personnages */}
+{plan.maxCharacters === Infinity ? (
+  <div className={`${colors.bg} border ${colors.border} rounded-lg p-4 mb-6`}>
+    <p className="text-center">
+      <span className="text-4xl font-bold text-yellow-300">∞</span>
+      <div className="text-gray-300 mt-2 text-sm">
+        Personnages illimités
+      </div>
+    </p>
+  </div>
+) : (
+  <div className={`${colors.bg} border ${colors.border} rounded-lg p-4 mb-6`}>
+    <p className="text-center">
+      <span className="text-2xl font-bold text-white">{plan.maxCharacters}</span>
+      <span className="text-gray-300 ml-2">
+        personnage{plan.maxCharacters > 1 ? 's' : ''} max
+      </span>
+    </p>
+  </div>
+)}
+                  
 {plan.id !== 'game_master' ? (
   <div className={`${colors.bg} border ${colors.border} rounded-lg p-4 mb-6`}>
     <p className="text-center">
