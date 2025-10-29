@@ -115,6 +115,25 @@ const getJackOfAllTradesBonus = (proficiencyBonus: number): number => {
   return Math.floor(proficiencyBonus / 2);
 };
 
+const getAbilityIcon = (abilityName: string) => {
+  switch (abilityName) {
+    case 'Force':
+      return <Dumbbell className="w-4 h-4 text-red-500" />;
+    case 'Dextérité':
+      return <Wind className="w-4 h-4 text-green-500" />;
+    case 'Constitution':
+      return <Heart className="w-4 h-4 text-orange-500" />;
+    case 'Intelligence':
+      return <Brain className="w-4 h-4 text-blue-500" />;
+    case 'Sagesse':
+      return <Eye className="w-4 h-4 text-purple-500" />;
+    case 'Charisme':
+      return <Crown className="w-4 h-4 text-yellow-500" />;
+    default:
+      return null;
+  }
+};
+
 export function StatsTab({ player, onUpdate }: StatsTabProps) {
   const [editing, setEditing] = useState(false);
 
@@ -277,80 +296,96 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
           </div>
         </div>
         <div className="p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {abilities.map((ability, abilityIndex) => (
-              <div key={ability.name} className="stat-block p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    {ability.name === 'Force' && <Dumbbell className="w-5 h-5 text-red-500" />}
-                    {ability.name === 'Dextérité' && <Wind className="w-5 h-5 text-green-500" />}
-                    {ability.name === 'Constitution' && <Heart className="w-5 h-5 text-orange-500" />}
-                    {ability.name === 'Intelligence' && <Brain className="w-5 h-5 text-blue-500" />}
-                    {ability.name === 'Sagesse' && <Eye className="w-5 h-5 text-purple-500" />}
-                    {ability.name === 'Charisme' && <Crown className="w-5 h-5 text-yellow-500" />}
-                    <h4 className="text-lg font-medium text-gray-200">
+              <div key={ability.name} className="flex flex-col items-center">
+                {/* Contenant principal avec l'image de fond */}
+                <div 
+                  className="relative w-40 h-52 flex flex-col items-center justify-start"
+                  style={{
+                    backgroundImage: 'url(/background/contenant_stats.png)',
+                    backgroundSize: 'contain',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'center'
+                  }}
+                >
+                  {/* Nom de la caractéristique en haut */}
+                  <div className="absolute top-3 left-0 right-0 flex flex-col items-center gap-1">
+                    {getAbilityIcon(ability.name)}
+                    <h4 className="text-sm font-bold text-gray-100 uppercase tracking-wide">
                       {ability.name}
                     </h4>
                   </div>
-                  {editing ? (
-                    <input
-                      type="number"
-                      value={ability.score}
-                      onChange={(e) => handleScoreChange(abilityIndex, parseInt(e.target.value) || 0)}
-                      className="input-dark w-16 px-2 py-1 text-center rounded-md"
-                      min="1"
-                      max="20"
-                    />
-                  ) : (
-                    <div className="text-lg font-bold text-gray-100">
-                      {ability.score}
+
+                  {/* Modificateur au centre (gros) */}
+                  <div className="absolute top-[45%] left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                    <div className="text-5xl font-black text-gray-100">
+                      {ability.modifier >= 0 ? '+' : ''}{ability.modifier}
                     </div>
-                  )}
-                </div>
-                <div className="flex items-center justify-between mb-3 px-3 py-1 bg-gray-800/50 rounded-md">
-                  <span className="text-sm text-gray-400">Modificateur</span>
-                  <span className="font-medium text-gray-200">
-                    {ability.modifier >= 0 ? '+' : ''}{ability.modifier}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between mb-3 px-3 py-1 bg-gray-800/50 rounded-md">
-                  <div className="flex items-center gap-2">
+                  </div>
+
+                  {/* Valeur de la caractéristique dans le cercle */}
+                  <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2">
                     {editing ? (
-                      <button
-                        onClick={() => handleSavingThrowChange(abilityIndex)}
-                        className={`w-4 h-4 rounded border ${
-                          ability.savingThrow !== ability.modifier
-                            ? 'bg-red-500 border-red-600'
-                            : 'border-gray-600 hover:border-gray-500'
-                        }`}
+                      <input
+                        type="number"
+                        value={ability.score}
+                        onChange={(e) => handleScoreChange(abilityIndex, parseInt(e.target.value) || 0)}
+                        className="w-12 h-12 text-center text-xl font-bold bg-gray-800/80 text-gray-100 rounded-full border-2 border-gray-600 focus:border-yellow-500 focus:outline-none"
+                        min="1"
+                        max="20"
                       />
                     ) : (
-                      <div
-                        className={`w-4 h-4 rounded border ${
-                          ability.savingThrow !== ability.modifier
-                            ? 'bg-red-500 border-red-600'
-                            : 'border-gray-600'
-                        }`}
-                      />
+                      <div className="w-12 h-12 flex items-center justify-center text-xl font-bold text-gray-100 bg-gray-800/50 rounded-full border-2 border-gray-600">
+                        {ability.score}
+                      </div>
                     )}
-                    <span className="text-sm text-gray-400">Sauvegarde</span>
                   </div>
-                  <span className="font-medium text-gray-200">
-                    {ability.savingThrow >= 0 ? '+' : ''}{ability.savingThrow}
-                  </span>
                 </div>
+
+                {/* Sauvegarde en dessous du contenant */}
+                <div className="mt-2 w-full max-w-[180px]">
+                  <div className="flex items-center justify-between px-3 py-2 bg-gray-800/50 rounded-md border border-gray-700/50">
+                    <div className="flex items-center gap-2">
+                      {editing ? (
+                        <button
+                          onClick={() => handleSavingThrowChange(abilityIndex)}
+                          className={`w-4 h-4 rounded border ${
+                            ability.savingThrow !== ability.modifier
+                              ? 'bg-red-500 border-red-600'
+                              : 'border-gray-600 hover:border-gray-500'
+                          }`}
+                        />
+                      ) : (
+                        <div
+                          className={`w-4 h-4 rounded border ${
+                            ability.savingThrow !== ability.modifier
+                              ? 'bg-red-500 border-red-600'
+                              : 'border-gray-600'
+                          }`}
+                        />
+                      )}
+                      <span className="text-xs text-gray-400">Sauvegarde</span>
+                    </div>
+                    <span className="text-sm font-medium text-gray-200">
+                      {ability.savingThrow >= 0 ? '+' : ''}{ability.savingThrow}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Compétences en dessous */}
                 {ability.skills.length > 0 && (
-                  <div className="space-y-2 mt-4">
+                  <div className="mt-2 space-y-1 w-full max-w-[180px]">
                     {ability.skills.map((skill, skillIndex) => (
                       <div
                         key={skill.name}
-                        className="flex items-center justify-between px-3 py-1"
+                        className="flex items-center justify-between px-2 py-1 bg-gray-800/30 rounded"
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                           {editing ? (
                             <button
                               onClick={() => handleProficiencyChange(abilityIndex, skillIndex)}
-                              className={`w-4 h-4 rounded border ${
+                              className={`w-3 h-3 rounded border ${
                                 skill.isProficient
                                   ? 'bg-red-500 border-red-600'
                                   : 'border-gray-600 hover:border-gray-500'
@@ -358,7 +393,7 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
                             />
                           ) : (
                             <div
-                              className={`w-4 h-4 rounded border ${
+                              className={`w-3 h-3 rounded border ${
                                 skill.isProficient
                                   ? 'bg-red-500 border-red-600'
                                   : 'border-gray-600'
@@ -368,30 +403,30 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
                           {editing && skill.isProficient && expertiseLimit > 0 ? (
                             <button
                               onClick={() => handleExpertiseChange(abilityIndex, skillIndex)}
-                              className={`w-4 h-4 flex items-center justify-center rounded ${
+                              className={`w-3 h-3 flex items-center justify-center rounded ${
                                 skill.hasExpertise
                                   ? 'text-yellow-500 hover:text-yellow-400'
                                   : 'text-gray-600 hover:text-yellow-500'
                               }`}
                               title={skill.hasExpertise ? 'Retirer l\'expertise' : 'Ajouter l\'expertise'}
                             >
-                              <Star size={12} />
+                              <Star size={10} />
                             </button>
                           ) : skill.hasExpertise ? (
-                            <Star size={12} className="text-yellow-500" />
+                            <Star size={10} className="text-yellow-500" />
                           ) : (
-                            <div className="w-4" />
+                            <div className="w-3" />
                           )}
-                          <span className="text-sm text-gray-300">
+                          <span className="text-xs text-gray-300">
                             {skill.name}
                             {!skill.isProficient && stats.jack_of_all_trades && (
-                              <span className="text-xs text-blue-400 ml-1" title="Touche-à-tout">
+                              <span className="text-[10px] text-blue-400 ml-1" title="Touche-à-tout">
                                 (T)
                               </span>
                             )}
                           </span>
                         </div>
-                        <span className="text-sm font-medium text-gray-300">
+                        <span className="text-xs font-medium text-gray-300">
                           {skill.bonus >= 0 ? '+' : ''}{skill.bonus}
                         </span>
                       </div>
@@ -452,7 +487,7 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
             </div> 
           )}
 
-          {/* ✅ AJOUT : Bouton Sauvegarder en bas de section (visible seulement en mode édition) */}
+          {/* Bouton Sauvegarder en bas de section (visible seulement en mode édition) */}
           {editing && (
             <div className="mt-6 pt-4 border-t border-gray-700/50">
               <button
