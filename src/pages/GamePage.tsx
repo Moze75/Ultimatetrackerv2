@@ -687,7 +687,7 @@ useEffect(() => {
 
   /* ---------------- Rendu d'un pane ---------------- */
 
-const renderPane = (key: TabKey | 'profile-details') => { 
+const renderPane = (key: TabKey | 'profile-details' | 'hp-manager' | 'inventory') => {
   if (!currentPlayer) return null;
    
   // Profil simple (avatar)
