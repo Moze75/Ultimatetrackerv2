@@ -302,6 +302,9 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
   const [healValue, setHealValue] = useState('');
   const [tempHpValue, setTempHpValue] = useState('');
 
+  const [showConcentrationCheck, setShowConcentrationCheck] = useState(false);
+  const [concentrationDC, setConcentrationDC] = useState(10);
+  
   const [diceRollerOpen, setDiceRollerOpen] = useState(false);
   const [rollData, setRollData] = useState<{
     type: 'attack' | 'damage';
