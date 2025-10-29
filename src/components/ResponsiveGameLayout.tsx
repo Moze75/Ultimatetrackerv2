@@ -28,7 +28,7 @@ const TAB_LABELS: Record<string, { icon: string; label: string }> = {
   class: { icon: '📜', label: 'Classe' },
   abilities: { icon: '🎯', label: 'Capacités' },
   stats: { icon: '📊', label: 'Statistiques' },
-  equipment: { icon: '👕', label: 'Équipement' },
+  equipment: { label: 'Équipement' },
 
 };
 
