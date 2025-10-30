@@ -155,8 +155,8 @@ export function StatsTab({ player, inventory, onUpdate }: StatsTabProps) {
     };
 
     // Parser les items de l'inventaire
-    if (player.inventory && Array.isArray(player.inventory)) {
-      for (const item of player.inventory) {
+    if (inventory && Array.isArray(inventory)) {
+      for (const item of inventory) {
         try {
           // Extraire les métadonnées de l'item
           const description = item.description || '';
