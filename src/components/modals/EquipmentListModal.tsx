@@ -511,16 +511,17 @@ React.useEffect(() => {
     return items;
   }
 
-  const effectiveFilters: FilterState = React.useMemo(() => {
-    if (!allowedKinds) return filters;
-    return {
-      weapons: allowedKinds.includes('weapons'),
-      armors: allowedKinds.includes('armors'),
-      shields: allowedKinds.includes('shields'),
-      adventuring_gear: allowedKinds.includes('adventuring_gear'),
-      tools: allowedKinds.includes('tools'),
-    };
-  }, [allowedKinds, filters]);
+const effectiveFilters: FilterState = React.useMemo(() => {
+  if (!allowedKinds) return filters;
+  return {
+    weapons: allowedKinds.includes('weapons'),
+    armors: allowedKinds.includes('armors'),
+    shields: allowedKinds.includes('shields'),
+    adventuring_gear: allowedKinds.includes('adventuring_gear'),
+    tools: allowedKinds.includes('tools'),
+    gems: allowedKinds.includes('gems'), // ✅ AJOUT
+  };
+}, [allowedKinds, filters]);
 
   const noneSelected = !effectiveFilters.weapons && !effectiveFilters.armors && !effectiveFilters.shields && !effectiveFilters.adventuring_gear && !effectiveFilters.tools;
 
