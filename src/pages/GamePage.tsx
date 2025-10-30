@@ -726,8 +726,8 @@ const renderPane = (key: TabKey | 'profile-details') => {
             (e.currentTarget as any).__sx = null; 
             (e.currentTarget as any).__sy = null;
           }}
-        >
-          <CombatTab player={currentPlayer} onUpdate={applyPlayerUpdate} />
+             >
+          <CombatTab player={currentPlayer} inventory={inventory} onUpdate={applyPlayerUpdate} />
         </div>
       ); 
     }
