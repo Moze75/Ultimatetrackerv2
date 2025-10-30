@@ -202,75 +202,57 @@ export function AbilitiesTab({ player, onUpdate }: AbilitiesTabProps) {
     modifier: number;
   } | null>(null);
 
-
-
-  
+// Guard: éviter les setState au tout premier rendu (réduit le “saut”)
+const firstMountRef = useRef(true);
 useEffect(() => {
-  if (player.class !== previousClass || player.level !== previousLevel) {
-    setPreviousClass(player.class);
-    setPreviousLevel(player.level);
-    initializeResources();
-  }
-}, [player.class, player.level, previousClass, previousLevel]); // ✅ Ajouter toutes les deps
+  firstMountRef.current = false;
+}, []);
+  
+  useEffect(() => {
+    if (player.class !== previousClass || player.level !== previousLevel) {
+      setPreviousClass(player.class);
+      setPreviousLevel(player.level);
+      initializeResources();
+    }
+  }, [player.class, player.level]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Bard: clamp used_bardic_inspiration if cap auto changes
   const lastClampKey = useRef<string | null>(null);
- useEffect(() => {
-  // 🔹 1. Créer un flag pour détecter le démontage
-  let isCancelled = false;
+  useEffect(() => {
+    if (player.class !== 'Barde' || !player?.id) return; 
 
-  if (player.class !== 'Barde' || !player?.id) return;
+    const cap = getBardicCap(player);
+    const upper = Math.max(0, cap);
+    const used = player.class_resources?.used_bardic_inspiration || 0;
+    const key = `${player.id}:${cap}:${used}`;
 
-  const cap = getBardicCap(player);
-  const upper = Math.max(0, cap);
-  const used = player.class_resources?.used_bardic_inspiration || 0;
-  const key = `${player.id}:${cap}:${used}`;
+    if (lastClampKey.current === key) return;
 
-  if (lastClampKey.current === key) return;
-
-  if (used > upper) {
-    const next: ClassResources = {
-      ...(player.class_resources || {}),
-      used_bardic_inspiration: upper,
-    };
-
-    (async () => {
-      try {
-        const { error } = await supabase
-          .from('players')
-          .update({ class_resources: next })
-          .eq('id', player.id);
-
-        // 🔹 2. Vérifier si le composant existe encore
-        if (isCancelled) {
-          console.log('⚠️ Composant démonté, annulation de la mise à jour');
-          return; // ❌ Ne pas mettre à jour le state !
+    if (used > upper) {
+      const next: ClassResources = {
+        ...(player.class_resources || {}),
+        used_bardic_inspiration: upper,
+      };
+      (async () => {
+        try {
+          const { error } = await supabase.from('players').update({ class_resources: next }).eq('id', player.id);
+          if (error) throw error;
+          onUpdate({ ...player, class_resources: next });
+          lastClampKey.current = key;
+        } catch (e) {
+          console.error('[AbilitiesTab] clamp bard used error:', e);
+          lastClampKey.current = null;
         }
-
-        if (error) throw error;
-
-        onUpdate({ ...player, class_resources: next }); // ✅ Safe maintenant
-        lastClampKey.current = key;
-      } catch (e) {
-        if (isCancelled) return; // Ne pas logger si démonté
-        console.error('[AbilitiesTab] clamp bard used error:', e);
-        lastClampKey.current = null;
-      }
-    })();
-  } else {
-    lastClampKey.current = key;
-  }
-
-  // 🔹 3. Fonction de nettoyage (cleanup)
-  return () => {
-    isCancelled = true; // ✅ Marquer comme annulé au démontage
-  };
-}, [
-  player?.id,
-  player?.class,
-  player?.class_resources?.used_bardic_inspiration,
-  player.abilities,
-]);
+      })();
+    } else {
+      lastClampKey.current = key;
+    }
+  }, [
+    player?.id,
+    player?.class,
+    player?.class_resources?.used_bardic_inspiration,
+    player.abilities,
+  ]);
 
   const handleSpellSlotChange = async (level: number, used: boolean) => {
     if (!player.spell_slots) return;
