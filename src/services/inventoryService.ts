@@ -497,4 +497,5 @@ export function determineAutoEquip(items: EnrichedEquipment[]): EnrichedEquipmen
   console.log('[determineAutoEquip] R\u00e9sultat:', result.map(i => ({ name: i.name, type: i.meta.type, autoEquip: i.autoEquip })));
   return result;
 }
-export { inventoryService };
+
+export default inventoryService;
