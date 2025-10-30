@@ -43,9 +43,15 @@ function feetToMeters(ft?: number): number {
   return Math.round(n * 0.3048 * 2) / 2;
 }
 
-function buildAbilitiesForTracker(finalAbilities: Record<string, number>, proficientSkillsRaw: string[], level: number) {
+function buildAbilitiesForTracker(
+  finalAbilities: Record<string, number>, 
+  proficientSkillsRaw: string[], 
+  level: number,
+  savingThrowProficiencies: string[] = [] // ✅ NOUVEAU PARAMÈTRE
+) {
   const proficiency = getProficiencyBonusForLevel(level);
   const profSet = new Set(proficientSkillsRaw.map(normalizeSkillForTracker));
+  const savingThrowSet = new Set(savingThrowProficiencies); // ✅ NOUVEAU
 
   const ORDER: Array<keyof typeof finalAbilities> = ['Force', 'Dextérité', 'Constitution', 'Intelligence', 'Sagesse', 'Charisme'];
 
@@ -61,7 +67,9 @@ function buildAbilitiesForTracker(finalAbilities: Record<string, number>, profic
       return { name: skillName, bonus, isProficient, hasExpertise };
     });
 
-    const savingThrow = modifier;
+    // ✅ Appliquer le bonus de maîtrise si cette caractéristique est dans savingThrows
+    const isSavingThrowProficient = savingThrowSet.has(abilityName);
+    const savingThrow = modifier + (isSavingThrowProficient ? proficiency : 0);
 
     return { name: abilityName, score, modifier, savingThrow, skills: skillsDetails };
   });
