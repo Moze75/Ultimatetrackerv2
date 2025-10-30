@@ -1413,22 +1413,13 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
     </div>
   ) : null;
 })()}
-  </div>
+  </div> 
 )}
                     </div>
 
-                                        <div className="flex items-center gap-2">
-                      {(isArmor || isShield || isWeapon || hasStatBonus) && ( {/* 🆕 MODIFIÉ */}
+                    <div className="flex items-center gap-2">
+                      {(isArmor || isShield || isWeapon) && (
                         <button
-                          onClick={() => {
-                            if (hasStatBonus && !isArmor && !isShield && !isWeapon) {
-                              // 🆕 NOUVEAU : Gestion spéciale pour les objets avec bonus de stats
-                              handleEquipStatItem(item);
-                            } else {
-                              // Comportement existant pour armure/bouclier/arme
-                              requestToggleWithConfirm(item);
-                            }
-                          }}
                           onClick={() => requestToggleWithConfirm(item)}
                           disabled={pendingEquipment.has(item.id)}
                           className={`px-2 py-1 rounded text-xs border ${
