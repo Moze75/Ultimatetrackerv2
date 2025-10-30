@@ -496,16 +496,42 @@ const getAttackBonus = (attack: Attack): number => {
 
 const getDamageBonus = (attack: Attack): number => {
   const weaponBonus = attack.weapon_bonus ?? 0;
+  
+  // ✅ NOUVEAU : Calculer les bonus d'équipement
+  const equipmentBonuses = calculateEquipmentBonuses(inventory);
 
   // 1) override_ability prime
   if (attack.override_ability) {
     const ability = player.abilities?.find((a) => a.name === attack.override_ability);
-    return (ability?.modifier || 0) + weaponBonus;
+    const baseAbilityMod = ability?.score ? Math.floor((ability.score - 10) / 2) : 0; // ✅ Modificateur de BASE
+    const equipmentBonus = equipmentBonuses[attack.override_ability] || 0; // ✅ Bonus d'équipement
+    return baseAbilityMod + equipmentBonus + weaponBonus;
   }
 
   // 2) inférence depuis properties/portée
-  const abilityMod = inferWeaponAbilityMod(attack as any, player.abilities || []);
-  return abilityMod + weaponBonus;
+  const inferredAbilityName = (() => {
+    const props = (attack.properties || '').toLowerCase();
+    const range = (attack.range || '').toLowerCase();
+    
+    if (props.includes('finesse')) {
+      const strAbility = player.abilities?.find(a => a.name === 'Force');
+      const dexAbility = player.abilities?.find(a => a.name === 'Dextérité');
+      const strScore = strAbility?.score || 10;
+      const dexScore = dexAbility?.score || 10;
+      return strScore >= dexScore ? 'Force' : 'Dextérité';
+    }
+    
+    if (range !== 'corps à corps' && range !== 'contact' && range.includes('m')) {
+      return 'Dextérité';
+    }
+    
+    return 'Force';
+  })();
+  
+  const ability = player.abilities?.find(a => a.name === inferredAbilityName);
+  const baseAbilityMod = ability?.score ? Math.floor((ability.score - 10) / 2) : 0; // ✅ Modificateur de BASE
+  const equipmentBonus = equipmentBonuses[inferredAbilityName] || 0; // ✅ Bonus d'équipement
+  return baseAbilityMod + equipmentBonus + weaponBonus;
 };
 
 const rollAttack = (attack: Attack) => {
