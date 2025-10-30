@@ -429,33 +429,15 @@ React.useEffect(() => {
           {/* Contenants des caractéristiques - 3 par ligne sur 2 lignes */}
           <div className="grid grid-cols-3 gap-4 mb-6">
 
-{/* ✅ FORCER LE RECALCUL DES MODIFICATEURS AVEC LES BONUS */}
-{(() => {
+{abilities.map((ability, abilityIndex) => {
+  // ✅ CALCULER LE MODIFICATEUR AVEC LE BONUS ICI
   const equipmentBonuses = calculateEquipmentBonuses();
-  console.log('🔄 [StatsTab RENDER] Recalcul forcé des modificateurs', {
-    inventoryLength: player.inventory?.length,
-    equipmentBonuses
-  });
-  
-  // Appliquer les bonus aux modificateurs affichés
-  const abilitiesWithBonuses = abilities.map(ability => {
-    const baseModifier = getModifier(ability.score);
-    const equipmentBonus = equipmentBonuses[ability.name as keyof typeof equipmentBonuses] || 0;
-    return {
-      ...ability,
-      modifier: baseModifier + equipmentBonus
-    };
-  });
-  
-  // Utiliser cette nouvelle liste pour l'affichage
-  return null; // Ne rien afficher ici, juste forcer le recalcul
-})()}
-            
-            {abilities.map((ability, abilityIndex) => (
+  const equipmentBonus = equipmentBonuses[ability.name as keyof typeof equipmentBonuses] || 0;
+  const baseModifier = getModifier(ability.score);
+  const displayModifier = baseModifier + equipmentBonus;
 
-     
-    
-              <div key={ability.name} className="flex flex-col items-center">
+  return (
+    <div key={ability.name} className="flex flex-col items-center">
                 {/* Contenant principal avec l'image de fond - ✅ Cliquable pour lancer le dé */}
                 <div 
                   className={`relative w-28 h-36 flex flex-col items-center justify-start ${
