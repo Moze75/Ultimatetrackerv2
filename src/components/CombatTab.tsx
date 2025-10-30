@@ -547,7 +547,8 @@ const getDamageBonus = (attack: Attack): number => {
     const range = (attack.range || '').toLowerCase();
     const nameLower = (attack.name || '').toLowerCase();
     
-    // ✅ PRIORITÉ 1 : Arme de LANCER
+    // ✅ PRIORITÉ 1 : Arme de LANCER (Lance, Javeline, Hache de lancer)
+    // Règle D&D : Utilise le meilleur entre Force et Dex
     const isThrown = 
       props.includes('lancer') || 
       props.includes('jet') || 
@@ -563,7 +564,8 @@ const getDamageBonus = (attack: Attack): number => {
       return strScore >= dexScore ? 'Force' : 'Dextérité';
     }
     
-    // ✅ PRIORITÉ 2 : Finesse
+    // ✅ PRIORITÉ 2 : Finesse (Dague, Rapière, Épée courte)
+    // Règle D&D : Utilise le meilleur entre Force et Dex
     if (props.includes('finesse')) {
       const strAbility = player.abilities?.find(a => a.name === 'Force');
       const dexAbility = player.abilities?.find(a => a.name === 'Dextérité');
@@ -572,7 +574,8 @@ const getDamageBonus = (attack: Attack): number => {
       return strScore >= dexScore ? 'Force' : 'Dextérité';
     }
     
-    // ✅ PRIORITÉ 3 : Arme à distance PURE
+    // ✅ PRIORITÉ 3 : Arme à distance PURE (Arc, Arbalète)
+    // Règle D&D : Toujours Dextérité
     const isPureRanged = 
       props.includes('munitions') || 
       props.includes('chargement') || 
@@ -583,12 +586,14 @@ const getDamageBonus = (attack: Attack): number => {
       return 'Dextérité';
     }
     
-    // ✅ PRIORITÉ 4 : Portée > 1,5m
+    // ✅ PRIORITÉ 4 : Portée > 1,5m (distance) MAIS pas de lancer
+    // Règle D&D : Toujours Dextérité
     if (range !== 'corps à corps' && range !== 'contact' && range.includes('m')) {
       return 'Dextérité';
     }
     
-    // ✅ PRIORITÉ 5 : Mêlée standard
+    // ✅ PRIORITÉ 5 : Mêlée standard (Épée longue, Masse d'armes, armes Polyvalentes)
+    // Règle D&D : Toujours Force
     return 'Force';
   })();
   
