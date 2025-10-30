@@ -296,7 +296,7 @@ const updateAbilityModifiers = (
 // ✅ Recalculer les modificateurs quand l'inventaire change
 React.useEffect(() => {
   console.log('🔄 [StatsTab] Inventaire changé, recalcul des modificateurs', {
-    inventoryLength: player.inventory?.length,
+    inventoryLength: inventory?.length,
     abilities: abilities.map(a => ({ name: a.name, score: a.score, mod: a.modifier }))
   });
   const updatedAbilities = updateAbilityModifiers(abilities, stats, effectiveProficiency);
