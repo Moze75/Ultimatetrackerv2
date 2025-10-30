@@ -63,15 +63,26 @@ interface ArmorMeta {
 interface ShieldMeta {
   bonus: number;
 }
-interface ItemMeta {
+export interface ItemMeta {
   type: MetaType;
   quantity?: number;
   equipped?: boolean;
   weapon?: WeaponMeta;
   armor?: ArmorMeta;
   shield?: ShieldMeta;
-  forced?: boolean; // --- ADDED (optionnel pour marquer un équipement forcé)
-   imageUrl?: string; // ✅ NOUVEAU : URL de l'image de l'item
+  forced?: boolean;
+  imageUrl?: string;
+  
+  // ✅ NOUVEAU : Bonus pour équipements, bijoux, outils, autres
+  bonuses?: {
+    strength?: number;
+    dexterity?: number;
+    constitution?: number;
+    intelligence?: number;
+    wisdom?: number;
+    charisma?: number;
+    armor_class?: number;
+  };
 }
 
 const META_PREFIX = '#meta:';
