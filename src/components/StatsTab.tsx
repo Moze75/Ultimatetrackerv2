@@ -477,26 +477,18 @@ React.useEffect(() => {
                     </h4>
                   </div>
 
-              {/* Modificateur au centre */}
+                       {/* Modificateur au centre */}
 <div className="absolute top-[48%] left-[48%] transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-  {(() => {
-    const equipmentBonuses = calculateEquipmentBonuses();
-    const bonus = equipmentBonuses[ability.name as keyof typeof equipmentBonuses] || 0;
-    const baseModifier = getModifier(ability.score);
-    
-    return (
-      <div className="flex flex-col items-center">
-        <div className="text-3xl font-normal text-gray-100">
-          {ability.modifier >= 0 ? '+' : ''}{ability.modifier}
-        </div>
-        {bonus !== 0 && (
-          <div className="text-[10px] text-green-400 leading-none mt-1">
-            ({baseModifier >= 0 ? '+' : ''}{baseModifier} {bonus > 0 ? '+' : ''}{bonus})
-          </div>
-        )}
+  <div className="flex flex-col items-center">
+    <div className="text-3xl font-normal text-gray-100">
+      {displayModifier >= 0 ? '+' : ''}{displayModifier}
+    </div>
+    {equipmentBonus !== 0 && (
+      <div className="text-[10px] text-green-400 leading-none mt-1">
+        ({baseModifier >= 0 ? '+' : ''}{baseModifier} {equipmentBonus > 0 ? '+' : ''}{equipmentBonus})
       </div>
-    );
-  })()}
+    )}
+  </div>
 </div>
 
                   {/* Valeur de la caractéristique (bulle invisible) */}
