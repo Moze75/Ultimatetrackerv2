@@ -63,17 +63,6 @@ interface ArmorMeta {
 interface ShieldMeta {
   bonus: number;
 }
-
-// 🆕 NOUVEAU : Interface pour les bonus de stats
-interface StatBonuses {
-  strength?: number;
-  dexterity?: number;
-  constitution?: number;
-  intelligence?: number;
-  wisdom?: number;
-  charisma?: number;
-}
-
 interface ItemMeta {
   type: MetaType;
   quantity?: number;
@@ -81,9 +70,8 @@ interface ItemMeta {
   weapon?: WeaponMeta;
   armor?: ArmorMeta;
   shield?: ShieldMeta;
-  forced?: boolean;
-  imageUrl?: string;
-  statBonuses?: StatBonuses; // 🆕 NOUVEAU
+  forced?: boolean; // --- ADDED (optionnel pour marquer un équipement forcé)
+   imageUrl?: string; // ✅ NOUVEAU : URL de l'image de l'item
 }
 
 const META_PREFIX = '#meta:';
@@ -607,14 +595,6 @@ export function EquipmentTab({
   const jewelryItems = useMemo(() => inventory.filter(i => parseMeta(i.description)?.type === 'jewelry'), [inventory]);
   const potionItems = useMemo(() => inventory.filter(i => parseMeta(i.description)?.type === 'potion'), [inventory]);
 
-// 🆕 NOUVEAU : Objets équipables avec bonus de stats
-const equipableStatItems = useMemo(() => {
-  return inventory.filter(item => {
-    const meta = parseMeta(item.description);
-    return meta?.statBonuses && Object.keys(meta.statBonuses).length > 0;
-  });
-}, [inventory]);
-  
   const equippedWeapons = useMemo(() => {
     return inventory
       .map(it => ({ it, meta: parseMeta(it.description) }))
@@ -921,7 +901,7 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
       console.error('Erreur performEquipToggle:', e);
       await refreshInventory(0);
       toast.error('Erreur lors de la bascule équipement');
-     } finally {
+    } finally {
       setPendingEquipment(prev => {
         const next = new Set(prev);
         next.delete(freshItem.id);
@@ -930,118 +910,6 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
     }
   };
 
-   // 🆕 NOUVEAU : Équiper/Déséquiper un objet avec bonus de stats
-  const handleEquipStatItem = async (item: InventoryItem) => {
-    if (!player?.id) return;
-
-    const meta = parseMeta(item.description);
-    if (!meta || !meta.statBonuses) {
-      toast.error('Cet objet n\'a pas de bonus de stats');
-      return;
-    }
-
-    try {
-      // ✅ Récupérer les abilities actuelles en tant qu'objet
-      const currentAbilities = player.abilities || {
-        strength: 10,
-        dexterity: 10,
-        constitution: 10,
-        intelligence: 10,
-        wisdom: 10,
-        charisma: 10
-      };
-
-      if (meta.equipped) {
-        // Déséquiper - retirer les bonus
-        const newAbilities = { ...currentAbilities };
-        
-        if (meta.statBonuses.strength) {
-          newAbilities.strength = (newAbilities.strength || 10) - meta.statBonuses.strength;
-        }
-        if (meta.statBonuses.dexterity) {
-          newAbilities.dexterity = (newAbilities.dexterity || 10) - meta.statBonuses.dexterity;
-        }
-        if (meta.statBonuses.constitution) {
-          newAbilities.constitution = (newAbilities.constitution || 10) - meta.statBonuses.constitution;
-        }
-        if (meta.statBonuses.intelligence) {
-          newAbilities.intelligence = (newAbilities.intelligence || 10) - meta.statBonuses.intelligence;
-        }
-        if (meta.statBonuses.wisdom) {
-          newAbilities.wisdom = (newAbilities.wisdom || 10) - meta.statBonuses.wisdom;
-        }
-        if (meta.statBonuses.charisma) {
-          newAbilities.charisma = (newAbilities.charisma || 10) - meta.statBonuses.charisma;
-        }
-
-        // Marquer l'item comme déséquipé
-        const updatedMeta = { ...meta, equipped: false };
-        await updateItemMetaComplete(item, updatedMeta);
-
-        // Mettre à jour les abilities du joueur dans la BDD
-        const { error: playerError } = await supabase
-          .from('players')
-          .update({ abilities: newAbilities })
-          .eq('id', player.id);
-
-        if (playerError) throw playerError;
-
-        // Mettre à jour le state local du joueur
-        const updatedPlayer = { ...player, abilities: newAbilities };
-        onPlayerUpdate(updatedPlayer);
-
-        toast.success(`${item.name} déséquipé`);
-        await refreshInventory(0);
-      } else {
-        // Équiper - ajouter les bonus
-        const newAbilities = { ...currentAbilities };
-        
-        if (meta.statBonuses.strength) {
-          newAbilities.strength = (newAbilities.strength || 10) + meta.statBonuses.strength;
-        }
-        if (meta.statBonuses.dexterity) {
-          newAbilities.dexterity = (newAbilities.dexterity || 10) + meta.statBonuses.dexterity;
-        }
-        if (meta.statBonuses.constitution) {
-          newAbilities.constitution = (newAbilities.constitution || 10) + meta.statBonuses.constitution;
-        }
-        if (meta.statBonuses.intelligence) {
-          newAbilities.intelligence = (newAbilities.intelligence || 10) + meta.statBonuses.intelligence;
-        }
-        if (meta.statBonuses.wisdom) {
-          newAbilities.wisdom = (newAbilities.wisdom || 10) + meta.statBonuses.wisdom;
-        }
-        if (meta.statBonuses.charisma) {
-          newAbilities.charisma = (newAbilities.charisma || 10) + meta.statBonuses.charisma;
-        }
-
-        // Marquer l'item comme équipé
-        const updatedMeta = { ...meta, equipped: true };
-        await updateItemMetaComplete(item, updatedMeta);
-
-        // Mettre à jour les abilities du joueur dans la BDD
-        const { error: playerError } = await supabase
-          .from('players')
-          .update({ abilities: newAbilities })
-          .eq('id', player.id);
-
-        if (playerError) throw playerError;
-
-        // Mettre à jour le state local du joueur
-        const updatedPlayer = { ...player, abilities: newAbilities };
-        onPlayerUpdate(updatedPlayer);
-
-        toast.success(`${item.name} équipé avec bonus appliqués !`);
-        await refreshInventory(0);
-      }
-    } catch (error) {
-      console.error('Erreur lors de l\'équipement:', error);
-      toast.error('Une erreur est survenue');
-      await refreshInventory(0);
-    }
-  };
- 
-  
   // ----------- performToggle (AVERTISSEMENT NON BLOQUANT) -----------
   // --- CHANGED: on ne déclenche plus le WeaponProficiencyWarningModal ici pour éviter double overlay
   const performToggle = async (item: InventoryItem, mode: 'equip' | 'unequip') => {
@@ -1314,15 +1182,13 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
             {filteredInventory.map(item => {
               const meta = parseMeta(item.description);
               const qty = meta?.quantity ?? 1;
-                const isArmor = meta?.type === 'armor';
+              const isArmor = meta?.type === 'armor';
               const isShield = meta?.type === 'shield';
               const isWeapon = meta?.type === 'weapon';
-              const hasStatBonus = meta?.statBonuses && Object.keys(meta.statBonuses).length > 0; // 🆕 NOUVEAU
               const isEquipped =
                 (isArmor && armor?.inventory_item_id === item.id) ||
                 (isShield && shield?.inventory_item_id === item.id) ||
-                (isWeapon && meta?.equipped === true) ||
-                (hasStatBonus && meta?.equipped === true); // 🆕 NOUVEAU
+                (isWeapon && meta?.equipped === true);
 
               // --- ADDED: calcul maîtrise arme
               let weaponProficiency: WeaponProficiencyCheck | null = null;
@@ -1363,9 +1229,8 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
                         {meta?.type === 'equipment' && <span className="text-xs px-2 py-0.5 rounded bg-gray-800/60 text-gray-300">Équipement</span>}
                         {meta?.type === 'tool' && <span className="text-xs px-2 py-0.5 rounded bg-teal-900/30 text-teal-300">Outil</span>}
                         {meta?.type === 'jewelry' && <span className="text-xs px-2 py-0.5 rounded bg-yellow-900/30 text-yellow-300">Bijou</span>}
-                                              {meta?.type === 'potion' && <span className="text-xs px-2 py-0.5 rounded bg-green-900/30 text-green-300">Potion/Poison</span>}
+                        {meta?.type === 'potion' && <span className="text-xs px-2 py-0.5 rounded bg-green-900/30 text-green-300">Potion/Poison</span>}
                         {meta?.type === 'other' && <span className="text-xs px-2 py-0.5 rounded bg-slate-900/30 text-slate-300">Autre</span>}
-                        {hasStatBonus && <span className="text-xs px-2 py-0.5 rounded bg-cyan-900/30 text-cyan-300">Équipable</span>} {/* 🆕 NOUVEAU */}
                       </div>
 
 {expanded[item.id] && (
@@ -1404,19 +1269,6 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
       </div>
     )}
     
-    {/* 🆕 NOUVEAU : Affichage des bonus de stats */}
-    {hasStatBonus && meta?.statBonuses && (
-      <div className="text-xs text-cyan-300 bg-cyan-900/20 border border-cyan-700/40 rounded px-3 py-2 space-y-1">
-        <div className="font-semibold mb-1">Bonus de caractéristiques :</div>
-        {meta.statBonuses.strength && <div>Force: +{meta.statBonuses.strength}</div>}
-        {meta.statBonuses.dexterity && <div>Dextérité: +{meta.statBonuses.dexterity}</div>}
-        {meta.statBonuses.constitution && <div>Constitution: +{meta.statBonuses.constitution}</div>}
-        {meta.statBonuses.intelligence && <div>Intelligence: +{meta.statBonuses.intelligence}</div>}
-        {meta.statBonuses.wisdom && <div>Sagesse: +{meta.statBonuses.wisdom}</div>}
-        {meta.statBonuses.charisma && <div>Charisme: +{meta.statBonuses.charisma}</div>}
-      </div>
-    )}
-    
 {/* Description visible (tous types) */}
 {(() => {
   const desc = visibleDescription(item.description);
@@ -1426,22 +1278,14 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
     </div>
   ) : null;
 })()}
-  </div> 
+  </div>
 )}
-                    </div> 
+                    </div>
 
                     <div className="flex items-center gap-2">
-                      {(isArmor || isShield || isWeapon || hasStatBonus) && (
+                      {(isArmor || isShield || isWeapon) && (
                         <button
-                          onClick={() => {
-                            if (hasStatBonus && !isArmor && !isShield && !isWeapon) {
-                              // 🆕 NOUVEAU : Gestion spéciale pour les objets avec bonus de stats
-                              handleEquipStatItem(item);
-                            } else {
-                              // Comportement existant pour armure/bouclier/arme
-                              requestToggleWithConfirm(item);
-                            }
-                          }}
+                          onClick={() => requestToggleWithConfirm(item)}
                           disabled={pendingEquipment.has(item.id)}
                           className={`px-2 py-1 rounded text-xs border ${
                             pendingEquipment.has(item.id)
