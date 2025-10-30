@@ -347,6 +347,7 @@ type FilterState = {
   shields: boolean;
   adventuring_gear: boolean;
   tools: boolean;
+  gems: boolean; // ✅ AJOUT
 };
 
 export function EquipmentListModal({
