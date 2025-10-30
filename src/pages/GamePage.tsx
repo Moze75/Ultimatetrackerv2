@@ -17,7 +17,7 @@ import { PlayerContext } from '../contexts/PlayerContext';
 import { ResponsiveGameLayout } from '../components/ResponsiveGameLayout';
 import { Grid3x3 } from 'lucide-react';
 
-import { inventoryService } from '../services/inventoryService';
+import inventoryService from '../services/inventoryService';  // ✅ Utilise l'export par défaut
 import PlayerProfileProfileTab from '../components/PlayerProfileProfileTab';
 import { loadAbilitySections } from '../services/classesContent';
 
