@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react'; 
 import {
   ArrowLeft, Plus, Users, Package, Send, Crown, X, Trash2, Mail, Copy, Check,
-  Settings, Search, Edit2, UserPlus, AlertCircle //
+  Settings, Search, Edit2, UserPlus, AlertCircle, Dices, //
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { campaignService } from '../services/campaignService';
