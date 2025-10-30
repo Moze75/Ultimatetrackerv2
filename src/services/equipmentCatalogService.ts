@@ -191,6 +191,92 @@ function parseWeapons(md: string): CatalogItem[] {
   return items;
 }
 
+function parseGems(md: string): CatalogItem[] {
+  const items: CatalogItem[] = [];
+  const tables = parseMarkdownTable(md);
+  
+  for (const table of tables) {
+    if (table.length === 0) continue;
+    
+    const header = table[0];
+    const body = table.slice(1);
+    
+    const nameColIdx = header.findIndex(h => /pierre|gemme|nom/i.test(h));
+    const valueColIdx = header.findIndex(h => /valeur|prix|co[ûu]t/i.test(h));
+    const descColIdx = header.findIndex(h => /description|effet/i.test(h));
+    
+    if (nameColIdx === -1) continue;
+    
+    for (const row of body) {
+      const rawName = row[nameColIdx] || '';
+      const name = stripPriceParentheses(rawName).trim();
+      
+      if (!name || 
+          name === '---' || 
+          name === '—' ||
+          name.length < 2 ||
+          /^pierre|^gemme|^valeur|^nom|^description/i.test(name) ||
+          /^-+$/.test(name)) {
+        continue;
+      }
+      
+      const parts: string[] = [];
+      
+      if (valueColIdx !== -1 && row[valueColIdx]) {
+        let value = row[valueColIdx].trim();
+        if (value && value !== '---' && value !== '—') {
+          const numMatch = value.match(/(\d+)\s*(po|pa|pc|or|argent|cuivre)?/i);
+          if (numMatch) {
+            const amount = numMatch[1];
+            let currency = numMatch[2] ? numMatch[2].toLowerCase() : '';
+            
+            if (!currency || currency === 'po' || currency === 'or') {
+              currency = parseInt(amount) >= 100 ? 'po' : 
+                         parseInt(amount) >= 10 ? 'pa' : 'pc';
+            } else if (currency === 'pa' || currency === 'argent') {
+              currency = 'pa';
+            } else if (currency === 'pc' || currency === 'cuivre') {
+              currency = 'pc';
+            }
+            
+            const symbol = currency === 'po' ? '🟡' : 
+                          currency === 'pa' ? '⚪' : '🟤';
+            const label = currency === 'po' ? "pièce d'or" : 
+                         currency === 'pa' ? "pièce d'argent" : 
+                         "pièce de cuivre";
+            
+            const fullLabel = parseInt(amount) > 1 ? `${label}s` : label;
+            
+            parts.push(`Valeur: ${symbol} ${amount} ${fullLabel}`);
+          } else {
+            parts.push(`Valeur: ${value}`);
+          }
+        }
+      }
+      
+      if (descColIdx !== -1 && row[descColIdx]) {
+        const desc = row[descColIdx].trim();
+        if (desc && desc !== '---' && desc !== '—') {
+          parts.push(desc);
+        }
+      }
+      
+      const description = parts.join('\n\n');
+      
+      if (!description) continue;
+      
+      items.push({
+        id: `gem:${name}`,
+        kind: 'gems',
+        name,
+        description
+      });
+    }
+  }
+  
+  return items;
+}
+
 function parseSectionedList(md: string, kind: CatalogKind): CatalogItem[] {
   const items: CatalogItem[] = [];
   const lines = md.split('\n');
