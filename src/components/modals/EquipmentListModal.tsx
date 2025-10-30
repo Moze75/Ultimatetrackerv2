@@ -701,13 +701,13 @@ const preview = (
                       )}
                     </button>
                   </div>
-                  {isOpen && (
-                    <div className="px-3 pb-3">
-                      {(ci.kind === 'adventuring_gear' || ci.kind === 'tools')
-                        ? <MarkdownLite text={(ci.description || '').trim()} />
-                        : <div className="text-sm text-gray-400">Aucun détail supplémentaire</div>}
-                    </div>
-                  )}
+{isOpen && (
+  <div className="px-3 pb-3">
+    {(ci.kind === 'adventuring_gear' || ci.kind === 'tools' || ci.kind === 'gems') // ✅ Ajout
+      ? <MarkdownLite text={(ci.description || '').trim()} />
+      : <div className="text-sm text-gray-400">Aucun détail supplémentaire</div>}
+  </div>
+)}
                 </div>
               );
             })
