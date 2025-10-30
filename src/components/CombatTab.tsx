@@ -449,19 +449,49 @@ export default function CombatTab({ player, inventory, onUpdate }: CombatTabProp
 const getAttackBonus = (attack: Attack): number => {
   const weaponBonus = attack.weapon_bonus ?? 0;
   const proficiencyBonus = player.stats?.proficiency_bonus || 2;
+  
+  // ✅ NOUVEAU : Calculer les bonus d'équipement
+  const equipmentBonuses = calculateEquipmentBonuses(inventory);
 
   // 1) override_ability prime
   if (attack.override_ability) {
     const ability = player.abilities?.find((a) => a.name === attack.override_ability);
-    const abilityMod = ability?.modifier || 0;
+    const baseAbilityMod = ability?.score ? Math.floor((ability.score - 10) / 2) : 0; // ✅ Modificateur de BASE
+    const equipmentBonus = equipmentBonuses[attack.override_ability] || 0; // ✅ Bonus d'équipement
+    const totalAbilityMod = baseAbilityMod + equipmentBonus; // ✅ Total
     const masteryBonus = attack.expertise ? proficiencyBonus : 0;
-    return abilityMod + masteryBonus + weaponBonus;
+    return totalAbilityMod + masteryBonus + weaponBonus;
   }
 
   // 2) inférence depuis properties/portée
-  const abilityMod = inferWeaponAbilityMod(attack as any, player.abilities || []);
+  const inferredAbilityName = (() => {
+    const props = (attack.properties || '').toLowerCase();
+    const range = (attack.range || '').toLowerCase();
+    
+    // Si Finesse présent, on utilise le meilleur entre Force et Dextérité
+    if (props.includes('finesse')) {
+      const strAbility = player.abilities?.find(a => a.name === 'Force');
+      const dexAbility = player.abilities?.find(a => a.name === 'Dextérité');
+      const strScore = strAbility?.score || 10;
+      const dexScore = dexAbility?.score || 10;
+      return strScore >= dexScore ? 'Force' : 'Dextérité';
+    }
+    
+    // Si portée > 1,5m ou contient "m" (distance), utiliser Dextérité
+    if (range !== 'corps à corps' && range !== 'contact' && range.includes('m')) {
+      return 'Dextérité';
+    }
+    
+    // Sinon Force par défaut
+    return 'Force';
+  })();
+  
+  const ability = player.abilities?.find(a => a.name === inferredAbilityName);
+  const baseAbilityMod = ability?.score ? Math.floor((ability.score - 10) / 2) : 0; // ✅ Modificateur de BASE
+  const equipmentBonus = equipmentBonuses[inferredAbilityName] || 0; // ✅ Bonus d'équipement
+  const totalAbilityMod = baseAbilityMod + equipmentBonus; // ✅ Total
   const masteryBonus = attack.expertise ? proficiencyBonus : 0;
-  return abilityMod + masteryBonus + weaponBonus;
+  return totalAbilityMod + masteryBonus + weaponBonus;
 };
 
 const getDamageBonus = (attack: Attack): number => {
