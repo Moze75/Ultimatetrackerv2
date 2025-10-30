@@ -25,13 +25,12 @@ export function inferWeaponAbilityMod(attack: any, playerAbilities: AbilityLike[
     return r.includes('corps à corps') || r.includes('contact') || r.includes('1,5') || r.includes('3 m');
   };
 
-const strMod = typeof playerAbilities === 'object' && playerAbilities !== null && 'strength' in playerAbilities
-  ? Math.floor(((playerAbilities.strength as number) - 10) / 2)
-  : 0;
+  // ✅ CORRECTION : Chercher dans le tableau d'abilities
+  const strAbility = playerAbilities?.find((a) => a.name === 'Force');
+  const strMod = strAbility?.modifier ?? 0;
   
-const dexMod = typeof playerAbilities === 'object' && playerAbilities !== null && 'dexterity' in playerAbilities
-  ? Math.floor(((playerAbilities.dexterity as number) - 10) / 2)
-  : 0;
+  const dexAbility = playerAbilities?.find((a) => a.name === 'Dextérité');
+  const dexMod = dexAbility?.modifier ?? 0;
 
   // 1) Drapeaux depuis propriétés/catégorie/nom
   const props = attack?.properties as string | undefined | null;
