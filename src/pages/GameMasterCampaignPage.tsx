@@ -2470,64 +2470,88 @@ function RandomLootModal({
     return filtered[randomIndex];
   };
 
-  // Génération du loot selon les probabilités
-  const generateLoot = () => {
-    const probs = LOOT_TABLES[levelRange][difficulty][enemyCount];
-    const currencyRange = CURRENCY_AMOUNTS[levelRange];
-    
-    // Montant total en cuivre
-    const totalCopper = Math.floor(
+ // Génération du loot selon les probabilités
+const generateLoot = () => {
+  const probs = LOOT_TABLES[levelRange][difficulty][enemyCount];
+  const currencyRange = CURRENCY_AMOUNTS[levelRange];
+  
+  let copper = 0, silver = 0, gold = 0;
+  const equipment: Array<{ name: string; meta: any; description?: string }> = [];
+
+  // Tirage pour déterminer QUEL TYPE de récompense
+  const roll = Math.random() * 100;
+  
+  if (roll < probs.copper) {
+    // ========== CUIVRE SEULEMENT ==========
+    const amount = Math.floor(
       Math.random() * (currencyRange.max - currencyRange.min) + currencyRange.min
     );
-
-    // Répartition selon les probabilités
-    const roll = Math.random() * 100;
-    let copper = 0, silver = 0, gold = 0;
-    const equipment: Array<{ name: string; meta: any; description?: string }> = [];
-
-    if (roll < probs.copper) {
-      // 100% cuivre
-      copper = totalCopper;
-    } else if (roll < probs.copper + probs.silver) {
-      // Argent
-      silver = Math.floor(totalCopper / 10);
-      copper = totalCopper % 10;
-    } else if (roll < probs.copper + probs.silver + probs.gold) {
-      // Or
-      gold = Math.floor(totalCopper / 100);
-      silver = Math.floor((totalCopper % 100) / 10);
-      copper = totalCopper % 10;
-    } else {
-      // Équipement
-      const numItems = 
-        levelRange === '1-4' ? 1 : 
-        levelRange === '5-10' ? (Math.random() < 0.5 ? 1 : 2) : 
-        levelRange === '11-16' ? (Math.random() < 0.3 ? 1 : Math.random() < 0.7 ? 2 : 3) :
-        (Math.random() < 0.2 ? 1 : Math.random() < 0.6 ? 2 : 3);
-      
-      for (let i = 0; i < numItems; i++) {
-        const item = getRandomEquipmentFromCatalog();
-        if (item) {
-          // Construire la meta selon le type
-          let meta: any = { type: 'equipment', quantity: 1, equipped: false };
-          
-          if (item.kind === 'armors' && item.armor) {
-            meta = { type: 'armor', quantity: 1, equipped: false, armor: item.armor };
-          } else if (item.kind === 'shields' && item.shield) {
-            meta = { type: 'shield', quantity: 1, equipped: false, shield: item.shield };
-          } else if (item.kind === 'weapons' && item.weapon) {
-            meta = { type: 'weapon', quantity: 1, equipped: false, weapon: item.weapon };
-          } else if (item.kind === 'tools') {
-            meta = { type: 'tool', quantity: 1, equipped: false };
-          }
-          
-          equipment.push({
-            name: item.name,
-            meta,
-            description: item.description || ''
-          });
+    copper = amount;
+    
+  } else if (roll < probs.copper + probs.silver) {
+    // ========== ARGENT (avec un peu de cuivre) ==========
+    const totalValue = Math.floor(
+      Math.random() * (currencyRange.max - currencyRange.min) + currencyRange.min
+    );
+    // Convertir en argent (1 argent = 10 cuivre)
+    silver = Math.floor(totalValue / 10);
+    copper = totalValue % 10;
+    
+  } else if (roll < probs.copper + probs.silver + probs.gold) {
+    // ========== OR (avec argent et cuivre en reste) ==========
+    const totalValue = Math.floor(
+      Math.random() * (currencyRange.max - currencyRange.min) + currencyRange.min
+    );
+    // Convertir en or (1 or = 100 cuivre, 1 argent = 10 cuivre)
+    gold = Math.floor(totalValue / 100);
+    const remainder = totalValue % 100;
+    silver = Math.floor(remainder / 10);
+    copper = remainder % 10;
+    
+  } else {
+    // ========== ÉQUIPEMENT ==========
+    const numItems = 
+      levelRange === '1-4' ? 1 : 
+      levelRange === '5-10' ? (Math.random() < 0.5 ? 1 : 2) : 
+      levelRange === '11-16' ? (Math.random() < 0.3 ? 1 : Math.random() < 0.7 ? 2 : 3) :
+      (Math.random() < 0.2 ? 1 : Math.random() < 0.6 ? 2 : 3);
+    
+    for (let i = 0; i < numItems; i++) {
+      const item = getRandomEquipmentFromCatalog();
+      if (item) {
+        // Construire la meta selon le type
+        let meta: any = { type: 'equipment', quantity: 1, equipped: false };
+        
+        if (item.kind === 'armors' && item.armor) {
+          meta = { type: 'armor', quantity: 1, equipped: false, armor: item.armor };
+        } else if (item.kind === 'shields' && item.shield) {
+          meta = { type: 'shield', quantity: 1, equipped: false, shield: item.shield };
+        } else if (item.kind === 'weapons' && item.weapon) {
+          meta = { type: 'weapon', quantity: 1, equipped: false, weapon: item.weapon };
+        } else if (item.kind === 'tools') {
+          meta = { type: 'tool', quantity: 1, equipped: false };
         }
+        
+        equipment.push({
+          name: item.name,
+          meta,
+          description: item.description || ''
+        });
       }
+    }
+    
+    // ✅ AJOUT : Un peu d'argent bonus avec l'équipement
+    const bonusValue = Math.floor(
+      Math.random() * (currencyRange.max * 0.3 - currencyRange.min * 0.1) + currencyRange.min * 0.1
+    );
+    gold = Math.floor(bonusValue / 100);
+    const remainder = bonusValue % 100;
+    silver = Math.floor(remainder / 10);
+    copper = remainder % 10;
+  }
+
+  return { copper, silver, gold, equipment };
+};
        
       // Un peu d'argent en plus
       const bonusCopper = Math.floor(totalCopper * 0.3);
