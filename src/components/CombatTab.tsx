@@ -12,6 +12,7 @@ import { inferWeaponAbilityMod } from '../utils/inferWeaponAbility';
 
 interface CombatTabProps {
   player: Player;
+  inventory: any[];
   onUpdate: (player: Player) => void;
 }
 
