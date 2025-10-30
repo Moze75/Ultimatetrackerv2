@@ -1268,25 +1268,39 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
       </div>
     )}
     
-    {/* Propriétés techniques pour armure/bouclier/arme */}
-    {(isArmor || isShield || isWeapon) && (
-      <div className="text-xs text-gray-400 space-y-0.5">
-        {isArmor && meta?.armor && <div>CA: {meta.armor.label}</div>}
-        {isShield && meta?.shield && <div>Bonus de bouclier: +{meta.shield.bonus}</div>}
-        {isWeapon && meta?.weapon && (
-          <>
-            <div>Dégâts: {meta.weapon.damageDice} {meta.weapon.damageType}</div>
-            {meta.weapon.properties && <div>Propriété: {meta.weapon.properties}</div>}
-            {meta.weapon.range && <div>Portée: {meta.weapon.range}</div>}
-            {notProficient && (
-              <div className="text-[10px] text-amber-300 mt-1">
-                Non maîtrisée : bonus de maîtrise non appliqué.
-              </div>
-            )}
-          </>
+  {/* Propriétés techniques pour armure/bouclier/arme */}
+{(isArmor || isShield || isWeapon) && (
+  <div className="text-xs text-gray-400 space-y-0.5">
+    {isArmor && meta?.armor && <div>CA: {meta.armor.label}</div>}
+    {isShield && meta?.shield && <div>Bonus de bouclier: +{meta.shield.bonus}</div>}
+    {isWeapon && meta?.weapon && (
+      <>
+        <div>Dégâts: {meta.weapon.damageDice} {meta.weapon.damageType}</div>
+        {meta.weapon.properties && <div>Propriété: {meta.weapon.properties}</div>}
+        {meta.weapon.range && <div>Portée: {meta.weapon.range}</div>}
+        {notProficient && (
+          <div className="text-[10px] text-amber-300 mt-1">
+            Non maîtrisée : bonus de maîtrise non appliqué.
+          </div>
         )}
-      </div>
+      </>
     )}
+  </div>
+)}
+
+{/* ✅ NOUVEAU : Affichage des bonus pour jewelry/equipment/tool/other */}
+{hasBonuses && meta?.bonuses && (
+  <div className="text-xs text-gray-400 space-y-0.5 mt-2 pt-2 border-t border-gray-700/30">
+    <div className="font-medium text-gray-300 mb-1">Bonus :</div>
+    {meta.bonuses.strength && <div>Force: {meta.bonuses.strength >= 0 ? '+' : ''}{meta.bonuses.strength}</div>}
+    {meta.bonuses.dexterity && <div>Dextérité: {meta.bonuses.dexterity >= 0 ? '+' : ''}{meta.bonuses.dexterity}</div>}
+    {meta.bonuses.constitution && <div>Constitution: {meta.bonuses.constitution >= 0 ? '+' : ''}{meta.bonuses.constitution}</div>}
+    {meta.bonuses.intelligence && <div>Intelligence: {meta.bonuses.intelligence >= 0 ? '+' : ''}{meta.bonuses.intelligence}</div>}
+    {meta.bonuses.wisdom && <div>Sagesse: {meta.bonuses.wisdom >= 0 ? '+' : ''}{meta.bonuses.wisdom}</div>}
+    {meta.bonuses.charisma && <div>Charisme: {meta.bonuses.charisma >= 0 ? '+' : ''}{meta.bonuses.charisma}</div>}
+    {meta.bonuses.armor_class && <div>Classe d'Armure: {meta.bonuses.armor_class >= 0 ? '+' : ''}{meta.bonuses.armor_class}</div>}
+  </div>
+)}
     
 {/* Description visible (tous types) */}
 {(() => {
