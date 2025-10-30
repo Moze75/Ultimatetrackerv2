@@ -1,3 +1,8 @@
+import { supabase } from '../lib/supabase';
+import { InventoryItem, Player } from '../types/dnd';
+
+const META_PREFIX = '#meta:';
+
 type MetaType = 'armor' | 'shield' | 'weapon' | 'potion' | 'equipment' | 'jewelry' | 'tool' | 'other';
 
 interface WeaponMeta {
@@ -494,17 +499,9 @@ export function determineAutoEquip(items: EnrichedEquipment[]): EnrichedEquipmen
     };
   });
 
-  console.log('[determineAutoEquip] R\u00e9sultat:', result.map(i => ({ name: i.name, type: i.meta.type, autoEquip: i.autoEquip })));
+  console.log('[determineAutoEquip] Résultat:', result.map(i => ({ name: i.name, type: i.meta.type, autoEquip: i.autoEquip })));
   return result;
 }
-
-}
-
-// ✅ AJOUTER TOUT CE BLOC ICI (après la ligne 499)
-import { supabase } from '../lib/supabase';
-import { InventoryItem, Player } from '../types/dnd';
-
-const META_PREFIX = '#meta:';
 
 function parseMeta(description: string | null | undefined): ItemMeta | null {
   if (!description) return null;
