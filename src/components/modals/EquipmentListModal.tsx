@@ -618,10 +618,12 @@ const description = (ci.kind === 'adventuring_gear' || ci.kind === 'tools' || ci
                       effectiveFilters[k] ? 'border-red-500/40 text-red-300 bg-red-900/20' : 'border-gray-600 text-gray-300 hover:bg-gray-800/40'
                     }`}
                   >
-                    {k === 'weapons' ? 'Armes' :
-                     k === 'armors' ? 'Armures' :
-                     k === 'shields' ? 'Boucliers' :
-                     k === 'adventuring_gear' ? 'Équipements' : 'Outils'}
+     {k === 'weapons' ? 'Armes' :
+ k === 'armors' ? 'Armures' :
+ k === 'shields' ? 'Boucliers' :
+ k === 'adventuring_gear' ? 'Équipements' : 
+ k === 'tools' ? 'Outils' :
+ k === 'gems' ? 'Bijoux' : k} {/* ✅ AJOUT */}
                   </button>
                 );
               })}
