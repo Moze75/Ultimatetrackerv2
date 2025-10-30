@@ -15,6 +15,49 @@ interface CombatTabProps {
   onUpdate: (player: Player) => void;
 }
 
+// ✅ NOUVEAU : Fonction pour calculer les bonus d'équipement depuis l'inventaire
+const calculateEquipmentBonuses = (inventory: any[]): Record<string, number> => {
+  const bonuses: Record<string, number> = {
+    Force: 0,
+    Dextérité: 0,
+    Constitution: 0,
+    Intelligence: 0,
+    Sagesse: 0,
+    Charisme: 0,
+    armor_class: 0
+  };
+
+  if (!inventory || !Array.isArray(inventory)) return bonuses;
+
+  for (const item of inventory) {
+    try {
+      const description = item.description || '';
+      const metaLine = description
+        .split('\n')
+        .reverse()
+        .find((l: string) => l.trim().startsWith('#meta:'));
+      
+      if (!metaLine) continue;
+      
+      const meta = JSON.parse(metaLine.trim().slice(6));
+      
+      if (meta.equipped && meta.bonuses) {
+        if (meta.bonuses.strength) bonuses.Force += meta.bonuses.strength;
+        if (meta.bonuses.dexterity) bonuses.Dextérité += meta.bonuses.dexterity;
+        if (meta.bonuses.constitution) bonuses.Constitution += meta.bonuses.constitution;
+        if (meta.bonuses.intelligence) bonuses.Intelligence += meta.bonuses.intelligence;
+        if (meta.bonuses.wisdom) bonuses.Sagesse += meta.bonuses.wisdom;
+        if (meta.bonuses.charisma) bonuses.Charisme += meta.bonuses.charisma;
+        if (meta.bonuses.armor_class) bonuses.armor_class += meta.bonuses.armor_class;
+      }
+    } catch (e) {
+      continue;
+    }
+  }
+
+  return bonuses;
+};
+
 interface AttackEditModalProps {
   attack: Attack | null;
   onClose: () => void;
