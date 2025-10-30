@@ -2573,61 +2573,86 @@ const [previewLoot, setPreviewLoot] = useState<{
     setPreviewLoot(loot);
   };
 
-  const handleSend = async () => {
-    if (distributionMode === 'individual' && selectedRecipients.length === 0) {
-      toast.error('Sélectionnez au moins un destinataire');
-      return;
+ const handleSend = async () => {
+  if (distributionMode === 'individual' && selectedRecipients.length === 0) {
+    toast.error('Sélectionnez au moins un destinataire');
+    return;
+  }
+
+  if (!previewLoot) {
+    toast.error('Générez d\'abord le loot');
+    return;
+  }
+
+  try {
+    setGenerating(true);
+    const recipientIds = distributionMode === 'individual' ? selectedRecipients : null;
+
+    // Envoi de la monnaie
+    if (previewLoot.copper > 0 || previewLoot.silver > 0 || previewLoot.gold > 0) {
+      await campaignService.sendGift(campaignId, 'currency', {
+        gold: previewLoot.gold,
+        silver: previewLoot.silver,
+        copper: previewLoot.copper,
+        distributionMode,
+        message: message.trim() || `🎲 Loot aléatoire (Niveau ${levelRange}, ${difficulty}, ${enemyCount} ennemi${enemyCount === '1' ? '' : 's'})`,
+        recipientIds: recipientIds || undefined,
+      });
     }
 
-    if (!previewLoot) {
-      toast.error('Générez d\'abord le loot');
-      return;
+    // Envoi des équipements
+    for (const equip of previewLoot.equipment) {
+      const metaLine = `${META_PREFIX}${JSON.stringify(equip.meta)}`;
+      const visibleDesc = (equip.description || '').trim();
+      const fullDescription = visibleDesc 
+        ? `${visibleDesc}\n${metaLine}`
+        : metaLine;
+
+      await campaignService.sendGift(campaignId, 'item', {
+        itemName: equip.name,
+        itemDescription: fullDescription,
+        itemQuantity: 1,
+        gold: 0,
+        silver: 0,
+        copper: 0,
+        distributionMode,
+        message: message.trim() || `🎲 Loot aléatoire (Niveau ${levelRange}, ${difficulty})`,
+        recipientIds: recipientIds || undefined,
+      });
     }
 
-    try {
-      setGenerating(true);
-      const recipientIds = distributionMode === 'individual' ? selectedRecipients : null;
-
-      if (previewLoot.copper > 0 || previewLoot.silver > 0 || previewLoot.gold > 0) {
-        await campaignService.sendGift(campaignId, 'currency', {
-          gold: previewLoot.gold,
-          silver: previewLoot.silver,
-          copper: previewLoot.copper,
-          distributionMode,
-          message: message.trim() || `🎲 Loot aléatoire (Niveau ${levelRange}, ${difficulty}, ${enemyCount} ennemi${enemyCount === '1' ? '' : 's'})`,
-          recipientIds: recipientIds || undefined,
-        });
-      }
-
-      for (const equip of previewLoot.equipment) {
-        const metaLine = `${META_PREFIX}${JSON.stringify(equip.meta)}`;
-        const visibleDesc = (equip.description || '').trim();
+    // ✅ AJOUT : Envoi des pierres précieuses
+    if (previewLoot.gems && previewLoot.gems.length > 0) {
+      for (const gem of previewLoot.gems) {
+        const metaLine = `${META_PREFIX}${JSON.stringify(gem.meta)}`;
+        const visibleDesc = (gem.description || '').trim();
         const fullDescription = visibleDesc 
           ? `${visibleDesc}\n${metaLine}`
           : metaLine;
 
         await campaignService.sendGift(campaignId, 'item', {
-          itemName: equip.name,
+          itemName: gem.name,
           itemDescription: fullDescription,
           itemQuantity: 1,
           gold: 0,
           silver: 0,
           copper: 0,
           distributionMode,
-          message: message.trim() || `🎲 Loot aléatoire (Niveau ${levelRange}, ${difficulty})`,
+          message: message.trim() || `🎲 Loot aléatoire - Pierre précieuse (Niveau ${levelRange}, ${difficulty})`,
           recipientIds: recipientIds || undefined,
         });
       }
-
-      toast.success('Loot aléatoire envoyé !');
-      onSent();
-    } catch (error) {
-      console.error(error);
-      toast.error('Erreur lors de l\'envoi');
-    } finally {
-      setGenerating(false);
     }
-  };
+
+    toast.success('Loot aléatoire envoyé !');
+    onSent();
+  } catch (error) {
+    console.error(error);
+    toast.error('Erreur lors de l\'envoi');
+  } finally {
+    setGenerating(false);
+  }
+};
 
   const probs = LOOT_TABLES[levelRange][difficulty][enemyCount];
 
