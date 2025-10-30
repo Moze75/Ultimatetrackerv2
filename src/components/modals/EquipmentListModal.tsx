@@ -633,17 +633,17 @@ const description = (ci.kind === 'adventuring_gear' || ci.kind === 'tools' || ci
               <X />
             </button>
           </div>
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2 min-w-[220px] flex-1">
-              <Search className="w-5 h-5 text-gray-400 shrink-0" />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Rechercher…"
-                className="input-dark px-3 py-2 rounded-md w-full"
-              />
-            </div>
-            <div className="flex items-center gap-2 flex-wrap justify-end">
+<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+  <div className="flex items-center gap-2 flex-1 min-w-0">
+    <Search className="w-5 h-5 text-gray-400 shrink-0" />
+    <input
+      value={query}
+      onChange={(e) => setQuery(e.target.value)}
+      placeholder="Rechercher…"
+      className="input-dark px-3 py-2 rounded-md w-full"
+    />
+  </div>
+  <div className="flex items-center gap-2 flex-wrap">
               {typeButtons.map(k => {
                 if (allowedKinds && !allowedKinds.includes(k)) return null;
                 return (
