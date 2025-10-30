@@ -187,7 +187,7 @@ export function StatsTab({ player, inventory, onUpdate }: StatsTabProps) {
     }
 
     return bonuses;
-  }, [player.inventory]);
+  }, [inventory]);
 
   const [stats, setStats] = useState(() => ({
     proficiency_bonus: effectiveProficiency,
