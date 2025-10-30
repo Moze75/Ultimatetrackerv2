@@ -1,5 +1,5 @@
 // Service pour charger et parser le catalogue d'équipements
-type CatalogKind = 'armors' | 'shields' | 'weapons' | 'adventuring_gear' | 'tools';
+type CatalogKind = 'armors' | 'shields' | 'weapons' | 'adventuring_gear' | 'tools' | 'gems'; // ✅ Ajout de 'gems'
 
 interface ArmorMeta {
   base: number;
