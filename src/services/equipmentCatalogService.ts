@@ -327,12 +327,13 @@ export async function loadEquipmentCatalog(): Promise<CatalogItem[]> {
   if (cachedCatalog) return cachedCatalog;
 
   try {
-    const [armorsMd, shieldsMd, weaponsMd, gearMd, toolsMd] = await Promise.all([
+    const [armorsMd, shieldsMd, weaponsMd, gearMd, toolsMd, gemsMd] = await Promise.all([
       fetchText(URLS.armors),
       fetchText(URLS.shields),
       fetchText(URLS.weapons),
       fetchText(URLS.adventuring_gear),
       fetchText(URLS.tools),
+      fetchText(URLS.gems), // ✅ AJOUT
     ]);
 
     const list: CatalogItem[] = [
@@ -341,6 +342,7 @@ export async function loadEquipmentCatalog(): Promise<CatalogItem[]> {
       ...parseWeapons(weaponsMd),
       ...parseSectionedList(gearMd, 'adventuring_gear'),
       ...parseSectionedList(toolsMd, 'tools'),
+      ...parseGems(gemsMd), // ✅ AJOUT
     ];
 
     // Dédupliquer
