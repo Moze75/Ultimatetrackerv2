@@ -136,6 +136,15 @@ export function InventoryItemEditModal({
   const [weaponPropTags, setWeaponPropTags] = useState<string[]>([]);
   const [weaponPropsFree, setWeaponPropsFree] = useState<string>(''); // fallback si aucun tag coché
 
+  // ✅ NOUVEAU : Bonus pour jewelry, equipment, tool, other
+  const [bonusStr, setBonusStr] = useState<number | ''>('');
+  const [bonusDex, setBonusDex] = useState<number | ''>('');
+  const [bonusCon, setBonusCon] = useState<number | ''>('');
+  const [bonusInt, setBonusInt] = useState<number | ''>('');
+  const [bonusWis, setBonusWis] = useState<number | ''>('');
+  const [bonusCha, setBonusCha] = useState<number | ''>('');
+  const [bonusAC, setBonusAC] = useState<number | ''>('');
+  
   // Image
   const [imageUrl, setImageUrl] = useState<string>('');
 
