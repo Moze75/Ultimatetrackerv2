@@ -1,8 +1,7 @@
 import React from 'react';
 import { Search, X, Check, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getWeaponCategory } from '../../utils/weaponProficiencyChecker';
-import MarkdownLite from '../MarkdownLite'; // ✅ AJOUT
+import { getWeaponCategory } from '../../utils/weaponProficiencyChecker'; 
 
 /* Types locaux (alignés sur EquipmentTab) */
 type MetaType = 'armor' | 'shield' | 'weapon' | 'potion' | 'equipment' | 'jewelry' | 'tool' | 'other';
