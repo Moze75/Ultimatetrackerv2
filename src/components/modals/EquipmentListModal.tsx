@@ -340,6 +340,84 @@ function parseTools(md: string): CatalogItem[] {
   return [...dedup.values()];
 }
 
+function parseTools(md: string): CatalogItem[] {
+  const items: CatalogItem[] = [];
+  const tables = parseMarkdownTables(md);
+  const noiseRow = (s: string) =>
+    !s ||
+    /^autres? outils?$/i.test(s) ||
+    /^types? d'?outils?$/i.test(s) ||
+    /^outils?$/i.test(s) ||
+    /^sommaire$/i.test(s) ||
+    /^table des matières$/i.test(s) ||
+    /^généralités?$/i.test(s) ||
+    /^introduction$/i.test(s);
+
+  for (const table of tables) {
+    if (table.length === 0) continue;
+    let header = table[0];
+    const body = table.slice(1);
+    const headerLooksLikeHeader = header.some(c => /nom|outil|description|prix|coût|co[ûu]t/i.test(c));
+    if (!headerLooksLikeHeader) header = header.map((_, i) => (i === 0 ? 'Nom' : `Col${i + 1}`));
+    for (const row of body) {
+      const name = stripPriceParentheses(row[0] || '').trim();
+      if (!name || noiseRow(name)) continue;
+      const parts: string[] = [];
+      for (let i = 1; i < Math.min(row.length, header.length); i++) {
+        const h = header[i]?.trim();
+        const v = (row[i] || '').trim();
+        if (!v) continue;
+        if (/prix|co[ûu]t/i.test(h)) continue;
+        parts.push(`${smartCapitalize(h)}: ${v}`);
+      }
+      const desc = parts.join('\n');
+      items.push({ id: `tools:${name}`, kind: 'tools', name, description: desc });
+    }
+  }
+
+  const lines = md.split('\n');
+  const sections: { name: string; desc: string }[] = [];
+  let current: { name: string; buf: string[] } | null = null;
+  const isHeader = (line: string) => /^#{2,3}\s+/.test(line);
+  const headerName = (line: string) => line.replace(/^#{2,3}\s+/, '').trim();
+
+  for (const raw of lines) {
+    if (isHeader(raw)) {
+      if (current) {
+        const nm = stripPriceParentheses(current.name);
+        const ds = current.buf.join('\n').trim();
+        if (nm && ds && !noiseRow(nm)) sections.push({ name: nm, desc: ds });
+      }
+      current = { name: headerName(raw), buf: [] };
+    } else {
+      if (current) current.buf.push(raw);
+    }
+  }
+  if (current) {
+    const nm = stripPriceParentheses(current.name);
+    const ds = current.buf.join('\n').trim();
+    if (nm && ds && !noiseRow(nm)) sections.push({ name: nm, desc: ds });
+  }
+
+  const seen = new Set(items.map(i => norm(i.name)));
+  for (const sec of sections) {
+    if (seen.has(norm(sec.name))) continue;
+    items.push({ id: `tools:${sec.name}`, kind: 'tools', name: sec.name, description: sec.desc });
+  }
+  const dedup = new Map<string, CatalogItem>();
+  for (const it of items) { if (!dedup.has(it.id)) dedup.set(it.id, it); }
+  return [...dedup.values()];
+}
+
+/* Props */    // ⬅️ VOUS ÊTES ICI, JUSTE APRÈS LA FIN DE parseTools
+type FilterState = {
+  weapons: boolean;
+  armors: boolean;
+  shields: boolean;
+  adventuring_gear: boolean;
+  tools: boolean;
+};
+
 /* Props */
 type FilterState = {
   weapons: boolean;
