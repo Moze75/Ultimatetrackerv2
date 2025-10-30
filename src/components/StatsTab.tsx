@@ -459,34 +459,20 @@ const updateAbilityModifiers = (
                     className="absolute bottom-4 left-[48%] transform -translate-x-1/2"
                     onClick={(e) => editing && e.stopPropagation()}
                   >
-                    {editing ? (
-                      <input
-                        type="number"
-                        value={ability.score}
-                        onChange={(e) => handleScoreChange(abilityIndex, parseInt(e.target.value) || 0)}
-                        className="w-10 h-10 text-center text-base font-normal bg-transparent text-gray-100 focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded"
-                        min="1"
-                        max="20"
-                      />
-                    ) : (
-                      // ✅ NOUVEAU : Afficher le score avec le bonus d'équipement
-                      (() => {
-                        const equipmentBonuses = calculateEquipmentBonuses();
-                        const bonus = equipmentBonuses[ability.name as keyof typeof equipmentBonuses] || 0;
-                        const effectiveScore = ability.score + bonus;
-                        
-                        return (
-                          <div className="w-10 h-10 flex flex-col items-center justify-center text-base font-normal text-gray-100">
-                            <div>{effectiveScore}</div>
-                            {bonus !== 0 && (
-                              <div className="text-[8px] text-green-400 leading-none">
-                                ({ability.score} {bonus > 0 ? '+' : ''}{bonus})
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })()
-                    )}
+                  {editing ? (
+  <input
+    type="number"
+    value={ability.score}
+    onChange={(e) => handleScoreChange(abilityIndex, parseInt(e.target.value) || 0)}
+    className="w-10 h-10 text-center text-base font-normal bg-transparent text-gray-100 focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded"
+    min="1"
+    max="20"
+  />
+) : (
+  <div className="w-10 h-10 flex items-center justify-center text-base font-normal text-gray-100">
+    {ability.score}
+  </div>
+)}
                   </div>
                 </div>
 
