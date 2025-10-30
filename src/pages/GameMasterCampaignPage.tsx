@@ -2432,7 +2432,7 @@ function RandomLootModal({
       setSelectedRecipients([]);
     }
   }, [selectAllRecipients, members]);
- 
+
   const toggleRecipient = (userId: string) => {
     setSelectedRecipients(prev => {
       if (prev.includes(userId)) return prev.filter(id => id !== userId);
@@ -2500,7 +2500,7 @@ function RandomLootModal({
       
     } else {
       const numItems = 
-        levelRange === '1-4' ? 1 :  
+        levelRange === '1-4' ? 1 : 
         levelRange === '5-10' ? (Math.random() < 0.5 ? 1 : 2) : 
         levelRange === '11-16' ? (Math.random() < 0.3 ? 1 : Math.random() < 0.7 ? 2 : 3) :
         (Math.random() < 0.2 ? 1 : Math.random() < 0.6 ? 2 : 3);
@@ -2509,7 +2509,7 @@ function RandomLootModal({
         const item = getRandomEquipmentFromCatalog();
         if (item) {
           let meta: any = { type: 'equipment', quantity: 1, equipped: false };
-           
+          
           if (item.kind === 'armors' && item.armor) {
             meta = { type: 'armor', quantity: 1, equipped: false, armor: item.armor };
           } else if (item.kind === 'shields' && item.shield) {
