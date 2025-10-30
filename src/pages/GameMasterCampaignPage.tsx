@@ -1855,6 +1855,20 @@ return (
           }}
         />
       )}
+
+      {/* ✅ AJOUT DE LA MODAL LOOT ALÉATOIRE */}
+      {showRandomLootModal && (
+        <RandomLootModal
+          campaignId={campaignId}
+          members={members}
+          inventory={inventory}
+          onClose={() => setShowRandomLootModal(false)}
+          onSent={() => {
+            setShowRandomLootModal(false);
+            toast.success('Loot aléatoire distribué !');
+          }}
+        />
+      )}
     </div>
   );
 }
