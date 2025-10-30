@@ -419,9 +419,10 @@ export function EquipmentListModal({
   const [loading, setLoading] = React.useState(false);
   const [query, setQuery] = React.useState('');
   const [all, setAll] = React.useState<CatalogItem[]>([]);
-  const [filters, setFilters] = React.useState<FilterState>({
-    weapons: true, armors: true, shields: true, adventuring_gear: true, tools: true
-  });
+const [filters, setFilters] = React.useState<FilterState>({
+  weapons: true, armors: true, shields: true, adventuring_gear: true, tools: true,
+  gems: true // ✅ AJOUT
+});
   const [expanded, setExpanded] = React.useState<Record<string, boolean>>({});
   
   // États pour le mode multi-ajout
