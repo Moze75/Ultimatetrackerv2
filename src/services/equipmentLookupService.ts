@@ -18,6 +18,16 @@ interface ShieldMeta {
   bonus: number;
 }
 
+// 🆕 NOUVEAU
+interface StatBonuses {
+  strength?: number;
+  dexterity?: number;
+  constitution?: number;
+  intelligence?: number;
+  wisdom?: number;
+  charisma?: number;
+}
+
 export interface ItemMeta {
   type: MetaType;
   quantity?: number;
@@ -25,8 +35,9 @@ export interface ItemMeta {
   weapon?: WeaponMeta;
   armor?: ArmorMeta;
   shield?: ShieldMeta;
+  // 🆕 NOUVEAU
+  statBonuses?: StatBonuses;
 }
-
 type CatalogKind = 'armors' | 'shields' | 'weapons' | 'adventuring_gear' | 'tools';
 
 interface CatalogItem {

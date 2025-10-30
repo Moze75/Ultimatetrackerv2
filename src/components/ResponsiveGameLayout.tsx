@@ -22,12 +22,14 @@ interface ResponsiveGameLayoutProps {
 }
 
 const TAB_LABELS: Record<string, { icon: string; label: string }> = {
-  profile: { icon: '👤', label: 'Profil' },  // ← AJOUTEZ cette ligne
-  combat: { icon: '⚔️', label: 'Combat' },
-  class: { icon: '📜', label: 'Classe' },
-  abilities: { icon: '🎯', label: 'Capacités' },
-  stats: { icon: '📊', label: 'Statistiques' },
-  equipment: { icon: '🎒', label: 'Équipement' },
+  profile: {  label: 'Profil' },
+  combat: {  label: 'Combat' },
+
+  class: {  label: 'Classe' },
+  abilities: { label: 'Capacités' },
+  stats: {  label: 'Statistiques' },
+  equipment: { label: 'Équipement' },
+
 };
 
 export function ResponsiveGameLayout({
@@ -200,7 +202,7 @@ export function ResponsiveGameLayout({
       
 
         {/* Les autres blocs */}
-        {['profile', 'combat', 'class', 'abilities', 'stats', 'equipment'].map((key) => (
+     {['profile', 'combat', 'class', 'abilities', 'stats', 'equipment'].map((key) => (
           <div
             key={key}
             className="bg-gray-800/50 rounded-lg overflow-hidden border border-gray-700 flex flex-col shadow-xl"

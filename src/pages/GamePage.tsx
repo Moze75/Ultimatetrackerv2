@@ -21,7 +21,8 @@ import { inventoryService } from '../services/inventoryService';
 import PlayerProfileProfileTab from '../components/PlayerProfileProfileTab';
 import { loadAbilitySections } from '../services/classesContent';
 
-import { PlayerProfileSettingsModal } from '../components/PlayerProfileSettingsModal';
+
+import { PlayerProfileSettingsModal } from '../components/PlayerProfileSettingsModal';  
 
 import '../styles/swipe.css';
 
@@ -682,57 +683,69 @@ useEffect(() => {
   }, [selectedCharacter?.id]);
 
   /* ---------------- Rendu d'un pane ---------------- */
-  const renderPane = (key: TabKey) => {
-    if (!currentPlayer) return null;
-    switch (key) {
-      case 'combat': {
-        // Wrapper pour capturer swipe GAUCHE -> ouvrir paramètres (sans déclencher le swipe de tabs)
-        return (
-          <div
-            onTouchStart={(e) => {
-              const t = e.touches[0];
-              (e.currentTarget as any).__sx = t.clientX;
-              (e.currentTarget as any).__sy = t.clientY;
-            }}
-            onTouchMove={(e) => {
-              const sx = (e.currentTarget as any).__sx ?? null;
-              const sy = (e.currentTarget as any).__sy ?? null;
-              if (sx == null || sy == null) return;
-              const t = e.touches[0];
-              const dx = t.clientX - sx;
-              const dy = t.clientY - sy;
-              // Seuils: dominance horizontale et mouvement vers la DROITE
-              if (Math.abs(dx) > Math.abs(dy) * 1.15 && dx > 64) {
-                e.stopPropagation();
-                e.preventDefault();
-                openSettings('left'); // au lieu de 'right' -> la modale entre depuis la GAUCHE
-              }
-            }}
-            onTouchEnd={(e) => {
-              (e.currentTarget as any).__sx = null;
-              (e.currentTarget as any).__sy = null;
-            }}
-          >
-            <CombatTab player={currentPlayer} onUpdate={applyPlayerUpdate} />
-          </div>
-        );
-      }
-      case 'class': return <ClassesTab player={currentPlayer} onUpdate={applyPlayerUpdate} sections={classSections} />;
-      case 'abilities': return <AbilitiesTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
-      case 'stats': return <StatsTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
-      case 'equipment':
-        return (
-          <EquipmentTab
-            player={currentPlayer}
-            inventory={inventory}
-            onPlayerUpdate={applyPlayerUpdate}
-            onInventoryUpdate={setInventory}
-          />
-        );
-case 'profile': return <PlayerProfileProfileTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
-      default: return null;
+
+const renderPane = (key: TabKey | 'profile-details') => { 
+  if (!currentPlayer) return null;
+   
+  // Profil simple (avatar)
+  if (key === 'profile') {
+    if (isGridMode) {
+      return (
+        <div className="-m-4">
+          <PlayerProfile player={currentPlayer} onUpdate={applyPlayerUpdate} />
+        </div>
+      );
     }
-  };
+    // En mode onglets : afficher le PlayerProfileProfileTab
+    return <PlayerProfileProfileTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
+  }
+  
+  switch (key) {
+    case 'combat': {
+      return (
+        <div
+          onTouchStart={(e) => {
+            const t = e.touches[0];
+            (e.currentTarget as any).__sx = t.clientX;
+            (e.currentTarget as any).__sy = t.clientY;
+          }}
+          onTouchMove={(e) => {
+            const sx = (e.currentTarget as any).__sx ?? null;
+            const sy = (e.currentTarget as any).__sy ?? null; 
+            if (sx == null || sy == null) return;
+            const t = e.touches[0];
+            const dx = t.clientX - sx;
+            const dy = t.clientY - sy;
+            if (Math.abs(dx) > Math.abs(dy) * 1.15 && dx > 64) {
+              e.stopPropagation();
+              e.preventDefault();
+              openSettings('left');
+            }
+          }}
+          onTouchEnd={(e) => {
+            (e.currentTarget as any).__sx = null; 
+            (e.currentTarget as any).__sy = null;
+          }}
+        >
+          <CombatTab player={currentPlayer} onUpdate={applyPlayerUpdate} />
+        </div>
+      ); 
+    }
+    case 'class': return <ClassesTab player={currentPlayer} onUpdate={applyPlayerUpdate} sections={classSections} />;
+    case 'abilities': return <AbilitiesTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
+    case 'stats': return <StatsTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
+    case 'equipment':
+      return (
+        <EquipmentTab
+          player={currentPlayer}
+          inventory={inventory}
+          onPlayerUpdate={applyPlayerUpdate}
+          onInventoryUpdate={setInventory}
+        />
+      );
+    default: return null; 
+  }
+}; 
 
   /* ---------------- Loading / Error ---------------- */
   if (loading) {

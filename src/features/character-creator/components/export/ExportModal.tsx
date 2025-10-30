@@ -285,55 +285,60 @@ export function ExportModal({ open, payload, onClose, onConfirm }: ExportModalPr
             </Card>
           )}
 
-          {/* ✅ Jets de sauvegarde */}
-          {payload.savingThrows && payload.savingThrows.length > 0 && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center">
-                  <Shield className="w-5 h-5 text-green-400 mr-2" />
-                  <h4 className="text-white font-semibold">Jets de sauvegarde maîtrisés</h4>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {payload.savingThrows.map((save, i) => (
-                    <span
-                      key={i}
-                      className="px-2 py-1 text-xs bg-green-500/20 text-green-200 rounded border border-green-500/30"
-                    >
-                      {save}
-                    </span>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
-          {/* Compétences */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center">
-                <Star className="w-5 h-5 text-purple-400 mr-2" />
-                <h4 className="text-white font-semibold">Compétences maîtrisées</h4>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {payload.proficientSkills.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {payload.proficientSkills.map((s) => (
-                    <span
-                      key={s}
-                      className="px-2 py-1 text-xs bg-purple-500/20 text-purple-200 rounded border border-purple-500/30"
-                    >
-                      {s}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-sm text-gray-500">Aucune compétence maîtrisée</div>
-              )}
-            </CardContent>
-          </Card>
+
+       {/* Compétences et Jets de sauvegarde */}
+<Card>
+  <CardHeader>
+    <div className="flex items-center">
+      <Star className="w-5 h-5 text-purple-400 mr-2" />
+      <h4 className="text-white font-semibold">Compétences et Jets de sauvegarde</h4>
+    </div>
+  </CardHeader>
+  <CardContent className="space-y-4">
+    {/* Jets de sauvegarde maîtrisés */}
+    {payload.savingThrows && payload.savingThrows.length > 0 && (
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          <Shield className="w-4 h-4 text-green-400" />
+          <span className="text-sm font-medium text-gray-300">Jets de sauvegarde maîtrisés</span>
+        </div>
+        <div className="flex flex-wrap gap-2 mb-4 pb-4 border-b border-gray-700/50">
+          {payload.savingThrows.map((save, i) => (
+            <span
+              key={i}
+              className="px-2 py-1 text-xs bg-green-500/20 text-green-200 rounded border border-green-500/30"
+            >
+              {save}
+            </span>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {/* Compétences maîtrisées */}
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        <Star className="w-4 h-4 text-purple-400" />
+        <span className="text-sm font-medium text-gray-300">Compétences maîtrisées</span>
+      </div>
+      {payload.proficientSkills.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {payload.proficientSkills.map((s) => (
+            <span
+              key={s}
+              className="px-2 py-1 text-xs bg-purple-500/20 text-purple-200 rounded border border-purple-500/30"
+            >
+              {s}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <div className="text-sm text-gray-500">Aucune compétence maîtrisée</div>
+      )}
+    </div>
+  </CardContent>
+</Card>
 
           {/* Sorts sélectionnés */}
           {(payload.selectedCantrips && payload.selectedCantrips.length > 0) ||

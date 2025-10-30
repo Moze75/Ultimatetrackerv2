@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Check, Crown, Shield, Sparkles, Users, Coins, Zap, Clock, Infinity } from 'lucide-react';
+import { ArrowLeft, Check, Crown, Shield, Sparkles, Users, Coins, Zap, Clock, Calendar, Star } from 'lucide-react';
 import { subscriptionService } from '../services/subscriptionService';
 import { SUBSCRIPTION_PLANS, UserSubscription } from '../types/subscription';
 import toast from 'react-hot-toast';
@@ -16,6 +16,7 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
   const [loading, setLoading] = useState(true);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [remainingTrialDays, setRemainingTrialDays] = useState<number | null>(null);
+  const [remainingSubscriptionDays, setRemainingSubscriptionDays] = useState<number | null>(null);
   const [isTrialExpired, setIsTrialExpired] = useState(false);
 
   useEffect(() => {
@@ -31,6 +32,10 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
       // Vérifier les jours restants de l'essai
       const trialDays = await subscriptionService.getRemainingTrialDays(session.user.id);
       setRemainingTrialDays(trialDays);
+
+      // Vérifier les jours restants de l'abonnement
+      const subDays = await subscriptionService.getRemainingSubscriptionDays(session.user.id);
+      setRemainingSubscriptionDays(subDays);
 
       // Vérifier si l'essai a expiré
       const expired = await subscriptionService.isTrialExpired(session.user.id);
@@ -50,7 +55,7 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
     }
 
     if (currentSubscription?.tier === tier && currentSubscription?.status === 'active') {
-      toast.success('Vous possédez déjà cet accès à vie !');
+      toast.success('Vous possédez déjà cet abonnement !');
       return;
     }
 
@@ -60,17 +65,15 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
       // TODO: Intégrer Mollie ici
       toast.loading('Redirection vers le paiement...', { duration: 2000 });
       
-      // Simuler un délai
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Pour l'instant, afficher un message
       const plan = SUBSCRIPTION_PLANS.find(p => p.id === tier);
       toast.error(
-        `Le paiement Mollie n'est pas encore configuré.\nMontant : ${plan?.price}€ (paiement unique pour accès à vie)\nCette fonctionnalité sera bientôt disponible !`,
+        `Le paiement Mollie n'est pas encore configuré.\nMontant : ${plan?.priceLabel}\nCette fonctionnalité sera bientôt disponible !`,
         { duration: 5000 }
       );
 
-      // Exemple de ce qu'il faudra faire :
+      // Exemple à implémenter :
       // const paymentUrl = await subscriptionService.createMolliePayment(session.user.id, tier);
       // window.location.href = paymentUrl;
       
@@ -83,54 +86,64 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
   };
 
   const getPlanIcon = (planId: string) => {
-    switch (planId) {
-      case 'free':
-        return <Clock className="w-8 h-8" />;
-      case 'hero':
-        return <Sparkles className="w-8 h-8" />;
-      case 'game_master':
-        return <Crown className="w-8 h-8" />;
-      default:
-        return <Shield className="w-8 h-8" />;
-    }
-  };
+  switch (planId) {
+    case 'free':
+      return <Clock className="w-8 h-8" />;
+    case 'hero':
+      return <Sparkles className="w-8 h-8" />;
+    case 'game_master':
+      return <Crown className="w-8 h-8" />;
+    case 'celestial':
+      return <Star className="w-8 h-8" />; // ✅ Nouveau
+    default:
+      return <Shield className="w-8 h-8" />;
+  }
+};
 
-  const getPlanColor = (color: string) => {
-    switch (color) {
-      case 'gray':
-        return {
-          border: 'border-gray-500/30',
-          bg: 'bg-gray-500/10',
-          text: 'text-gray-400',
-          button: 'bg-gray-600 hover:bg-gray-700',
-          iconBg: 'bg-gray-500/20',
-        };
-      case 'blue':
-        return {
-          border: 'border-blue-500/50',
-          bg: 'bg-blue-500/10',
-          text: 'text-blue-400',
-          button: 'bg-blue-600 hover:bg-blue-700',
-          iconBg: 'bg-blue-500/20',
-        };
-      case 'purple':
-        return {
-          border: 'border-purple-500/50',
-          bg: 'bg-purple-500/10',
-          text: 'text-purple-400',
-          button: 'bg-purple-600 hover:bg-purple-700',
-          iconBg: 'bg-purple-500/20',
-        };
-      default:
-        return {
-          border: 'border-gray-500/30',
-          bg: 'bg-gray-500/10',
-          text: 'text-gray-400',
-          button: 'bg-gray-600 hover:bg-gray-700',
-          iconBg: 'bg-gray-500/20',
-        };
-    }
-  };
+const getPlanColor = (color: string) => {
+  switch (color) {
+    case 'gray':
+      return {
+        border: 'border-gray-500/30',
+        bg: 'bg-gray-500/10',
+        text: 'text-gray-400',
+        button: 'bg-gray-600 hover:bg-gray-700',
+        iconBg: 'bg-gray-500/20',
+      };
+    case 'blue':
+      return {
+        border: 'border-blue-500/50',
+        bg: 'bg-blue-500/10',
+        text: 'text-blue-400',
+        button: 'bg-blue-600 hover:bg-blue-700',
+        iconBg: 'bg-blue-500/20',
+      };
+    case 'purple':
+      return {
+        border: 'border-purple-500/50',
+        bg: 'bg-purple-500/10',
+        text: 'text-purple-400',
+        button: 'bg-purple-600 hover:bg-purple-700',
+        iconBg: 'bg-purple-500/20',
+      };
+    case 'gold': // ✅ Nouveau
+      return {
+        border: 'border-yellow-500/50',
+        bg: 'bg-yellow-500/10',
+        text: 'text-yellow-400',
+        button: 'bg-yellow-600 hover:bg-yellow-700',
+        iconBg: 'bg-yellow-500/20',
+      };
+    default:
+      return {
+        border: 'border-gray-500/30',
+        bg: 'bg-gray-500/10',
+        text: 'text-gray-400',
+        button: 'bg-gray-600 hover:bg-gray-700',
+        iconBg: 'bg-gray-500/20',
+      };
+  }
+};
 
   if (loading) {
     return (
@@ -166,7 +179,6 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
         backgroundAttachment: 'fixed',
       }}
     >
-      {/* Overlay sombre */}
       <div className="absolute inset-0 bg-black/50" />
 
       <div className="relative z-10 w-full max-w-7xl mx-auto px-4">
@@ -188,13 +200,13 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
                   '0 0 15px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.6), 0 0 30px rgba(255,255,255,0.4)',
               }}
             >
-              Choisissez votre accès
+              Choisissez votre abonnement
             </h1>
             <p className="text-lg text-gray-200 max-w-2xl mx-auto mb-2">
-              Paiement unique pour un accès à vie
+              Abonnement annuel avec renouvellement automatique
             </p>
             <p className="text-sm text-purple-300">
-              ✨ Pas d'abonnement • Payez une fois, gardez pour toujours
+              ✨ Annulation possible à tout moment • Accès immédiat
             </p>
 
             {/* Badge du plan actuel */}
@@ -210,7 +222,17 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
                     </p>
                   ) : currentSubscription.status === 'expired' ? (
                     <p className="text-sm text-red-400">
-                      ⚠️ Essai gratuit expiré - Choisissez un plan pour continuer
+                      ⚠️ Abonnement expiré - Choisissez un plan pour continuer
+                    </p>
+                  ) : currentSubscription.status === 'active' && remainingSubscriptionDays !== null ? (
+                    <p className="text-sm text-gray-400">
+                      Plan actuel :{' '}
+                      <span className="font-bold text-white">
+                        {SUBSCRIPTION_PLANS.find(p => p.id === currentSubscription.tier)?.name || 'Gratuit'}
+                      </span>
+                      <span className="ml-2 text-green-400">
+                        • Renouvellement dans {remainingSubscriptionDays} jour{remainingSubscriptionDays > 1 ? 's' : ''}
+                      </span>
                     </p>
                   ) : (
                     <p className="text-sm text-gray-400">
@@ -218,9 +240,6 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
                       <span className="font-bold text-white">
                         {SUBSCRIPTION_PLANS.find(p => p.id === currentSubscription.tier)?.name || 'Gratuit'}
                       </span>
-                      {currentSubscription.tier !== 'free' && (
-                        <span className="ml-2 text-green-400">✓ Accès à vie</span>
-                      )}
                     </p>
                   )}
                 </div>
@@ -243,9 +262,9 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
           </div>
         </div>
 
-        {/* Plans d'abonnement */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          {SUBSCRIPTION_PLANS.map((plan) => {
+     {/* Plans d'abonnement */}
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+  {SUBSCRIPTION_PLANS.map((plan) => {
             const colors = getPlanColor(plan.color);
             const isCurrentPlan = currentSubscription?.tier === plan.id && currentSubscription?.status === 'active';
             const isExpiredTrial = plan.id === 'free' && isTrialExpired;
@@ -257,61 +276,55 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
                   plan.popular ? 'ring-2 ring-yellow-500/50' : ''
                 } ${isExpiredTrial ? 'opacity-60' : ''}`}
               >
-                {/* Badge "Populaire" */}
                 {plan.popular && (
                   <div className="absolute top-4 right-4 bg-yellow-500 text-gray-900 px-3 py-1 rounded-full text-xs font-bold">
                     ⭐ POPULAIRE
                   </div>
                 )}
 
-                {/* Badge "Accès à vie" */}
-                {plan.lifetime && (
-                  <div className="absolute top-4 left-4 bg-green-500/20 border border-green-500/50 text-green-300 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                    <Infinity size={14} />
-                    À VIE
-                  </div>
-                )}
-
                 <div className="p-8">
-                  {/* Icône */}
                   <div className={`w-16 h-16 ${colors.iconBg} rounded-full flex items-center justify-center mb-6 ${colors.text}`}>
                     {getPlanIcon(plan.id)}
                   </div>
 
-                  {/* Nom et prix */}
                   <h3 className="text-2xl font-bold text-white mb-2">{plan.name}</h3>
                   <div className="mb-6">
-                    <span className="text-4xl font-bold text-white">{plan.price}€</span>
-                    {plan.price > 0 && (
-                      <span className="text-gray-400 ml-2 text-sm">paiement unique</span>
+                    {plan.price === 0 ? (
+                      <>
+                        <span className="text-4xl font-bold text-white">Gratuit</span>
+                        <span className="text-gray-400 ml-2 text-sm">15 jours</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-4xl font-bold text-white">{plan.price}€</span>
+                        <span className="text-gray-400 ml-2 text-sm">/an</span>
+                      </>
                     )}
                   </div>
 
-                  {/* Limite de personnages (sauf pour MJ) */}
-                  {plan.id !== 'game_master' && (
-                    <div className={`${colors.bg} border ${colors.border} rounded-lg p-4 mb-6`}>
-                      <p className="text-center">
-                        <span className="text-2xl font-bold text-white">{plan.maxCharacters}</span>
-                        <span className="text-gray-300 ml-2">
-                          personnage{plan.maxCharacters > 1 ? 's' : ''} max
-                        </span>
-                      </p>
-                    </div>
-                  )}
+{/* Limite de personnages */}
+{plan.maxCharacters === Infinity ? (
+  <div className={`${colors.bg} border ${colors.border} rounded-lg p-4 mb-6`}>
+    <p className="text-center">
+      <span className="text-4xl font-bold text-yellow-300">∞</span>
+      <div className="text-gray-300 mt-2 text-sm">
+        Personnages illimités
+      </div>
+    </p>
+  </div>
+) : (
+  <div className={`${colors.bg} border ${colors.border} rounded-lg p-4 mb-6`}>
+    <p className="text-center">
+      <span className="text-2xl font-bold text-white">{plan.maxCharacters}</span>
+      <span className="text-gray-300 ml-2">
+        personnage{plan.maxCharacters > 1 ? 's' : ''} max
+      </span>
+    </p>
+  </div>
+)}
+                  
 
-                  {/* Pour MJ : message différent */}
-                  {plan.id === 'game_master' && (
-                    <div className={`${colors.bg} border ${colors.border} rounded-lg p-4 mb-6`}>
-                      <p className="text-center">
-                        <span className="text-2xl font-bold text-purple-300">♾️</span>
-                        <span className="text-gray-300 ml-2">
-                          Personnages pour toute votre campagne
-                        </span>
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Fonctionnalités */}
+{/* Fonctionnalités */}
                   <ul className="space-y-3 mb-8">
                     {plan.features.map((feature, index) => (
                       <li key={index} className="flex items-start gap-3">
@@ -321,14 +334,24 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
                     ))}
                   </ul>
 
-                  {/* Bouton d'action */}
+{/* ✅ COLLEZ ICI LE BLOC "Message personnalisé pour Céleste" */}
+{plan.id === 'celestial' && (
+  <div className="mb-6 p-4 bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border border-yellow-500/30 rounded-lg">
+    <p className="text-sm text-yellow-200 text-center leading-relaxed">
+      <span className="font-semibold">✨ En choisissant Céleste</span>, vous soutenez directement le développement de D&D Ultimate Tracker. 
+      Votre contribution permet d'ajouter de nouvelles fonctionnalités, d'améliorer l'expérience utilisateur et de maintenir l'application à jour. 
+      <span className="block mt-2 font-semibold text-yellow-100">Merci de faire partie de cette aventure ! 🙏</span>
+    </p>
+  </div>
+)}
+                  
                   {isCurrentPlan ? (
                     <button
                       disabled
                       className="w-full bg-green-700 text-white py-3 px-6 rounded-lg font-semibold cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       <Check size={20} />
-                      Accès actif à vie
+                      Abonnement actif
                     </button>
                   ) : isExpiredTrial ? (
                     <button
@@ -357,8 +380,8 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
                         </>
                       ) : (
                         <>
-                          <Zap size={20} />
-                          Obtenir l'accès à vie
+                          <Calendar size={20} />
+                          S'abonner ({plan.priceLabel})
                         </>
                       )}
                     </button>
@@ -369,53 +392,18 @@ export function SubscriptionPage({ session, onBack }: SubscriptionPageProps) {
           })}
         </div>
 
-        {/* Fonctionnalités MJ à venir */}
-        <div className="mt-16 max-w-4xl mx-auto">
-          <div className="bg-gradient-to-r from-purple-900/40 to-blue-900/40 backdrop-blur-sm border border-purple-500/30 rounded-xl p-8">
-            <div className="flex items-start gap-4 mb-6">
-              <div className="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center flex-shrink-0">
-                <Crown className="w-6 h-6 text-purple-400" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold text-white mb-2">
-                  Fonctionnalités Maître du Jeu (à venir)
-                </h3>
-                <p className="text-gray-300">
-                  Le plan Maître du Jeu inclura prochainement des outils puissants pour gérer vos campagnes
-                </p>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center gap-3 bg-gray-900/50 rounded-lg p-4">
-                <Users className="w-6 h-6 text-blue-400" />
-                <span className="text-gray-200">Gestion des joueurs de la campagne</span>
-              </div>
-              <div className="flex items-center gap-3 bg-gray-900/50 rounded-lg p-4">
-                <Coins className="w-6 h-6 text-yellow-400" />
-                <span className="text-gray-200">Envoi d'items et d'or aux joueurs</span>
-              </div>
-              <div className="flex items-center gap-3 bg-gray-900/50 rounded-lg p-4">
-                <Shield className="w-6 h-6 text-green-400" />
-                <span className="text-gray-200">Système de campagnes partagées</span>
-              </div>
-              <div className="flex items-center gap-3 bg-gray-900/50 rounded-lg p-4">
-                <Sparkles className="w-6 h-6 text-purple-400" />
-                <span className="text-gray-200">Tableaux de bord pour MJ</span>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Note de paiement sécurisé */}
-        <div className="mt-8 text-center">
-          <p className="text-sm text-gray-400">
-            🔒 Paiements sécurisés via <span className="font-semibold text-white">Mollie</span>
-          </p>
-          <p className="text-xs text-gray-500 mt-2">
-            Paiement unique • Accès à vie • Support disponible
-          </p>
-        </div>
+        
+{/* Note de paiement sécurisé */}
+<div className="mt-8 text-center">
+  <p className="text-sm text-gray-400">
+    🔒 Paiements sécurisés via <span className="font-semibold text-white">Mollie</span>
+  </p>
+  <p className="text-xs text-gray-500 mt-2">
+    Abonnement annuel • Annulation possible à tout moment
+  </p>
+</div>
       </div>
     </div>
   );
