@@ -198,33 +198,43 @@ function parseGems(md: string): CatalogItem[] {
   for (const table of tables) {
     if (table.length === 0) continue;
     
-    const header = table[0];
+    // ✅ CORRECTION : Vérifier que header est un tableau valide
+    let header = table[0];
+    if (!header || !Array.isArray(header)) continue;
+    
     const body = table.slice(1);
     
-    const nameColIdx = header.findIndex(h => /pierre|gemme|nom/i.test(h));
-    const valueColIdx = header.findIndex(h => /valeur|prix|co[ûu]t/i.test(h));
-    const descColIdx = header.findIndex(h => /description|effet/i.test(h));
+    // Chercher les colonnes pertinentes
+    const nameColIdx = header.findIndex(h => h && /pierre|gemme|nom/i.test(h));
+    const valueColIdx = header.findIndex(h => h && /valeur|prix|co[ûu]t/i.test(h));
+    const descColIdx = header.findIndex(h => h && /description|effet/i.test(h));
     
-    if (nameColIdx === -1) continue;
+    // ✅ Si aucune colonne nom trouvée, essayer la première colonne
+    const finalNameIdx = nameColIdx !== -1 ? nameColIdx : 0;
     
     for (const row of body) {
-      const rawName = row[nameColIdx] || '';
+      if (!row || !Array.isArray(row)) continue; // ✅ Sécurité
+      
+      const rawName = row[finalNameIdx] || '';
       const name = stripPriceParentheses(rawName).trim();
       
+      // Filtrer les lignes vides, headers, et séparateurs
       if (!name || 
           name === '---' || 
           name === '—' ||
           name.length < 2 ||
           /^pierre|^gemme|^valeur|^nom|^description/i.test(name) ||
-          /^-+$/.test(name)) {
+          /^-+$/.test(name) ||
+          /^:?-+:?$/.test(name)) { // ✅ Filtrer séparateurs markdown
         continue;
       }
       
+      // Construire la description
       const parts: string[] = [];
       
       if (valueColIdx !== -1 && row[valueColIdx]) {
         let value = row[valueColIdx].trim();
-        if (value && value !== '---' && value !== '—') {
+        if (value && value !== '---' && value !== '—' && !/^:?-+:?$/.test(value)) {
           const numMatch = value.match(/(\d+)\s*(po|pa|pc|or|argent|cuivre)?/i);
           if (numMatch) {
             const amount = numMatch[1];
@@ -256,23 +266,25 @@ function parseGems(md: string): CatalogItem[] {
       
       if (descColIdx !== -1 && row[descColIdx]) {
         const desc = row[descColIdx].trim();
-        if (desc && desc !== '---' && desc !== '—') {
+        if (desc && desc !== '---' && desc !== '—' && !/^:?-+:?$/.test(desc)) {
           parts.push(desc);
         }
       }
       
       const description = parts.join('\n\n');
       
-      if (!description) continue;
-      
+      // ✅ Permettre les gemmes sans description (juste le nom)
       items.push({
         id: `gem:${name}`,
         kind: 'gems',
         name,
-        description
+        description: description || `Pierre précieuse`
       });
     }
   }
+  
+  // ✅ DEBUG : Logger le nombre de gemmes parsées
+  console.log(`📊 parseGems: ${items.length} gemmes parsées`);
   
   return items;
 }
