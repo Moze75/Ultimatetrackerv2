@@ -2724,49 +2724,65 @@ const [previewLoot, setPreviewLoot] = useState<{
             </button>
           </div>
 
-          {previewLoot && (
-            <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
-              <h4 className="text-sm font-semibold text-green-300 mb-3">🎁 Loot généré :</h4>
-              <div className="space-y-2">
-                {(previewLoot.gold > 0 || previewLoot.silver > 0 || previewLoot.copper > 0) && (
-                  <div className="flex items-center gap-4 text-sm">
-                    {previewLoot.gold > 0 && <span className="text-yellow-400">🟡 {previewLoot.gold} or</span>}
-                    {previewLoot.silver > 0 && <span className="text-gray-300">⚪ {previewLoot.silver} argent</span>}
-                    {previewLoot.copper > 0 && <span className="text-orange-400">🟤 {previewLoot.copper} cuivre</span>}
-                  </div>
-                )}
-                {previewLoot.equipment.length > 0 && (
-                  <div>
-                    <div className="text-xs text-gray-400 mb-1">Équipements :</div>
-                    {previewLoot.equipment.map((eq, idx) => (
-                      <div key={idx} className="text-sm text-purple-300 flex items-center gap-2">
-                        <span>⚔️</span>
-                        <span>{eq.name}</span>
-                        {eq.meta.type === 'weapon' && eq.meta.weapon && (
-                          <span className="text-xs text-gray-400">
-                            ({eq.meta.weapon.damageDice} {eq.meta.weapon.damageType})
-                          </span>
-                        )}
-                        {eq.meta.type === 'armor' && eq.meta.armor && (
-                          <span className="text-xs text-gray-400">
-                            (CA {eq.meta.armor.label})
-                          </span>
-                        )}
-                        {eq.meta.type === 'shield' && eq.meta.shield && (
-                          <span className="text-xs text-gray-400">
-                            (+{eq.meta.shield.bonus} CA)
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {previewLoot.copper === 0 && previewLoot.silver === 0 && previewLoot.gold === 0 && previewLoot.equipment.length === 0 && (
-                  <div className="text-sm text-gray-500">Aucun loot généré</div>
-                )}
-              </div>
+{previewLoot && (
+  <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
+    <h4 className="text-sm font-semibold text-green-300 mb-3">🎁 Loot généré :</h4>
+    <div className="space-y-2">
+      {(previewLoot.gold > 0 || previewLoot.silver > 0 || previewLoot.copper > 0) && (
+        <div className="flex items-center gap-4 text-sm flex-wrap">
+          {previewLoot.gold > 0 && <span className="text-yellow-400">🟡 {previewLoot.gold} or</span>}
+          {previewLoot.silver > 0 && <span className="text-gray-300">⚪ {previewLoot.silver} argent</span>}
+          {previewLoot.copper > 0 && <span className="text-orange-400">🟤 {previewLoot.copper} cuivre</span>}
+        </div>
+      )}
+      {previewLoot.equipment.length > 0 && (
+        <div>
+          <div className="text-xs text-gray-400 mb-1">Équipements :</div>
+          {previewLoot.equipment.map((eq, idx) => (
+            <div key={idx} className="text-sm text-purple-300 flex items-center gap-2">
+              <span>⚔️</span>
+              <span>{eq.name}</span>
+              {eq.meta.type === 'weapon' && eq.meta.weapon && (
+                <span className="text-xs text-gray-400">
+                  ({eq.meta.weapon.damageDice} {eq.meta.weapon.damageType})
+                </span>
+              )}
+              {eq.meta.type === 'armor' && eq.meta.armor && (
+                <span className="text-xs text-gray-400">
+                  (CA {eq.meta.armor.label})
+                </span>
+              )}
+              {eq.meta.type === 'shield' && eq.meta.shield && (
+                <span className="text-xs text-gray-400">
+                  (+{eq.meta.shield.bonus} CA)
+                </span>
+              )}
             </div>
-          )}
+          ))}
+        </div>
+      )}
+      {/* ✅ AJOUT : Affichage des gemmes */}
+      {previewLoot.gems && previewLoot.gems.length > 0 && (
+        <div>
+          <div className="text-xs text-gray-400 mb-1">Pierres précieuses :</div>
+          {previewLoot.gems.map((gem, idx) => (
+            <div key={idx} className="text-sm text-pink-300 flex items-center gap-2">
+              <span>💎</span>
+              <span>{gem.name}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {previewLoot.copper === 0 && 
+       previewLoot.silver === 0 && 
+       previewLoot.gold === 0 && 
+       previewLoot.equipment.length === 0 && 
+       (!previewLoot.gems || previewLoot.gems.length === 0) && (
+        <div className="text-sm text-gray-500">Aucun loot généré</div>
+      )}
+    </div>
+  </div>
+)}
 
           {previewLoot && (
             <>
