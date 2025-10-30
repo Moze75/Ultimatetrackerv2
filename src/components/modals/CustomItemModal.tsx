@@ -90,6 +90,13 @@ export function CustomItemModal({
 
   const [propTags, setPropTags] = React.useState<string[]>([]);
 
+  // 🆕 NOUVEAU : États pour les bonus de stats
+  const [statBonuses, setStatBonuses] = React.useState<StatBonuses>({});
+  
+  const hasAnyStatBonus = React.useMemo(() => {
+    return Object.values(statBonuses).some(val => val && val !== 0);
+  }, [statBonuses]);
+  
   React.useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
