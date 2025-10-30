@@ -253,6 +253,88 @@ meta.weapon = {
           </div>
         )}
 
+        {/* ✅ NOUVEAU : Section bonus pour jewelry, equipment, tool, other */}
+{(type === 'jewelry' || type === 'equipment' || type === 'tool' || type === 'other') && (
+  <div className="mt-4 space-y-3 border-t border-gray-700 pt-4">
+    <h4 className="text-sm font-medium text-gray-300">Bonus (optionnel)</h4>
+    <p className="text-xs text-gray-500">
+      Si cet objet confère des bonus, l'objet deviendra équipable/déséquipable.
+    </p>
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <div>
+        <label className="block text-xs text-gray-400 mb-1">Force</label>
+        <input 
+          type="number" 
+          className="input-dark w-full px-3 py-2 rounded-md" 
+          value={bonusStr} 
+          onChange={e => setBonusStr(e.target.value ? parseInt(e.target.value) : '')} 
+          placeholder="+0"
+        />
+      </div>
+      <div>
+        <label className="block text-xs text-gray-400 mb-1">Dextérité</label>
+        <input 
+          type="number" 
+          className="input-dark w-full px-3 py-2 rounded-md" 
+          value={bonusDex} 
+          onChange={e => setBonusDex(e.target.value ? parseInt(e.target.value) : '')} 
+          placeholder="+0"
+        />
+      </div>
+      <div>
+        <label className="block text-xs text-gray-400 mb-1">Constitution</label>
+        <input 
+          type="number" 
+          className="input-dark w-full px-3 py-2 rounded-md" 
+          value={bonusCon} 
+          onChange={e => setBonusCon(e.target.value ? parseInt(e.target.value) : '')} 
+          placeholder="+0"
+        />
+      </div>
+      <div>
+        <label className="block text-xs text-gray-400 mb-1">Intelligence</label>
+        <input 
+          type="number" 
+          className="input-dark w-full px-3 py-2 rounded-md" 
+          value={bonusInt} 
+          onChange={e => setBonusInt(e.target.value ? parseInt(e.target.value) : '')} 
+          placeholder="+0"
+        />
+      </div>
+      <div>
+        <label className="block text-xs text-gray-400 mb-1">Sagesse</label>
+        <input 
+          type="number" 
+          className="input-dark w-full px-3 py-2 rounded-md" 
+          value={bonusWis} 
+          onChange={e => setBonusWis(e.target.value ? parseInt(e.target.value) : '')} 
+          placeholder="+0"
+        />
+      </div>
+      <div>
+        <label className="block text-xs text-gray-400 mb-1">Charisme</label>
+        <input 
+          type="number" 
+          className="input-dark w-full px-3 py-2 rounded-md" 
+          value={bonusCha} 
+          onChange={e => setBonusCha(e.target.value ? parseInt(e.target.value) : '')} 
+          placeholder="+0"
+        />
+      </div>
+      <div>
+        <label className="block text-xs text-gray-400 mb-1">Classe d'Armure</label>
+        <input 
+          type="number" 
+          className="input-dark w-full px-3 py-2 rounded-md" 
+          value={bonusAC} 
+          onChange={e => setBonusAC(e.target.value ? parseInt(e.target.value) : '')} 
+          placeholder="+0"
+        />
+      </div>
+    </div>
+  </div>
+)}
+
         <div className="mt-4 border-t border-gray-700 pt-4">
           <ImageUrlInput value={imageUrl} onChange={setImageUrl} />
         </div>
