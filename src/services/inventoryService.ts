@@ -3,18 +3,8 @@ import { InventoryItem, Player } from '../types/dnd';
 
 const META_PREFIX = '#meta:';
 
-// 🆕 NOUVEAU
-interface StatBonuses {
-  strength?: number;
-  dexterity?: number;
-  constitution?: number;
-  intelligence?: number;
-  wisdom?: number;
-  charisma?: number;
-}
-
 interface ItemMeta {
-  type: 'armor' | 'shield' | 'weapon' | 'potion' | 'equipment' | 'jewelry' | 'tool' | 'other';
+  type: 'armor' | 'shield' | 'weapon' | 'potion' | 'equipment' | 'jewelry' | 'tool';
   quantity?: number;
   equipped?: boolean;
   weapon?: {
@@ -32,8 +22,6 @@ interface ItemMeta {
   shield?: {
     bonus: number;
   };
-  // 🆕 NOUVEAU
-  statBonuses?: StatBonuses;
 }
 
 function parseMeta(description: string | null | undefined): ItemMeta | null {
@@ -185,137 +173,12 @@ export const inventoryService = {
         .update({ equipment: equipmentUpdate })
         .eq('id', playerId);
 
-          if (equipError) throw equipError;
+      if (equipError) throw equipError;
 
       console.log(`[inventoryService] ${type} ${item.name} équipé avec succès`);
       return true;
     } catch (error) {
       console.error(`Erreur lors de l'équipement du ${type}:`, error);
-      return false;
-    }
-  },
-
-  // 🆕 NOUVEAU : Équiper un objet avec bonus de stats (jewelry/other)
-  async equipStatItem(
-    playerId: string,
-    item: InventoryItem,
-    player: Player
-  ): Promise<boolean> {
-    try {
-      console.log(`[inventoryService.equipStatItem] Équipement de l'objet avec bonus: ${item.name}`);
-
-      const meta = parseMeta(item.description);
-      console.log('[inventoryService.equipStatItem] Meta parsé:', meta);
-
-      if (!meta || !meta.statBonuses || Object.keys(meta.statBonuses).length === 0) {
-        console.error(`[inventoryService.equipStatItem] ERREUR: Item ${item.name} n'a pas de bonus de stats`);
-        return false;
-      }
-
-      // 1. Marquer l'item comme équipé dans inventory_items
-      const updatedMeta = { ...meta, equipped: true };
-      const updatedDesc = injectMetaIntoDescription(visibleDescription(item.description), updatedMeta);
-      const { error: updateError } = await supabase
-        .from('inventory_items')
-        .update({ description: updatedDesc })
-        .eq('id', item.id);
-
-      if (updateError) throw updateError;
-
-      // 2. Mettre à jour les caractéristiques du joueur
-      const newAbilities = { ...player.abilities };
-      
-      if (meta.statBonuses.strength) {
-        newAbilities.strength = (newAbilities.strength || 10) + meta.statBonuses.strength;
-      }
-      if (meta.statBonuses.dexterity) {
-        newAbilities.dexterity = (newAbilities.dexterity || 10) + meta.statBonuses.dexterity;
-      }
-      if (meta.statBonuses.constitution) {
-        newAbilities.constitution = (newAbilities.constitution || 10) + meta.statBonuses.constitution;
-      }
-      if (meta.statBonuses.intelligence) {
-        newAbilities.intelligence = (newAbilities.intelligence || 10) + meta.statBonuses.intelligence;
-      }
-      if (meta.statBonuses.wisdom) {
-        newAbilities.wisdom = (newAbilities.wisdom || 10) + meta.statBonuses.wisdom;
-      }
-      if (meta.statBonuses.charisma) {
-        newAbilities.charisma = (newAbilities.charisma || 10) + meta.statBonuses.charisma;
-      }
-
-      const { error: playerError } = await supabase
-        .from('players')
-        .update({ abilities: newAbilities })
-        .eq('id', playerId);
-
-      if (playerError) throw playerError;
-
-      console.log(`[inventoryService] Objet ${item.name} équipé avec bonus de stats appliqués`);
-      return true;
-    } catch (error) {
-      console.error('Erreur lors de l\'équipement de l\'objet avec bonus:', error);
-      return false;
-    }
-  },
-
-  // 🆕 NOUVEAU : Déséquiper un objet avec bonus de stats
-  async unequipStatItem(
-    playerId: string,
-    item: InventoryItem,
-    player: Player
-  ): Promise<boolean> {
-    try {
-      console.log(`[inventoryService.unequipStatItem] Déséquipement de l'objet: ${item.name}`);
-
-      const meta = parseMeta(item.description);
-      if (!meta || !meta.statBonuses) {
-        return false;
-      }
-
-      // 1. Marquer l'item comme déséquipé
-      const updatedMeta = { ...meta, equipped: false };
-      const updatedDesc = injectMetaIntoDescription(visibleDescription(item.description), updatedMeta);
-      const { error: updateError } = await supabase
-        .from('inventory_items')
-        .update({ description: updatedDesc })
-        .eq('id', item.id);
-
-      if (updateError) throw updateError;
-
-      // 2. Retirer les bonus des caractéristiques
-      const newAbilities = { ...player.abilities };
-      
-      if (meta.statBonuses.strength) {
-        newAbilities.strength = (newAbilities.strength || 10) - meta.statBonuses.strength;
-      }
-      if (meta.statBonuses.dexterity) {
-        newAbilities.dexterity = (newAbilities.dexterity || 10) - meta.statBonuses.dexterity;
-      }
-      if (meta.statBonuses.constitution) {
-        newAbilities.constitution = (newAbilities.constitution || 10) - meta.statBonuses.constitution;
-      }
-      if (meta.statBonuses.intelligence) {
-        newAbilities.intelligence = (newAbilities.intelligence || 10) - meta.statBonuses.intelligence;
-      }
-      if (meta.statBonuses.wisdom) {
-        newAbilities.wisdom = (newAbilities.wisdom || 10) - meta.statBonuses.wisdom;
-      }
-      if (meta.statBonuses.charisma) {
-        newAbilities.charisma = (newAbilities.charisma || 10) - meta.statBonuses.charisma;
-      }
-
-      const { error: playerError } = await supabase
-        .from('players')
-        .update({ abilities: newAbilities })
-        .eq('id', playerId);
-
-      if (playerError) throw playerError;
-
-      console.log(`[inventoryService] Objet ${item.name} déséquipé et bonus retirés`);
-      return true;
-    } catch (error) {
-      console.error('Erreur lors du déséquipement de l\'objet:', error);
       return false;
     }
   }
