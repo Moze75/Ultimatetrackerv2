@@ -121,6 +121,17 @@ export function InventoryItemEditModal({
   const [weaponDamageDice, setWeaponDamageDice] = useState<string>('1d6');
   const [weaponDamageType, setWeaponDamageType] = useState<'Tranchant' | 'Perforant' | 'Contondant'>('Tranchant');
   const [weaponRange, setWeaponRange] = useState<string>('Corps à corps');
+
+
+// ✅ NOUVEAU : Bonus pour jewelry, equipment, tool, other
+const [bonusStr, setBonusStr] = useState<number | ''>('');
+const [bonusDex, setBonusDex] = useState<number | ''>('');
+const [bonusCon, setBonusCon] = useState<number | ''>('');
+const [bonusInt, setBonusInt] = useState<number | ''>('');
+const [bonusWis, setBonusWis] = useState<number | ''>('');
+const [bonusCha, setBonusCha] = useState<number | ''>('');
+const [bonusAC, setBonusAC] = useState<number | ''>('');
+  
   const [weaponCategory, setWeaponCategory] = useState<WeaponCategory>('Armes courantes');
   const [weaponBonus, setWeaponBonus] = useState<number | null>(null);
   const [weaponPropTags, setWeaponPropTags] = useState<string[]>([]);
