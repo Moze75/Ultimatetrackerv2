@@ -690,7 +690,7 @@ const preview = (
         {ci.weapon.range && <div>Portée: {ci.weapon.range}</div>}
       </div>
     )}
-    {ci.kind === 'gems' && <div className="text-purple-400">💎 Pierre précieuse</div>} {/* ✅ AJOUT */}
+    {ci.kind === 'gems' && <div className="text-xs text-gray-400"> Voir le détail</div>}
     {(ci.kind === 'adventuring_gear' || ci.kind === 'tools') && (ci.description ? 'Voir le détail' : 'Équipement')}
   </>
 );
