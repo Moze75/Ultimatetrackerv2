@@ -224,8 +224,7 @@ async function autoEquipItems(
     return;
   }
 
-  // Import dynamique du service d'inventaire
-  const { inventoryService } = await import('./inventoryService');
+
 
   // Équiper l'armure
   const armorItem = toEquip.find(item => item.meta.type === 'armor');
