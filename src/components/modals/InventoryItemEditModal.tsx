@@ -239,7 +239,7 @@ export function InventoryItemEditModal({
     } else if (type === 'shield') {
       const bonus = typeof shieldBonus === 'number' ? shieldBonus : parseInt(String(shieldBonus)) || 0;
       base.shield = { bonus };
-    } else if (type === 'weapon') {
+     } else if (type === 'weapon') {
       const properties = (weaponPropTags.length ? weaponPropTags.join(', ') : weaponPropsFree || '').trim();
       base.weapon = {
         damageDice: weaponDamageDice || '1d6',
@@ -249,6 +249,22 @@ export function InventoryItemEditModal({
         category: weaponCategory || 'Armes courantes',
         weapon_bonus: weaponBonus
       };
+    }
+
+    // ✅ NOUVEAU : Ajouter les bonus si présents
+    const hasBonuses = 
+      bonusStr !== '' || bonusDex !== '' || bonusCon !== '' || 
+      bonusInt !== '' || bonusWis !== '' || bonusCha !== '' || bonusAC !== '';
+
+    if (hasBonuses) {
+      base.bonuses = {};
+      if (bonusStr !== '') base.bonuses.strength = Number(bonusStr);
+      if (bonusDex !== '') base.bonuses.dexterity = Number(bonusDex);
+      if (bonusCon !== '') base.bonuses.constitution = Number(bonusCon);
+      if (bonusInt !== '') base.bonuses.intelligence = Number(bonusInt);
+      if (bonusWis !== '') base.bonuses.wisdom = Number(bonusWis);
+      if (bonusCha !== '') base.bonuses.charisma = Number(bonusCha);
+      if (bonusAC !== '') base.bonuses.armor_class = Number(bonusAC);
     }
 
     return base;
