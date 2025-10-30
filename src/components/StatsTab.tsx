@@ -140,6 +140,54 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
 
   const effectiveProficiency = getProficiencyBonusForLevel(player.level);
 
+  
+  // ✅ NOUVEAU : Fonction pour calculer les bonus d'équipement équipé
+  const calculateEquipmentBonuses = React.useCallback(() => {
+    const bonuses = {
+      Force: 0,
+      Dextérité: 0,
+      Constitution: 0,
+      Intelligence: 0,
+      Sagesse: 0,
+      Charisme: 0,
+      armor_class: 0
+    };
+
+    // Parser les items de l'inventaire
+    if (player.inventory && Array.isArray(player.inventory)) {
+      for (const item of player.inventory) {
+        try {
+          // Extraire les métadonnées de l'item
+          const description = item.description || '';
+          const metaLine = description
+            .split('\n')
+            .reverse()
+            .find((l: string) => l.trim().startsWith('#meta:'));
+          
+          if (!metaLine) continue;
+          
+          const meta = JSON.parse(metaLine.trim().slice(6)); // Enlever "#meta:"
+          
+          // Vérifier si l'item est équipé et a des bonus
+          if (meta.equipped && meta.bonuses) {
+            if (meta.bonuses.strength) bonuses.Force += meta.bonuses.strength;
+            if (meta.bonuses.dexterity) bonuses.Dextérité += meta.bonuses.dexterity;
+            if (meta.bonuses.constitution) bonuses.Constitution += meta.bonuses.constitution;
+            if (meta.bonuses.intelligence) bonuses.Intelligence += meta.bonuses.intelligence;
+            if (meta.bonuses.wisdom) bonuses.Sagesse += meta.bonuses.wisdom;
+            if (meta.bonuses.charisma) bonuses.Charisme += meta.bonuses.charisma;
+            if (meta.bonuses.armor_class) bonuses.armor_class += meta.bonuses.armor_class;
+          }
+        } catch (e) {
+          // Ignorer les erreurs de parsing
+          continue;
+        }
+      }
+    }
+
+    return bonuses;
+  }, [player.inventory]);
+
   const [stats, setStats] = useState(() => ({
     proficiency_bonus: effectiveProficiency,
     jack_of_all_trades: player.stats.jack_of_all_trades || false
