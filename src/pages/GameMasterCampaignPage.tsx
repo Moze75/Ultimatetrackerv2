@@ -2407,22 +2407,31 @@ const [previewLoot, setPreviewLoot] = useState<{
 
   const META_PREFIX = '#meta:';
 
-  useEffect(() => {
-    const loadCatalog = async () => {
-      setLoadingCatalog(true);
-      try {
-        const { loadEquipmentCatalog } = await import('../services/equipmentCatalogService');
-        const items = await loadEquipmentCatalog();
-        setCatalog(items);
-      } catch (error) {
-        console.error('Erreur chargement catalogue:', error);
-        toast.error('Erreur de chargement du catalogue d\'équipements');
-      } finally {
-        setLoadingCatalog(false);
+useEffect(() => {
+  const loadCatalog = async () => {
+    setLoadingCatalog(true);
+    try {
+      const { loadEquipmentCatalog } = await import('../services/equipmentCatalogService');
+      const items = await loadEquipmentCatalog();
+      setCatalog(items);
+      
+      // ✅ DEBUG : Vérifier les gemmes
+      const gemItems = items.filter(item => item.kind === 'gems');
+      console.log('💎 Gemmes chargées:', gemItems.length);
+      if (gemItems.length > 0) {
+        console.log('Exemples de gemmes:', gemItems.slice(0, 3).map(g => g.name));
+      } else {
+        console.warn('⚠️ AUCUNE GEMME TROUVÉE !');
       }
-    };
-    loadCatalog();
-  }, []);
+    } catch (error) {
+      console.error('Erreur chargement catalogue:', error);
+      toast.error('Erreur de chargement du catalogue d\'équipements');
+    } finally {
+      setLoadingCatalog(false);
+    }
+  };
+  loadCatalog();
+}, []);
 
   useEffect(() => {
     if (selectAllRecipients) {
