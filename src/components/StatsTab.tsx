@@ -453,13 +453,7 @@ React.useEffect(() => {
             
             {abilities.map((ability, abilityIndex) => (
 
-   // ✅ RECALCULER LE MODIFICATEUR AVEC LE BONUS ICI AUSSI
-  const equipmentBonuses = calculateEquipmentBonuses();
-  const baseModifier = getModifier(ability.score);
-  const equipmentBonus = equipmentBonuses[ability.name as keyof typeof equipmentBonuses] || 0;
-  const displayModifier = baseModifier + equipmentBonus;
   
-  return (
   
               <div key={ability.name} className="flex flex-col items-center">
                 {/* Contenant principal avec l'image de fond - ✅ Cliquable pour lancer le dé */}
