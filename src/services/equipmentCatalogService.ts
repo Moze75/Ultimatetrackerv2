@@ -366,26 +366,65 @@ function parseSectionedList(md: string, kind: CatalogKind): CatalogItem[] {
 let cachedCatalog: CatalogItem[] | null = null;
 
 export async function loadEquipmentCatalog(): Promise<CatalogItem[]> {
-  if (cachedCatalog) return cachedCatalog;
+  console.log('🔄 loadEquipmentCatalog: Début du chargement');
+  
+  if (cachedCatalog) {
+    console.log('✅ Retour du cache:', cachedCatalog.length, 'items');
+    return cachedCatalog;
+  }
 
   try {
+    console.log('📥 Chargement des fichiers depuis GitHub...');
+    console.log('URLs:', URLS);
+    
     const [armorsMd, shieldsMd, weaponsMd, gearMd, toolsMd, gemsMd] = await Promise.all([
       fetchText(URLS.armors),
       fetchText(URLS.shields),
       fetchText(URLS.weapons),
       fetchText(URLS.adventuring_gear),
       fetchText(URLS.tools),
-      fetchText(URLS.gems), // ✅ AJOUT
+      fetchText(URLS.gems),
     ]);
 
+    console.log('✅ Fichiers chargés:');
+    console.log('  - Armures:', armorsMd.length, 'chars');
+    console.log('  - Boucliers:', shieldsMd.length, 'chars');
+    console.log('  - Armes:', weaponsMd.length, 'chars');
+    console.log('  - Équipement:', gearMd.length, 'chars');
+    console.log('  - Outils:', toolsMd.length, 'chars');
+    console.log('  - 💎 GEMMES:', gemsMd.length, 'chars');
+
+    console.log('\n🔨 Parsing des fichiers...');
+    
+    const armorsItems = parseArmors(armorsMd);
+    console.log('  ✅ Armures:', armorsItems.length);
+    
+    const shieldsItems = parseShields(shieldsMd);
+    console.log('  ✅ Boucliers:', shieldsItems.length);
+    
+    const weaponsItems = parseWeapons(weaponsMd);
+    console.log('  ✅ Armes:', weaponsItems.length);
+    
+    const gearItems = parseSectionedList(gearMd, 'adventuring_gear');
+    console.log('  ✅ Équipement:', gearItems.length);
+    
+    const toolsItems = parseSectionedList(toolsMd, 'tools');
+    console.log('  ✅ Outils:', toolsItems.length);
+    
+    console.log('\n🔍 Appel de parseGems...');
+    const gemsItems = parseGems(gemsMd);
+    console.log('  ✅ Gemmes:', gemsItems.length);
+
     const list: CatalogItem[] = [
-      ...parseArmors(armorsMd),
-      ...parseShields(shieldsMd),
-      ...parseWeapons(weaponsMd),
-      ...parseSectionedList(gearMd, 'adventuring_gear'),
-      ...parseSectionedList(toolsMd, 'tools'),
-      ...parseGems(gemsMd), // ✅ AJOUT
+      ...armorsItems,
+      ...shieldsItems,
+      ...weaponsItems,
+      ...gearItems,
+      ...toolsItems,
+      ...gemsItems,
     ];
+    
+    console.log('\n📊 Total avant dédupliquer:', list.length);
 
     // Dédupliquer
     const seen = new Set<string>();
