@@ -915,10 +915,20 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
         } catch (weaponSaveError) {
           console.error('Erreur sauvegarde armes équipées:', weaponSaveError);
         }
-      } else if (isEquippableItem) {
+  } else if (isEquippableItem) {
         // ✅ NOUVEAU : Gestion équipement/bijoux/outils/autres avec bonus
         if (mode === 'unequip' && meta.equipped) {
           await updateItemMetaComplete(freshItem, { ...meta, equipped: false });
+          
+          // ✅ NOUVEAU : Notifier le changement d'inventaire pour mettre à jour les stats
+          try {
+            window.dispatchEvent(
+              new CustomEvent('inventory:refresh', { detail: { playerId: player.id } })
+            );
+          } catch (e) {
+            console.warn('[performEquipToggle] dispatch inventory:refresh failed', e);
+          }
+          
           const itemTypeName = 
             meta.type === 'jewelry' ? 'Bijou' : 
             meta.type === 'equipment' ? 'Équipement' : 
@@ -926,6 +936,16 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
           toast.success(`${itemTypeName} déséquipé`);
         } else if (mode === 'equip' && !meta.equipped) {
           await updateItemMetaComplete(freshItem, { ...meta, equipped: true });
+          
+          // ✅ NOUVEAU : Notifier le changement d'inventaire pour mettre à jour les stats
+          try {
+            window.dispatchEvent(
+              new CustomEvent('inventory:refresh', { detail: { playerId: player.id } })
+            );
+          } catch (e) {
+            console.warn('[performEquipToggle] dispatch inventory:refresh failed', e);
+          }
+          
           const itemTypeName = 
             meta.type === 'jewelry' ? 'Bijou' : 
             meta.type === 'equipment' ? 'Équipement' : 
