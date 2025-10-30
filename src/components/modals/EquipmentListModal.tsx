@@ -2,7 +2,6 @@ import React from 'react';
 import { Search, X, Check, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getWeaponCategory } from '../../utils/weaponProficiencyChecker'; 
-import MarkdownLite from '../MarkdownLite'; // ✅ AJOUT
 
 /* Types locaux (alignés sur EquipmentTab) */
 type MetaType = 'armor' | 'shield' | 'weapon' | 'potion' | 'equipment' | 'jewelry' | 'tool' | 'other';
@@ -697,10 +696,10 @@ const preview = (
                   </div>
 {isOpen && (
   <div className="px-3 pb-3">
-    {(ci.kind === 'adventuring_gear' || ci.kind === 'tools' || ci.kind === 'gems')
-      ? <MarkdownLite content={(ci.description || '').trim()} /> {/* ✅ Changé: text → content */}
+    {(ci.kind === 'adventuring_gear' || ci.kind === 'tools' || ci.kind === 'gems') // ✅ Ajout
+      ? <MarkdownLite text={(ci.description || '').trim()} />
       : <div className="text-sm text-gray-400">Aucun détail supplémentaire</div>}
-  </div>
+  </div> 
 )}
                 </div>
               );
