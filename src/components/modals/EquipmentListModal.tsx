@@ -340,7 +340,60 @@ function parseTools(md: string): CatalogItem[] {
   return [...dedup.values()];
 }
 
- 
+ // ✅ COLLEZ ICI ⬇️
+function parseGems(md: string): CatalogItem[] {
+  const items: CatalogItem[] = [];
+  const tables = parseMarkdownTables(md);
+  
+  for (const table of tables) {
+    if (table.length === 0) continue;
+    
+    const header = table[0];
+    const body = table.slice(1);
+    
+    // Chercher les colonnes pertinentes
+    const nameColIdx = header.findIndex(h => /pierre|gemme|nom/i.test(h));
+    const valueColIdx = header.findIndex(h => /valeur|prix|co[ûu]t/i.test(h));
+    const descColIdx = header.findIndex(h => /description|effet/i.test(h));
+    
+    if (nameColIdx === -1) continue;
+    
+    for (const row of body) {
+      const rawName = row[nameColIdx] || '';
+      const name = stripPriceParentheses(rawName).trim();
+      
+      if (!name || name === '---' || /^pierre|^gemme|^valeur/i.test(name)) continue;
+      
+      // Construire la description
+      const parts: string[] = [];
+      
+      if (valueColIdx !== -1 && row[valueColIdx]) {
+        const value = row[valueColIdx].trim();
+        if (value && value !== '---') {
+          parts.push(`**Valeur**: ${value}`);
+        }
+      }
+      
+      if (descColIdx !== -1 && row[descColIdx]) {
+        const desc = row[descColIdx].trim();
+        if (desc && desc !== '---') {
+          parts.push(desc);
+        }
+      }
+      
+      const description = parts.join('\n\n');
+      
+      items.push({
+        id: `gem:${name}`,
+        kind: 'gems',
+        name,
+        description: description || 'Pierre précieuse'
+      });
+    }
+  }
+  
+  return items;
+}
 
 /* Props */
 type FilterState = {
