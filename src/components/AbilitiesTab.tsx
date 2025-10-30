@@ -215,41 +215,62 @@ useEffect(() => {
 
   // Bard: clamp used_bardic_inspiration if cap auto changes
   const lastClampKey = useRef<string | null>(null);
-  useEffect(() => {
-    if (player.class !== 'Barde' || !player?.id) return; 
+ useEffect(() => {
+  // 🔹 1. Créer un flag pour détecter le démontage
+  let isCancelled = false;
 
-    const cap = getBardicCap(player);
-    const upper = Math.max(0, cap);
-    const used = player.class_resources?.used_bardic_inspiration || 0;
-    const key = `${player.id}:${cap}:${used}`;
+  if (player.class !== 'Barde' || !player?.id) return;
 
-    if (lastClampKey.current === key) return;
+  const cap = getBardicCap(player);
+  const upper = Math.max(0, cap);
+  const used = player.class_resources?.used_bardic_inspiration || 0;
+  const key = `${player.id}:${cap}:${used}`;
 
-    if (used > upper) {
-      const next: ClassResources = {
-        ...(player.class_resources || {}),
-        used_bardic_inspiration: upper,
-      };
-      (async () => {
-        try {
-          const { error } = await supabase.from('players').update({ class_resources: next }).eq('id', player.id);
-          if (error) throw error;
-          onUpdate({ ...player, class_resources: next });
-          lastClampKey.current = key;
-        } catch (e) {
-          console.error('[AbilitiesTab] clamp bard used error:', e);
-          lastClampKey.current = null;
+  if (lastClampKey.current === key) return;
+
+  if (used > upper) {
+    const next: ClassResources = {
+      ...(player.class_resources || {}),
+      used_bardic_inspiration: upper,
+    };
+
+    (async () => {
+      try {
+        const { error } = await supabase
+          .from('players')
+          .update({ class_resources: next })
+          .eq('id', player.id);
+
+        // 🔹 2. Vérifier si le composant existe encore
+        if (isCancelled) {
+          console.log('⚠️ Composant démonté, annulation de la mise à jour');
+          return; // ❌ Ne pas mettre à jour le state !
         }
-      })();
-    } else {
-      lastClampKey.current = key;
-    }
-  }, [
-    player?.id,
-    player?.class,
-    player?.class_resources?.used_bardic_inspiration,
-    player.abilities,
-  ]);
+
+        if (error) throw error;
+
+        onUpdate({ ...player, class_resources: next }); // ✅ Safe maintenant
+        lastClampKey.current = key;
+      } catch (e) {
+        if (isCancelled) return; // Ne pas logger si démonté
+        console.error('[AbilitiesTab] clamp bard used error:', e);
+        lastClampKey.current = null;
+      }
+    })();
+  } else {
+    lastClampKey.current = key;
+  }
+
+  // 🔹 3. Fonction de nettoyage (cleanup)
+  return () => {
+    isCancelled = true; // ✅ Marquer comme annulé au démontage
+  };
+}, [
+  player?.id,
+  player?.class,
+  player?.class_resources?.used_bardic_inspiration,
+  player.abilities,
+]);
 
   const handleSpellSlotChange = async (level: number, used: boolean) => {
     if (!player.spell_slots) return;
