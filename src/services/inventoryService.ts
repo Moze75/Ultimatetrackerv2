@@ -3,8 +3,18 @@ import { InventoryItem, Player } from '../types/dnd';
 
 const META_PREFIX = '#meta:';
 
+// 🆕 NOUVEAU
+interface StatBonuses {
+  strength?: number;
+  dexterity?: number;
+  constitution?: number;
+  intelligence?: number;
+  wisdom?: number;
+  charisma?: number;
+}
+
 interface ItemMeta {
-  type: 'armor' | 'shield' | 'weapon' | 'potion' | 'equipment' | 'jewelry' | 'tool';
+  type: 'armor' | 'shield' | 'weapon' | 'potion' | 'equipment' | 'jewelry' | 'tool' | 'other';
   quantity?: number;
   equipped?: boolean;
   weapon?: {
@@ -22,6 +32,8 @@ interface ItemMeta {
   shield?: {
     bonus: number;
   };
+  // 🆕 NOUVEAU
+  statBonuses?: StatBonuses;
 }
 
 function parseMeta(description: string | null | undefined): ItemMeta | null {
