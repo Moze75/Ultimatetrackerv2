@@ -293,6 +293,12 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
     setAbilities(updateAbilityModifiers(newAbilities, stats, effectiveProficiency));
   };
 
+  // ✅ NOUVEAU : Recalculer les modificateurs quand l'inventaire change
+  React.useEffect(() => {
+    const updatedAbilities = updateAbilityModifiers(abilities, stats, effectiveProficiency);
+    setAbilities(updatedAbilities);
+  }, [player.inventory]); // eslint-disable-line react-hooks/exhaustive-deps
+  
   // ✅ Fonctions pour lancer les dés avec les bons libellés
   const rollAbilityCheck = (ability: Ability) => {
     if (editing) return;
