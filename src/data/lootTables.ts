@@ -89,23 +89,23 @@ export type EnemyCount = '1' | '2-4' | '5-10' | '11+';
 // ✅ NOUVEAU : Montants spécifiques par type de monnaie et niveau
 export const CURRENCY_AMOUNTS = {
   '1-4': {
-    copper: { min: 5,  max: 200 },      // 5-200 pc
-    silver: { min: 1,  max: 50  },      // 1-50 pa
-    gold:   { min: 1,  max: 20  }       // 1-20 po
+    copper: { min: 1,  max: 50 },
+    silver: { min: 1,  max: 20 },
+    gold:   { min: 1,  max: 10 }
   },
   '5-10': {
-    copper: { min: 10, max: 500 },      // 10-500 pc
-    silver: { min: 5,  max: 200 },      // 5-200 pa
-    gold:   { min: 5,  max: 100 }       // 5-100 po
+    copper: { min: 1,  max: 50 },
+    silver: { min: 5,  max: 50 },
+    gold:   { min: 5,  max: 50 }
   },
   '11-16': {
-    copper: { min: 20,  max: 1000 },     // 20-1000 pc
-    silver: { min: 10,  max: 500  },     // 10-500 pa
-    gold:   { min: 20,  max: 500  }      // 20-500 po
+    copper: { min: 1,  max: 50 },
+    silver: { min: 10, max: 100 },
+    gold:   { min: 10, max: 200 }
   },
   '17-20': {
-    copper: { min: 50,  max: 2000 },     // 50-2000 pc
-    silver: { min: 50,  max: 1000 },     // 50-1000 pa
-    gold:   { min: 100, max: 2000 }      // 100-2000 po
+    copper: { min: 1,  max: 50 },
+    silver: { min: 10, max: 200 },
+    gold:   { min: 50, max: 500 }
   }
 };
