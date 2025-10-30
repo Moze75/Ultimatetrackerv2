@@ -1301,13 +1301,15 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
             {filteredInventory.map(item => {
               const meta = parseMeta(item.description);
               const qty = meta?.quantity ?? 1;
-              const isArmor = meta?.type === 'armor';
+                const isArmor = meta?.type === 'armor';
               const isShield = meta?.type === 'shield';
               const isWeapon = meta?.type === 'weapon';
+              const hasStatBonus = meta?.statBonuses && Object.keys(meta.statBonuses).length > 0; // 🆕 NOUVEAU
               const isEquipped =
                 (isArmor && armor?.inventory_item_id === item.id) ||
                 (isShield && shield?.inventory_item_id === item.id) ||
-                (isWeapon && meta?.equipped === true);
+                (isWeapon && meta?.equipped === true) ||
+                (hasStatBonus && meta?.equipped === true); // 🆕 NOUVEAU
 
               // --- ADDED: calcul maîtrise arme
               let weaponProficiency: WeaponProficiencyCheck | null = null;
