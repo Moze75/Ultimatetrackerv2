@@ -976,7 +976,7 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
     setProficiencyCheck(null);
   };
 
-  const requestToggleWithConfirm = (item: InventoryItem) => {
+   const requestToggleWithConfirm = (item: InventoryItem) => {
     if (pendingEquipment.has(item.id)) return;
     const freshItem = inventory.find(i => i.id === item.id);
     if (!freshItem) {
@@ -990,10 +990,32 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
     const isShield = meta.type === 'shield';
     const isWeapon = meta.type === 'weapon';
 
+    // ✅ NOUVEAU : Détecter les objets équipables avec bonus
+    const hasBonuses = meta?.bonuses && Object.keys(meta.bonuses).length > 0;
+    const isEquippableItem = hasBonuses && 
+      (meta?.type === 'jewelry' || meta?.type === 'equipment' || 
+       meta?.type === 'tool' || meta?.type === 'other');
+
+    // ✅ DEBUG : Log pour comprendre l'état
+    console.log('🔧 [requestToggleWithConfirm]', {
+      itemName: freshItem.name,
+      type: meta.type,
+      hasBonuses,
+      isEquippableItem,
+      currentEquipped: meta.equipped
+    });
+
     const equipped =
       (isArmor && armor?.inventory_item_id === freshItem.id) ||
       (isShield && shield?.inventory_item_id === freshItem.id) ||
-      (isWeapon && meta.equipped === true);
+      (isWeapon && meta.equipped === true) ||
+      (isEquippableItem && meta.equipped === true); // ✅ AJOUT : Vérifier l'état équipé pour les items avec bonus
+
+    // ✅ DEBUG : Afficher le mode qui sera utilisé
+    console.log('🔧 [requestToggleWithConfirm] État calculé:', {
+      equipped,
+      mode: equipped ? 'unequip' : 'equip'
+    });
 
     // --- ADDED: calc maîtrise pour affichage dans le modal
     let showWarning = false;
