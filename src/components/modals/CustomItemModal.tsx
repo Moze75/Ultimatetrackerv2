@@ -13,13 +13,33 @@ type WeaponCategory =
 interface WeaponMeta {
   damageDice: string;
   damageType: 'Tranchant' | 'Perforant' | 'Contondant';
-  properties: string;            // string lisible, ex: "Finesse, Légère"
-  range: string;                 // libellé FR, ex: "Corps à corps", "6 m", etc.
+  properties: string;
+  range: string;
   category?: WeaponCategory;
   weapon_bonus?: number | null;
 }
-interface ArmorMeta { base: number; addDex: boolean; dexCap?: number | null; label: string; }
-interface ShieldMeta { bonus: number; }
+
+interface ArmorMeta { 
+  base: number; 
+  addDex: boolean; 
+  dexCap?: number | null; 
+  label: string; 
+}
+
+interface ShieldMeta { 
+  bonus: number; 
+}
+
+// 🆕 NOUVEAU : Interface pour les bonus de stats
+interface StatBonuses {
+  strength?: number;
+  dexterity?: number;
+  constitution?: number;
+  intelligence?: number;
+  wisdom?: number;
+  charisma?: number;
+}
+
 export interface ItemMeta {
   type: MetaType;
   quantity?: number;
@@ -28,6 +48,8 @@ export interface ItemMeta {
   armor?: ArmorMeta;
   shield?: ShieldMeta;
   imageUrl?: string;
+  // 🆕 NOUVEAU : Bonus de stats pour bijoux/other
+  statBonuses?: StatBonuses;
 }
 
 const stripPriceParentheses = (name: string) =>
