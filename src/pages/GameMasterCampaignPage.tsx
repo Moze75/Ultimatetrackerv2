@@ -8,7 +8,7 @@ import { campaignService } from '../services/campaignService';
 import { Campaign, CampaignMember, CampaignInventoryItem, CampaignInvitation } from '../types/campaign';
 import toast from 'react-hot-toast';
 
-import { LOOT_TABLES, CURRENCY_AMOUNTS, LevelRange, Difficulty, EnemyCount } from '../data/lootTables';
+import { LOOT_TABLES, CURRENCY_AMOUNTS, GEM_AMOUNTS, LevelRange, Difficulty, EnemyCount } from '../data/lootTables';
 import { Dices } from 'lucide-react'; // Ajoutez cette icône
 
 // Réutilisation des modals d'équipement
