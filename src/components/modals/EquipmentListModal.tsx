@@ -2,7 +2,6 @@ import React from 'react';
 import { Search, X, Check, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getWeaponCategory } from '../../utils/weaponProficiencyChecker'; 
-import MarkdownLite from '../MarkdownLite';
 
 /* Types locaux (alignés sur EquipmentTab) */
 type MetaType = 'armor' | 'shield' | 'weapon' | 'potion' | 'equipment' | 'jewelry' | 'tool' | 'other';
@@ -203,7 +202,65 @@ function parseWeapons(md: string): CatalogItem[] {
   return items;
 }
 
+/* Markdown renderer simple (tables + listes) */ 
+function isMarkdownTableLine(line: string) {
+  const l = line.trim();
+  return l.startsWith('|') && l.endsWith('|') && l.includes('|');
+}
 
+function MarkdownLite({ text }: { text: string }) {
+  // ✅ Fonction pour rendre le texte avec markdown basique
+  const renderText = (str: string) => {
+    const parts = str.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((part, idx) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={idx} className="font-semibold text-gray-200">{part.slice(2, -2)}</strong>;
+      }
+      return <span key={idx}>{part}</span>;
+    });
+  };
+
+  const blocks = text.split(/\n{2,}/g).map(b => b.split('\n'));
+  return (
+    <div className="space-y-2">
+      {blocks.map((lines, idx) => {
+        if (lines.length >= 2 && isMarkdownTableLine(lines[0])) {
+          const tableLines: string[] = [];
+          for (const l of lines) if (isMarkdownTableLine(l)) tableLines.push(l);
+          const rows: string[][] = [];
+          for (const tl of tableLines) {
+            const cells = tl.substring(1, tl.length - 1).split('|').map(c => c.trim());
+            if (cells.every(c => /^[-:\s]+$/.test(c))) continue;
+            rows.push(cells);
+          }
+          if (rows.length === 0) return null;
+          const header = rows[0];
+          const body = rows.slice(1);
+          return (
+            <div key={idx} className="overflow-x-auto">
+              <table className="w-full text-left text-sm border border-gray-700/50 rounded-md overflow-hidden">
+                <thead className="bg-gray-800/60">
+                  <tr>{header.map((c, i) => <th key={i} className="px-2 py-1 border-b border-gray-700/50">{renderText(c)}</th>)}</tr>
+                </thead>
+                <tbody>
+                  {body.map((r, ri) => (
+                    <tr key={ri} className="odd:bg-gray-800/30">
+                      {r.map((c, ci) => <td key={ci} className="px-2 py-1 align-top border-b border-gray-700/30">{renderText(c)}</td>)}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        }
+        if (lines.every(l => l.trim().startsWith('- '))) {
+          return <ul key={idx} className="list-disc pl-5 space-y-1">{lines.map((l, i) => <li key={i} className="text-sm text-gray-300">{renderText(l.replace(/^- /, ''))}</li>)}</ul>;
+        }
+        return <p key={idx} className="text-sm text-gray-300 whitespace-pre-wrap">{renderText(lines.join('\n'))}</p>;
+      })}
+    </div>
+  );
+}
 
 /* OUTILS parsing robuste (tables + sections) */
 function parseMarkdownTables(md: string): string[][][] {
@@ -697,8 +754,8 @@ const preview = (
                   </div>
 {isOpen && (
   <div className="px-3 pb-3">
-    {(ci.kind === 'adventuring_gear' || ci.kind === 'tools' || ci.kind === 'gems')
-      ? <MarkdownLite content={(ci.description || '').trim()} />
+    {(ci.kind === 'adventuring_gear' || ci.kind === 'tools' || ci.kind === 'gems') // ✅ Ajout
+      ? <MarkdownLite text={(ci.description || '').trim()} />
       : <div className="text-sm text-gray-400">Aucun détail supplémentaire</div>}
   </div>
 )}
