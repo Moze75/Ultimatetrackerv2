@@ -2399,8 +2399,31 @@ function RandomLootModal({
     copper: number;
     silver: number;
     gold: number;
-    equipment: string[];
+    equipment: Array<{ name: string; meta: any; description?: string }>;
   } | null>(null);
+  const [loadingCatalog, setLoadingCatalog] = useState(false);
+  const [catalog, setCatalog] = useState<any[]>([]);
+
+  const META_PREFIX = '#meta:';
+
+  // Charger le catalogue au montage
+  useEffect(() => {
+    const loadCatalog = async () => {
+      setLoadingCatalog(true);
+      try {
+        // Import dynamique pour éviter les dépendances circulaires
+        const { loadEquipmentCatalog } = await import('../services/equipmentCatalogService');
+        const items = await loadEquipmentCatalog();
+        setCatalog(items);
+      } catch (error) {
+        console.error('Erreur chargement catalogue:', error);
+        toast.error('Erreur de chargement du catalogue d\'équipements');
+      } finally {
+        setLoadingCatalog(false);
+      }
+    };
+    loadCatalog();
+  }, []);
 
   useEffect(() => {
     if (selectAllRecipients) {
@@ -2419,11 +2442,32 @@ function RandomLootModal({
     setSelectAllRecipients(false);
   };
 
-  // Fonction pour obtenir un équipement aléatoire de l'inventaire de campagne
-  const getRandomEquipment = (): CampaignInventoryItem | null => {
-    if (inventory.length === 0) return null;
-    const randomIndex = Math.floor(Math.random() * inventory.length);
-    return inventory[randomIndex];
+  // Fonction pour obtenir un équipement aléatoire du catalogue
+  const getRandomEquipmentFromCatalog = () => {
+    if (catalog.length === 0) return null;
+    
+    // Filtrer selon le niveau pour avoir des équipements appropriés
+    let types: any[] = [];
+    
+    if (levelRange === '1-4') {
+      // Niveau bas : armes courantes, armures légères, équipement de base
+      types = ['weapons', 'adventuring_gear', 'tools'];
+    } else if (levelRange === '5-10') {
+      // Niveau moyen : plus d'armures et boucliers
+      types = ['weapons', 'armors', 'shields', 'adventuring_gear'];
+    } else if (levelRange === '11-16') {
+      // Niveau élevé : tous types
+      types = ['weapons', 'armors', 'shields', 'adventuring_gear', 'tools'];
+    } else {
+      // Niveau 17-20 : focus sur armes et armures
+      types = ['weapons', 'armors', 'shields'];
+    }
+    
+    const filtered = catalog.filter(item => types.includes(item.kind));
+    if (filtered.length === 0) return null;
+    
+    const randomIndex = Math.floor(Math.random() * filtered.length);
+    return filtered[randomIndex];
   };
 
   // Génération du loot selon les probabilités
@@ -2439,24 +2483,56 @@ function RandomLootModal({
     // Répartition selon les probabilités
     const roll = Math.random() * 100;
     let copper = 0, silver = 0, gold = 0;
-    const equipment: string[] = [];
+    const equipment: Array<{ name: string; meta: any; description?: string }> = [];
 
     if (roll < probs.copper) {
+      // 100% cuivre
       copper = totalCopper;
     } else if (roll < probs.copper + probs.silver) {
+      // Argent
       silver = Math.floor(totalCopper / 10);
+      copper = totalCopper % 10;
     } else if (roll < probs.copper + probs.silver + probs.gold) {
+      // Or
       gold = Math.floor(totalCopper / 100);
+      silver = Math.floor((totalCopper % 100) / 10);
+      copper = totalCopper % 10;
     } else {
       // Équipement
-      const numItems = levelRange === '1-4' ? 1 : levelRange === '5-10' ? Math.random() < 0.5 ? 1 : 2 : Math.random() < 0.3 ? 1 : 2;
+      const numItems = 
+        levelRange === '1-4' ? 1 : 
+        levelRange === '5-10' ? (Math.random() < 0.5 ? 1 : 2) : 
+        levelRange === '11-16' ? (Math.random() < 0.3 ? 1 : Math.random() < 0.7 ? 2 : 3) :
+        (Math.random() < 0.2 ? 1 : Math.random() < 0.6 ? 2 : 3);
+      
       for (let i = 0; i < numItems; i++) {
-        const item = getRandomEquipment();
-        if (item) equipment.push(item.name);
+        const item = getRandomEquipmentFromCatalog();
+        if (item) {
+          // Construire la meta selon le type
+          let meta: any = { type: 'equipment', quantity: 1, equipped: false };
+          
+          if (item.kind === 'armors' && item.armor) {
+            meta = { type: 'armor', quantity: 1, equipped: false, armor: item.armor };
+          } else if (item.kind === 'shields' && item.shield) {
+            meta = { type: 'shield', quantity: 1, equipped: false, shield: item.shield };
+          } else if (item.kind === 'weapons' && item.weapon) {
+            meta = { type: 'weapon', quantity: 1, equipped: false, weapon: item.weapon };
+          } else if (item.kind === 'tools') {
+            meta = { type: 'tool', quantity: 1, equipped: false };
+          }
+          
+          equipment.push({
+            name: item.name,
+            meta,
+            description: item.description || ''
+          });
+        }
       }
+      
       // Un peu d'argent en plus
       const bonusCopper = Math.floor(totalCopper * 0.3);
-      silver = Math.floor(bonusCopper / 10);
+      gold = Math.floor(bonusCopper / 100);
+      silver = Math.floor((bonusCopper % 100) / 10);
       copper = bonusCopper % 10;
     }
 
@@ -2464,6 +2540,10 @@ function RandomLootModal({
   };
 
   const handlePreview = () => {
+    if (loadingCatalog) {
+      toast.error('Chargement du catalogue en cours...');
+      return;
+    }
     const loot = generateLoot();
     setPreviewLoot(loot);
   };
@@ -2496,19 +2576,16 @@ function RandomLootModal({
       }
 
       // Envoi des équipements
-      for (const equipName of previewLoot.equipment) {
-        const item = inventory.find(i => i.name === equipName);
-        if (!item) continue;
-
-        const META_PREFIX = '#meta:';
-        const getFullDescription = (item: CampaignInventoryItem) => {
-          if (!item.description) return '';
-          return item.description;
-        };
+      for (const equip of previewLoot.equipment) {
+        const metaLine = `${META_PREFIX}${JSON.stringify(equip.meta)}`;
+        const visibleDesc = (equip.description || '').trim();
+        const fullDescription = visibleDesc 
+          ? `${visibleDesc}\n${metaLine}`
+          : metaLine;
 
         await campaignService.sendGift(campaignId, 'item', {
-          itemName: item.name,
-          itemDescription: getFullDescription(item),
+          itemName: equip.name,
+          itemDescription: fullDescription,
           itemQuantity: 1,
           gold: 0,
           silver: 0,
@@ -2516,16 +2593,7 @@ function RandomLootModal({
           distributionMode,
           message: message.trim() || `🎲 Loot aléatoire (Niveau ${levelRange}, ${difficulty})`,
           recipientIds: recipientIds || undefined,
-          inventoryItemId: item.id,
         });
-
-        // Décrémenter l'inventaire
-        const newQuantity = item.quantity - 1;
-        if (newQuantity > 0) {
-          await campaignService.updateCampaignItem(item.id, { quantity: newQuantity });
-        } else {
-          await campaignService.deleteCampaignItem(item.id);
-        }
       }
 
       toast.success('Loot aléatoire envoyé !');
@@ -2553,6 +2621,15 @@ function RandomLootModal({
             <X size={20} />
           </button>
         </div>
+
+        {loadingCatalog && (
+          <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-400" />
+              <p className="text-sm text-blue-200">Chargement du catalogue d'équipements...</p>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-6">
           {/* Paramètres de la rencontre */}
@@ -2623,10 +2700,11 @@ function RandomLootModal({
             {/* Bouton de génération */}
             <button
               onClick={handlePreview}
-              className="w-full btn-primary px-4 py-2 rounded-lg flex items-center justify-center gap-2"
+              disabled={loadingCatalog}
+              className="w-full btn-primary px-4 py-2 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <Dices size={18} />
-              Générer le loot
+              {loadingCatalog ? 'Chargement...' : 'Générer le loot'}
             </button>
           </div>
 
@@ -2646,12 +2724,30 @@ function RandomLootModal({
                   <div>
                     <div className="text-xs text-gray-400 mb-1">Équipements :</div>
                     {previewLoot.equipment.map((eq, idx) => (
-                      <div key={idx} className="text-sm text-purple-300">⚔️ {eq}</div>
+                      <div key={idx} className="text-sm text-purple-300 flex items-center gap-2">
+                        <span>⚔️</span>
+                        <span>{eq.name}</span>
+                        {eq.meta.type === 'weapon' && eq.meta.weapon && (
+                          <span className="text-xs text-gray-400">
+                            ({eq.meta.weapon.damageDice} {eq.meta.weapon.damageType})
+                          </span>
+                        )}
+                        {eq.meta.type === 'armor' && eq.meta.armor && (
+                          <span className="text-xs text-gray-400">
+                            (CA {eq.meta.armor.label})
+                          </span>
+                        )}
+                        {eq.meta.type === 'shield' && eq.meta.shield && (
+                          <span className="text-xs text-gray-400">
+                            (+{eq.meta.shield.bonus} CA)
+                          </span>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}
                 {previewLoot.copper === 0 && previewLoot.silver === 0 && previewLoot.gold === 0 && previewLoot.equipment.length === 0 && (
-                  <div className="text-sm text-gray-500">Aucun loot généré (pas d'équipement disponible dans l'inventaire)</div>
+                  <div className="text-sm text-gray-500">Aucun loot généré</div>
                 )}
               </div>
             </div>
