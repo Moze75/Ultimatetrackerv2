@@ -82,46 +82,62 @@ const [bonusAC, setBonusAC] = React.useState<number | ''>('');
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-  const add = () => {
-    const cleanNameRaw = name.trim();
-    if (!cleanNameRaw) return toast.error('Nom requis');
-    if (quantity <= 0) return toast.error('Quantité invalide');
+ const add = () => {
+  const cleanNameRaw = name.trim();
+  if (!cleanNameRaw) return toast.error('Nom requis');
+  if (quantity <= 0) return toast.error('Quantité invalide');
 
-    const cleanName = smartCapitalize(cleanNameRaw);
+  const cleanName = smartCapitalize(cleanNameRaw);
 
-    const meta: ItemMeta = {
-      type,
-      quantity,
-      equipped: false,
-      imageUrl: imageUrl.trim() || undefined
-    };
-
-    if (type === 'armor') {
-      const cap = armDexCap === '' ? null : Number(armDexCap);
-      meta.armor = {
-        base: armBase,
-        addDex: armAddDex,
-        dexCap: cap,
-        label: `${armBase}${armAddDex ? ` + modificateur de Dex${cap != null ? ` (max ${cap})` : ''}` : ''}`
-      };
-    } else if (type === 'shield') {
-      meta.shield = { bonus: shieldBonus };
-    } else if (type === 'weapon') {
-      // Construire la chaîne properties depuis la checklist ou le fallback libre
-     const properties = (propTags.length ? propTags.join(', ') : wProps || '').trim();
-meta.weapon = {
-  damageDice: wDice,
-  damageType: wType,
-  properties,
-  range: wRange,
-  category: wCategory,
-  weapon_bonus: wBonus
-};
-    }
-
-    onAdd({ name: cleanName, description: description.trim(), meta });
-    onClose();
+  const meta: ItemMeta = {
+    type,
+    quantity,
+    equipped: false,
+    imageUrl: imageUrl.trim() || undefined
   };
+
+  if (type === 'armor') {
+    const cap = armDexCap === '' ? null : Number(armDexCap);
+    meta.armor = {
+      base: armBase,
+      addDex: armAddDex,
+      dexCap: cap,
+      label: `${armBase}${armAddDex ? ` + modificateur de Dex${cap != null ? ` (max ${cap})` : ''}` : ''}`
+    };
+  } else if (type === 'shield') {
+    meta.shield = { bonus: shieldBonus };
+  } else if (type === 'weapon') {
+    // Construire la chaîne properties depuis la checklist ou le fallback libre
+    const properties = (propTags.length ? propTags.join(', ') : wProps || '').trim();
+    meta.weapon = {
+      damageDice: wDice,
+      damageType: wType,
+      properties,
+      range: wRange,
+      category: wCategory,
+      weapon_bonus: wBonus
+    };
+  }
+
+  // ✅ NOUVEAU : Ajouter les bonus si présents (jewelry, equipment, tool, other)
+  const hasBonuses = 
+    bonusStr !== '' || bonusDex !== '' || bonusCon !== '' || 
+    bonusInt !== '' || bonusWis !== '' || bonusCha !== '' || bonusAC !== '';
+
+  if (hasBonuses) {
+    meta.bonuses = {};
+    if (bonusStr !== '') meta.bonuses.strength = Number(bonusStr);
+    if (bonusDex !== '') meta.bonuses.dexterity = Number(bonusDex);
+    if (bonusCon !== '') meta.bonuses.constitution = Number(bonusCon);
+    if (bonusInt !== '') meta.bonuses.intelligence = Number(bonusInt);
+    if (bonusWis !== '') meta.bonuses.wisdom = Number(bonusWis);
+    if (bonusCha !== '') meta.bonuses.charisma = Number(bonusCha);
+    if (bonusAC !== '') meta.bonuses.armor_class = Number(bonusAC);
+  }
+
+  onAdd({ name: cleanName, description: description.trim(), meta });
+  onClose();
+};
 
   return (
     <div className="fixed inset-0 z-[9999]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
