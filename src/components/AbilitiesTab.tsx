@@ -1,867 +1,1099 @@
-import React, { useState } from 'react';
-import { Heart, Plus, Sword, Swords, Shield, Settings, Trash2 } from 'lucide-react';
-import { Player, Attack } from '../types/dnd';
-import toast from 'react-hot-toast';
-import { ConditionsSection } from './ConditionsSection';
-import { DiceRoller } from '../components/DiceRoller';
-import { StandardActionsSection } from './StandardActionsSection';
-import { attackService } from '../services/attackService';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  BookOpen,
+  Plus,
+  Minus,
+  Settings,
+  X,
+  Book,
+  Sparkles,
+  Flame,
+  Music,
+  Cross,
+  Leaf,
+  Wand2,
+  Swords,
+  Footprints,
+  HandHeart,
+  Target,
+  Skull,
+  Trash2,
+  Save,
+} from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import './combat-tab.css';
-import { inferWeaponAbilityMod } from '../utils/inferWeaponAbility';
+import toast from 'react-hot-toast';
+import { SpellbookModal } from './SpellbookModal';
+import { KnownSpellsSection } from './KnownSpellsSection';
+import { SpellSlotSelectionModal } from './SpellSlotSelectionModal';
+import type { Player, SpellSlots, ClassResources, DndClass } from '../types/dnd';
+import { getSpellSlotsByLevel } from '../utils/spellSlots2024';
 
-interface CombatTabProps {
-  player: Player;
-  onUpdate: (player: Player) => void;
-}
+/* ============================ Helpers ============================ */
 
-interface AttackEditModalProps {
-  attack: Attack | null;
-  onClose: () => void;
-  onSave: (attack: Partial<Attack>) => void;
-  onDelete?: () => void;
-}
+const getChaModFromPlayer = (p: Player): number => {
+  const abilities: any = (p as any)?.abilities;
 
-// Icône locale "Bow" (style Lucide)
-const BowIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="M4 20c6-4 6-12 0-16" />
-    <path d="M4 4l8 8L4 20" />
-    <path d="M22 2l-8 8" />
-    <path d="M22 2l-4 2" />
-    <path d="M22 2l-2 4" />
-  </svg>
-);
-
-// Types de dégâts physiques uniquement
-const PHYSICAL_DAMAGE_TYPES = ['Tranchant', 'Perforant', 'Contondant'] as const;
-type PhysicalDamage = typeof PHYSICAL_DAMAGE_TYPES[number];
-
-const RANGES = [
-  'Corps à corps',
-  'Contact',
-  '1,5 m',
-  '3 m',
-  '6 m',
-  '9 m',
-  '12 m',
-  '18 m',
-  '24 m',
-  '30 m',
-  '36 m',
-  '45 m',
-  '60 m',
-  '90 m'
-];
-
-// ✅ AJOUT : Liste des caractéristiques
-const ABILITIES = ['Force', 'Dextérité', 'Constitution', 'Intelligence', 'Sagesse', 'Charisme'] as const;
-type Ability = typeof ABILITIES[number];
-
-const AttackEditModal = ({ attack, onClose, onSave, onDelete }: AttackEditModalProps) => {
-  const [formData, setFormData] = useState<{
-    name: string;
-    damage_dice: string;
-    damage_type: PhysicalDamage;
-    range: string;
-    properties: string;
-    manual_attack_bonus: number | null;
-    manual_damage_bonus: number | null;
-    expertise: boolean;
-    ammo_type: string;
-    override_ability: Ability | null; 
-    weapon_bonus: number | null;
-  }>({
-    name: attack?.name || '',
-    damage_dice: attack?.damage_dice || '1d8',
-    damage_type: (PHYSICAL_DAMAGE_TYPES as readonly string[]).includes(attack?.damage_type || '')
-      ? (attack?.damage_type as PhysicalDamage)
-      : 'Tranchant',
-    range: attack?.range || 'Corps à corps',
-    properties: attack?.properties || '',
-    manual_attack_bonus: attack?.manual_attack_bonus ?? null,
-    manual_damage_bonus: attack?.manual_damage_bonus ?? null,
-    expertise: attack?.expertise || false,
-    ammo_type: (attack as any)?.ammo_type || '',
-  override_ability: attack?.override_ability || null,
-  weapon_bonus: attack?.weapon_bonus ?? null // ✅ AJOUT
-});
-
-  const handleSave = () => {
-    if (!formData.name.trim()) {
-      toast.error("Le nom de l'attaque est obligatoire");
-      return;
+  const toNum = (v: any): number | null => {
+    if (typeof v === 'number' && Number.isFinite(v)) return v;
+    if (typeof v === 'string') {
+      const cleaned = v.replace(/[^\d+-]/g, '');
+      const n = Number(cleaned);
+      return Number.isFinite(n) ? n : null;
     }
-    onSave({
-      name: formData.name,
-      damage_dice: formData.damage_dice,
-      damage_type: formData.damage_type,
-      range: formData.range,
-      properties: formData.properties,
-      manual_attack_bonus: formData.manual_attack_bonus,
-      manual_damage_bonus: formData.manual_damage_bonus,
-      expertise: formData.expertise,
-      ammo_type: formData.ammo_type.trim() || null,
-      override_ability: formData.override_ability,
-      weapon_bonus: formData.weapon_bonus // ✅ AJOUT
-    });
+    return null;
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <h3 className="text-lg font-semibold text-gray-100 mb-6">
-          {attack ? "Modifier l'attaque" : 'Nouvelle attaque'}
-        </h3>
+  const getFromObj = (obj: any): any | null => {
+    if (!obj || typeof obj !== 'object') return null;
+    const keys = Object.keys(obj);
+    const matchKey = keys.find(k => {
+      const kk = k.toLowerCase();
+      return kk === 'charisme' || kk === 'charisma' || kk === 'cha' || kk === 'car';
+    }) ?? keys.find(k => k.toLowerCase().includes('charis') || k.toLowerCase() === 'cha' || k.toLowerCase() === 'car');
+    return matchKey ? obj[matchKey] : null;
+  };
 
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Nom de l&apos;attaque</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="input-dark w-full px-3 py-2 rounded-md border border-gray-600 focus:border-red-500"
-              placeholder="Ex: Épée longue"
-            />
-          </div>
+  let cha: any = null;
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Dés de dégâts</label>
-            <input
-              type="text"
-              value={formData.damage_dice}
-              onChange={(e) => setFormData({ ...formData, damage_dice: e.target.value })}
-              className="input-dark w-full px-3 py-2 rounded-md border border-gray-600 focus:border-red-500"
-              placeholder="Ex: 1d8, 2d6"
-            />
-          </div>
+  if (Array.isArray(abilities)) {
+    cha = abilities.find((a: any) => {
+      const n = (a?.name || a?.abbr || a?.key || a?.code || '').toString().toLowerCase();
+      return n === 'charisme' || n === 'charisma' || n === 'cha' || n === 'car';
+    });
+  } else if (abilities && typeof abilities === 'object') {
+    cha = getFromObj(abilities);
+  }
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Type de dégâts</label>
-            <select
-              value={formData.damage_type}
-              onChange={(e) => setFormData({ ...formData, damage_type: e.target.value as PhysicalDamage })}
-              className="input-dark w-full px-3 py-2 rounded-md border border-gray-600 focus:border-red-500"
-            >
-              {PHYSICAL_DAMAGE_TYPES.map((dt) => (
-                <option key={dt} value={dt}>
-                  {dt}
-                </option>
-              ))}
-            </select>
-          </div>
+  if (cha) {
+    const mod =
+      toNum(cha.modifier) ??
+      toNum(cha.mod) ??
+      toNum(cha.modValue) ??
+      toNum(cha.value);
+    if (mod != null) return mod;
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Portée</label>
-            <select
-              value={formData.range}
-              onChange={(e) => setFormData({ ...formData, range: e.target.value })}
-              className="input-dark w-full px-3 py-2 rounded-md border border-gray-600 focus:border-red-500"
-            >
-              {RANGES.map((range) => (
-                <option key={range} value={range}>
-                  {range}
-                </option>
-              ))}
-            </select>
-          </div>
+    const score =
+      toNum(cha.score) ??
+      toNum(cha.total) ??
+      toNum(cha.base);
+    if (score != null) return Math.floor((score - 10) / 2);
+  }
 
-          {/* Type de munition */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Type de munition (optionnel)</label>
-            <input
-              type="text"
-              value={formData.ammo_type}
-              onChange={(e) => setFormData({ ...formData, ammo_type: e.target.value })}
-              className="input-dark w-full px-3 py-2 rounded-md border border-gray-600 focus:border-red-500"
-              placeholder="Ex: Flèches, Balles, Carreaux"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Propriétés (optionnel)</label>
-            <input
-              type="text"
-              value={formData.properties}
-              onChange={(e) => setFormData({ ...formData, properties: e.target.value })}
-              className="input-dark w-full px-3 py-2 rounded-md border border-gray-600 focus:border-red-500"
-              placeholder="Ex: Finesse, Polyvalente"
-            />
-          </div>
-
-          {/* ✅ AJOUT : Sélecteur de caractéristique */}
-          <div className="border-t border-gray-700 pt-4">
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Caractéristique pour les calculs
-              <span className="text-xs text-gray-500 ml-2">(optionnel - remplace le calcul auto)</span>
-            </label>
-            <select
-              value={formData.override_ability || ''}
-              onChange={(e) => setFormData({ ...formData, override_ability: e.target.value as Ability || null })}
-              className="input-dark w-full px-3 py-2 rounded-md border border-gray-600 focus:border-red-500"
-            >
-              <option value="">Calcul automatique (selon classe/portée)</option>
-              {ABILITIES.map((ability) => (
-                <option key={ability} value={ability}>
-                  {ability}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-gray-500 mt-1">
-              Ex: Choisir "Charisme" pour un Occultiste utilisant Coup au but
-            </p>
-          </div>
-
- 
-
-
-             {/* ✅ Bonus de l'arme (lecture seule) */}
-          <div className="border-t border-gray-700 pt-4 mt-4">
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Bonus de l'arme
-              <span className="text-xs text-gray-500 ml-2">(défini dans l'onglet Équipement)</span>
-            </label>
-            <div className="bg-gray-700/50 px-4 py-3 rounded-md border border-gray-600">
-              <span className="text-gray-100 font-medium">
-                {formData.weapon_bonus !== null && formData.weapon_bonus !== undefined 
-                  ? `+${formData.weapon_bonus}` 
-                  : 'Aucun bonus'}
-              </span>
-            </div>
-            <p className="text-xs text-gray-400 mt-2">
-              💡 Pour modifier le bonus de cette arme, allez dans <span className="text-purple-400 font-medium">Onglet Sac → Paramètres de l'arme</span>
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setFormData({ ...formData, expertise: !formData.expertise })}
-              className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                formData.expertise ? 'bg-red-500 border-red-500 text-white' : 'bg-gray-700 border-gray-600 hover:border-gray-500'
-              }`}
-            >
-              {formData.expertise && (
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                  <path
-                    fillRule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              )}
-            </button>
-            <label
-              className="text-sm font-medium text-gray-300 cursor-pointer"
-              onClick={() => setFormData({ ...formData, expertise: !formData.expertise })}
-            >
-              Maîtrise (ajoute le bonus de maîtrise)
-            </label>
-          </div>
-
-          <div className="flex gap-3 pt-4">
-            <button onClick={handleSave} className="btn-primary flex-1 px-4 py-2 rounded-lg">
-              Sauvegarder
-            </button>
-            {attack && onDelete && (
-              <button
-                onClick={onDelete}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                <Trash2 size={16} />
-              </button>
-            )}
-            <button onClick={onClose} className="btn-secondary px-4 py-2 rounded-lg">
-              Annuler
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  return 0;
 };
 
-export default function CombatTab({ player, onUpdate }: CombatTabProps) {
-  const [attacks, setAttacks] = useState<Attack[]>([]);
-  const [editingAttack, setEditingAttack] = useState<Attack | null>(null);
-  const [showAttackModal, setShowAttackModal] = useState(false);
+const getBardicCap = (player: Player): number => getChaModFromPlayer(player);
 
-  const [showMaxHpModal, setShowMaxHpModal] = useState(false);
-  const [newMaxHp, setNewMaxHp] = useState(player.max_hp.toString());
-  const [damageValue, setDamageValue] = useState('');
-  const [healValue, setHealValue] = useState('');
-  const [tempHpValue, setTempHpValue] = useState('');
+const getDefaultClassResources = (player: Player): ClassResources => {
+  const level = Number(player.level) || 1;
+  const cls = player.class as DndClass | null | undefined;
+  const resources: ClassResources = { ...(player.class_resources || {}) };
 
-  const [diceRollerOpen, setDiceRollerOpen] = useState(false);
-  const [rollData, setRollData] = useState<{
+  switch (cls) {
+    case 'Barbare':
+      resources.rage = Math.min(6, Math.floor((level + 3) / 4) + 2);
+      resources.used_rage = 0;
+      break;
+
+    case 'Barde': {
+      const cap = getBardicCap(player);
+      const upper = Math.max(0, cap);
+      resources.used_bardic_inspiration = Math.min(resources.used_bardic_inspiration || 0, upper);
+      break;
+    }
+
+    case 'Clerc':
+      resources.channel_divinity = level >= 6 ? 2 : 1;
+      resources.used_channel_divinity = 0;
+      break;
+
+    case 'Druide':
+      resources.wild_shape = 2;
+      resources.used_wild_shape = 0;
+      break;
+
+    case 'Ensorceleur':
+      resources.sorcery_points = level;
+      resources.used_sorcery_points = 0;
+      break;
+
+    case 'Guerrier':
+      resources.action_surge = level >= 17 ? 2 : 1;
+      resources.used_action_surge = 0;
+      break;
+
+    case 'Magicien':
+      resources.arcane_recovery = true;
+      resources.used_arcane_recovery = false;
+      (resources as any).arcane_recovery_slots_used = 0; // ✅ AJOUT
+      break;
+
+    case 'Moine':
+      resources.ki_points = level;
+      resources.used_ki_points = 0;
+      break;
+
+    case 'Paladin':
+      resources.lay_on_hands = level * 5;
+      resources.used_lay_on_hands = 0;
+      if (level >= 3) {
+        resources.channel_divinity = level >= 11 ? 3 : 2;
+        resources.used_channel_divinity = 0;
+      } else {
+        delete (resources as any).channel_divinity;
+        delete (resources as any).used_channel_divinity;
+      }
+      break;
+
+case 'Rôdeur':
+  // Tableau officiel 2024 : 2 utilisations au niveau 1-4, puis +1 tous les 4 niveaux
+  if (level <= 4) {
+    resources.favored_foe = 2;
+  } else if (level <= 8) {
+    resources.favored_foe = 3;
+  } else if (level <= 12) {
+    resources.favored_foe = 4;
+  } else if (level <= 16) {
+    resources.favored_foe = 5;
+  } else {
+    resources.favored_foe = 6;
+  }
+  resources.used_favored_foe = 0;
+  break;
+
+    case 'Roublard':
+      resources.sneak_attack = `${Math.ceil(level / 2)}d6`;
+      break;
+  }
+
+  return resources;
+};
+
+const RESOURCE_LABELS: Record<string, string> = {
+  rage: 'Rage',
+  bardic_inspiration: 'Inspiration bardique',
+  channel_divinity: 'Conduit divin',
+  wild_shape: 'Forme sauvage',
+  sorcery_points: 'Points de sorcellerie',
+  action_surge: "Second souffle",
+  ki_points: 'Points de ki',
+  lay_on_hands: 'Imposition des mains',
+  favored_foe: 'Ennemi juré',
+  sneak_attack: 'Attaque sournoise',
+};
+
+/* ============================ Composant principal ============================ */
+
+type AbilitiesTabProps = {
+  player: Player;
+  onUpdate: (player: Player) => void;
+};
+
+export function AbilitiesTab({ player, onUpdate }: AbilitiesTabProps) {
+  const [editing, setEditing] = useState(false);
+  const [previousClass, setPreviousClass] = useState(player.class);
+  const [previousLevel, setPreviousLevel] = useState(player.level);
+  const [showSpellbook, setShowSpellbook] = useState(false);
+  const [showSpellSlotModal, setShowSpellSlotModal] = useState(false);
+  const [spellSlotModalData, setSpellSlotModalData] = useState<{
     type: 'attack' | 'damage';
     attackName: string;
     diceFormula: string;
     modifier: number;
   } | null>(null);
 
-  React.useEffect(() => {
-    fetchAttacks();
-  }, [player.id]);
 
-  React.useEffect(() => {
-    const handler = (e: any) => {
-      try {
-        if (e?.detail?.playerId && e.detail.playerId !== player.id) return;
-      } catch {}
-      fetchAttacks();
-    };
-    window.addEventListener('attacks:changed', handler);
-    const visHandler = () => {
-      if (document.visibilityState === 'visible') fetchAttacks();
-    };
-    document.addEventListener('visibilitychange', visHandler);
-    return () => {
-      window.removeEventListener('attacks:changed', handler);
-      document.removeEventListener('visibilitychange', visHandler);
-    };
-  }, [player.id]);
 
-  const fetchAttacks = async () => {
-    try {
-      const attacksData = await attackService.getPlayerAttacks(player.id);
-      setAttacks(attacksData);
-    } catch (error) {
-      console.error('Erreur lors de la récupération des attaques:', error);
-      toast.error('Erreur lors de la récupération des attaques');
-    }
-  };
-
-  const saveAttack = async (attackData: Partial<Attack>) => {
-    try {
-      if (editingAttack) {
-        const updatedAttack = await attackService.updateAttack({
-          ...attackData,
-          id: editingAttack.id,
-          attack_type: 'physical',
-          spell_level: null
-        });
-
-        if (updatedAttack) {
-          setAttacks(attacks.map((attack) => (attack.id === editingAttack.id ? updatedAttack : attack)));
-          toast.success('Attaque modifiée');
-        }
-      } else {
-        const newAttack = await attackService.addAttack({
-          player_id: player.id,
-          ...attackData,
-          attack_type: 'physical',
-          spell_level: null,
-          ammo_count: 0
-        });
-
-        if (newAttack) {
-          setAttacks([...attacks, newAttack]);
-          toast.success('Attaque ajoutée');
-        }
-      }
-
-      setEditingAttack(null);
-      setShowAttackModal(false);
-    } catch (error) {
-      console.error("Erreur lors de la sauvegarde de l'attaque:", error);
-      toast.error("Erreur lors de la sauvegarde de l'attaque");
-    }
-  };
-
-  const deleteAttack = async (attackId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette attaque ?')) return;
-
-    try {
-      const success = await attackService.removeAttack(attackId);
-
-      if (success) {
-        setAttacks(attacks.filter((attack) => attack.id !== attackId));
-        setEditingAttack(null);
-        setShowAttackModal(false);
-        toast.success('Attaque supprimée');
-      } else {
-        throw new Error('Échec de la suppression');
-      }
-    } catch (error) {
-      console.error("Erreur lors de la suppression de l'attaque:", error);
-      toast.error("Erreur lors de la suppression de l'attaque");
-    }
-  };
-
-const getAttackBonus = (attack: Attack): number => {
-  const weaponBonus = attack.weapon_bonus ?? 0;
-  const proficiencyBonus = player.stats?.proficiency_bonus || 2;
-
-  // 1) override_ability prime
-  if (attack.override_ability) {
-    const ability = player.abilities?.find((a) => a.name === attack.override_ability);
-    const abilityMod = ability?.modifier || 0;
-    const masteryBonus = attack.expertise ? proficiencyBonus : 0;
-    return abilityMod + masteryBonus + weaponBonus;
-  }
-
-  // 2) inférence depuis properties/portée
-  const abilityMod = inferWeaponAbilityMod(attack as any, player.abilities || []);
-  const masteryBonus = attack.expertise ? proficiencyBonus : 0;
-  return abilityMod + masteryBonus + weaponBonus;
-};
-
-const getDamageBonus = (attack: Attack): number => {
-  const weaponBonus = attack.weapon_bonus ?? 0;
-
-  // 1) override_ability prime
-  if (attack.override_ability) {
-    const ability = player.abilities?.find((a) => a.name === attack.override_ability);
-    return (ability?.modifier || 0) + weaponBonus;
-  }
-
-  // 2) inférence depuis properties/portée
-  const abilityMod = inferWeaponAbilityMod(attack as any, player.abilities || []);
-  return abilityMod + weaponBonus;
-};
-
-const rollAttack = (attack: Attack) => {
-  const attackBonus = getAttackBonus(attack);
-  setRollData({
-    type: 'attack',
-    attackName: attack.name,
-    diceFormula: '1d20',
-    modifier: attackBonus
-  });
-  setDiceRollerOpen(true);
-};
   
-  const rollDamage = (attack: Attack) => {
-    const damageBonus = getDamageBonus(attack);
-    setRollData({
-      type: 'damage',
-      attackName: attack.name,
-      diceFormula: attack.damage_dice,
-      modifier: damageBonus
-    });
-    setDiceRollerOpen(true);
-  };
+useEffect(() => {
+  if (player.class !== previousClass || player.level !== previousLevel) {
+    setPreviousClass(player.class);
+    setPreviousLevel(player.level);
+    initializeResources();
+  }
+}, [player.class, player.level, previousClass, previousLevel]); // ✅ Ajouter toutes les deps
 
-  const setAmmoCount = async (attack: Attack, next: number) => {
-    const clamped = Math.max(0, Math.floor(next || 0));
+  // Bard: clamp used_bardic_inspiration if cap auto changes
+  const lastClampKey = useRef<string | null>(null);
+ useEffect(() => {
+  // 🔹 1. Créer un flag pour détecter le démontage
+  let isCancelled = false;
+
+  if (player.class !== 'Barde' || !player?.id) return;
+
+  const cap = getBardicCap(player);
+  const upper = Math.max(0, cap);
+  const used = player.class_resources?.used_bardic_inspiration || 0;
+  const key = `${player.id}:${cap}:${used}`;
+
+  if (lastClampKey.current === key) return;
+
+  if (used > upper) {
+    const next: ClassResources = {
+      ...(player.class_resources || {}),
+      used_bardic_inspiration: upper,
+    };
+
+    (async () => {
+      try {
+        const { error } = await supabase
+          .from('players')
+          .update({ class_resources: next })
+          .eq('id', player.id);
+
+        // 🔹 2. Vérifier si le composant existe encore
+        if (isCancelled) {
+          console.log('⚠️ Composant démonté, annulation de la mise à jour');
+          return; // ❌ Ne pas mettre à jour le state !
+        }
+
+        if (error) throw error;
+
+        onUpdate({ ...player, class_resources: next }); // ✅ Safe maintenant
+        lastClampKey.current = key;
+      } catch (e) {
+        if (isCancelled) return; // Ne pas logger si démonté
+        console.error('[AbilitiesTab] clamp bard used error:', e);
+        lastClampKey.current = null;
+      }
+    })();
+  } else {
+    lastClampKey.current = key;
+  }
+
+  // 🔹 3. Fonction de nettoyage (cleanup)
+  return () => {
+    isCancelled = true; // ✅ Marquer comme annulé au démontage
+  };
+}, [
+  player?.id,
+  player?.class,
+  player?.class_resources?.used_bardic_inspiration,
+  player.abilities,
+]);
+
+  const handleSpellSlotChange = async (level: number, used: boolean) => {
+    if (!player.spell_slots) return;
+
+    const isWarlock = player.class === 'Occultiste';
+    const pactLevel = player.spell_slots.pact_level || 1;
+
+    if (isWarlock && level === pactLevel) {
+      const currentUsed = player.spell_slots.used_pact_slots || 0;
+      const maxSlots = player.spell_slots.pact_slots || 0;
+
+      if (used && currentUsed >= maxSlots) return;
+      if (!used && currentUsed <= 0) return;
+
+      const newSpellSlots = {
+        ...player.spell_slots,
+        used_pact_slots: used ? currentUsed + 1 : currentUsed - 1,
+      };
+
+      try {
+        const { error } = await supabase.from('players').update({ spell_slots: newSpellSlots }).eq('id', player.id);
+        if (error) throw error;
+
+        onUpdate({ ...player, spell_slots: newSpellSlots });
+        toast.success(used ? `✨ Emplacement de pacte (niveau ${pactLevel}) utilisé` : `🔮 Emplacement de pacte (niveau ${pactLevel}) récupéré`);
+      } catch (error) {
+        console.error('Erreur lors de la mise à jour des emplacements de pacte:', error);
+        toast.error('Erreur lors de la mise à jour');
+      }
+      return;
+    }
+
+    const usedKey = `used${level}` as keyof SpellSlots;
+    const levelKey = `level${level}` as keyof SpellSlots;
+    const currentUsed = player.spell_slots[usedKey] || 0;
+    const maxSlots = player.spell_slots[levelKey] || 0;
+
+    if (used && currentUsed >= maxSlots) return;
+    if (!used && currentUsed <= 0) return;
+
+    const newSpellSlots = {
+      ...player.spell_slots,
+      [usedKey]: used ? currentUsed + 1 : currentUsed - 1,
+    };
+
     try {
-      const updated = await attackService.updateAttack({ id: attack.id, ammo_count: clamped });
-      if (!updated) throw new Error('update failed');
-      setAttacks((prev) => prev.map((a) => (a.id === attack.id ? { ...a, ammo_count: clamped } : a)));
-    } catch (e) {
-      console.error('Erreur maj munitions:', e);
-      toast.error('Erreur lors de la mise à jour des munitions');
+      const { error } = await supabase.from('players').update({ spell_slots: newSpellSlots }).eq('id', player.id);
+      if (error) throw error;
+
+      onUpdate({ ...player, spell_slots: newSpellSlots });
+      toast.success(used ? '✨ Emplacement de sort utilisé' : '🔮 Emplacement de sort récupéré');
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour des emplacements de sorts:', error);
+      toast.error('Erreur lors de la mise à jour');
     }
   };
 
-  const changeAmmoCount = (attack: Attack, delta: number) => {
-    const current = attack.ammo_count ?? 0;
-    setAmmoCount(attack, current + delta);
-  };
+  // Carte Emplacements de sorts (gardée pour usage futur, mais non rendue)
+  const renderSpellSlots = () => {
+    const spellSlots = player.spell_slots || {};
+    const hasSpellSlots = Object.keys(spellSlots).some((key) => key.startsWith('level') && !key.startsWith('used') && (spellSlots[key as keyof SpellSlots] || 0) > 0);
+    if (!hasSpellSlots) return null;
 
-  const renderAttackCard = (attack: Attack) => {
-    const dmgBonus = getDamageBonus(attack);
-    const dmgLabel = `${attack.damage_dice}${dmgBonus !== 0 ? (dmgBonus > 0 ? `+${dmgBonus}` : `${dmgBonus}`) : ''}`;
-    const ammoType = (attack as any).ammo_type || '';
-    const ammoCount = (attack as any).ammo_count ?? 0;
+    const getMaxSpellLevel = (level: number) => {
+      if (level >= 17) return 9;
+      if (level >= 15) return 8;
+      if (level >= 13) return 7;
+      if (level >= 11) return 6;
+      if (level >= 9) return 5;
+      if (level >= 7) return 4;
+      if (level >= 5) return 3;
+      if (level >= 3) return 2;
+      if (level >= 1) return 1;
+      return 0;
+    };
+    const maxLevel = editing ? 9 : getMaxSpellLevel(player.level);
 
-    // ✅ AJOUT : Afficher la caractéristique override si définie
-    const overrideLabel = attack.override_ability ? ` (${attack.override_ability})` : '';
+    const slots = Array.from({ length: maxLevel }, (_, i) => {
+      const level = i + 1;
+      const levelKey = `level${level}` as keyof SpellSlots;
+      const usedKey = `used${level}` as keyof SpellSlots;
+      const maxSlots = spellSlots[levelKey] || 0;
+      const usedSlots = spellSlots[usedKey] || 0;
+
+      return (
+        <div key={level} className="spell-slot">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-purple-300">Niveau {level}</span>
+            <div className="text-sm text-gray-400 bg-gray-800/50 px-3 py-1 rounded-md min-w-[64px] text-center">
+              {maxSlots - usedSlots}/{maxSlots}
+            </div>
+          </div>
+          {maxSlots > 0 && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleSpellSlotChange(level, true)}
+                disabled={usedSlots >= maxSlots}
+                className={`flex-1 p-2 rounded-md transition-colors ${usedSlots < maxSlots ? 'text-purple-500 hover:bg-purple-900/30' : 'text-gray-600 bg-gray-800/50 cursor-not-allowed'}`}
+                title="Utiliser un emplacement"
+              >
+                <Minus size={16} className="mx-auto" />
+              </button>
+              <button
+                onClick={() => handleSpellSlotChange(level, false)}
+                disabled={usedSlots <= 0}
+                className={`flex-1 p-2 rounded-md transition-colors ${usedSlots > 0 ? 'text-purple-500 hover:bg-purple-900/30' : 'text-gray-600 bg-gray-800/50 cursor-not-allowed'}`}
+                title="Récupérer un emplacement"
+              >
+                <Plus size={16} className="mx-auto" />
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    });
 
     return (
-      <div key={attack.id} className="bg-gray-800/50 rounded-lg p-3 border border-gray-700/50">
-        <div className="flex items-start justify-between mb-1">
-          <div>
-            <h4 className="font-medium text-gray-100 text-base">{attack.name}</h4>
-            <p className="text-sm text-gray-400">
-              {attack.damage_type} • {attack.range}
-              {overrideLabel && <span className="text-purple-400">{overrideLabel}</span>}
-            </p>
+      <div className="stats-card">
+        <div className="stat-header flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <BookOpen className="w-5 h-5 text-purple-500" />
+            <h3 className="text-lg font-semibold text-gray-100">Emplacements de sorts</h3>
           </div>
-          <div className="flex items-center gap-1">
+          {!editing && (
             <button
-              onClick={() => {
-                setEditingAttack(attack);
-                setShowAttackModal(true);
-              }}
-              className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-300 hover:bg-gray-700/50 rounded transition-colors"
-              title="Modifier l'attaque"
+              onClick={() => setEditing(true)}
+              className="p-2 text-gray-400 hover:bg-gray-700/50 rounded-lg transition-colors flex items-center justify-center"
+              title="Modifier les emplacements"
             >
-              <Settings size={16} />
+              <Settings size={20} />
             </button>
-            <button
-              onClick={() => deleteAttack(attack.id)}
-              className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-900/30 rounded transition-colors"
-              title="Supprimer l'attaque"
-            >
-              <Trash2 size={16} />
-            </button>
-          </div>
+          )}
         </div>
 
-        <div className="flex gap-2 text-sm items-stretch">
-          <div className="flex-1 flex flex-col">
-            <button
-              onClick={() => rollAttack(attack)}
-              className="bg-gray-600 hover:bg-gray-500 text-white px-3 py-2 rounded-md transition-colors flex items-center justify-center"
-            >
-              Attaque : 1d20+{getAttackBonus(attack)}
-            </button>
+        <div className="p-4 space-y-4">
+          {editing && (
+            <div className="border-b border-gray-700/50 pb-4 mb-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {Array.from({ length: 9 }, (_, i) => i + 1).map((level) => {
+                  const levelKey = `level${level}` as keyof SpellSlots;
+                  const usedKey = `used${level}` as keyof SpellSlots;
+                  const maxSlots = spellSlots[levelKey] || 0;
 
-            {ammoType ? (
-              <div
-                className="mt-2 px-3 py-2 rounded-md flex items-center justify-center gap-2 bg-transparent"
-                aria-hidden
-              >
-                <BowIcon className="w-5 h-5 text-amber-400" />
-                <span className="text-sm font-medium text-gray-100">{ammoType}</span>
+                  return (
+                    <div key={level} className="space-y-2">
+                      <label className="block text-sm font-medium text-purple-300">Niveau {level}</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={maxSlots}
+                        onChange={async (e) => {
+                          const newValue = Math.max(0, parseInt(e.target.value) || 0);
+                          const newSpellSlots = {
+                            ...spellSlots,
+                            [levelKey]: newValue,
+                            [usedKey]: Math.min(spellSlots[usedKey] || 0, newValue),
+                          };
+                          try {
+                            const { error } = await supabase.from('players').update({ spell_slots: newSpellSlots }).eq('id', player.id);
+                            if (error) throw error;
+
+                            onUpdate({ ...player, spell_slots: newSpellSlots });
+                          } catch (error) {
+                            console.error('Erreur lors de la mise à jour:', error);
+                            toast.error('Erreur lors de la mise à jour');
+                          }
+                        }}
+                        className="input-dark w-full px-3 py-2 rounded-md text-center"
+                      />
+                    </div>
+                  );
+                })}
               </div>
-            ) : (
-              <div className="mt-2" />
-            )}
-          </div>
-
-          <div className="flex-1 flex flex-col">
-            <button
-              onClick={() => rollDamage(attack)}
-              className="bg-orange-600/60 hover:bg-orange-500/60 text-white px-3 py-2 rounded-md transition-colors flex items-center justify-center"
-            >
-              Dégâts : {dmgLabel}
-            </button>
-            {ammoType ? (
-              <div className="mt-2 flex items-center justify-center gap-2">
-                <button
-                  onClick={() => changeAmmoCount(attack, -1)}
-                  disabled={(ammoCount ?? 0) <= 0}
-                  className="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-gray-200"
-                  title="Retirer une munition"
-                >
-                  −
-                </button>
-                <input
-                  type="number"
-                  value={ammoCount}
-                  min={0}
-                  onChange={(e) => setAmmoCount(attack, Number(e.target.value))}
-                  className="w-16 text-center input-dark px-2 py-1 rounded-md border border-gray-600 focus:border-red-500"
-                />
-                <button
-                  onClick={() => changeAmmoCount(attack, +1)}
-                  className="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-gray-200"
-                  title="Ajouter une munition"
-                >
-                  +
+              <div className="flex justify-end mt-4">
+                <button onClick={() => setEditing(false)} className="btn-secondary px-4 py-2 rounded-lg flex items-center gap-2">
+                  <X size={16} />
+                  Fermer
                 </button>
               </div>
-            ) : (
-              <div className="mt-2" />
-            )}
-          </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">{slots}</div>
         </div>
       </div>
     );
   };
 
-  // ... (reste du code HP, soins, etc. inchangé)
+  const updateClassResource = async (resource: keyof ClassResources, value: number | boolean) => {
+    let nextResources: ClassResources = { ...(player.class_resources || {}) };
 
-  const totalHP = player.current_hp + player.temporary_hp;
-  const isCriticalHealth = totalHP <= Math.floor(player.max_hp * 0.20);
-
-  const getWoundLevel = () => {
-    const percentage = (totalHP / player.max_hp) * 100;
-    if (totalHP <= 0) return 'Mort';
-    if (percentage >= 1 && percentage <= 30) return 'Blessures critiques';
-    if (percentage > 30 && percentage <= 60) return 'Blessures importantes';
-    if (percentage > 60 && percentage <= 75) return 'Blessures';
-    if (percentage > 75 && percentage <= 90) return 'Blessures légères';
-    if (percentage > 90 && percentage <= 99) return 'Égratignures';
-    return 'En pleine forme';
-  };
-
-  const getWoundColor = () => {
-    const percentage = (totalHP / player.max_hp) * 100;
-    if (totalHP <= 0) return 'text-black';
-    if (percentage >= 1 && percentage <= 30) return 'text-red-600';
-    if (percentage > 30 && percentage <= 60) return 'text-red-500';
-    if (percentage > 60 && percentage <= 75) return 'text-orange-500';
-    if (percentage > 75 && percentage <= 90) return 'text-yellow-500';
-    if (percentage > 90 && percentage <= 99) return 'text-yellow-400';
-    return 'text-green-500';
-  };
-
-  const getHPBarColor = () => {
-    const percentage = (player.current_hp / player.max_hp) * 100;
-    if (totalHP <= 0) return 'from-black to-gray-800';
-    if (percentage >= 1 && percentage <= 30) return 'from-red-600 to-red-700';
-    if (percentage > 30 && percentage <= 60) return 'from-red-500 to-red-600';
-    if (percentage > 60 && percentage <= 75) return 'from-orange-500 to-red-500';
-    if (percentage > 75 && percentage <= 90) return 'from-yellow-500 to-orange-500';
-    if (percentage > 90 && percentage <= 99) return 'from-yellow-400 to-yellow-500';
-    return 'from-green-500 to-green-600';
-  };
-
-  const applyDamage = async () => {
-    const damage = parseInt(damageValue) || 0;
-    if (damage <= 0) return;
-
-    let newCurrentHP = player.current_hp;
-    let newTempHP = player.temporary_hp;
-
-    if (newTempHP > 0) {
-      if (damage >= newTempHP) {
-        const remainingDamage = damage - newTempHP;
-        newTempHP = 0;
-        newCurrentHP = Math.max(0, newCurrentHP - remainingDamage);
-      } else {
-        newTempHP = newTempHP - damage;
-      }
+    if (resource === 'used_bardic_inspiration' && typeof value === 'number') {
+      const cap = getBardicCap(player);
+      const upper = Math.max(0, cap);
+      const clamped = Math.min(Math.max(0, value), upper);
+      nextResources.used_bardic_inspiration = clamped;
     } else {
-      newCurrentHP = Math.max(0, newCurrentHP - damage);
+      (nextResources as any)[resource] = value;
     }
-
-    await updateHP(newCurrentHP, newTempHP);
-    setDamageValue('');
-
-    const hpElement = document.querySelector('.hp-bar');
-    if (hpElement) {
-      hpElement.classList.add('damage-animation');
-      setTimeout(() => hpElement.classList.remove('damage-animation'), 600);
-    }
-
-    toast.success(`${damage} dégâts appliqués`);
-  };
-
-  const applyHealing = async () => {
-    const healing = parseInt(healValue) || 0;
-    if (healing <= 0) return;
-
-    const newCurrentHP = Math.min(player.max_hp, player.current_hp + healing);
-    await updateHP(newCurrentHP);
-    setHealValue('');
-
-    const hpElement = document.querySelector('.hp-bar');
-    if (hpElement) {
-      hpElement.classList.add('heal-animation');
-      setTimeout(() => hpElement.classList.remove('heal-animation'), 600);
-    }
-
-    toast.success(`${healing} PV récupérés`);
-  };
-
-  const applyTempHP = async () => {
-    const tempHP = parseInt(tempHpValue) || 0;
-    if (tempHP <= 0) return;
-
-    const newTempHP = Math.max(player.temporary_hp, tempHP);
-    await updateHP(player.current_hp, newTempHP);
-    setTempHpValue('');
-
-    toast.success(`${newTempHP} PV temporaires appliqués`);
-  };
-
-  const updateHP = async (newCurrentHP: number, newTempHP?: number) => {
-    const clampedHP = Math.max(0, Math.min(player.max_hp, newCurrentHP));
-    const clampedTempHP = Math.max(0, newTempHP ?? player.temporary_hp);
 
     try {
-      const updateData: any = { current_hp: clampedHP };
-      if (newTempHP !== undefined) updateData.temporary_hp = clampedTempHP;
-
-      const { error } = await supabase.from('players').update(updateData).eq('id', player.id);
+      const { error } = await supabase.from('players').update({ class_resources: nextResources }).eq('id', player.id);
       if (error) throw error;
 
-      onUpdate({ ...player, current_hp: clampedHP, temporary_hp: clampedTempHP });
+      onUpdate({ ...player, class_resources: nextResources });
+
+      if (typeof value === 'boolean') {
+        toast.success(`Récupération arcanique ${value ? 'utilisée' : 'disponible'}`);
+      } else {
+        const key = String(resource);
+        const displayKey = key.replace('used_', '');
+        const resourceName = RESOURCE_LABELS[displayKey] || displayKey;
+        const isUsed = key.startsWith('used_');
+        const previous = (player.class_resources as any)?.[resource];
+
+        const action =
+          isUsed && typeof previous === 'number' && typeof value === 'number'
+            ? (value as number) > (previous as number)
+              ? 'utilisé'
+              : 'récupéré'
+            : 'mis à jour';
+
+        if (isUsed && typeof previous === 'number' && typeof value === 'number') {
+          const diff = Math.abs((value as number) - (previous as number));
+          toast.success(`${diff} ${resourceName} ${action}`);
+        } else {
+          toast.success(`${resourceName} ${action}`);
+        }
+      }
     } catch (error) {
-      console.error('Erreur lors de la mise à jour des PV:', error);
-      toast.error('Erreur lors de la mise à jour des PV');
+      console.error('Erreur lors de la mise à jour des ressources:', error);
+      toast.error('Erreur lors de la mise à jour');
     }
   };
 
-  const physicalAttacks = attacks.filter((a) => (a.attack_type || 'physical') === 'physical');
+  // Carte Ressources de classe (gardée pour usage futur, mais non rendue)
+  const renderClassResources = () => {
+    if (!player.class_resources || !player.class) return null;
+
+    const classResources = player.class_resources;
+    const items: React.ReactNode[] = [];
+
+    switch (player.class) {
+      case 'Barbare':
+        if (typeof classResources.rage === 'number') {
+          items.push(
+            <ResourceBlock
+              key="rage"
+              icon={<Flame size={20} />}
+              label="Rage"
+              total={classResources.rage}
+              used={classResources.used_rage || 0}
+              onUse={() => updateClassResource('used_rage', (classResources.used_rage || 0) + 1)}
+              onUpdateTotal={(newTotal) => updateClassResource('rage', newTotal)}
+              onRestore={() => updateClassResource('used_rage', Math.max(0, (classResources.used_rage || 0) - 1))}
+              color="red"
+            />
+          );
+        }
+        break;
+
+      case 'Barde': {
+        const total = getBardicCap(player);
+        const upper = Math.max(0, total);
+        const used = Math.min(classResources.used_bardic_inspiration || 0, upper);
+
+        items.push(
+          <ResourceBlock
+            key="bardic_inspiration"
+            icon={<Music size={20} />}
+            label="Inspiration bardique"
+            total={total}
+            used={used}
+            onUse={() => updateClassResource('used_bardic_inspiration', used + 1)}
+            onUpdateTotal={() => {}}
+            onRestore={() => updateClassResource('used_bardic_inspiration', Math.max(0, used - 1))}
+            color="purple"
+            hideEdit
+          />
+        );
+        break;
+      }
+
+      case 'Clerc':
+        if (typeof classResources.channel_divinity === 'number') {
+          items.push(
+            <ResourceBlock
+              key="channel_divinity"
+              icon={<Cross size={20} />}
+              label="Conduit divin"
+              total={classResources.channel_divinity}
+              used={classResources.used_channel_divinity || 0}
+              onUse={() => updateClassResource('used_channel_divinity', (classResources.used_channel_divinity || 0) + 1)}
+              onUpdateTotal={(newTotal) => updateClassResource('channel_divinity', newTotal)}
+              onRestore={() => updateClassResource('used_channel_divinity', Math.max(0, (classResources.used_channel_divinity || 0) - 1))}
+              color="yellow"
+            />
+          );
+        }
+        break;
+
+      case 'Druide':
+        if (typeof classResources.wild_shape === 'number') {
+          items.push(
+            <ResourceBlock
+              key="wild_shape"
+              icon={<Leaf size={20} />}
+              label="Forme sauvage"
+              total={classResources.wild_shape}
+              used={classResources.used_wild_shape || 0}
+              onUse={() => updateClassResource('used_wild_shape', (classResources.used_wild_shape || 0) + 1)}
+              onUpdateTotal={(newTotal) => updateClassResource('wild_shape', newTotal)}
+              onRestore={() => updateClassResource('used_wild_shape', Math.max(0, (classResources.used_wild_shape || 0) - 1))}
+              color="green"
+            />
+          );
+        }
+        break;
+
+      case 'Ensorceleur':
+        if (typeof classResources.sorcery_points === 'number') {
+          items.push(
+            <ResourceBlock
+              key="sorcery_points"
+              icon={<Wand2 size={20} />}
+              label="Points de sorcellerie"
+              total={classResources.sorcery_points}
+              used={classResources.used_sorcery_points || 0}
+              onUse={() => updateClassResource('used_sorcery_points', (classResources.used_sorcery_points || 0) + 1)}
+              onUpdateTotal={(newTotal) => updateClassResource('sorcery_points', newTotal)}
+              onRestore={() => updateClassResource('used_sorcery_points', Math.max(0, (classResources.used_sorcery_points || 0) - 1))}
+              color="purple"
+            />
+          );
+        }
+        break;
+
+      case 'Guerrier':
+        if (typeof classResources.action_surge === 'number') {
+          items.push(
+            <ResourceBlock
+              key="action_surge"
+              icon={<Swords size={20} />}
+              label="Second souffle"
+              total={classResources.action_surge}
+              used={classResources.used_action_surge || 0}
+              onUse={() => updateClassResource('used_action_surge', (classResources.used_action_surge || 0) + 1)}
+              onUpdateTotal={(newTotal) => updateClassResource('action_surge', newTotal)}
+              onRestore={() => updateClassResource('used_action_surge', Math.max(0, (classResources.used_action_surge || 0) - 1))}
+              color="red"
+            />
+          );
+        }
+        break;
+
+case 'Magicien':
+  if (player.class_resources.arcane_recovery !== undefined) {
+    // ✅ Calculer le total et les niveaux restants
+    const level = Number(player.level || 1);
+    const recoveryTotal = Math.max(1, Math.ceil(level / 2));
+    const recoveryUsed = (player.class_resources as any).arcane_recovery_slots_used || 0;
+    const recoveryRemaining = Math.max(0, recoveryTotal - recoveryUsed);
+
+    items.push(
+      <div key="arcane_recovery" className="resource-block bg-gradient-to-br from-gray-800/50 to-gray-900/30 border border-gray-700/30 rounded-lg p-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <BookOpen size={20} className="text-blue-500" />
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-gray-300">Restauration magique</span>
+              {/* ✅ Afficher le compteur */}
+              <span className="text-xs text-gray-400">
+                {recoveryRemaining}/{recoveryTotal} niveau{recoveryTotal > 1 ? 'x' : ''} disponible{recoveryTotal > 1 ? 's' : ''}
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={async () => {
+              const nextValue = !player.class_resources?.used_arcane_recovery;
+              
+              // ✅ Si on réactive, réinitialiser le compteur
+              if (!nextValue) {
+                // Réinitialiser arcane_recovery_slots_used à 0
+                const resetResources = {
+                  ...player.class_resources,
+                  used_arcane_recovery: nextValue,
+                  arcane_recovery_slots_used: 0
+                };
+                
+                try {
+                  const { error } = await supabase
+                    .from('players')
+                    .update({ class_resources: resetResources })
+                    .eq('id', player.id);
+                  
+                  if (error) throw error;
+                  
+                  onUpdate({ ...player, class_resources: resetResources });
+                  toast.success('Restauration magique disponible');
+                } catch (error) {
+                  console.error('Erreur:', error);
+                  toast.error('Erreur lors de la mise à jour');
+                }
+              } else {
+                // Juste marquer comme utilisé
+                updateClassResource('used_arcane_recovery', nextValue);
+              }
+            }}
+            className={`h-8 px-3 flex items-center justify-center rounded-md transition-colors ${
+              player.class_resources?.used_arcane_recovery ? 'bg-gray-800/50 text-gray-500' : 'text-blue-500 hover:bg-blue-900/30'
+            }`}
+          >
+            {player.class_resources?.used_arcane_recovery ? 'Utilisé' : 'Disponible'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+  break;
+
+      case 'Moine': {
+        const total = (classResources as any).ki_points;
+        const used = (classResources as any).used_ki_points ?? 0;
+        if (typeof total === 'number') {
+          items.push(
+            <ResourceBlock
+              key="ki_points"
+              icon={<Footprints size={20} />}
+              label="Points de ki"
+              total={total}
+              used={used}
+              onUse={() => updateClassResource('used_ki_points', used + 1)}
+              onUpdateTotal={(newTotal) => updateClassResource('ki_points', newTotal)}
+              onRestore={() => updateClassResource('used_ki_points', Math.max(0, used - 1))}
+              color="blue"
+            />
+          );
+        }
+        break;
+      }
+
+      case 'Paladin':
+        if (typeof classResources.lay_on_hands === 'number') {
+          items.push(
+            <ResourceBlock
+              key="lay_on_hands"
+              icon={<HandHeart size={20} />}
+              label="Imposition des mains"
+              total={classResources.lay_on_hands}
+              used={classResources.used_lay_on_hands || 0}
+              onUpdateTotal={(newTotal) => updateClassResource('lay_on_hands', newTotal)}
+              onUpdateUsed={(v) => updateClassResource('used_lay_on_hands', v)}
+              color="yellow"
+              useNumericInput
+              hideEdit={true}
+              minusOnly={true}
+              minusSize={26}
+            />
+          );
+        }
+        // Conduits divins Paladin (N3+), total calculé (non éditable)
+        if ((player.level ?? 0) >= 3) {
+          const cap = (player.level ?? 0) >= 11 ? 3 : 2;
+          const used = classResources.used_channel_divinity || 0;
+          items.push(
+            <ResourceBlock
+              key="paladin_channel_divinity"
+              icon={<Cross size={20} />}
+              label="Conduits divins"
+              total={cap}
+              used={used}
+              onUse={() => updateClassResource('used_channel_divinity', Math.min(used + 1, cap))}
+              onUpdateTotal={() => { /* cap calculé -> non éditable */ }}
+              onRestore={() => updateClassResource('used_channel_divinity', Math.max(0, used - 1))}
+              color="yellow"
+              hideEdit
+            />
+          );
+        }
+        break;
+
+      case 'Rôdeur':
+        if (typeof classResources.favored_foe === 'number') {
+          items.push(
+            <ResourceBlock
+              key="favored_foe"
+              icon={<Target size={20} />}
+              label="Ennemi juré"
+              total={classResources.favored_foe}
+              used={classResources.used_favored_foe || 0}
+              onUse={() => updateClassResource('used_favored_foe', (classResources.used_favored_foe || 0) + 1)}
+              onUpdateTotal={(newTotal) => updateClassResource('favored_foe', newTotal)}
+              onRestore={() => updateClassResource('used_favored_foe', Math.max(0, (classResources.used_favored_foe || 0) - 1))}
+              color="green"
+            />
+          );
+        }
+        break;
+
+      case 'Roublard':
+        if (classResources.sneak_attack) {
+          items.push(
+            <div key="sneak_attack" className="resource-block bg-gradient-to-br from-gray-800/50 to-gray-900/30 border border-gray-700/30 rounded-lg p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Skull size={20} className="text-red-500" />
+                  <span className="text-sm font-medium text-gray-300">Attaque sournoise</span>
+                </div>
+                <div className="text-sm text-gray-400 bg-gray-800/50 px-3 py-1 rounded-md">
+                  {player.class_resources.sneak_attack}
+                </div>
+              </div>
+            </div>
+          );
+        }
+        break;
+    }
+
+    if (!items.length) return null;
+
+    return (
+      <div className="stats-card">
+        <div className="stat-header flex items-center gap-3">
+          <Sparkles className="w-5 h-5 text-yellow-500" />
+          <h3 className="text-lg font-semibold text-gray-100">Ressources de classe</h3>
+        </div>
+        <div className="p-4 space-y-4">{items}</div>
+      </div>
+    );
+  };
+
+  const initializeResources = async () => {
+    if (!player.class) return;
+
+    try {
+      const defaultSpellSlots = getSpellSlotsByLevel(player.class, player.level);
+      const defaultClassResources = getDefaultClassResources(player);
+
+      const { error } = await supabase
+        .from('players')
+        .update({
+          spell_slots: defaultSpellSlots,
+          class_resources: defaultClassResources,
+        })
+        .eq('id', player.id);
+
+      if (error) throw error;
+
+      onUpdate({
+        ...player,
+        spell_slots: defaultSpellSlots,
+        class_resources: defaultClassResources,
+      });
+
+      toast.success('Ressources initialisées');
+    } catch (error) {
+      console.error('Erreur lors de l\'initialisation des ressources:', error);
+      toast.error('Erreur lors de l\'initialisation');
+    }
+  };
+
+  // Récupère la sous-classe depuis plusieurs clés possibles
+  const getSubclass = (p: Player): string | null => {
+    const anyP: any = p as any;
+    const candidates = [
+      anyP?.subclass,
+      anyP?.sub_class,
+      anyP?.subClass,
+      anyP?.sousClasse,
+      anyP?.['sous-classe'],
+    ];
+    const found = candidates.find((v) => typeof v === 'string' && v.trim().length > 0);
+    return found ? (found as string).trim() : null;
+  };
+
+  const subclass = getSubclass(player);
 
   return (
-    <div className="space-y-6">
-      {/* Points de vie */}
-      <div className="stat-card">
-        <div className="stat-header flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Heart className="w-5 h-5 text-red-500" />
-            <div>
-              <h3 className="text-lg font-semibold text-gray-100">Points de vie</h3>
-              <p className={`text-sm font-medium ${getWoundColor()}`}>{getWoundLevel()}</p>
+    <div className="space-y-8">
+
+      <KnownSpellsSection player={player} onUpdate={onUpdate} />
+
+      {/* Section "Emplacements de sorts" masquée */}
+      {/* {renderSpellSlots()} */}
+
+      <div className="stats-card">
+                <div className="p-4">
+          <button
+            onClick={() => setShowSpellbook(true)}
+            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg"
+          >
+            <div className="flex items-center justify-center gap-2">
+              <Book size={20} />
+              Ouvrir le grimoire
             </div>
-          </div>
-        </div>
-        <div className="p-4">
-          <div className="space-y-4">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none select-none">
-                <span className="text-white font-bold text-sm drop-shadow-lg">
-                  {totalHP} / {player.max_hp}
-                </span>
-              </div>
-
-              <div className="w-full bg-gray-700 rounded-full h-8 overflow-hidden relative">
-                <div
-                  className={`hp-bar hp-bar-main h-full transition-all duration-500 bg-gradient-to-r ${getHPBarColor()} ${
-                    isCriticalHealth ? 'heartbeat-animation' : ''
-                  }`}
-                  style={{ width: `${Math.min(100, (player.current_hp / player.max_hp) * 100)}%` }}
-                />
-                {player.temporary_hp > 0 && (
-                  <div
-                    className="hp-bar-temp absolute top-0 h-full bg-gradient-to-r from-blue-500 to-blue-400"
-                    style={{
-                      left: `${Math.min(100, (player.current_hp / player.max_hp) * 100)}%`,
-                      width: `${Math.min(
-                        100 - (player.current_hp / player.max_hp) * 100,
-                        (player.temporary_hp / player.max_hp) * 100
-                      )}%`
-                    }}
-                  />
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div className="flex flex-col items-center space-y-2">
-                <div className="flex items-center">
-                  <input
-                    type="number"
-                    value={damageValue}
-                    onChange={(e) => setDamageValue(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && applyDamage()}
-                    className="input-dark w-16 px-2 py-2 rounded-l-md text-center text-sm"
-                    placeholder="0"
-                    min="0"
-                  />
-                  <button
-                    onClick={applyDamage}
-                    disabled={!damageValue || parseInt(damageValue) <= 0}
-                    className="px-3 py-2 bg-transparent hover:bg-gray-600/30 disabled:bg-transparent disabled:cursor-not-allowed text-red-500 rounded-r-md text-sm font-medium transition-colors"
-                  >
-                    OK
-                  </button>
-                </div>
-                <div className="flex items-center justify-center gap-1 text-sm text-red-500 mt-1">
-                  <Sword size={16} />
-                  <span>Dégâts</span>
-                </div>
-              </div>
-
-              <div className="flex flex-col items-center space-y-2">
-                <div className="flex items-center">
-                  <input
-                    type="number"
-                    value={healValue}
-                    onChange={(e) => setHealValue(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && applyHealing()}
-                    className="input-dark w-16 px-2 py-2 rounded-l-md text-center text-sm"
-                    placeholder="0"
-                    min="0"
-                  />
-                  <button
-                    onClick={applyHealing}
-                    disabled={!healValue || parseInt(healValue) <= 0}
-                    className="px-3 py-2 bg-transparent hover:bg-gray-600/30 disabled:bg-transparent disabled:cursor-not-allowed text-green-400 rounded-r-md text-sm font-medium transition-colors"
-                  >
-                    OK
-                  </button>
-                </div>
-                <div className="flex items-center justify-center gap-1 text-sm text-green-400 mt-1">
-                  <Heart size={16} />
-                  <span>Soins</span>
-                </div>
-              </div>
-
-              <div className="flex flex-col items-center space-y-2">
-                <div className="flex items-center">
-                  <input
-                    type="number"
-                    value={tempHpValue}
-                    onChange={(e) => setTempHpValue(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && applyTempHP()}
-                    className="input-dark w-16 px-2 py-2 rounded-l-md text-center text-sm"
-                    placeholder="0"
-                    min="0"
-                  />
-                  <button
-                    onClick={applyTempHP}
-                    disabled={!tempHpValue || parseInt(tempHpValue) <= 0}
-                    className="px-3 py-2 bg-transparent hover:bg-gray-600/30 disabled:bg-transparent disabled:cursor-not-allowed text-blue-400 rounded-r-md text-sm font-medium transition-colors"
-                  >
-                    OK
-                  </button>
-                </div>
-                <div className="flex items-center justify-center gap-1 text-sm text-blue-400 mt-1">
-                  <Shield size={16} />
-                  <span>PV Temp</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          </button>
         </div>
       </div>
 
-      {/* Attaques */}
-      <div className="stat-card">
-        <div className="stat-header flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Swords className="w-5 h-5 text-red-500" />
-            <h3 className="text-lg font-semibold text-gray-100">Attaques</h3>
-          </div>
-          <button
-            onClick={() => {
-              setEditingAttack(null);
-              setShowAttackModal(true);
-            }}
-            className="p-2 text-gray-400 hover:bg-gray-700/50 rounded-lg transition-colors"
-            title="Ajouter une attaque"
-          >
-            <Plus size={20} />
-          </button>
+      {/* Section "Ressources de classe" masquée */}
+      {/* {renderClassResources()} */}
+
+      {showSpellbook && (
+        <SpellbookModal
+          isOpen={showSpellbook}
+          onClose={() => setShowSpellbook(false)}
+          playerClass={player.class}
+        />
+      )}
+
+      {showSpellSlotModal && spellSlotModalData && (
+        <SpellSlotSelectionModal
+          isOpen={showSpellSlotModal}
+          onClose={() => {
+            setShowSpellSlotModal(false);
+            setSpellSlotModalData(null);
+          }}
+          onConfirm={(level) => {
+            handleSpellSlotChange(level, true);
+            setShowSpellSlotModal(false);
+            setSpellSlotModalData(null);
+          }}
+          player={player}
+          attackName={spellSlotModalData.attackName}
+          suggestedLevel={1}
+        />
+      )}
+    </div>
+  );
+}
+
+
+
+function ResourceEditModal({
+  label,
+  total,
+  onSave,
+  onCancel,
+}: {
+  label: string;
+  total: number;
+  onSave: (newTotal: number) => void;
+  onCancel: () => void;
+}) {
+  const [value, setValue] = useState<string>(total.toString());
+  const handleSave = () => {
+    const newValue = parseInt(value);
+    if (!Number.isNaN(newValue) && newValue >= 0) onSave(newValue);
+  };
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-300 mb-1">{label}</label>
+        <input type="number" min="0" value={value} onChange={(e) => setValue(e.target.value)} className="input-dark w-full px-3 py-2 rounded-md" />
+      </div>
+      <div className="flex gap-2">
+        <button onClick={handleSave} className="btn-primary flex-1 px-4 py-2 rounded-lg flex items-center justify-center gap-2">
+          <Save size={16} />
+          Sauvegarder
+        </button>
+        <button onClick={onCancel} className="btn-secondary px-4 py-2 rounded-lg flex items-center justify-center gap-2">
+          <X size={16} />
+          Annuler
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ResourceBlock({
+  icon,
+  label,
+  total,
+  used,
+  onUse,
+  onRestore,
+  onUpdateTotal,
+  onUpdateUsed,
+  useNumericInput = false,
+  color = 'purple',
+  onDelete,
+  hideEdit = false,
+  minusOnly = false,
+  minusSize = 18,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  total: number;
+  used: number;
+  onUse?: () => void;
+  onRestore?: () => void;
+  onUpdateTotal: (newTotal: number) => void;
+  onUpdateUsed?: (value: number) => void;
+  useNumericInput?: boolean;
+  color?: 'red' | 'purple' | 'yellow' | 'green' | 'blue';
+  onDelete?: () => void;
+  hideEdit?: boolean;
+  minusOnly?: boolean;
+  minusSize?: number;
+}) {
+  const remaining = Math.max(0, total - used);
+  const [isEditing, setIsEditing] = useState(false);
+  const [amount, setAmount] = useState<string>('');
+
+  const colorClasses = {
+    red: 'text-red-500 hover:bg-red-900/30',
+    purple: 'text-purple-500 hover:bg-purple-900/30',
+    yellow: 'text-yellow-500 hover:bg-yellow-900/30',
+    green: 'text-green-500 hover:bg-green-900/30',
+    blue: 'text-blue-500 hover:bg-blue-900/30',
+  };
+
+  return (
+    <div className="resource-block bg-gradient-to-br from-gray-800/50 to-gray-900/30 border border-gray-700/30 rounded-lg p-3">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <div className={`${colorClasses[color]}`}>{icon}</div>
+          <span className="text-sm font-medium text-gray-300">{label}</span>
         </div>
-        <div className="p-4 space-y-2">
-          {physicalAttacks.length === 0 ? (
-            <div className="text-center py-8 text-gray-400">
-              <Sword className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>Aucune attaque configurée</p>
-              <p className="text-sm">Equippez une arme dans l'onglet Sac</p>
-              <p className="text-sm">ou bien cliquez sur + pour ajouter une attaque</p>
-            </div>
-          ) : (
-            <div className="space-y-2">{physicalAttacks.map(renderAttackCard)}</div>
+        <div className="flex items-center gap-2">
+          <div className="text-sm text-gray-400 bg-gray-800/50 px-3 py-1 rounded-md min-w-[64px] text-center">
+            {remaining}/{total}
+          </div>
+          {!hideEdit && (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-blue-500 hover:bg-blue-900/30 rounded-full transition-colors"
+              title="Modifier"
+            >
+              <Settings size={16} />
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-red-500 hover:bg-red-900/30 rounded-full transition-colors"
+              title="Supprimer"
+            >
+              <Trash2 size={16} />
+            </button>
           )}
         </div>
       </div>
 
-      {showAttackModal && (
-        <AttackEditModal
-          attack={editingAttack}
-          onClose={() => {
-            setShowAttackModal(false);
-            setEditingAttack(null);
-          }}
-          onSave={saveAttack}
-          onDelete={editingAttack ? () => deleteAttack(editingAttack.id) : undefined}
-        />
+      {useNumericInput ? (
+        <div className="flex-1 flex items-center gap-2">
+          <input
+            type="number"
+            min="0"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="input-dark flex-1 px-3 py-1 rounded-md text-center"
+            placeholder="0"
+          />
+          <button
+            onClick={() => {
+              const value = parseInt(amount) || 0;
+              if (value > 0) {
+                onUpdateUsed?.(used + value);
+                setAmount('');
+              }
+            }}
+            className="p-1 text-red-500 hover:bg-red-900/30 rounded-md transition-colors"
+            title="Dépenser"
+            style={{ minWidth: 44, minHeight: 44 }}
+          >
+            <Minus size={minusSize} />
+          </button>
+          {!minusOnly && (
+            <button
+              onClick={() => {
+                const value = parseInt(amount) || 0;
+                if (value > 0) {
+                  onUpdateUsed?.(Math.max(0, used - value));
+                  setAmount('');
+                }
+              }}
+              className="p-1 text-green-500 hover:bg-green-900/30 rounded-md transition-colors"
+              title="Récupérer"
+            >
+              <Plus size={18} />
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="flex gap-2">
+          <button
+            onClick={onUse}
+            disabled={remaining <= 0}
+            className={`flex-1 h-8 flex items-center justify-center rounded-md transition-colors ${
+              remaining > 0 ? colorClasses[color] : 'text-gray-600 bg-gray-800/50 cursor-not-allowed'
+            }`}
+          >
+            <Minus size={16} className="mx-auto" />
+          </button>
+          <button
+            onClick={onRestore}
+            disabled={used <= 0}
+            className={`flex-1 h-8 flex items-center justify-center rounded-md transition-colors ${
+              used > 0 ? colorClasses[color] : 'text-gray-600 bg-gray-800/50 cursor-not-allowed'
+            }`}
+          >
+            <Plus size={16} className="mx-auto" />
+          </button>
+        </div>
       )}
 
-      <StandardActionsSection player={player} onUpdate={onUpdate} />
-      <ConditionsSection player={player} onUpdate={onUpdate} />
-
-      <DiceRoller isOpen={diceRollerOpen} onClose={() => setDiceRollerOpen(false)} rollData={rollData} />
+      {isEditing && !hideEdit && (
+        <div className="mt-4 border-t border-gray-700/50 pt-4">
+          <ResourceEditModal
+            label={`Nombre total de ${label.toLowerCase()}`}
+            total={total}
+            onSave={(newTotal) => {
+              onRestore && onRestore();
+              onUpdateTotal(newTotal);
+              setIsEditing(false);
+            }}
+            onCancel={() => setIsEditing(false)}
+          />
+        </div>
+      )}
     </div>
   );
 }
+
+export default AbilitiesTab; 
