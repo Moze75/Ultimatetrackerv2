@@ -288,7 +288,25 @@ async function autoEquipItems(
     equipment: updatedPlayer.equipment
   });
 
-  // Équiper les armes (logique existante pour les armes)
+   // ✅ CORRECTION: Récupérer le player APRÈS équipement armure/bouclier
+  const { data: playerAfterArmorShield } = await supabase
+    .from('players')
+    .select('*')
+    .eq('id', playerId)
+    .single();
+
+  if (!playerAfterArmorShield) {
+    console.error('[autoEquipItems] Impossible de récupérer le player après armure/bouclier');
+    return;
+  }
+
+  console.log('[autoEquipItems] Player après armure/bouclier:', {
+    hasArmor: !!playerAfterArmorShield.equipment?.armor,
+    hasShield: !!playerAfterArmorShield.equipment?.shield,
+    equipment: playerAfterArmorShield.equipment
+  });
+
+  // Équiper les armes
   const weaponItems = toEquip.filter(item => item.meta.type === 'weapon');
   if (weaponItems.length > 0) {
     const equippedWeapons = [];
@@ -324,11 +342,12 @@ async function autoEquipItems(
         );
         console.log('[autoEquipItems] Arme marquée comme équipée:', weaponItem.name);
 
+        // ✅ CORRECTION: Utiliser playerAfterArmorShield au lieu de updatedPlayer
         await createWeaponAttack(
           playerId,
           weaponItem.name,
           weaponItem.meta.weapon,
-          updatedPlayer
+          playerAfterArmorShield
         );
       }
     }
@@ -338,8 +357,9 @@ async function autoEquipItems(
     }
 
     if (equippedWeapons.length > 0) {
+      // ✅ CORRECTION: Utiliser playerAfterArmorShield.equipment au lieu de updatedPlayer.equipment
       const equipmentUpdates = {
-        ...updatedPlayer.equipment,
+        ...playerAfterArmorShield.equipment,
         weapons: equippedWeapons
       };
 
