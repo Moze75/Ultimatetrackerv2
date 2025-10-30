@@ -117,6 +117,11 @@ export function CustomItemModal({
       imageUrl: imageUrl.trim() || undefined
     };
 
+    // 🆕 NOUVEAU : Ajouter les bonus de stats si présents
+    if (hasAnyStatBonus) {
+      meta.statBonuses = statBonuses;
+    }
+
     if (type === 'armor') {
       const cap = armDexCap === '' ? null : Number(armDexCap);
       meta.armor = {
@@ -128,16 +133,15 @@ export function CustomItemModal({
     } else if (type === 'shield') {
       meta.shield = { bonus: shieldBonus };
     } else if (type === 'weapon') {
-      // Construire la chaîne properties depuis la checklist ou le fallback libre
-     const properties = (propTags.length ? propTags.join(', ') : wProps || '').trim();
-meta.weapon = {
-  damageDice: wDice,
-  damageType: wType,
-  properties,
-  range: wRange,
-  category: wCategory,
-  weapon_bonus: wBonus
-};
+      const properties = (propTags.length ? propTags.join(', ') : wProps || '').trim();
+      meta.weapon = {
+        damageDice: wDice,
+        damageType: wType,
+        properties,
+        range: wRange,
+        category: wCategory,
+        weapon_bonus: wBonus
+      };
     }
 
     onAdd({ name: cleanName, description: description.trim(), meta });
