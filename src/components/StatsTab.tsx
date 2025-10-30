@@ -453,9 +453,13 @@ React.useEffect(() => {
             
             {abilities.map((ability, abilityIndex) => (
 
+    const equipmentBonuses = calculateEquipmentBonuses();
+  const baseModifier = getModifier(ability.score);
+  const equipmentBonus = equipmentBonuses[ability.name as keyof typeof equipmentBonuses] || 0;
+  const displayModifier = baseModifier + equipmentBonus;
   
-  
-              <div key={ability.name} className="flex flex-col items-center">
+  return (
+    <div key={ability.name} className="flex flex-col items-center">
                 {/* Contenant principal avec l'image de fond - ✅ Cliquable pour lancer le dé */}
                 <div 
                   className={`relative w-28 h-36 flex flex-col items-center justify-start ${
