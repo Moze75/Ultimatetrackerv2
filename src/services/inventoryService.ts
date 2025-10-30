@@ -498,4 +498,164 @@ export function determineAutoEquip(items: EnrichedEquipment[]): EnrichedEquipmen
   return result;
 }
 
+}
 
+// ✅ AJOUTER TOUT CE BLOC ICI (après la ligne 499)
+import { supabase } from '../lib/supabase';
+import { InventoryItem, Player } from '../types/dnd';
+
+const META_PREFIX = '#meta:';
+
+function parseMeta(description: string | null | undefined): ItemMeta | null {
+  if (!description) return null;
+  const lines = (description || '').split('\n').map(l => l.trim());
+  const metaLine = [...lines].reverse().find(l => l.startsWith(META_PREFIX));
+  if (!metaLine) return null;
+  try {
+    return JSON.parse(metaLine.slice(META_PREFIX.length));
+  } catch {
+    return null;
+  }
+}
+
+function visibleDescription(desc: string | null | undefined): string {
+  if (!desc) return '';
+  return desc.split('\n').filter((l) => !l.trim().startsWith(META_PREFIX)).join('\n').trim();
+}
+
+function injectMetaIntoDescription(desc: string, meta: ItemMeta): string {
+  const metaLine = `${META_PREFIX}${JSON.stringify(meta)}`;
+  return desc ? `${desc}\n${metaLine}` : metaLine;
+}
+
+const inventoryService = {
+  async getPlayerInventory(playerId: string): Promise<InventoryItem[]> {
+    try {
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .select('*')
+        .eq('player_id', playerId);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erreur lors de la récupération de l\'inventaire:', error);
+      return [];
+    }
+  },
+
+  async addItem(item: Partial<InventoryItem>): Promise<InventoryItem | null> {
+    try {
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .insert([item])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout de l\'objet:', error);
+      return null;
+    }
+  },
+
+  async removeItem(itemId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('inventory_items')
+        .delete()
+        .eq('id', itemId);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Erreur lors de la suppression de l\'objet:', error);
+      return false;
+    }
+  },
+
+  async equipItem(
+    playerId: string,
+    item: InventoryItem,
+    player: Player,
+    type: 'armor' | 'shield'
+  ): Promise<boolean> {
+    try {
+      console.log(`[inventoryService.equipItem] Tentative d'équipement de ${type}: ${item.name}`);
+      console.log('[inventoryService.equipItem] Item description:', item.description);
+
+      const meta = parseMeta(item.description);
+      console.log('[inventoryService.equipItem] Meta parsé:', meta);
+
+      if (!meta || meta.type !== type) {
+        console.error(`[inventoryService.equipItem] ERREUR: Item ${item.name} n'est pas de type ${type}. Meta type trouvé:`, meta?.type);
+        return false;
+      }
+
+      const inventory = await this.getPlayerInventory(playerId);
+      for (const invItem of inventory) {
+        const invMeta = parseMeta(invItem.description);
+        if (invItem.id !== item.id && invMeta?.type === type && invMeta.equipped) {
+          const updatedMeta = { ...invMeta, equipped: false };
+          const updatedDesc = injectMetaIntoDescription(visibleDescription(invItem.description), updatedMeta);
+          await supabase
+            .from('inventory_items')
+            .update({ description: updatedDesc })
+            .eq('id', invItem.id);
+        }
+      }
+
+      const updatedMeta = { ...meta, equipped: true };
+      const updatedDesc = injectMetaIntoDescription(visibleDescription(item.description), updatedMeta);
+      const { error: updateError } = await supabase
+        .from('inventory_items')
+        .update({ description: updatedDesc })
+        .eq('id', item.id);
+
+      if (updateError) throw updateError;
+
+      const equipmentUpdate: any = { ...player.equipment };
+
+      if (type === 'armor' && meta.armor) {
+        equipmentUpdate.armor = {
+          name: item.name,
+          description: visibleDescription(item.description),
+          inventory_item_id: item.id,
+          armor_formula: {
+            base: meta.armor.base,
+            addDex: meta.armor.addDex,
+            dexCap: meta.armor.dexCap ?? null,
+            label: meta.armor.label
+          },
+          shield_bonus: null,
+          weapon_meta: null,
+        };
+      } else if (type === 'shield' && meta.shield) {
+        equipmentUpdate.shield = {
+          name: item.name,
+          description: visibleDescription(item.description),
+          inventory_item_id: item.id,
+          shield_bonus: meta.shield.bonus,
+          armor_formula: null,
+          weapon_meta: null,
+        };
+      }
+
+      const { error: equipError } = await supabase
+        .from('players')
+        .update({ equipment: equipmentUpdate })
+        .eq('id', playerId);
+
+      if (equipError) throw equipError;
+
+      console.log(`[inventoryService] ${type} ${item.name} équipé avec succès`);
+      return true;
+    } catch (error) {
+      console.error(`Erreur lors de l'équipement du ${type}:`, error);
+      return false;
+    }
+  }
+};
+
+export default inventoryService;
