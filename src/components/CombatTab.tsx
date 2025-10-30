@@ -574,6 +574,39 @@ const getDamageBonus = (attack: Attack): number => {
       return strScore >= dexScore ? 'Force' : 'Dextérité';
     }
     
+    // ✅ PRIORITÉ 2b : Polyvalente (Épée longue, Bâton)
+    // VOTRE RÈGLE : Utilise le meilleur entre Force et Dex
+    if (props.includes('polyvalente') || props.includes('versatile')) {
+      const strAbility = player.abilities?.find(a => a.name === 'Force');
+      const dexAbility = player.abilities?.find(a => a.name === 'Dextérité');
+      const strScore = strAbility?.score || 10;
+      const dexScore = dexAbility?.score || 10;
+      return strScore >= dexScore ? 'Force' : 'Dextérité';
+    }
+    
+    // ✅ PRIORITÉ 3 : Arme à distance PURE (Arc, Arbalète)
+    // Règle D&D : Toujours Dextérité
+    const isPureRanged = 
+      props.includes('munitions') || 
+      props.includes('chargement') || 
+      nameLower.includes('arc') || 
+      nameLower.includes('arbalète');
+    
+    if (isPureRanged) {
+      return 'Dextérité';
+    }
+    
+    // ✅ PRIORITÉ 4 : Portée > 1,5m (distance) MAIS pas de lancer
+    // Règle D&D : Toujours Dextérité
+    if (range !== 'corps à corps' && range !== 'contact' && range.includes('m')) {
+      return 'Dextérité';
+    }
+    
+    // ✅ PRIORITÉ 5 : Mêlée standard (Épée longue, Masse d'armes)
+    // Règle D&D : Toujours Force
+    return 'Force';
+  })();
+    
     // ✅ PRIORITÉ 3 : Arme à distance PURE (Arc, Arbalète)
     // Règle D&D : Toujours Dextérité
     const isPureRanged = 
