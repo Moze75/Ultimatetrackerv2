@@ -37,6 +37,7 @@ const URLS = {
   weapons: `${ULT_BASE}/Armes.md`,
   adventuring_gear: `${ULT_BASE}/Equipements_daventurier.md`,
   tools: `${ULT_BASE}/Outils.md`,
+  gems: `${ULT_BASE}/Pierres%20pr%C3%A9cieuses.md`, // ✅ AJOUT
 };
 const META_PREFIX = '#meta:';
 const stripPriceParentheses = (name: string) =>
