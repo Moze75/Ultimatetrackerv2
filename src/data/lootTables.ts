@@ -86,10 +86,26 @@ export type LevelRange = '1-4' | '5-10' | '11-16' | '17-20';
 export type Difficulty = 'facile' | 'modérée' | 'difficile';
 export type EnemyCount = '1' | '2-4' | '5-10' | '11+';
 
-// Montants de monnaie par niveau (en pièces de cuivre comme base)
+// ✅ NOUVEAU : Montants spécifiques par type de monnaie et niveau
 export const CURRENCY_AMOUNTS = {
-  '1-4': { min: 5, max: 50 },
-  '5-10': { min: 50, max: 300 },
-  '11-16': { min: 300, max: 1500 },
-  '17-20': { min: 1500, max: 5000 }
+  '1-4': {
+    copper: { min: 1, max: 50 },      // Max 50 pc
+    silver: { min: 1, max: 10 },      // 1-10 pa
+    gold: { min: 1, max: 5 }          // 1-5 po
+  },
+  '5-10': {
+    copper: { min: 1, max: 50 },      // Toujours max 50 pc
+    silver: { min: 5, max: 30 },      // 5-30 pa
+    gold: { min: 1, max: 15 }         // 1-15 po
+  },
+  '11-16': {
+    copper: { min: 1, max: 50 },      // Toujours max 50 pc
+    silver: { min: 10, max: 50 },     // 10-50 pa
+    gold: { min: 5, max: 50 }         // 5-50 po
+  },
+  '17-20': {
+    copper: { min: 1, max: 50 },      // Toujours max 50 pc
+    silver: { min: 10, max: 50 },     // 10-50 pa
+    gold: { min: 10, max: 100 }       // 10-100 po
+  }
 };
