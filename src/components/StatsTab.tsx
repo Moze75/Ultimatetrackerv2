@@ -136,7 +136,7 @@ const getAbilityShortName = (abilityName: string): string => {
   }
 };
 
-export function StatsTab({ player, onUpdate }: StatsTabProps) {
+export function StatsTab({ player, inventory, onUpdate }: StatsTabProps) {
   const [editing, setEditing] = useState(false);
 
   const effectiveProficiency = getProficiencyBonusForLevel(player.level);
