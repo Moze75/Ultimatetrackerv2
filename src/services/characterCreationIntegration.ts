@@ -442,7 +442,12 @@ export async function createCharacterFromCreatorPayload(
   const level = Math.max(1, payload.level ?? 1);
   const proficiency_bonus = getProficiencyBonusForLevel(level);
 
-  const abilitiesArray = buildAbilitiesForTracker(payload.finalAbilities || {}, payload.proficientSkills || [], level);
+ const abilitiesArray = buildAbilitiesForTracker(
+  payload.finalAbilities || {}, 
+  payload.proficientSkills || [], 
+  level,
+  payload.savingThrows || [] // ✅ PASSER LES SAVING THROWS
+);
 
   // Don d’historique → feats.origins/origin
   const feats: any = {
