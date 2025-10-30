@@ -733,7 +733,7 @@ const renderPane = (key: TabKey | 'profile-details') => {
     }
     case 'class': return <ClassesTab player={currentPlayer} onUpdate={applyPlayerUpdate} sections={classSections} />;
     case 'abilities': return <AbilitiesTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
-    case 'stats': return <StatsTab player={currentPlayer} onUpdate={applyPlayerUpdate} />;
+       case 'stats': return <StatsTab player={currentPlayer} inventory={inventory} onUpdate={applyPlayerUpdate} />;
     case 'equipment':
       return (
         <EquipmentTab
