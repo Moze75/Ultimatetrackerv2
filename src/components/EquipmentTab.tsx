@@ -834,7 +834,7 @@ useEffect(() => {
           await saveEquipment('shield', eq);
           toast.success('Bouclier équipé');
         }
-    } else if (meta.type === 'weapon') {
+      } else if (meta.type === 'weapon') {
   const targetEquipped = mode === 'equip';
   if (meta.equipped === targetEquipped) return;
 
@@ -907,10 +907,24 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
         } catch (weaponSaveError) {
           console.error('Erreur sauvegarde armes équipées:', weaponSaveError);
         }
+      } else if (isEquippableItem) {
+        // ✅ NOUVEAU : Gestion équipement/bijoux/outils/autres avec bonus
+        if (mode === 'unequip' && meta.equipped) {
+          await updateItemMetaComplete(freshItem, { ...meta, equipped: false });
+          const itemTypeName = 
+            meta.type === 'jewelry' ? 'Bijou' : 
+            meta.type === 'equipment' ? 'Équipement' : 
+            meta.type === 'tool' ? 'Outil' : 'Objet';
+          toast.success(`${itemTypeName} déséquipé`);
+        } else if (mode === 'equip' && !meta.equipped) {
+          await updateItemMetaComplete(freshItem, { ...meta, equipped: true });
+          const itemTypeName = 
+            meta.type === 'jewelry' ? 'Bijou' : 
+            meta.type === 'equipment' ? 'Équipement' : 
+            meta.type === 'tool' ? 'Outil' : 'Objet';
+          toast.success(`${itemTypeName} équipé`);
+        }
       }
-
- 
-      
     } catch (e) {
       console.error('Erreur performEquipToggle:', e);
       await refreshInventory(0);
