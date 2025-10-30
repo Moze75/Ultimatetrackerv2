@@ -908,6 +908,18 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
           console.error('Erreur sauvegarde armes équipées:', weaponSaveError);
         }
       }
+
+      } else if (isEquippableItem) {
+        // ✅ NOUVEAU : Gestion équipement/bijoux/outils/autres avec bonus
+        if (mode === 'unequip' && meta.equipped) {
+          await updateItemMetaComplete(freshItem, { ...meta, equipped: false });
+          toast.success(`${meta.type === 'jewelry' ? 'Bijou' : meta.type === 'equipment' ? 'Équipement' : meta.type === 'tool' ? 'Outil' : 'Objet'} déséquipé`);
+        } else if (mode === 'equip' && !meta.equipped) {
+          await updateItemMetaComplete(freshItem, { ...meta, equipped: true });
+          toast.success(`${meta.type === 'jewelry' ? 'Bijou' : meta.type === 'equipment' ? 'Équipement' : meta.type === 'tool' ? 'Outil' : 'Objet'} équipé`);
+        }
+      }
+      
     } catch (e) {
       console.error('Erreur performEquipToggle:', e);
       await refreshInventory(0);
