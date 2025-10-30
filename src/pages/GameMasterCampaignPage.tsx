@@ -1767,18 +1767,28 @@ function GiftsTab({
   const [showRandomLootModal, setShowRandomLootModal] = useState(false); // ✅ AJOUT
   const [giftType, setGiftType] = useState<'item' | 'currency'>('item');
 
-  return (
+return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="text-xl font-semibold text-white">Envoyer aux joueurs</h2>
-        <button
-          onClick={() => setShowSendModal(true)}
-          className="btn-primary px-6 py-3 rounded-lg flex items-center gap-2"
-        >
-          <Send size={20} />
-          Nouvel envoi
-        </button>
+        <div className="flex gap-2">
+          {/* ✅ NOUVEAU BOUTON */}
+          <button
+            onClick={() => setShowRandomLootModal(true)}
+            className="px-4 py-2 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 flex items-center gap-2"
+          >
+            <Dices size={18} />
+            Loot aléatoire
+          </button>
+          <button
+            onClick={() => setShowSendModal(true)}
+            className="btn-primary px-6 py-3 rounded-lg flex items-center gap-2"
+          >
+            <Send size={20} />
+            Nouvel envoi
+          </button>
+        </div>
       </div>
 
       {/* Sélecteur de type */}
