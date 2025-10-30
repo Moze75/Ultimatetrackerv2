@@ -220,39 +220,38 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
     count + ability.skills.filter(skill => skill.hasExpertise).length, 0
   );
 
-  const updateAbilityModifiers = (
-    newAbilities: Ability[],
-    currentStats = stats,
-    proficiencyBonus = effectiveProficiency
-  ) => {
-    // ✅ NOUVEAU : Récupérer les bonus d'équipement
-    const equipmentBonuses = calculateEquipmentBonuses();
+const updateAbilityModifiers = (
+  newAbilities: Ability[],
+  currentStats = stats,
+  proficiencyBonus = effectiveProficiency
+) => {
+  // ✅ Récupérer les bonus d'équipement
+  const equipmentBonuses = calculateEquipmentBonuses();
 
-    return newAbilities.map(ability => {
-      // ✅ NOUVEAU : Appliquer le bonus d'équipement au score de base
-      const equipmentBonus = equipmentBonuses[ability.name as keyof typeof equipmentBonuses] || 0;
-      const effectiveScore = ability.score + equipmentBonus;
-      
-      // Calculer le modificateur sur le score effectif (avec bonus d'équipement)
-      const modifier = getModifier(effectiveScore);
-      const jackOfAllTradesBonus = currentStats.jack_of_all_trades ? getJackOfAllTradesBonus(proficiencyBonus) : 0;
+  return newAbilities.map(ability => {
+    // ✅ MODIFIÉ : Le bonus s'ajoute directement au MODIFICATEUR (pas au score)
+    const baseModifier = getModifier(ability.score);
+    const equipmentBonus = equipmentBonuses[ability.name as keyof typeof equipmentBonuses] || 0;
+    const modifier = baseModifier + equipmentBonus; // ✅ CHANGEMENT ICI
+    
+    const jackOfAllTradesBonus = currentStats.jack_of_all_trades ? getJackOfAllTradesBonus(proficiencyBonus) : 0;
 
-      const isSavingThrowProficient = ability.savingThrow !== ability.modifier;
+    const isSavingThrowProficient = ability.savingThrow !== ability.modifier;
 
-      return {
-        ...ability,
-        modifier,
-        savingThrow: modifier + (isSavingThrowProficient ? proficiencyBonus : 0),
-        skills: ability.skills.map(skill => ({
-          ...skill,
-          bonus: modifier + (skill.isProficient ? 
-            (skill.hasExpertise ? proficiencyBonus * 2 : proficiencyBonus) :
-            (currentStats.jack_of_all_trades ? jackOfAllTradesBonus : 0)
-          )
-        }))
-      };
-    });
-  };
+    return {
+      ...ability,
+      modifier,
+      savingThrow: modifier + (isSavingThrowProficient ? proficiencyBonus : 0),
+      skills: ability.skills.map(skill => ({
+        ...skill,
+        bonus: modifier + (skill.isProficient ? 
+          (skill.hasExpertise ? proficiencyBonus * 2 : proficiencyBonus) :
+          (currentStats.jack_of_all_trades ? jackOfAllTradesBonus : 0)
+        )
+      }))
+    };
+  });
+};
 
   const handleScoreChange = (index: number, score: number) => {
     const newAbilities = [...abilities];
