@@ -1764,6 +1764,7 @@ function GiftsTab({
   inventory: CampaignInventoryItem[];
 }) {
   const [showSendModal, setShowSendModal] = useState(false);
+  const [showRandomLootModal, setShowRandomLootModal] = useState(false); // ✅ AJOUT
   const [giftType, setGiftType] = useState<'item' | 'currency'>('item');
 
   return (
