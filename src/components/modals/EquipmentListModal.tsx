@@ -209,6 +209,17 @@ function isMarkdownTableLine(line: string) {
 }
 
 function MarkdownLite({ text }: { text: string }) {
+  // ✅ Fonction pour rendre le texte avec markdown basique
+  const renderText = (str: string) => {
+    const parts = str.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((part, idx) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={idx} className="font-semibold text-gray-200">{part.slice(2, -2)}</strong>;
+      }
+      return <span key={idx}>{part}</span>;
+    });
+  };
+
   const blocks = text.split(/\n{2,}/g).map(b => b.split('\n'));
   return (
     <div className="space-y-2">
@@ -229,12 +240,12 @@ function MarkdownLite({ text }: { text: string }) {
             <div key={idx} className="overflow-x-auto">
               <table className="w-full text-left text-sm border border-gray-700/50 rounded-md overflow-hidden">
                 <thead className="bg-gray-800/60">
-                  <tr>{header.map((c, i) => <th key={i} className="px-2 py-1 border-b border-gray-700/50">{c}</th>)}</tr>
+                  <tr>{header.map((c, i) => <th key={i} className="px-2 py-1 border-b border-gray-700/50">{renderText(c)}</th>)}</tr>
                 </thead>
                 <tbody>
                   {body.map((r, ri) => (
                     <tr key={ri} className="odd:bg-gray-800/30">
-                      {r.map((c, ci) => <td key={ci} className="px-2 py-1 align-top border-b border-gray-700/30">{c}</td>)}
+                      {r.map((c, ci) => <td key={ci} className="px-2 py-1 align-top border-b border-gray-700/30">{renderText(c)}</td>)}
                     </tr>
                   ))}
                 </tbody>
@@ -243,9 +254,9 @@ function MarkdownLite({ text }: { text: string }) {
           );
         }
         if (lines.every(l => l.trim().startsWith('- '))) {
-          return <ul key={idx} className="list-disc pl-5 space-y-1">{lines.map((l, i) => <li key={i} className="text-sm text-gray-300">{l.replace(/^- /, '')}</li>)}</ul>;
+          return <ul key={idx} className="list-disc pl-5 space-y-1">{lines.map((l, i) => <li key={i} className="text-sm text-gray-300">{renderText(l.replace(/^- /, ''))}</li>)}</ul>;
         }
-        return <p key={idx} className="text-sm text-gray-300 whitespace-pre-wrap">{lines.join('\n')}</p>;
+        return <p key={idx} className="text-sm text-gray-300 whitespace-pre-wrap">{renderText(lines.join('\n'))}</p>;
       })}
     </div>
   );
