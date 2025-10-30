@@ -302,7 +302,7 @@ React.useEffect(() => {
   const updatedAbilities = updateAbilityModifiers(abilities, stats, effectiveProficiency);
   setAbilities(updatedAbilities);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [player.inventory, player.id]);
+}, [inventory, player.id]);
   
   // ✅ Fonctions pour lancer les dés avec les bons libellés
   const rollAbilityCheck = (ability: Ability) => {
