@@ -225,8 +225,16 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
     currentStats = stats,
     proficiencyBonus = effectiveProficiency
   ) => {
+    // ✅ NOUVEAU : Récupérer les bonus d'équipement
+    const equipmentBonuses = calculateEquipmentBonuses();
+
     return newAbilities.map(ability => {
-      const modifier = getModifier(ability.score);
+      // ✅ NOUVEAU : Appliquer le bonus d'équipement au score de base
+      const equipmentBonus = equipmentBonuses[ability.name as keyof typeof equipmentBonuses] || 0;
+      const effectiveScore = ability.score + equipmentBonus;
+      
+      // Calculer le modificateur sur le score effectif (avec bonus d'équipement)
+      const modifier = getModifier(effectiveScore);
       const jackOfAllTradesBonus = currentStats.jack_of_all_trades ? getJackOfAllTradesBonus(proficiencyBonus) : 0;
 
       const isSavingThrowProficient = ability.savingThrow !== ability.modifier;
@@ -243,7 +251,7 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
           )
         }))
       };
-    }); 
+    });
   };
 
   const handleScoreChange = (index: number, score: number) => {
