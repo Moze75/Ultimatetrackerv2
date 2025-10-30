@@ -427,7 +427,7 @@ React.useEffect(() => {
         </div>
         <div className="p-4">
           {/* Contenants des caractéristiques - 3 par ligne sur 2 lignes */}
-          <div className="grid grid-cols-3 gap-4 mb-6">
+  <div className="grid grid-cols-3 gap-4 mb-6">
 
 {/* ✅ FORCER LE RECALCUL DES MODIFICATEURS AVEC LES BONUS */}
 {(() => {
@@ -450,12 +450,14 @@ React.useEffect(() => {
   // Utiliser cette nouvelle liste pour l'affichage
   return null; // Ne rien afficher ici, juste forcer le recalcul
 })()}
-             
-            {abilities.map((ability, abilityIndex) => (
+            
+{abilities.map((ability, abilityIndex) => (
 
-     
     
-              <div key={ability.name} className="flex flex-col items-center">
+    
+  <div key={ability.name} className="flex flex-col items-center">
+
+
                 {/* Contenant principal avec l'image de fond - ✅ Cliquable pour lancer le dé */}
                 <div 
                   className={`relative w-28 h-36 flex flex-col items-center justify-start ${
@@ -552,7 +554,8 @@ React.useEffect(() => {
                   </div>
                 </div>
               </div>
-            ))}
+            );
+          })}
           </div>
 
           {/* Tableau des compétences sur une seule colonne centrée */}
