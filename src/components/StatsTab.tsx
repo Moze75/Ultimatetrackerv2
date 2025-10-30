@@ -463,25 +463,13 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
                         max="20"
                       />
                     ) : (
-                      // ✅ NOUVEAU : Afficher le score avec le bonus d'équipement
-                      (() => {
-                        const equipmentBonuses = calculateEquipmentBonuses();
-                        const bonus = equipmentBonuses[ability.name as keyof typeof equipmentBonuses] || 0;
-                        const effectiveScore = ability.score + bonus;
-                        
-                        return (
-                          <div className="w-10 h-10 flex flex-col items-center justify-center text-base font-normal text-gray-100">
-                            <div>{effectiveScore}</div>
-                            {bonus !== 0 && (
-                              <div className="text-[8px] text-green-400 leading-none">
-                                ({ability.score} {bonus > 0 ? '+' : ''}{bonus})
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })()
-                    )}
+                      <div className="w-10 h-10 flex items-center justify-center text-base font-normal text-gray-100">
+                        {ability.score}
+                      </div>
+                    )} 
                   </div>
+                </div>
+
                 {/* Sauvegarde en dessous du contenant - ✅ Cliquable pour lancer le dé */}
                 <div className="mt-2 w-full max-w-[130px]">
                   <div 
