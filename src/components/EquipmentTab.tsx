@@ -930,6 +930,115 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
     }
   };
 
+    } finally {
+      setPendingEquipment(prev => {
+        const next = new Set(prev);
+        next.delete(freshItem.id);
+        return next;
+      });
+    }
+  };
+
+  // 🆕 NOUVEAU : Équiper/Déséquiper un objet avec bonus de stats
+  const handleEquipStatItem = async (item: InventoryItem) => {
+    if (!player?.id) return;
+
+    const meta = parseMeta(item.description);
+    if (!meta || !meta.statBonuses) {
+      toast.error('Cet objet n\'a pas de bonus de stats');
+      return;
+    }
+
+    try {
+      if (meta.equipped) {
+        // Déséquiper - retirer les bonus
+        const newAbilities = { ...player.abilities };
+        
+        if (meta.statBonuses.strength) {
+          newAbilities.strength = (newAbilities.strength || 10) - meta.statBonuses.strength;
+        }
+        if (meta.statBonuses.dexterity) {
+          newAbilities.dexterity = (newAbilities.dexterity || 10) - meta.statBonuses.dexterity;
+        }
+        if (meta.statBonuses.constitution) {
+          newAbilities.constitution = (newAbilities.constitution || 10) - meta.statBonuses.constitution;
+        }
+        if (meta.statBonuses.intelligence) {
+          newAbilities.intelligence = (newAbilities.intelligence || 10) - meta.statBonuses.intelligence;
+        }
+        if (meta.statBonuses.wisdom) {
+          newAbilities.wisdom = (newAbilities.wisdom || 10) - meta.statBonuses.wisdom;
+        }
+        if (meta.statBonuses.charisma) {
+          newAbilities.charisma = (newAbilities.charisma || 10) - meta.statBonuses.charisma;
+        }
+
+        // Mettre à jour les abilities du joueur
+        const { error: playerError } = await supabase
+          .from('players')
+          .update({ abilities: newAbilities })
+          .eq('id', player.id);
+
+        if (playerError) throw playerError;
+
+        // Marquer l'item comme déséquipé
+        const updatedMeta = { ...meta, equipped: false };
+        await updateItemMetaComplete(item, updatedMeta);
+
+        // Mettre à jour le state local
+        onPlayerUpdate({ ...player, abilities: newAbilities });
+
+        toast.success(`${item.name} déséquipé`);
+        await refreshInventory(0);
+      } else {
+        // Équiper - ajouter les bonus
+        const newAbilities = { ...player.abilities };
+        
+        if (meta.statBonuses.strength) {
+          newAbilities.strength = (newAbilities.strength || 10) + meta.statBonuses.strength;
+        }
+        if (meta.statBonuses.dexterity) {
+          newAbilities.dexterity = (newAbilities.dexterity || 10) + meta.statBonuses.dexterity;
+        }
+        if (meta.statBonuses.constitution) {
+          newAbilities.constitution = (newAbilities.constitution || 10) + meta.statBonuses.constitution;
+        }
+        if (meta.statBonuses.intelligence) {
+          newAbilities.intelligence = (newAbilities.intelligence || 10) + meta.statBonuses.intelligence;
+        }
+        if (meta.statBonuses.wisdom) {
+          newAbilities.wisdom = (newAbilities.wisdom || 10) + meta.statBonuses.wisdom;
+        }
+        if (meta.statBonuses.charisma) {
+          newAbilities.charisma = (newAbilities.charisma || 10) + meta.statBonuses.charisma;
+        }
+
+        // Mettre à jour les abilities du joueur
+        const { error: playerError } = await supabase
+          .from('players')
+          .update({ abilities: newAbilities })
+          .eq('id', player.id);
+
+        if (playerError) throw playerError;
+
+        // Marquer l'item comme équipé
+        const updatedMeta = { ...meta, equipped: true };
+        await updateItemMetaComplete(item, updatedMeta);
+
+        // Mettre à jour le state local
+        onPlayerUpdate({ ...player, abilities: newAbilities });
+
+        toast.success(`${item.name} équipé`);
+        await refreshInventory(0);
+      }
+    } catch (error) {
+      console.error('Erreur:', error);
+      toast.error('Une erreur est survenue');
+    }
+  };
+
+  // ----------- performToggle (AVERTISSEMENT NON BLOQUANT) -----------
+  
   // ----------- performToggle (AVERTISSEMENT NON BLOQUANT) -----------
   // --- CHANGED: on ne déclenche plus le WeaponProficiencyWarningModal ici pour éviter double overlay
   const performToggle = async (item: InventoryItem, mode: 'equip' | 'unequip') => {
