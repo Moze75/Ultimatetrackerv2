@@ -110,10 +110,10 @@ export const CURRENCY_AMOUNTS = {
   }
 };
 
-// ✅ NOUVEAU : Nombre de pierres précieuses par niveau
+// ✅ Révisé : Nombre de gemmes/objets précieux par niveau
 export const GEM_AMOUNTS = {
-  '1-4': { min: 1, max: 2 },    // 1-2 gemmes
-  '5-10': { min: 1, max: 3 },   // 1-3 gemmes
-  '11-16': { min: 2, max: 4 },  // 2-4 gemmes
-  '17-20': { min: 2, max: 5 }   // 2-5 gemmes
+  '1-4':   { min: 0, max: 2 },   // jusqu’à 2 gemmes pour niveaux 1‑4
+  '5-10':  { min: 0, max: 3 },   // jusqu’à 3 gemmes pour niveaux 5‑10
+  '11-16': { min: 1, max: 3 },   // 1 à 3 gemmes pour niveaux 11‑16
+  '17-20': { min: 1, max: 4 }    // 1 à 4 gemmes pour niveaux 17‑20
 };
