@@ -208,13 +208,13 @@ useEffect(() => {
   firstMountRef.current = false;
 }, []);
   
-  useEffect(() => {
-    if (player.class !== previousClass || player.level !== previousLevel) {
-      setPreviousClass(player.class);
-      setPreviousLevel(player.level);
-      initializeResources();
-    }
-  }, [player.class, player.level]); // eslint-disable-line react-hooks/exhaustive-deps
+useEffect(() => {
+  if (player.class !== previousClass || player.level !== previousLevel) {
+    setPreviousClass(player.class);
+    setPreviousLevel(player.level);
+    initializeResources();
+  }
+}, [player.class, player.level, previousClass, previousLevel]); // ✅ Ajouter toutes les deps
 
   // Bard: clamp used_bardic_inspiration if cap auto changes
   const lastClampKey = useRef<string | null>(null);
