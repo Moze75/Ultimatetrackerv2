@@ -278,6 +278,101 @@ export function CustomItemModal({
           </div>
         )}
 
+        {/* 🆕 NOUVEAU : Section bonus de stats pour jewelry et other */}
+        {(type === 'jewelry' || type === 'other') && (
+          <div className="mt-4 space-y-3 border-t border-gray-700 pt-4">
+            <h4 className="text-sm font-medium text-gray-300">Bonus de caractéristiques</h4>
+            <p className="text-xs text-gray-400 mb-2">
+              Ces bonus s'appliqueront aux caractéristiques du joueur lorsque l'objet sera équipé.
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Force</label>
+                <input
+                  type="number"
+                  className="input-dark w-full px-3 py-2 rounded-md"
+                  value={statBonuses.strength ?? ''}
+                  onChange={e => setStatBonuses(prev => ({
+                    ...prev,
+                    strength: e.target.value ? parseInt(e.target.value) : undefined
+                  }))}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Dextérité</label>
+                <input
+                  type="number"
+                  className="input-dark w-full px-3 py-2 rounded-md"
+                  value={statBonuses.dexterity ?? ''}
+                  onChange={e => setStatBonuses(prev => ({
+                    ...prev,
+                    dexterity: e.target.value ? parseInt(e.target.value) : undefined
+                  }))}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Constitution</label>
+                <input
+                  type="number"
+                  className="input-dark w-full px-3 py-2 rounded-md"
+                  value={statBonuses.constitution ?? ''}
+                  onChange={e => setStatBonuses(prev => ({
+                    ...prev,
+                    constitution: e.target.value ? parseInt(e.target.value) : undefined
+                  }))}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Intelligence</label>
+                <input
+                  type="number"
+                  className="input-dark w-full px-3 py-2 rounded-md"
+                  value={statBonuses.intelligence ?? ''}
+                  onChange={e => setStatBonuses(prev => ({
+                    ...prev,
+                    intelligence: e.target.value ? parseInt(e.target.value) : undefined
+                  }))}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Sagesse</label>
+                <input
+                  type="number"
+                  className="input-dark w-full px-3 py-2 rounded-md"
+                  value={statBonuses.wisdom ?? ''}
+                  onChange={e => setStatBonuses(prev => ({
+                    ...prev,
+                    wisdom: e.target.value ? parseInt(e.target.value) : undefined
+                  }))}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Charisme</label>
+                <input
+                  type="number"
+                  className="input-dark w-full px-3 py-2 rounded-md"
+                  value={statBonuses.charisma ?? ''}
+                  onChange={e => setStatBonuses(prev => ({
+                    ...prev,
+                    charisma: e.target.value ? parseInt(e.target.value) : undefined
+                  }))}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            {hasAnyStatBonus && (
+              <p className="text-xs text-green-400 mt-2">
+                ✓ Cet objet pourra être équipé pour appliquer ses bonus
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="mt-4 border-t border-gray-700 pt-4">
           <ImageUrlInput value={imageUrl} onChange={setImageUrl} />
         </div>
