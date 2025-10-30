@@ -270,23 +270,7 @@ async function autoEquipItems(
     console.log('[autoEquipItems] Aucun bouclier à équiper dans toEquip');
   }
 
-  // IMPORTANT : Récupérer le player à jour APRÈS avoir équipé armure/bouclier et AVANT les armes
-  const { data: updatedPlayer } = await supabase
-    .from('players')
-    .select('*')
-    .eq('id', playerId)
-    .single();
 
-  if (!updatedPlayer) {
-    console.error('[autoEquipItems] Impossible de récupérer le player à jour');
-    return;
-  }
-
-  console.log('[autoEquipItems] Player après équipement armure/bouclier:', {
-    hasArmor: !!updatedPlayer.equipment?.armor,
-    hasShield: !!updatedPlayer.equipment?.shield,
-    equipment: updatedPlayer.equipment
-  });
 
    // ✅ CORRECTION: Récupérer le player APRÈS équipement armure/bouclier
   const { data: playerAfterArmorShield } = await supabase
