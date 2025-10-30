@@ -2528,6 +2528,19 @@ function RandomLootModal({
           });
         }
       }
+
+          // ✅ AJOUT : Un peu d'argent bonus avec l'équipement
+    const bonusValue = Math.floor(
+      Math.random() * (currencyRange.max * 0.3 - currencyRange.min * 0.1) + currencyRange.min * 0.1
+    );
+    gold = Math.floor(bonusValue / 100);
+    const remainder = bonusValue % 100;
+    silver = Math.floor(remainder / 10);
+    copper = remainder % 10;
+  }
+
+  return { copper, silver, gold, equipment };
+};
        
       // Un peu d'argent en plus
       const bonusCopper = Math.floor(totalCopper * 0.3);
