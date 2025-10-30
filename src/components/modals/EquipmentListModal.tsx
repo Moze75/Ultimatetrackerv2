@@ -523,7 +523,7 @@ const effectiveFilters: FilterState = React.useMemo(() => {
   };
 }, [allowedKinds, filters]);
 
-  const noneSelected = !effectiveFilters.weapons && !effectiveFilters.armors && !effectiveFilters.shields && !effectiveFilters.adventuring_gear && !effectiveFilters.tools;
+ const noneSelected = !effectiveFilters.weapons && !effectiveFilters.armors && !effectiveFilters.shields && !effectiveFilters.adventuring_gear && !effectiveFilters.tools && !effectiveFilters.gems; // ✅ Ajout
 
   const filtered = React.useMemo(() => {
     if (noneSelected) return [];
