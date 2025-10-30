@@ -498,4 +498,4 @@ export function determineAutoEquip(items: EnrichedEquipment[]): EnrichedEquipmen
   return result;
 }
 
-export default inventoryService;
+
