@@ -2406,6 +2406,7 @@ function RandomLootModal({
 
   const META_PREFIX = '#meta:';
 
+  // Charger le catalogue au montage
   useEffect(() => {
     const loadCatalog = async () => {
       setLoadingCatalog(true);
@@ -2431,7 +2432,7 @@ function RandomLootModal({
       setSelectedRecipients([]);
     }
   }, [selectAllRecipients, members]);
-
+ 
   const toggleRecipient = (userId: string) => {
     setSelectedRecipients(prev => {
       if (prev.includes(userId)) return prev.filter(id => id !== userId);
@@ -2440,6 +2441,7 @@ function RandomLootModal({
     setSelectAllRecipients(false);
   };
 
+  // Fonction pour obtenir un équipement aléatoire du catalogue
   const getRandomEquipmentFromCatalog = () => {
     if (catalog.length === 0) return null;
     
@@ -2462,9 +2464,10 @@ function RandomLootModal({
     return filtered[randomIndex];
   };
 
+  // Génération du loot selon les probabilités
   const generateLoot = () => {
     const probs = LOOT_TABLES[levelRange][difficulty][enemyCount];
-    const currencyRanges = CURRENCY_AMOUNTS[levelRange];
+    const currencyRange = CURRENCY_AMOUNTS[levelRange];
     
     let copper = 0;
     let silver = 0;
@@ -2474,26 +2477,30 @@ function RandomLootModal({
     const roll = Math.random() * 100;
     
     if (roll < probs.copper) {
-      copper = Math.floor(
-        Math.random() * (currencyRanges.copper.max - currencyRanges.copper.min + 1) + currencyRanges.copper.min
+      const amount = Math.floor(
+        Math.random() * (currencyRange.max - currencyRange.min) + currencyRange.min
       );
+      copper = amount;
       
     } else if (roll < probs.copper + probs.silver) {
-      silver = Math.floor(
-        Math.random() * (currencyRanges.silver.max - currencyRanges.silver.min + 1) + currencyRanges.silver.min
+      const totalValue = Math.floor(
+        Math.random() * (currencyRange.max - currencyRange.min) + currencyRange.min
       );
-      copper = Math.floor(Math.random() * 11);
+      silver = Math.floor(totalValue / 10);
+      copper = totalValue % 10;
       
     } else if (roll < probs.copper + probs.silver + probs.gold) {
-      gold = Math.floor(
-        Math.random() * (currencyRanges.gold.max - currencyRanges.gold.min + 1) + currencyRanges.gold.min
+      const totalValue = Math.floor(
+        Math.random() * (currencyRange.max - currencyRange.min) + currencyRange.min
       );
-      silver = Math.floor(Math.random() * 6);
-      copper = Math.floor(Math.random() * 11);
+      gold = Math.floor(totalValue / 100);
+      const remainder = totalValue % 100;
+      silver = Math.floor(remainder / 10);
+      copper = remainder % 10;
       
     } else {
       const numItems = 
-        levelRange === '1-4' ? 1 : 
+        levelRange === '1-4' ? 1 :  
         levelRange === '5-10' ? (Math.random() < 0.5 ? 1 : 2) : 
         levelRange === '11-16' ? (Math.random() < 0.3 ? 1 : Math.random() < 0.7 ? 2 : 3) :
         (Math.random() < 0.2 ? 1 : Math.random() < 0.6 ? 2 : 3);
@@ -2502,7 +2509,7 @@ function RandomLootModal({
         const item = getRandomEquipmentFromCatalog();
         if (item) {
           let meta: any = { type: 'equipment', quantity: 1, equipped: false };
-          
+           
           if (item.kind === 'armors' && item.armor) {
             meta = { type: 'armor', quantity: 1, equipped: false, armor: item.armor };
           } else if (item.kind === 'shields' && item.shield) {
@@ -2521,10 +2528,13 @@ function RandomLootModal({
         }
       }
       
-      silver = Math.floor(
-        Math.random() * (currencyRanges.silver.max * 0.3 - currencyRanges.silver.min * 0.1 + 1) + currencyRanges.silver.min * 0.1
+      const bonusValue = Math.floor(
+        Math.random() * (currencyRange.max * 0.3 - currencyRange.min * 0.1) + currencyRange.min * 0.1
       );
-      copper = Math.floor(Math.random() * 11);
+      gold = Math.floor(bonusValue / 100);
+      const bonusRemainder = bonusValue % 100;
+      silver = Math.floor(bonusRemainder / 10);
+      copper = bonusRemainder % 10;
     }
 
     return { copper, silver, gold, equipment };
@@ -2594,8 +2604,6 @@ function RandomLootModal({
       setGenerating(false);
     }
   };
-
-  const probs = LOOT_TABLES[levelRange][difficulty][enemyCount];
 
   return (
     <div className="fixed inset-0 z-[10000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
@@ -2672,10 +2680,17 @@ function RandomLootModal({
             <div className="bg-gray-900/40 rounded p-3 text-xs text-gray-400">
               <div className="font-semibold text-gray-300 mb-2">Probabilités :</div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                <div>🟤 Cuivre: {probs.copper}%</div>
-                <div>⚪ Argent: {probs.silver}%</div>
-                <div>🟡 Or: {probs.gold}%</div>
-                <div>⚔️ Équipement: {probs.equipment}%</div>
+                {(() => {
+                  const probs = LOOT_TABLES[levelRange][difficulty][enemyCount];
+                  return (
+                    <>
+                      <div>🟤 Cuivre: {probs.copper}%</div>
+                      <div>⚪ Argent: {probs.silver}%</div>
+                      <div>🟡 Or: {probs.gold}%</div>
+                      <div>⚔️ Équipement: {probs.equipment}%</div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
 
