@@ -791,18 +791,18 @@ useEffect(() => {
 
  
   // ----------- Équipement effectif -----------
-  const performEquipToggle = async (freshItem: InventoryItem, mode: 'equip' | 'unequip') => {
-    const meta = parseMeta(freshItem.description);
-    if (!meta) return;
-    
-    // ✅ NOUVEAU : Détecter si l'objet a des bonus (devient équipable)
-    const hasBonuses = meta?.bonuses && Object.keys(meta.bonuses).length > 0;
-    const isEquippableItem = hasBonuses && 
-      (meta?.type === 'jewelry' || meta?.type === 'equipment' || 
-       meta?.type === 'tool' || meta?.type === 'other');
-    
-    try {
-      setPendingEquipment(prev => new Set([...prev, freshItem.id]));
+ const performEquipToggle = async (freshItem: InventoryItem, mode: 'equip' | 'unequip') => {
+  const meta = parseMeta(freshItem.description);
+  if (!meta) return;
+  
+  // ✅ NOUVEAU : Calculer isEquippableItem ici (accessible dans toute la fonction)
+  const hasBonuses = meta?.bonuses && Object.keys(meta.bonuses).length > 0;
+  const isEquippableItem = hasBonuses && 
+    (meta?.type === 'jewelry' || meta?.type === 'equipment' || 
+     meta?.type === 'tool' || meta?.type === 'other');
+  
+  try {
+    setPendingEquipment(prev => new Set([...prev, freshItem.id]));
 
       if (meta.type === 'armor') {
         if (mode === 'unequip' && armor?.inventory_item_id === freshItem.id) {
