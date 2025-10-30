@@ -2462,73 +2462,106 @@ function RandomLootModal({
     return filtered[randomIndex];
   };
 
-  const generateLoot = () => {
-    const probs = LOOT_TABLES[levelRange][difficulty][enemyCount];
-    const currencyRanges = CURRENCY_AMOUNTS[levelRange];
-    
-    let copper = 0;
-    let silver = 0;
-    let gold = 0;
-    const equipment: Array<{ name: string; meta: any; description?: string }> = [];
+ const generateLoot = () => {
+  const probs = LOOT_TABLES[levelRange][difficulty][enemyCount];
+  const currencyRanges = CURRENCY_AMOUNTS[levelRange];
+  const gemRange = GEM_AMOUNTS[levelRange];
+  
+  let copper = 0;
+  let silver = 0;
+  let gold = 0;
+  const equipment: Array<{ name: string; meta: any; description?: string }> = [];
+  const gems: Array<{ name: string; meta: any; description?: string }> = [];
 
-    const roll = Math.random() * 100;
+  const roll = Math.random() * 100;
+  
+  if (roll < probs.copper) {
+    // ========== CUIVRE SEULEMENT ==========
+    copper = Math.floor(
+      Math.random() * (currencyRanges.copper.max - currencyRanges.copper.min + 1) + currencyRanges.copper.min
+    );
     
-    if (roll < probs.copper) {
-      copper = Math.floor(
-        Math.random() * (currencyRanges.copper.max - currencyRanges.copper.min + 1) + currencyRanges.copper.min
-      );
-      
-    } else if (roll < probs.copper + probs.silver) {
-      silver = Math.floor(
-        Math.random() * (currencyRanges.silver.max - currencyRanges.silver.min + 1) + currencyRanges.silver.min
-      );
-      copper = Math.floor(Math.random() * 11);
-      
-    } else if (roll < probs.copper + probs.silver + probs.gold) {
-      gold = Math.floor(
-        Math.random() * (currencyRanges.gold.max - currencyRanges.gold.min + 1) + currencyRanges.gold.min
-      );
-      silver = Math.floor(Math.random() * 6);
-      copper = Math.floor(Math.random() * 11);
-      
-    } else {
-      const numItems = 
-        levelRange === '1-4' ? 1 : 
-        levelRange === '5-10' ? (Math.random() < 0.5 ? 1 : 2) : 
-        levelRange === '11-16' ? (Math.random() < 0.3 ? 1 : Math.random() < 0.7 ? 2 : 3) :
-        (Math.random() < 0.2 ? 1 : Math.random() < 0.6 ? 2 : 3);
-      
-      for (let i = 0; i < numItems; i++) {
-        const item = getRandomEquipmentFromCatalog();
-        if (item) {
-          let meta: any = { type: 'equipment', quantity: 1, equipped: false };
-          
-          if (item.kind === 'armors' && item.armor) {
-            meta = { type: 'armor', quantity: 1, equipped: false, armor: item.armor };
-          } else if (item.kind === 'shields' && item.shield) {
-            meta = { type: 'shield', quantity: 1, equipped: false, shield: item.shield };
-          } else if (item.kind === 'weapons' && item.weapon) {
-            meta = { type: 'weapon', quantity: 1, equipped: false, weapon: item.weapon };
-          } else if (item.kind === 'tools') {
-            meta = { type: 'tool', quantity: 1, equipped: false };
-          }
-          
-          equipment.push({
-            name: item.name,
-            meta,
-            description: item.description || ''
-          });
+  } else if (roll < probs.copper + probs.silver) {
+    // ========== ARGENT ==========
+    silver = Math.floor(
+      Math.random() * (currencyRanges.silver.max - currencyRanges.silver.min + 1) + currencyRanges.silver.min
+    );
+    copper = Math.floor(Math.random() * 11);
+    
+  } else if (roll < probs.copper + probs.silver + probs.gold) {
+    // ========== OR ==========
+    gold = Math.floor(
+      Math.random() * (currencyRanges.gold.max - currencyRanges.gold.min + 1) + currencyRanges.gold.min
+    );
+    silver = Math.floor(Math.random() * 6);
+    copper = Math.floor(Math.random() * 11);
+    
+  } else if (roll < probs.copper + probs.silver + probs.gold + probs.equipment) {
+    // ========== ÉQUIPEMENT ==========
+    const numItems = 
+      levelRange === '1-4' ? 1 : 
+      levelRange === '5-10' ? (Math.random() < 0.5 ? 1 : 2) : 
+      levelRange === '11-16' ? (Math.random() < 0.3 ? 1 : Math.random() < 0.7 ? 2 : 3) :
+      (Math.random() < 0.2 ? 1 : Math.random() < 0.6 ? 2 : 3);
+    
+    for (let i = 0; i < numItems; i++) {
+      const item = getRandomEquipmentFromCatalog();
+      if (item) {
+        let meta: any = { type: 'equipment', quantity: 1, equipped: false };
+        
+        if (item.kind === 'armors' && item.armor) {
+          meta = { type: 'armor', quantity: 1, equipped: false, armor: item.armor };
+        } else if (item.kind === 'shields' && item.shield) {
+          meta = { type: 'shield', quantity: 1, equipped: false, shield: item.shield };
+        } else if (item.kind === 'weapons' && item.weapon) {
+          meta = { type: 'weapon', quantity: 1, equipped: false, weapon: item.weapon };
+        } else if (item.kind === 'tools') {
+          meta = { type: 'tool', quantity: 1, equipped: false };
         }
+        
+        equipment.push({
+          name: item.name,
+          meta,
+          description: item.description || ''
+        });
       }
-      
-      silver = Math.floor(
-        Math.random() * (currencyRanges.silver.max * 0.3 - currencyRanges.silver.min * 0.1 + 1) + currencyRanges.silver.min * 0.1
-      );
-      copper = Math.floor(Math.random() * 11);
     }
+    
+    // Argent bonus avec l'équipement
+    silver = Math.floor(
+      Math.random() * (currencyRanges.silver.max * 0.3 - currencyRanges.silver.min * 0.1 + 1) + currencyRanges.silver.min * 0.1
+    );
+    copper = Math.floor(Math.random() * 11);
+    
+  } else {
+    // ========== PIERRES PRÉCIEUSES ==========
+    const numGems = Math.floor(
+      Math.random() * (gemRange.max - gemRange.min + 1) + gemRange.min
+    );
+    
+    // Filtrer les gemmes du catalogue
+    const gemItems = catalog.filter(item => item.kind === 'gems');
+    
+    if (gemItems.length > 0) {
+      for (let i = 0; i < numGems; i++) {
+        const randomGem = gemItems[Math.floor(Math.random() * gemItems.length)];
+        gems.push({
+          name: randomGem.name,
+          meta: { type: 'jewelry', quantity: 1, equipped: false },
+          description: randomGem.description || ''
+        });
+      }
+    }
+    
+    // Un peu d'argent bonus avec les gemmes
+    silver = Math.floor(
+      Math.random() * (currencyRanges.silver.max * 0.2) + currencyRanges.silver.min
+    );
+    copper = Math.floor(Math.random() * 11);
+  }
 
-    return { copper, silver, gold, equipment };
-  };
+  return { copper, silver, gold, equipment, gems };
+};
 
   const handlePreview = () => {
     if (loadingCatalog) {
