@@ -220,31 +220,7 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
     count + ability.skills.filter(skill => skill.hasExpertise).length, 0
   );
 
-  const updateAbilityModifiers = (
-    newAbilities: Ability[],
-    currentStats = stats,
-    proficiencyBonus = effectiveProficiency
-  ) => {
-    return newAbilities.map(ability => {
-      const modifier = getModifier(ability.score);
-      const jackOfAllTradesBonus = currentStats.jack_of_all_trades ? getJackOfAllTradesBonus(proficiencyBonus) : 0;
-
-      const isSavingThrowProficient = ability.savingThrow !== ability.modifier;
-
-      return {
-        ...ability,
-        modifier,
-        savingThrow: modifier + (isSavingThrowProficient ? proficiencyBonus : 0),
-        skills: ability.skills.map(skill => ({
-          ...skill,
-          bonus: modifier + (skill.isProficient ? 
-            (skill.hasExpertise ? proficiencyBonus * 2 : proficiencyBonus) :
-            (currentStats.jack_of_all_trades ? jackOfAllTradesBonus : 0)
-          )
-        }))
-      };
-    });
-  };
+nst updateAbilityModifiers = (
 
   const handleScoreChange = (index: number, score: number) => {
     const newAbilities = [...abilities];
