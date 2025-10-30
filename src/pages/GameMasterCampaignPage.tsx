@@ -2395,12 +2395,13 @@ function RandomLootModal({
   const [selectAllRecipients, setSelectAllRecipients] = useState(false);
   const [message, setMessage] = useState('');
   const [generating, setGenerating] = useState(false);
-  const [previewLoot, setPreviewLoot] = useState<{
-    copper: number;
-    silver: number;
-    gold: number;
-    equipment: Array<{ name: string; meta: any; description?: string }>;
-  } | null>(null);
+const [previewLoot, setPreviewLoot] = useState<{
+  copper: number;
+  silver: number;
+  gold: number;
+  equipment: Array<{ name: string; meta: any; description?: string }>;
+  gems: Array<{ name: string; meta: any; description?: string }>; // ✅ AJOUT
+} | null>(null);
   const [loadingCatalog, setLoadingCatalog] = useState(false);
   const [catalog, setCatalog] = useState<any[]>([]);
 
