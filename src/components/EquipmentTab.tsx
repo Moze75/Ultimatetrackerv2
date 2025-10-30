@@ -789,17 +789,17 @@ useEffect(() => {
     if (updates.length) await Promise.allSettled(updates);
   };
 
+ 
   // ----------- Équipement effectif -----------
   const performEquipToggle = async (freshItem: InventoryItem, mode: 'equip' | 'unequip') => {
     const meta = parseMeta(freshItem.description);
     if (!meta) return;
-   
     
-      // ✅ NOUVEAU : Calculer isEquippableItem ici aussi
-  const hasBonuses = meta?.bonuses && Object.keys(meta.bonuses).length > 0;
-  const isEquippableItem = hasBonuses && 
-    (meta?.type === 'jewelry' || meta?.type === 'equipment' || 
-     meta?.type === 'tool' || meta?.type === 'other');
+    // ✅ NOUVEAU : Détecter si l'objet a des bonus (devient équipable)
+    const hasBonuses = meta?.bonuses && Object.keys(meta.bonuses).length > 0;
+    const isEquippableItem = hasBonuses && 
+      (meta?.type === 'jewelry' || meta?.type === 'equipment' || 
+       meta?.type === 'tool' || meta?.type === 'other');
     
     try {
       setPendingEquipment(prev => new Set([...prev, freshItem.id]));
