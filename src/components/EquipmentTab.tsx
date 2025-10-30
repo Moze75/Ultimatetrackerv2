@@ -595,6 +595,14 @@ export function EquipmentTab({
   const jewelryItems = useMemo(() => inventory.filter(i => parseMeta(i.description)?.type === 'jewelry'), [inventory]);
   const potionItems = useMemo(() => inventory.filter(i => parseMeta(i.description)?.type === 'potion'), [inventory]);
 
+// 🆕 NOUVEAU : Objets équipables avec bonus de stats
+const equipableStatItems = useMemo(() => {
+  return inventory.filter(item => {
+    const meta = parseMeta(item.description);
+    return meta?.statBonuses && Object.keys(meta.statBonuses).length > 0;
+  });
+}, [inventory]);
+  
   const equippedWeapons = useMemo(() => {
     return inventory
       .map(it => ({ it, meta: parseMeta(it.description) }))
