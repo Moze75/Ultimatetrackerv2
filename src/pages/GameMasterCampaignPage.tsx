@@ -2411,7 +2411,6 @@ function RandomLootModal({
     const loadCatalog = async () => {
       setLoadingCatalog(true);
       try {
-        // Import dynamique pour éviter les dépendances circulaires
         const { loadEquipmentCatalog } = await import('../services/equipmentCatalogService');
         const items = await loadEquipmentCatalog();
         setCatalog(items);
@@ -2446,20 +2445,15 @@ function RandomLootModal({
   const getRandomEquipmentFromCatalog = () => {
     if (catalog.length === 0) return null;
     
-    // Filtrer selon le niveau pour avoir des équipements appropriés
     let types: any[] = [];
     
     if (levelRange === '1-4') {
-      // Niveau bas : armes courantes, armures légères, équipement de base
       types = ['weapons', 'adventuring_gear', 'tools'];
     } else if (levelRange === '5-10') {
-      // Niveau moyen : plus d'armures et boucliers
       types = ['weapons', 'armors', 'shields', 'adventuring_gear'];
     } else if (levelRange === '11-16') {
-      // Niveau élevé : tous types
       types = ['weapons', 'armors', 'shields', 'adventuring_gear', 'tools'];
     } else {
-      // Niveau 17-20 : focus sur armes et armures
       types = ['weapons', 'armors', 'shields'];
     }
     
@@ -2475,30 +2469,36 @@ function RandomLootModal({
     const probs = LOOT_TABLES[levelRange][difficulty][enemyCount];
     const currencyRange = CURRENCY_AMOUNTS[levelRange];
     
-    // Montant total en cuivre
-    const totalCopper = Math.floor(
-      Math.random() * (currencyRange.max - currencyRange.min) + currencyRange.min
-    );
-
-    // Répartition selon les probabilités
-    const roll = Math.random() * 100;
-    let copper = 0, silver = 0, gold = 0;
+    let copper = 0;
+    let silver = 0;
+    let gold = 0;
     const equipment: Array<{ name: string; meta: any; description?: string }> = [];
 
+    const roll = Math.random() * 100;
+    
     if (roll < probs.copper) {
-      // 100% cuivre
-      copper = totalCopper;
+      const amount = Math.floor(
+        Math.random() * (currencyRange.max - currencyRange.min) + currencyRange.min
+      );
+      copper = amount;
+      
     } else if (roll < probs.copper + probs.silver) {
-      // Argent
-      silver = Math.floor(totalCopper / 10);
-      copper = totalCopper % 10;
+      const totalValue = Math.floor(
+        Math.random() * (currencyRange.max - currencyRange.min) + currencyRange.min
+      );
+      silver = Math.floor(totalValue / 10);
+      copper = totalValue % 10;
+      
     } else if (roll < probs.copper + probs.silver + probs.gold) {
-      // Or
-      gold = Math.floor(totalCopper / 100);
-      silver = Math.floor((totalCopper % 100) / 10);
-      copper = totalCopper % 10;
+      const totalValue = Math.floor(
+        Math.random() * (currencyRange.max - currencyRange.min) + currencyRange.min
+      );
+      gold = Math.floor(totalValue / 100);
+      const remainder = totalValue % 100;
+      silver = Math.floor(remainder / 10);
+      copper = remainder % 10;
+      
     } else {
-      // Équipement
       const numItems = 
         levelRange === '1-4' ? 1 : 
         levelRange === '5-10' ? (Math.random() < 0.5 ? 1 : 2) : 
@@ -2508,7 +2508,6 @@ function RandomLootModal({
       for (let i = 0; i < numItems; i++) {
         const item = getRandomEquipmentFromCatalog();
         if (item) {
-          // Construire la meta selon le type
           let meta: any = { type: 'equipment', quantity: 1, equipped: false };
           
           if (item.kind === 'armors' && item.armor) {
@@ -2528,17 +2527,17 @@ function RandomLootModal({
           });
         }
       }
-
-       
-       
-      // Un peu d'argent en plus
-      const bonusCopper = Math.floor(totalCopper * 0.3);
-      gold = Math.floor(bonusCopper / 100);
-      silver = Math.floor((bonusCopper % 100) / 10);
-      copper = bonusCopper % 10;
+      
+      const bonusValue = Math.floor(
+        Math.random() * (currencyRange.max * 0.3 - currencyRange.min * 0.1) + currencyRange.min * 0.1
+      );
+      gold = Math.floor(bonusValue / 100);
+      const bonusRemainder = bonusValue % 100;
+      silver = Math.floor(bonusRemainder / 10);
+      copper = bonusRemainder % 10;
     }
 
-    return { copper, silver, gold, equipment }; 
+    return { copper, silver, gold, equipment };
   };
 
   const handlePreview = () => {
@@ -2565,7 +2564,6 @@ function RandomLootModal({
       setGenerating(true);
       const recipientIds = distributionMode === 'individual' ? selectedRecipients : null;
 
-      // Envoi de la monnaie
       if (previewLoot.copper > 0 || previewLoot.silver > 0 || previewLoot.gold > 0) {
         await campaignService.sendGift(campaignId, 'currency', {
           gold: previewLoot.gold,
@@ -2577,7 +2575,6 @@ function RandomLootModal({
         });
       }
 
-      // Envoi des équipements
       for (const equip of previewLoot.equipment) {
         const metaLine = `${META_PREFIX}${JSON.stringify(equip.meta)}`;
         const visibleDesc = (equip.description || '').trim();
@@ -2634,7 +2631,6 @@ function RandomLootModal({
         )}
 
         <div className="space-y-6">
-          {/* Paramètres de la rencontre */}
           <div className="bg-gray-800/30 rounded-lg p-4 space-y-4">
             <h4 className="text-sm font-semibold text-gray-300 mb-3">Paramètres de la rencontre</h4>
             
@@ -2681,7 +2677,6 @@ function RandomLootModal({
               </div>
             </div>
 
-            {/* Affichage des probabilités */}
             <div className="bg-gray-900/40 rounded p-3 text-xs text-gray-400">
               <div className="font-semibold text-gray-300 mb-2">Probabilités :</div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -2699,7 +2694,6 @@ function RandomLootModal({
               </div>
             </div>
 
-            {/* Bouton de génération */}
             <button
               onClick={handlePreview}
               disabled={loadingCatalog}
@@ -2710,7 +2704,6 @@ function RandomLootModal({
             </button>
           </div>
 
-          {/* Aperçu du loot généré */}
           {previewLoot && (
             <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
               <h4 className="text-sm font-semibold text-green-300 mb-3">🎁 Loot généré :</h4>
@@ -2755,7 +2748,6 @@ function RandomLootModal({
             </div>
           )}
 
-          {/* Mode de distribution */}
           {previewLoot && (
             <>
               <div>
@@ -2794,7 +2786,6 @@ function RandomLootModal({
                 </div>
               </div>
 
-              {/* Sélection des destinataires */}
               {distributionMode === 'individual' && (
                 <div className="bg-gray-800/30 rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
@@ -2829,7 +2820,6 @@ function RandomLootModal({
                 </div>
               )}
 
-              {/* Message */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Message (optionnel)
@@ -2846,7 +2836,6 @@ function RandomLootModal({
           )}
         </div>
 
-        {/* Boutons */}
         <div className="flex justify-end gap-3 mt-6">
           <button
             onClick={onClose}
