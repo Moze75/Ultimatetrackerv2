@@ -7,6 +7,7 @@ import { DiceRoller } from './DiceRoller';
 
 interface StatsTabProps {
   player: Player;
+  inventory: any[];
   onUpdate: (player: Player) => void;
 }
 
