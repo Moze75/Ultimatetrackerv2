@@ -575,7 +575,7 @@ const description = (ci.kind === 'adventuring_gear' || ci.kind === 'tools' || ci
   };
 
   const toggleExpand = (id: string) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
-  const typeButtons: CatalogKind[] = ['weapons','armors','shields','adventuring_gear','tools'];
+ const typeButtons: CatalogKind[] = ['weapons','armors','shields','adventuring_gear','tools','gems']; // ✅ Ajout 'gems'
 
   return (
     <div className="fixed inset-0 z-[9999]">
