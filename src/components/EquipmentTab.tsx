@@ -1190,16 +1190,24 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
           </div>
 
           <div className="space-y-2">
-            {filteredInventory.map(item => {
-              const meta = parseMeta(item.description);
-              const qty = meta?.quantity ?? 1;
-              const isArmor = meta?.type === 'armor';
-              const isShield = meta?.type === 'shield';
-              const isWeapon = meta?.type === 'weapon';
-              const isEquipped =
-                (isArmor && armor?.inventory_item_id === item.id) ||
-                (isShield && shield?.inventory_item_id === item.id) ||
-                (isWeapon && meta?.equipped === true);
+          {filteredInventory.map(item => {
+  const meta = parseMeta(item.description);
+  const qty = meta?.quantity ?? 1;
+  const isArmor = meta?.type === 'armor';
+  const isShield = meta?.type === 'shield';
+  const isWeapon = meta?.type === 'weapon';
+  
+  // ✅ NOUVEAU : Détecter si l'objet a des bonus (devient équipable)
+  const hasBonuses = meta?.bonuses && Object.keys(meta.bonuses).length > 0;
+  const isEquippableItem = hasBonuses && 
+    (meta?.type === 'jewelry' || meta?.type === 'equipment' || 
+     meta?.type === 'tool' || meta?.type === 'other');
+  
+  const isEquipped =
+    (isArmor && armor?.inventory_item_id === item.id) ||
+    (isShield && shield?.inventory_item_id === item.id) ||
+    (isWeapon && meta?.equipped === true) ||
+    (isEquippableItem && meta?.equipped === true);
 
               // --- ADDED: calcul maîtrise arme
               let weaponProficiency: WeaponProficiencyCheck | null = null;
