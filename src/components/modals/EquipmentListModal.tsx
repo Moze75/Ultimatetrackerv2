@@ -405,13 +405,17 @@ function parseGems(md: string): CatalogItem[] {
               currency = 'pc';
             }
             
-            // Symboles de monnaie
-            const symbol = currency === 'po' ? '🟡' : 
-                          currency === 'pa' ? '⚪' : '🟤';
-            const label = currency === 'po' ? 'or' : 
-                         currency === 'pa' ? 'argent' : 'cuivre';
-            
-            parts.push(`**Valeur**: ${symbol} ${amount} ${label}`);
+// Symboles de monnaie
+const symbol = currency === 'po' ? '🟡' : 
+              currency === 'pa' ? '⚪' : '🟤';
+const label = currency === 'po' ? "pièce d'or" : 
+             currency === 'pa' ? "pièce d'argent" : 
+             "pièce de cuivre";
+
+// Pluriel si nécessaire
+const fullLabel = parseInt(amount) > 1 ? `${label}s` : label;
+
+parts.push(`**Valeur**: ${symbol} ${amount} ${fullLabel}`);
           } else {
             parts.push(`**Valeur**: ${value}`);
           }
