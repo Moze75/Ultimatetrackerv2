@@ -2703,15 +2703,16 @@ const [previewLoot, setPreviewLoot] = useState<{
               </div>
             </div>
 
-            <div className="bg-gray-900/40 rounded p-3 text-xs text-gray-400">
-              <div className="font-semibold text-gray-300 mb-2">Probabilités :</div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                <div>🟤 Cuivre: {probs.copper}%</div>
-                <div>⚪ Argent: {probs.silver}%</div>
-                <div>🟡 Or: {probs.gold}%</div>
-                <div>⚔️ Équipement: {probs.equipment}%</div>
-              </div>
-            </div>
+<div className="bg-gray-900/40 rounded p-3 text-xs text-gray-400">
+  <div className="font-semibold text-gray-300 mb-2">Probabilités :</div>
+  <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+    <div>🟤 Cuivre: {probs.copper}%</div>
+    <div>⚪ Argent: {probs.silver}%</div>
+    <div>🟡 Or: {probs.gold}%</div>
+    <div>⚔️ Équipement: {probs.equipment}%</div>
+    <div>💎 Gemmes: {probs.gems}%</div>
+  </div>
+</div>
 
             <button
               onClick={handlePreview}
