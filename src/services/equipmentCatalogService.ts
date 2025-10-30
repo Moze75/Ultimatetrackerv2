@@ -192,31 +192,59 @@ function parseWeapons(md: string): CatalogItem[] {
 }
 
 function parseGems(md: string): CatalogItem[] {
+  console.log('🔍 parseGems: Début du parsing');
+  console.log('📄 Contenu MD (premiers 500 caractères):', md.substring(0, 500));
+  
   const items: CatalogItem[] = [];
   const tables = parseMarkdownTable(md);
   
-  for (const table of tables) {
-    if (table.length === 0) continue;
+  console.log('📊 Nombre de tables trouvées:', tables.length);
+  
+  for (let tableIdx = 0; tableIdx < tables.length; tableIdx++) {
+    const table = tables[tableIdx];
+    console.log(`\n--- Table ${tableIdx + 1} ---`);
+    console.log('Lignes dans la table:', table.length);
     
-    // ✅ CORRECTION : Vérifier que header est un tableau valide
+    if (table.length === 0) {
+      console.log('⚠️ Table vide, skip');
+      continue;
+    }
+    
+    // ✅ Vérifier que header est un tableau valide
     let header = table[0];
-    if (!header || !Array.isArray(header)) continue;
+    console.log('Header:', header);
+    
+    if (!header || !Array.isArray(header)) {
+      console.log('⚠️ Header invalide, skip');
+      continue;
+    }
     
     const body = table.slice(1);
+    console.log('Lignes de body:', body.length);
     
     // Chercher les colonnes pertinentes
     const nameColIdx = header.findIndex(h => h && /pierre|gemme|nom/i.test(h));
     const valueColIdx = header.findIndex(h => h && /valeur|prix|co[ûu]t/i.test(h));
     const descColIdx = header.findIndex(h => h && /description|effet/i.test(h));
     
+    console.log('Index des colonnes:', { nameColIdx, valueColIdx, descColIdx });
+    
     // ✅ Si aucune colonne nom trouvée, essayer la première colonne
     const finalNameIdx = nameColIdx !== -1 ? nameColIdx : 0;
+    console.log('Index final pour le nom:', finalNameIdx);
     
-    for (const row of body) {
-      if (!row || !Array.isArray(row)) continue; // ✅ Sécurité
+    for (let rowIdx = 0; rowIdx < body.length; rowIdx++) {
+      const row = body[rowIdx];
+      
+      if (!row || !Array.isArray(row)) {
+        console.log(`  Row ${rowIdx}: invalide, skip`);
+        continue;
+      }
       
       const rawName = row[finalNameIdx] || '';
       const name = stripPriceParentheses(rawName).trim();
+      
+      console.log(`  Row ${rowIdx}: rawName="${rawName}" -> name="${name}"`);
       
       // Filtrer les lignes vides, headers, et séparateurs
       if (!name || 
@@ -225,7 +253,8 @@ function parseGems(md: string): CatalogItem[] {
           name.length < 2 ||
           /^pierre|^gemme|^valeur|^nom|^description/i.test(name) ||
           /^-+$/.test(name) ||
-          /^:?-+:?$/.test(name)) { // ✅ Filtrer séparateurs markdown
+          /^:?-+:?$/.test(name)) {
+        console.log(`    ❌ Filtré (nom invalide ou séparateur)`);
         continue;
       }
       
@@ -273,7 +302,8 @@ function parseGems(md: string): CatalogItem[] {
       
       const description = parts.join('\n\n');
       
-      // ✅ Permettre les gemmes sans description (juste le nom)
+      console.log(`    ✅ Ajouté: "${name}" (description: ${description.length} chars)`);
+      
       items.push({
         id: `gem:${name}`,
         kind: 'gems',
@@ -283,8 +313,8 @@ function parseGems(md: string): CatalogItem[] {
     }
   }
   
-  // ✅ DEBUG : Logger le nombre de gemmes parsées
-  console.log(`📊 parseGems: ${items.length} gemmes parsées`);
+  console.log(`\n📊 parseGems: ${items.length} gemmes parsées au total`);
+  console.log('Liste des gemmes:', items.map(g => g.name));
   
   return items;
 }
