@@ -462,7 +462,7 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
                         min="1"
                         max="20"
                       />
-                  ) : (
+                    ) : (
                       // ✅ NOUVEAU : Afficher le score avec le bonus d'équipement
                       (() => {
                         const equipmentBonuses = calculateEquipmentBonuses();
@@ -482,7 +482,6 @@ export function StatsTab({ player, onUpdate }: StatsTabProps) {
                       })()
                     )}
                   </div>
-
                 {/* Sauvegarde en dessous du contenant - ✅ Cliquable pour lancer le dé */}
                 <div className="mt-2 w-full max-w-[130px]">
                   <div 
