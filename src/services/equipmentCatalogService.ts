@@ -193,128 +193,121 @@ function parseWeapons(md: string): CatalogItem[] {
 
 function parseGems(md: string): CatalogItem[] {
   console.log('🔍 parseGems: Début du parsing');
-  console.log('📄 Contenu MD (premiers 500 caractères):', md.substring(0, 500));
   
   const items: CatalogItem[] = [];
-  const tables = parseMarkdownTable(md);
+  const lines = md.split('\n');
   
-  console.log('📊 Nombre de tables trouvées:', tables.length);
+  let inTable = false;
+  let headerProcessed = false;
+  let nameColIdx = -1;
+  let valueColIdx = -1;
+  let descColIdx = -1;
   
-  for (let tableIdx = 0; tableIdx < tables.length; tableIdx++) {
-    const table = tables[tableIdx];
-    console.log(`\n--- Table ${tableIdx + 1} ---`);
-    console.log('Lignes dans la table:', table.length);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
     
-    if (table.length === 0) {
-      console.log('⚠️ Table vide, skip');
-      continue;
-    }
-    
-    // ✅ Vérifier que header est un tableau valide
-    let header = table[0];
-    console.log('Header:', header);
-    
-    if (!header || !Array.isArray(header)) {
-      console.log('⚠️ Header invalide, skip');
-      continue;
-    }
-    
-    const body = table.slice(1);
-    console.log('Lignes de body:', body.length);
-    
-    // Chercher les colonnes pertinentes
-    const nameColIdx = header.findIndex(h => h && /pierre|gemme|nom/i.test(h));
-    const valueColIdx = header.findIndex(h => h && /valeur|prix|co[ûu]t/i.test(h));
-    const descColIdx = header.findIndex(h => h && /description|effet/i.test(h));
-    
-    console.log('Index des colonnes:', { nameColIdx, valueColIdx, descColIdx });
-    
-    // ✅ Si aucune colonne nom trouvée, essayer la première colonne
-    const finalNameIdx = nameColIdx !== -1 ? nameColIdx : 0;
-    console.log('Index final pour le nom:', finalNameIdx);
-    
-    for (let rowIdx = 0; rowIdx < body.length; rowIdx++) {
-      const row = body[rowIdx];
+    // Détecter une ligne de table
+    if (line.startsWith('|') && line.endsWith('|')) {
+      const cells = line.substring(1, line.length - 1).split('|').map(c => c.trim());
       
-      if (!row || !Array.isArray(row)) {
-        console.log(`  Row ${rowIdx}: invalide, skip`);
+      // Ligne de séparation (ex: |---|---|)
+      if (cells.every(c => /^:?-+:?$/.test(c))) {
+        inTable = true;
+        console.log('✅ Ligne de séparation détectée, début de table');
         continue;
       }
       
-      const rawName = row[finalNameIdx] || '';
-      const name = stripPriceParentheses(rawName).trim();
-      
-      console.log(`  Row ${rowIdx}: rawName="${rawName}" -> name="${name}"`);
-      
-      // Filtrer les lignes vides, headers, et séparateurs
-      if (!name || 
-          name === '---' || 
-          name === '—' ||
-          name.length < 2 ||
-          /^pierre|^gemme|^valeur|^nom|^description/i.test(name) ||
-          /^-+$/.test(name) ||
-          /^:?-+:?$/.test(name)) {
-        console.log(`    ❌ Filtré (nom invalide ou séparateur)`);
+      // Header de la table
+      if (!headerProcessed && !inTable) {
+        console.log('📋 Header détecté:', cells);
+        nameColIdx = cells.findIndex(h => /pierre|gemme|nom/i.test(h));
+        valueColIdx = cells.findIndex(h => /valeur|prix|co[ûu]t/i.test(h));
+        descColIdx = cells.findIndex(h => /description|courte/i.test(h));
+        
+        if (nameColIdx === -1) nameColIdx = 0; // Fallback sur première colonne
+        
+        console.log('Index des colonnes:', { nameColIdx, valueColIdx, descColIdx });
+        headerProcessed = true;
         continue;
       }
       
-      // Construire la description
-      const parts: string[] = [];
-      
-      if (valueColIdx !== -1 && row[valueColIdx]) {
-        let value = row[valueColIdx].trim();
-        if (value && value !== '---' && value !== '—' && !/^:?-+:?$/.test(value)) {
-          const numMatch = value.match(/(\d+)\s*(po|pa|pc|or|argent|cuivre)?/i);
-          if (numMatch) {
-            const amount = numMatch[1];
-            let currency = numMatch[2] ? numMatch[2].toLowerCase() : '';
-            
-            if (!currency || currency === 'po' || currency === 'or') {
-              currency = parseInt(amount) >= 100 ? 'po' : 
-                         parseInt(amount) >= 10 ? 'pa' : 'pc';
-            } else if (currency === 'pa' || currency === 'argent') {
-              currency = 'pa';
-            } else if (currency === 'pc' || currency === 'cuivre') {
-              currency = 'pc';
+      // Ligne de données
+      if (inTable && headerProcessed) {
+        const rawName = cells[nameColIdx] || '';
+        const name = stripPriceParentheses(rawName).trim();
+        
+        // Filtrer les lignes invalides
+        if (!name || 
+            name.length < 2 ||
+            /^pierre|^gemme|^valeur|^nom|^description/i.test(name)) {
+          console.log(`  ⚠️ Ligne ignorée: "${name}"`);
+          continue;
+        }
+        
+        // Construire la description
+        const parts: string[] = [];
+        
+        // Valeur
+        if (valueColIdx !== -1 && cells[valueColIdx]) {
+          let value = cells[valueColIdx].trim();
+          if (value && value !== '---' && value !== '—') {
+            const numMatch = value.match(/(\d+)\s*(po|pa|pc)?/i);
+            if (numMatch) {
+              const amount = numMatch[1];
+              let currency = numMatch[2] ? numMatch[2].toLowerCase() : 'po';
+              
+              if (!currency || currency === 'po' || currency === 'or') {
+                currency = parseInt(amount) >= 100 ? 'po' : 
+                           parseInt(amount) >= 10 ? 'pa' : 'pc';
+              } else if (currency === 'pa' || currency === 'argent') {
+                currency = 'pa';
+              } else if (currency === 'pc' || currency === 'cuivre') {
+                currency = 'pc';
+              }
+              
+              const symbol = currency === 'po' ? '🟡' : 
+                            currency === 'pa' ? '⚪' : '🟤';
+              const label = currency === 'po' ? "pièce d'or" : 
+                           currency === 'pa' ? "pièce d'argent" : 
+                           "pièce de cuivre";
+              
+              const fullLabel = parseInt(amount) > 1 ? `${label}s` : label;
+              
+              parts.push(`Valeur: ${symbol} ${amount} ${fullLabel}`);
             }
-            
-            const symbol = currency === 'po' ? '🟡' : 
-                          currency === 'pa' ? '⚪' : '🟤';
-            const label = currency === 'po' ? "pièce d'or" : 
-                         currency === 'pa' ? "pièce d'argent" : 
-                         "pièce de cuivre";
-            
-            const fullLabel = parseInt(amount) > 1 ? `${label}s` : label;
-            
-            parts.push(`Valeur: ${symbol} ${amount} ${fullLabel}`);
-          } else {
-            parts.push(`Valeur: ${value}`);
           }
         }
-      }
-      
-      if (descColIdx !== -1 && row[descColIdx]) {
-        const desc = row[descColIdx].trim();
-        if (desc && desc !== '---' && desc !== '—' && !/^:?-+:?$/.test(desc)) {
-          parts.push(desc);
+        
+        // Description
+        if (descColIdx !== -1 && cells[descColIdx]) {
+          const desc = cells[descColIdx].trim();
+          if (desc && desc !== '---' && desc !== '—') {
+            parts.push(desc);
+          }
         }
+        
+        const description = parts.join('\n\n') || 'Pierre précieuse';
+        
+        console.log(`  ✅ Gemme ajoutée: "${name}"`);
+        
+        items.push({
+          id: `gem:${name}`,
+          kind: 'gems',
+          name,
+          description
+        });
       }
-      
-      const description = parts.join('\n\n');
-      
-      console.log(`    ✅ Ajouté: "${name}" (description: ${description.length} chars)`);
-      
-      items.push({
-        id: `gem:${name}`,
-        kind: 'gems',
-        name,
-        description: description || `Pierre précieuse`
-      });
+    } else {
+      // Ligne non-table => réinitialiser
+      if (inTable) {
+        console.log('⚠️ Fin de table détectée');
+        inTable = false;
+      }
     }
   }
   
   console.log(`\n📊 parseGems: ${items.length} gemmes parsées au total`);
-  console.log('Liste des gemmes:', items.map(g => g.name));
+  console.log('Liste des gemmes:', items.map(g => g.name).join(', '));
   
   return items;
 }
