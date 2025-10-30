@@ -63,15 +63,15 @@ interface ArmorMeta {
 interface ShieldMeta {
   bonus: number;
 }
-export interface ItemMeta {
+interface ItemMeta {
   type: MetaType;
   quantity?: number;
   equipped?: boolean;
   weapon?: WeaponMeta;
   armor?: ArmorMeta;
   shield?: ShieldMeta;
-  forced?: boolean;
-  imageUrl?: string;
+  forced?: boolean; // --- ADDED (optionnel pour marquer un équipement forcé)
+  imageUrl?: string; // ✅ NOUVEAU : URL de l'image de l'item
   
   // ✅ NOUVEAU : Bonus pour équipements, bijoux, outils, autres
   bonuses?: {
