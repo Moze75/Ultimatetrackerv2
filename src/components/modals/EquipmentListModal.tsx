@@ -547,12 +547,13 @@ const filtered = React.useMemo(() => {
     try {
       setAdding(ci.id);
 
-      let meta: ItemMeta = { type: 'equipment', quantity: 1, equipped: false };
-      if (ci.kind === 'armors' && ci.armor) meta = { type: 'armor', quantity: 1, equipped: false, armor: ci.armor };
-      if (ci.kind === 'shields' && ci.shield) meta = { type: 'shield', quantity: 1, equipped: false, shield: ci.shield };
-      if (ci.kind === 'weapons' && ci.weapon) meta = { type: 'weapon', quantity: 1, equipped: false, weapon: ci.weapon };
-      if (ci.kind === 'tools') meta = { type: 'tool', quantity: 1, equipped: false };
-      const description = (ci.kind === 'adventuring_gear' || ci.kind === 'tools') ? (ci.description || '').trim() : '';
+let meta: ItemMeta = { type: 'equipment', quantity: 1, equipped: false };
+if (ci.kind === 'armors' && ci.armor) meta = { type: 'armor', quantity: 1, equipped: false, armor: ci.armor };
+if (ci.kind === 'shields' && ci.shield) meta = { type: 'shield', quantity: 1, equipped: false, shield: ci.shield };
+if (ci.kind === 'weapons' && ci.weapon) meta = { type: 'weapon', quantity: 1, equipped: false, weapon: ci.weapon };
+if (ci.kind === 'tools') meta = { type: 'tool', quantity: 1, equipped: false };
+if (ci.kind === 'gems') meta = { type: 'jewelry', quantity: 1, equipped: false }; // ✅ AJOUT
+const description = (ci.kind === 'adventuring_gear' || ci.kind === 'tools' || ci.kind === 'gems') ? (ci.description || '').trim() : ''; // ✅ Ajout || ci.kind === 'gems'
       
       await onAddItem({ name: ci.name, description, meta });
       
