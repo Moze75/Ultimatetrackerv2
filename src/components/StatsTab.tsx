@@ -292,12 +292,16 @@ const updateAbilityModifiers = (
     setAbilities(updateAbilityModifiers(newAbilities, stats, effectiveProficiency));
   };
 
-  // ✅ NOUVEAU : Recalculer les modificateurs quand l'inventaire change
-  React.useEffect(() => {
-    console.log('🔄 [StatsTab] Inventaire changé, recalcul des modificateurs');
-    const updatedAbilities = updateAbilityModifiers(abilities, stats, effectiveProficiency);
-    setAbilities(updatedAbilities);
-  }, [player.inventory, player]); // ✅ AJOUT : Écouter aussi player pour forcer le refresh
+// ✅ Recalculer les modificateurs quand l'inventaire change
+React.useEffect(() => {
+  console.log('🔄 [StatsTab] Inventaire changé, recalcul des modificateurs', {
+    inventoryLength: player.inventory?.length,
+    abilities: abilities.map(a => ({ name: a.name, score: a.score, mod: a.modifier }))
+  });
+  const updatedAbilities = updateAbilityModifiers(abilities, stats, effectiveProficiency);
+  setAbilities(updatedAbilities);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [player.inventory, player.id]);
   
   // ✅ Fonctions pour lancer les dés avec les bons libellés
   const rollAbilityCheck = (ability: Ability) => {
