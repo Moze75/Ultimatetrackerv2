@@ -17,7 +17,7 @@ export interface ItemMeta {
   armor?: ArmorMeta;
   shield?: ShieldMeta;
 }
-type CatalogKind = 'armors' | 'shields' | 'weapons' | 'adventuring_gear' | 'tools';
+type CatalogKind = 'armors' | 'shields' | 'weapons' | 'adventuring_gear' | 'tools' | 'gems'; // ✅ Ajout de 'gems'
 interface CatalogItem {
   id: string;
   kind: CatalogKind;
