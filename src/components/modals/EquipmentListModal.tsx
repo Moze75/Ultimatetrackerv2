@@ -696,10 +696,10 @@ const preview = (
                   </div>
 {isOpen && (
   <div className="px-3 pb-3">
-    {(ci.kind === 'adventuring_gear' || ci.kind === 'tools' || ci.kind === 'gems') // ✅ Ajout
-      ? <MarkdownLite text={(ci.description || '').trim()} />
+    {(ci.kind === 'adventuring_gear' || ci.kind === 'tools' || ci.kind === 'gems')
+      ? <MarkdownLite content={(ci.description || '').trim()} />
       : <div className="text-sm text-gray-400">Aucun détail supplémentaire</div>}
-  </div> 
+  </div>
 )}
                 </div>
               );
