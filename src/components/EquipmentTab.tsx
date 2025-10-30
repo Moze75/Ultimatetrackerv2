@@ -1350,8 +1350,9 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
                         {meta?.type === 'equipment' && <span className="text-xs px-2 py-0.5 rounded bg-gray-800/60 text-gray-300">Équipement</span>}
                         {meta?.type === 'tool' && <span className="text-xs px-2 py-0.5 rounded bg-teal-900/30 text-teal-300">Outil</span>}
                         {meta?.type === 'jewelry' && <span className="text-xs px-2 py-0.5 rounded bg-yellow-900/30 text-yellow-300">Bijou</span>}
-                        {meta?.type === 'potion' && <span className="text-xs px-2 py-0.5 rounded bg-green-900/30 text-green-300">Potion/Poison</span>}
+                                              {meta?.type === 'potion' && <span className="text-xs px-2 py-0.5 rounded bg-green-900/30 text-green-300">Potion/Poison</span>}
                         {meta?.type === 'other' && <span className="text-xs px-2 py-0.5 rounded bg-slate-900/30 text-slate-300">Autre</span>}
+                        {hasStatBonus && <span className="text-xs px-2 py-0.5 rounded bg-cyan-900/30 text-cyan-300">Équipable</span>} {/* 🆕 NOUVEAU */}
                       </div>
 
 {expanded[item.id] && (
@@ -1387,6 +1388,19 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
             )}
           </>
         )}
+      </div>
+    )}
+    
+    {/* 🆕 NOUVEAU : Affichage des bonus de stats */}
+    {hasStatBonus && meta?.statBonuses && (
+      <div className="text-xs text-cyan-300 bg-cyan-900/20 border border-cyan-700/40 rounded px-3 py-2 space-y-1">
+        <div className="font-semibold mb-1">Bonus de caractéristiques :</div>
+        {meta.statBonuses.strength && <div>Force: +{meta.statBonuses.strength}</div>}
+        {meta.statBonuses.dexterity && <div>Dextérité: +{meta.statBonuses.dexterity}</div>}
+        {meta.statBonuses.constitution && <div>Constitution: +{meta.statBonuses.constitution}</div>}
+        {meta.statBonuses.intelligence && <div>Intelligence: +{meta.statBonuses.intelligence}</div>}
+        {meta.statBonuses.wisdom && <div>Sagesse: +{meta.statBonuses.wisdom}</div>}
+        {meta.statBonuses.charisma && <div>Charisme: +{meta.statBonuses.charisma}</div>}
       </div>
     )}
     
