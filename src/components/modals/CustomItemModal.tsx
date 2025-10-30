@@ -65,8 +65,16 @@ export function CustomItemModal({
   const [wCategory, setWCategory] = React.useState<WeaponCategory>('Armes courantes');
   const [wBonus, setWBonus] = React.useState<number | null>(null);
   const [imageUrl, setImageUrl] = React.useState('');
-
   const [propTags, setPropTags] = React.useState<string[]>([]);
+
+  // ✅ NOUVEAU : États pour les bonus
+const [bonusStr, setBonusStr] = React.useState<number | ''>('');
+const [bonusDex, setBonusDex] = React.useState<number | ''>('');
+const [bonusCon, setBonusCon] = React.useState<number | ''>('');
+const [bonusInt, setBonusInt] = React.useState<number | ''>('');
+const [bonusWis, setBonusWis] = React.useState<number | ''>('');
+const [bonusCha, setBonusCha] = React.useState<number | ''>('');
+const [bonusAC, setBonusAC] = React.useState<number | ''>('');
 
   React.useEffect(() => {
     const prev = document.body.style.overflow;
