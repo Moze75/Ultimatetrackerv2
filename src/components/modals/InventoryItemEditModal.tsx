@@ -32,17 +32,7 @@ interface ItemMeta {
   imageUrl?: string;
 }
 
-  // ✅ NOUVEAU : Bonus pour équipements, bijoux, outils, autres
-  bonuses?: {
-    strength?: number;
-    dexterity?: number;
-    constitution?: number;
-    intelligence?: number;
-    wisdom?: number;
-    charisma?: number;
-    armor_class?: number;
-  };
-}
+ 
 
 const META_PREFIX = '#meta:';
 
