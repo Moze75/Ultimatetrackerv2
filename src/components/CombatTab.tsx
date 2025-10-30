@@ -450,15 +450,15 @@ const getAttackBonus = (attack: Attack): number => {
   const weaponBonus = attack.weapon_bonus ?? 0;
   const proficiencyBonus = player.stats?.proficiency_bonus || 2;
   
-  // ✅ NOUVEAU : Calculer les bonus d'équipement
+  // ✅ Calculer les bonus d'équipement
   const equipmentBonuses = calculateEquipmentBonuses(inventory);
 
   // 1) override_ability prime
   if (attack.override_ability) {
     const ability = player.abilities?.find((a) => a.name === attack.override_ability);
-    const baseAbilityMod = ability?.score ? Math.floor((ability.score - 10) / 2) : 0; // ✅ Modificateur de BASE
-    const equipmentBonus = equipmentBonuses[attack.override_ability] || 0; // ✅ Bonus d'équipement
-    const totalAbilityMod = baseAbilityMod + equipmentBonus; // ✅ Total
+    const baseAbilityMod = ability?.score ? Math.floor((ability.score - 10) / 2) : 0;
+    const equipmentBonus = equipmentBonuses[attack.override_ability] || 0;
+    const totalAbilityMod = baseAbilityMod + equipmentBonus;
     const masteryBonus = attack.expertise ? proficiencyBonus : 0;
     return totalAbilityMod + masteryBonus + weaponBonus;
   }
@@ -467,8 +467,27 @@ const getAttackBonus = (attack: Attack): number => {
   const inferredAbilityName = (() => {
     const props = (attack.properties || '').toLowerCase();
     const range = (attack.range || '').toLowerCase();
+    const nameLower = (attack.name || '').toLowerCase();
     
-    // Si Finesse présent, on utilise le meilleur entre Force et Dextérité
+    // ✅ PRIORITÉ 1 : Arme de LANCER (Lance, Javeline, Hachette)
+    // Règle D&D : Utilise le meilleur entre Force et Dex
+    const isThrown = 
+      props.includes('lancer') || 
+      props.includes('jet') || 
+      nameLower.includes('lance') || 
+      nameLower.includes('javeline') || 
+      nameLower.includes('hachette');
+    
+    if (isThrown) {
+      const strAbility = player.abilities?.find(a => a.name === 'Force');
+      const dexAbility = player.abilities?.find(a => a.name === 'Dextérité');
+      const strScore = strAbility?.score || 10;
+      const dexScore = dexAbility?.score || 10;
+      return strScore >= dexScore ? 'Force' : 'Dextérité';
+    }
+    
+    // ✅ PRIORITÉ 2 : Finesse (Dague, Rapière)
+    // Règle D&D : Utilise le meilleur entre Force et Dex
     if (props.includes('finesse')) {
       const strAbility = player.abilities?.find(a => a.name === 'Force');
       const dexAbility = player.abilities?.find(a => a.name === 'Dextérité');
@@ -477,19 +496,33 @@ const getAttackBonus = (attack: Attack): number => {
       return strScore >= dexScore ? 'Force' : 'Dextérité';
     }
     
-    // Si portée > 1,5m ou contient "m" (distance), utiliser Dextérité
+    // ✅ PRIORITÉ 3 : Arme à distance PURE (Arc, Arbalète)
+    // Règle D&D : Toujours Dextérité
+    const isPureRanged = 
+      props.includes('munitions') || 
+      props.includes('chargement') || 
+      nameLower.includes('arc') || 
+      nameLower.includes('arbalète');
+    
+    if (isPureRanged) {
+      return 'Dextérité';
+    }
+    
+    // ✅ PRIORITÉ 4 : Portée > 1,5m (distance) MAIS pas de lancer
+    // Règle D&D : Toujours Dextérité
     if (range !== 'corps à corps' && range !== 'contact' && range.includes('m')) {
       return 'Dextérité';
     }
     
-    // Sinon Force par défaut
+    // ✅ PRIORITÉ 5 : Mêlée standard (Épée longue, Masse d'armes)
+    // Règle D&D : Toujours Force
     return 'Force';
   })();
   
   const ability = player.abilities?.find(a => a.name === inferredAbilityName);
-  const baseAbilityMod = ability?.score ? Math.floor((ability.score - 10) / 2) : 0; // ✅ Modificateur de BASE
-  const equipmentBonus = equipmentBonuses[inferredAbilityName] || 0; // ✅ Bonus d'équipement
-  const totalAbilityMod = baseAbilityMod + equipmentBonus; // ✅ Total
+  const baseAbilityMod = ability?.score ? Math.floor((ability.score - 10) / 2) : 0;
+  const equipmentBonus = equipmentBonuses[inferredAbilityName] || 0;
+  const totalAbilityMod = baseAbilityMod + equipmentBonus;
   const masteryBonus = attack.expertise ? proficiencyBonus : 0;
   return totalAbilityMod + masteryBonus + weaponBonus;
 };
