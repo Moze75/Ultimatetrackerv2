@@ -1,7 +1,7 @@
 import React from 'react';
 import { Search, X, Check, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getWeaponCategory } from '../../utils/weaponProficiencyChecker'; 
+import { getWeaponCategory } from '../../utils/weaponProficiencyChecker';
 
 /* Types locaux (alignés sur EquipmentTab) */
 type MetaType = 'armor' | 'shield' | 'weapon' | 'potion' | 'equipment' | 'jewelry' | 'tool' | 'other';
@@ -17,7 +17,7 @@ export interface ItemMeta {
   armor?: ArmorMeta;
   shield?: ShieldMeta;
 }
-type CatalogKind = 'armors' | 'shields' | 'weapons' | 'adventuring_gear' | 'tools' | 'gems'; // ✅ Ajout de 'gems'
+type CatalogKind = 'armors' | 'shields' | 'weapons' | 'adventuring_gear' | 'tools';
 interface CatalogItem {
   id: string;
   kind: CatalogKind;
@@ -37,7 +37,6 @@ const URLS = {
   weapons: `${ULT_BASE}/Armes.md`,
   adventuring_gear: `${ULT_BASE}/Equipements_daventurier.md`,
   tools: `${ULT_BASE}/Outils.md`,
-  gems: `${ULT_BASE}/Pierres%20pr%C3%A9cieuses.md`, // ✅ AJOUT
 };
 const META_PREFIX = '#meta:';
 const stripPriceParentheses = (name: string) =>
@@ -202,24 +201,13 @@ function parseWeapons(md: string): CatalogItem[] {
   return items;
 }
 
-/* Markdown renderer simple (tables + listes) */ 
+/* Markdown renderer simple (tables + listes) */
 function isMarkdownTableLine(line: string) {
   const l = line.trim();
   return l.startsWith('|') && l.endsWith('|') && l.includes('|');
 }
 
 function MarkdownLite({ text }: { text: string }) {
-  // ✅ Fonction pour rendre le texte avec markdown basique
-  const renderText = (str: string) => {
-    const parts = str.split(/(\*\*[^*]+\*\*)/g);
-    return parts.map((part, idx) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
-        return <strong key={idx} className="font-semibold text-gray-200">{part.slice(2, -2)}</strong>;
-      }
-      return <span key={idx}>{part}</span>;
-    });
-  };
-
   const blocks = text.split(/\n{2,}/g).map(b => b.split('\n'));
   return (
     <div className="space-y-2">
@@ -240,12 +228,12 @@ function MarkdownLite({ text }: { text: string }) {
             <div key={idx} className="overflow-x-auto">
               <table className="w-full text-left text-sm border border-gray-700/50 rounded-md overflow-hidden">
                 <thead className="bg-gray-800/60">
-                  <tr>{header.map((c, i) => <th key={i} className="px-2 py-1 border-b border-gray-700/50">{renderText(c)}</th>)}</tr>
+                  <tr>{header.map((c, i) => <th key={i} className="px-2 py-1 border-b border-gray-700/50">{c}</th>)}</tr>
                 </thead>
                 <tbody>
                   {body.map((r, ri) => (
                     <tr key={ri} className="odd:bg-gray-800/30">
-                      {r.map((c, ci) => <td key={ci} className="px-2 py-1 align-top border-b border-gray-700/30">{renderText(c)}</td>)}
+                      {r.map((c, ci) => <td key={ci} className="px-2 py-1 align-top border-b border-gray-700/30">{c}</td>)}
                     </tr>
                   ))}
                 </tbody>
@@ -254,9 +242,9 @@ function MarkdownLite({ text }: { text: string }) {
           );
         }
         if (lines.every(l => l.trim().startsWith('- '))) {
-          return <ul key={idx} className="list-disc pl-5 space-y-1">{lines.map((l, i) => <li key={i} className="text-sm text-gray-300">{renderText(l.replace(/^- /, ''))}</li>)}</ul>;
+          return <ul key={idx} className="list-disc pl-5 space-y-1">{lines.map((l, i) => <li key={i} className="text-sm text-gray-300">{l.replace(/^- /, '')}</li>)}</ul>;
         }
-        return <p key={idx} className="text-sm text-gray-300 whitespace-pre-wrap">{renderText(lines.join('\n'))}</p>;
+        return <p key={idx} className="text-sm text-gray-300 whitespace-pre-wrap">{lines.join('\n')}</p>;
       })}
     </div>
   );
@@ -351,101 +339,6 @@ function parseTools(md: string): CatalogItem[] {
   return [...dedup.values()];
 }
 
- // ✅ COLLEZ ICI ⬇️
-function parseGems(md: string): CatalogItem[] {
-  const items: CatalogItem[] = [];
-  const tables = parseMarkdownTables(md);
-  
-  for (const table of tables) {
-    if (table.length === 0) continue;
-    
-    const header = table[0];
-    const body = table.slice(1);
-    
-    // Chercher les colonnes pertinentes
-    const nameColIdx = header.findIndex(h => /pierre|gemme|nom/i.test(h));
-    const valueColIdx = header.findIndex(h => /valeur|prix|co[ûu]t/i.test(h));
-    const descColIdx = header.findIndex(h => /description|effet/i.test(h));
-    
-    if (nameColIdx === -1) continue;
-    
-    for (const row of body) {
-      const rawName = row[nameColIdx] || '';
-      const name = stripPriceParentheses(rawName).trim();
-      
-      // ✅ Filtrer les lignes vides, headers, et séparateurs
-      if (!name || 
-          name === '---' || 
-          name === '—' ||
-          name.length < 2 ||
-          /^pierre|^gemme|^valeur|^nom|^description/i.test(name) ||
-          /^-+$/.test(name)) {
-        continue;
-      }
-      
-      // Construire la description
-      const parts: string[] = [];
-      
-      if (valueColIdx !== -1 && row[valueColIdx]) {
-        let value = row[valueColIdx].trim();
-        if (value && value !== '---' && value !== '—') {
-          // ✅ Conversion automatique en type de monnaie
-          const numMatch = value.match(/(\d+)\s*(po|pa|pc|or|argent|cuivre)?/i);
-          if (numMatch) {
-            const amount = numMatch[1];
-            let currency = numMatch[2] ? numMatch[2].toLowerCase() : '';
-            
-            // Déterminer la monnaie selon la valeur
-            if (!currency || currency === 'po' || currency === 'or') {
-              currency = parseInt(amount) >= 100 ? 'po' : 
-                         parseInt(amount) >= 10 ? 'pa' : 'pc';
-            } else if (currency === 'pa' || currency === 'argent') {
-              currency = 'pa';
-            } else if (currency === 'pc' || currency === 'cuivre') {
-              currency = 'pc';
-            }
-            
-// Symboles de monnaie
-const symbol = currency === 'po' ? '🟡' : 
-              currency === 'pa' ? '⚪' : '🟤';
-const label = currency === 'po' ? "pièce d'or" : 
-             currency === 'pa' ? "pièce d'argent" : 
-             "pièce de cuivre";
-
-// Pluriel si nécessaire
-const fullLabel = parseInt(amount) > 1 ? `${label}s` : label;
-
-parts.push(`**Valeur**: ${symbol} ${amount} ${fullLabel}`);
-          } else {
-            parts.push(`**Valeur**: ${value}`);
-          }
-        }
-      }
-      
-      if (descColIdx !== -1 && row[descColIdx]) {
-        const desc = row[descColIdx].trim();
-        if (desc && desc !== '---' && desc !== '—') {
-          parts.push(desc);
-        }
-      }
-      
-      const description = parts.join('\n\n');
-      
-      // ✅ Ne pas ajouter si pas de description
-      if (!description) continue;
-      
-      items.push({
-        id: `gem:${name}`,
-        kind: 'gems',
-        name,
-        description
-      });
-    }
-  }
-  
-  return items;
-}
-
 /* Props */
 type FilterState = {
   weapons: boolean;
@@ -453,7 +346,6 @@ type FilterState = {
   shields: boolean;
   adventuring_gear: boolean;
   tools: boolean;
-  gems: boolean; // ✅ AJOUT
 };
 
 export function EquipmentListModal({
@@ -470,10 +362,9 @@ export function EquipmentListModal({
   const [loading, setLoading] = React.useState(false);
   const [query, setQuery] = React.useState('');
   const [all, setAll] = React.useState<CatalogItem[]>([]);
-const [filters, setFilters] = React.useState<FilterState>({
-  weapons: true, armors: true, shields: true, adventuring_gear: true, tools: true,
-  gems: true // ✅ AJOUT
-});
+  const [filters, setFilters] = React.useState<FilterState>({
+    weapons: true, armors: true, shields: true, adventuring_gear: true, tools: true
+  });
   const [expanded, setExpanded] = React.useState<Record<string, boolean>>({});
   
   // États pour le mode multi-ajout
@@ -486,26 +377,24 @@ const [filters, setFilters] = React.useState<FilterState>({
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-React.useEffect(() => {
-  const load = async () => {
-    setLoading(true);
-    try {
-      const [armorsMd, shieldsMd, weaponsMd, gearMd, toolsMd, gemsMd] = await Promise.all([ // ✅ Ajout gemsMd
-        fetchText(URLS.armors), fetchText(URLS.shields), fetchText(URLS.weapons),
-        fetchText(URLS.adventuring_gear), fetchText(URLS.tools),
-        fetchText(URLS.gems), // ✅ AJOUT
-      ]);
+  React.useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [armorsMd, shieldsMd, weaponsMd, gearMd, toolsMd] = await Promise.all([
+          fetchText(URLS.armors), fetchText(URLS.shields), fetchText(URLS.weapons),
+          fetchText(URLS.adventuring_gear), fetchText(URLS.tools),
+        ]);
 
-      const armorItems = parseArmors(armorsMd);
+        const armorItems = parseArmors(armorsMd);
 
-      const list: CatalogItem[] = [
-        ...armorItems,
-        ...parseShields(shieldsMd),
-        ...parseWeapons(weaponsMd),
-        ...parseTools(toolsMd),
-        ...parseGems(gemsMd), // ✅ AJOUT
-        ...parseSectionedList(gearMd, 'adventuring_gear'),
-      ];
+        const list: CatalogItem[] = [
+          ...armorItems,
+          ...parseShields(shieldsMd),
+          ...parseWeapons(weaponsMd),
+          ...parseTools(toolsMd),
+          ...parseSectionedList(gearMd, 'adventuring_gear'),
+        ];
 
         const seen = new Set<string>();
         const cleaned = list.filter(ci => {
@@ -562,32 +451,31 @@ React.useEffect(() => {
     return items;
   }
 
-const effectiveFilters: FilterState = React.useMemo(() => {
-  if (!allowedKinds) return filters;
-  return {
-    weapons: allowedKinds.includes('weapons'),
-    armors: allowedKinds.includes('armors'),
-    shields: allowedKinds.includes('shields'),
-    adventuring_gear: allowedKinds.includes('adventuring_gear'),
-    tools: allowedKinds.includes('tools'),
-    gems: allowedKinds.includes('gems'), // ✅ AJOUT
-  };
-}, [allowedKinds, filters]);
+  const effectiveFilters: FilterState = React.useMemo(() => {
+    if (!allowedKinds) return filters;
+    return {
+      weapons: allowedKinds.includes('weapons'),
+      armors: allowedKinds.includes('armors'),
+      shields: allowedKinds.includes('shields'),
+      adventuring_gear: allowedKinds.includes('adventuring_gear'),
+      tools: allowedKinds.includes('tools'),
+    };
+  }, [allowedKinds, filters]);
 
- const noneSelected = !effectiveFilters.weapons && !effectiveFilters.armors && !effectiveFilters.shields && !effectiveFilters.adventuring_gear && !effectiveFilters.tools && !effectiveFilters.gems; // ✅ Ajout
+  const noneSelected = !effectiveFilters.weapons && !effectiveFilters.armors && !effectiveFilters.shields && !effectiveFilters.adventuring_gear && !effectiveFilters.tools;
 
-const filtered = React.useMemo(() => {
-  if (noneSelected) return [];
-  const q = query.trim().toLowerCase();
-  return all.filter(ci => {
-    if (!effectiveFilters[ci.kind]) return false;
-    if (allowedKinds && !allowedKinds.includes(ci.kind)) return false;
-    if (!q) return true;
-    if (smartCapitalize(ci.name).toLowerCase().includes(q)) return true;
-    if ((ci.kind === 'adventuring_gear' || ci.kind === 'tools' || ci.kind === 'gems') && (ci.description || '').toLowerCase().includes(q)) return true; // ✅ Ajout || ci.kind === 'gems'
-    return false;
-  });
-}, [all, query, effectiveFilters, allowedKinds, noneSelected]);
+  const filtered = React.useMemo(() => {
+    if (noneSelected) return [];
+    const q = query.trim().toLowerCase();
+    return all.filter(ci => {
+      if (!effectiveFilters[ci.kind]) return false;
+      if (allowedKinds && !allowedKinds.includes(ci.kind)) return false;
+      if (!q) return true;
+      if (smartCapitalize(ci.name).toLowerCase().includes(q)) return true;
+      if ((ci.kind === 'adventuring_gear' || ci.kind === 'tools') && (ci.description || '').toLowerCase().includes(q)) return true;
+      return false;
+    });
+  }, [all, query, effectiveFilters, allowedKinds, noneSelected]);
 
   // ✅ MODIFIÉ : Comportement conditionnel selon multiAdd
   const handlePick = async (ci: CatalogItem) => {
@@ -598,13 +486,12 @@ const filtered = React.useMemo(() => {
     try {
       setAdding(ci.id);
 
-let meta: ItemMeta = { type: 'equipment', quantity: 1, equipped: false };
-if (ci.kind === 'armors' && ci.armor) meta = { type: 'armor', quantity: 1, equipped: false, armor: ci.armor };
-if (ci.kind === 'shields' && ci.shield) meta = { type: 'shield', quantity: 1, equipped: false, shield: ci.shield };
-if (ci.kind === 'weapons' && ci.weapon) meta = { type: 'weapon', quantity: 1, equipped: false, weapon: ci.weapon };
-if (ci.kind === 'tools') meta = { type: 'tool', quantity: 1, equipped: false };
-if (ci.kind === 'gems') meta = { type: 'jewelry', quantity: 1, equipped: false }; // ✅ AJOUT
-const description = (ci.kind === 'adventuring_gear' || ci.kind === 'tools' || ci.kind === 'gems') ? (ci.description || '').trim() : ''; // ✅ Ajout || ci.kind === 'gems'
+      let meta: ItemMeta = { type: 'equipment', quantity: 1, equipped: false };
+      if (ci.kind === 'armors' && ci.armor) meta = { type: 'armor', quantity: 1, equipped: false, armor: ci.armor };
+      if (ci.kind === 'shields' && ci.shield) meta = { type: 'shield', quantity: 1, equipped: false, shield: ci.shield };
+      if (ci.kind === 'weapons' && ci.weapon) meta = { type: 'weapon', quantity: 1, equipped: false, weapon: ci.weapon };
+      if (ci.kind === 'tools') meta = { type: 'tool', quantity: 1, equipped: false };
+      const description = (ci.kind === 'adventuring_gear' || ci.kind === 'tools') ? (ci.description || '').trim() : '';
       
       await onAddItem({ name: ci.name, description, meta });
       
@@ -626,7 +513,7 @@ const description = (ci.kind === 'adventuring_gear' || ci.kind === 'tools' || ci
   };
 
   const toggleExpand = (id: string) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
- const typeButtons: CatalogKind[] = ['weapons','armors','shields','adventuring_gear','tools','gems']; // ✅ Ajout 'gems'
+  const typeButtons: CatalogKind[] = ['weapons','armors','shields','adventuring_gear','tools'];
 
   return (
     <div className="fixed inset-0 z-[9999]">
@@ -648,17 +535,17 @@ const description = (ci.kind === 'adventuring_gear' || ci.kind === 'tools' || ci
               <X />
             </button>
           </div>
-<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-  <div className="flex items-center gap-2 flex-1 min-w-0">
-    <Search className="w-5 h-5 text-gray-400 shrink-0" />
-    <input
-      value={query}
-      onChange={(e) => setQuery(e.target.value)}
-      placeholder="Rechercher…"
-      className="input-dark px-3 py-2 rounded-md w-full"
-    />
-  </div>
-  <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2 min-w-[220px] flex-1">
+              <Search className="w-5 h-5 text-gray-400 shrink-0" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Rechercher…"
+                className="input-dark px-3 py-2 rounded-md w-full"
+              />
+            </div>
+            <div className="flex items-center gap-2 flex-wrap justify-end">
               {typeButtons.map(k => {
                 if (allowedKinds && !allowedKinds.includes(k)) return null;
                 return (
@@ -669,12 +556,10 @@ const description = (ci.kind === 'adventuring_gear' || ci.kind === 'tools' || ci
                       effectiveFilters[k] ? 'border-red-500/40 text-red-300 bg-red-900/20' : 'border-gray-600 text-gray-300 hover:bg-gray-800/40'
                     }`}
                   >
-     {k === 'weapons' ? 'Armes' :
- k === 'armors' ? 'Armures' :
- k === 'shields' ? 'Boucliers' :
- k === 'adventuring_gear' ? 'Équipements' : 
- k === 'tools' ? 'Outils' :
- k === 'gems' ? 'Bijoux' : k} {/* ✅ AJOUT */}
+                    {k === 'weapons' ? 'Armes' :
+                     k === 'armors' ? 'Armures' :
+                     k === 'shields' ? 'Boucliers' :
+                     k === 'adventuring_gear' ? 'Équipements' : 'Outils'}
                   </button>
                 );
               })}
@@ -694,21 +579,20 @@ const description = (ci.kind === 'adventuring_gear' || ci.kind === 'tools' || ci
               const isAdded = addedItems.has(ci.id);
               const isAdding = adding === ci.id;
 
-const preview = (
-  <>
-    {ci.kind === 'armors' && ci.armor && <div>CA: {ci.armor.label}</div>}
-    {ci.kind === 'shields' && ci.shield && <div>Bonus de bouclier: +{ci.shield.bonus}</div>}
-    {ci.kind === 'weapons' && ci.weapon && (
-      <div className="space-y-0.5">
-        <div>Dégâts: {ci.weapon.damageDice} {ci.weapon.damageType}</div>
-        {ci.weapon.properties && <div>Propriété: {ci.weapon.properties}</div>}
-        {ci.weapon.range && <div>Portée: {ci.weapon.range}</div>}
-      </div>
-    )}
-    {ci.kind === 'gems' && <div className="text-xs text-gray-400"> Voir le détail</div>}
-    {(ci.kind === 'adventuring_gear' || ci.kind === 'tools') && (ci.description ? 'Voir le détail' : 'Équipement')}
-  </>
-);
+              const preview = (
+                <>
+                  {ci.kind === 'armors' && ci.armor && <div>CA: {ci.armor.label}</div>}
+                  {ci.kind === 'shields' && ci.shield && <div>Bonus de bouclier: +{ci.shield.bonus}</div>}
+                  {ci.kind === 'weapons' && ci.weapon && (
+                    <div className="space-y-0.5">
+                      <div>Dégâts: {ci.weapon.damageDice} {ci.weapon.damageType}</div>
+                      {ci.weapon.properties && <div>Propriété: {ci.weapon.properties}</div>}
+                      {ci.weapon.range && <div>Portée: {ci.weapon.range}</div>}
+                    </div>
+                  )}
+                  {(ci.kind === 'adventuring_gear' || ci.kind === 'tools') && (ci.description ? 'Voir le détail' : 'Équipement')}
+                </>
+              );
 
               return (
                 <div 
@@ -752,13 +636,13 @@ const preview = (
                       )}
                     </button>
                   </div>
-{isOpen && ( 
-  <div className="px-3 pb-3">
-    {(ci.kind === 'adventuring_gear' || ci.kind === 'tools' || ci.kind === 'gems') // ✅ Ajout
-      ? <MarkdownLite text={(ci.description || '').trim()} />
-      : <div className="text-sm text-gray-400">Aucun détail supplémentaire</div>}
-  </div>
-)}
+                  {isOpen && (
+                    <div className="px-3 pb-3">
+                      {(ci.kind === 'adventuring_gear' || ci.kind === 'tools')
+                        ? <MarkdownLite text={(ci.description || '').trim()} />
+                        : <div className="text-sm text-gray-400">Aucun détail supplémentaire</div>}
+                    </div>
+                  )}
                 </div>
               );
             })
