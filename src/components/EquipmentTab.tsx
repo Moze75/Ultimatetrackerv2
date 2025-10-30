@@ -930,7 +930,7 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
     }
   };
 
-  // 🆕 NOUVEAU : Équiper/Déséquiper un objet avec bonus de stats
+   // 🆕 NOUVEAU : Équiper/Déséquiper un objet avec bonus de stats
   const handleEquipStatItem = async (item: InventoryItem) => {
     if (!player?.id) return;
 
@@ -941,9 +941,19 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
     }
 
     try {
+      // ✅ Récupérer les abilities actuelles en tant qu'objet
+      const currentAbilities = player.abilities || {
+        strength: 10,
+        dexterity: 10,
+        constitution: 10,
+        intelligence: 10,
+        wisdom: 10,
+        charisma: 10
+      };
+
       if (meta.equipped) {
         // Déséquiper - retirer les bonus
-        const newAbilities = { ...player.abilities };
+        const newAbilities = { ...currentAbilities };
         
         if (meta.statBonuses.strength) {
           newAbilities.strength = (newAbilities.strength || 10) - meta.statBonuses.strength;
@@ -964,7 +974,11 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
           newAbilities.charisma = (newAbilities.charisma || 10) - meta.statBonuses.charisma;
         }
 
-        // Mettre à jour les abilities du joueur
+        // Marquer l'item comme déséquipé
+        const updatedMeta = { ...meta, equipped: false };
+        await updateItemMetaComplete(item, updatedMeta);
+
+        // Mettre à jour les abilities du joueur dans la BDD
         const { error: playerError } = await supabase
           .from('players')
           .update({ abilities: newAbilities })
@@ -972,18 +986,15 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
 
         if (playerError) throw playerError;
 
-        // Marquer l'item comme déséquipé
-        const updatedMeta = { ...meta, equipped: false };
-        await updateItemMetaComplete(item, updatedMeta);
-
-        // Mettre à jour le state local
-        onPlayerUpdate({ ...player, abilities: newAbilities });
+        // Mettre à jour le state local du joueur
+        const updatedPlayer = { ...player, abilities: newAbilities };
+        onPlayerUpdate(updatedPlayer);
 
         toast.success(`${item.name} déséquipé`);
         await refreshInventory(0);
       } else {
         // Équiper - ajouter les bonus
-        const newAbilities = { ...player.abilities };
+        const newAbilities = { ...currentAbilities };
         
         if (meta.statBonuses.strength) {
           newAbilities.strength = (newAbilities.strength || 10) + meta.statBonuses.strength;
@@ -1004,7 +1015,11 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
           newAbilities.charisma = (newAbilities.charisma || 10) + meta.statBonuses.charisma;
         }
 
-        // Mettre à jour les abilities du joueur
+        // Marquer l'item comme équipé
+        const updatedMeta = { ...meta, equipped: true };
+        await updateItemMetaComplete(item, updatedMeta);
+
+        // Mettre à jour les abilities du joueur dans la BDD
         const { error: playerError } = await supabase
           .from('players')
           .update({ abilities: newAbilities })
@@ -1012,19 +1027,17 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
 
         if (playerError) throw playerError;
 
-        // Marquer l'item comme équipé
-        const updatedMeta = { ...meta, equipped: true };
-        await updateItemMetaComplete(item, updatedMeta);
+        // Mettre à jour le state local du joueur
+        const updatedPlayer = { ...player, abilities: newAbilities };
+        onPlayerUpdate(updatedPlayer);
 
-        // Mettre à jour le state local
-        onPlayerUpdate({ ...player, abilities: newAbilities });
-
-        toast.success(`${item.name} équipé`);
+        toast.success(`${item.name} équipé avec bonus appliqués !`);
         await refreshInventory(0);
       }
     } catch (error) {
-      console.error('Erreur:', error);
+      console.error('Erreur lors de l\'équipement:', error);
       toast.error('Une erreur est survenue');
+      await refreshInventory(0);
     }
   };
  
