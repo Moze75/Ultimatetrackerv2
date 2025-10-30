@@ -451,20 +451,16 @@ React.useEffect(() => {
   return null; // Ne rien afficher ici, juste forcer le recalcul
 })()}
             
-       {abilities.map((ability, abilityIndex) => {
-  // ✅ NOUVEAU : Calculer le modificateur avec le bonus d'équipement ICI
-  const equipmentBonuses = calculateEquipmentBonuses();
-  const equipmentBonus = equipmentBonuses[ability.name as keyof typeof equipmentBonuses] || 0;
-  const baseModifier = getModifier(ability.score);
-  const displayModifier = baseModifier + equipmentBonus;
-  
-  return (
-    <div key={ability.name} className="flex flex-col items-center">
-      {/* Contenant principal avec l'image de fond - ✅ Cliquable pour lancer le dé */}
-      <div 
-        className={`relative w-28 h-36 flex flex-col items-center justify-start ${
-          !editing ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''
-        }`}
+            {abilities.map((ability, abilityIndex) => (
+
+    
+    
+              <div key={ability.name} className="flex flex-col items-center">
+                {/* Contenant principal avec l'image de fond - ✅ Cliquable pour lancer le dé */}
+                <div 
+                  className={`relative w-28 h-36 flex flex-col items-center justify-start ${
+                    !editing ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''
+                  }`}
                   style={{
                     backgroundImage: 'url(/background/contenant_stats.png)',
                     backgroundSize: 'contain',
