@@ -1041,14 +1041,14 @@ const fetchKnownSpells = async () => {
     return levels;
   }, [player.spell_slots, groupedSpells, allowedLevelsSet, casterType]);
 
-  // Initialiser tous les niveaux comme repliés par défaut au premier chargement
-  useEffect(() => {
-    const saved = localStorage.getItem(`spell-levels-state-${player.id}`);
-    if (!saved && levelsToRender.length > 0) {
-      // Premier chargement : tout replier
-      setCollapsedLevels(new Set(levelsToRender));
-    }
-  }, [player.id, levelsToRender]);
+  // Initialiser tous les niveaux comme dépliés
+useEffect(() => {
+  const saved = localStorage.getItem(`spell-levels-state-${player.id}`);
+  if (!saved && levelsToRender.length > 0) {
+    // Premier chargement : tout replier
+    setCollapsedLevels(new Set(levelsToRender));
+  }
+}, [player.id, levelsToRender]);
   
   // Dépliage global: bouton livre à droite
   const allExpanded = useMemo(() => {
