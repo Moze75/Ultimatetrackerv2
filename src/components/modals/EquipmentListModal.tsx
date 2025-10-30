@@ -643,20 +643,21 @@ const description = (ci.kind === 'adventuring_gear' || ci.kind === 'tools' || ci
               const isAdded = addedItems.has(ci.id);
               const isAdding = adding === ci.id;
 
-              const preview = (
-                <>
-                  {ci.kind === 'armors' && ci.armor && <div>CA: {ci.armor.label}</div>}
-                  {ci.kind === 'shields' && ci.shield && <div>Bonus de bouclier: +{ci.shield.bonus}</div>}
-                  {ci.kind === 'weapons' && ci.weapon && (
-                    <div className="space-y-0.5">
-                      <div>Dégâts: {ci.weapon.damageDice} {ci.weapon.damageType}</div>
-                      {ci.weapon.properties && <div>Propriété: {ci.weapon.properties}</div>}
-                      {ci.weapon.range && <div>Portée: {ci.weapon.range}</div>}
-                    </div>
-                  )}
-                  {(ci.kind === 'adventuring_gear' || ci.kind === 'tools') && (ci.description ? 'Voir le détail' : 'Équipement')}
-                </>
-              );
+const preview = (
+  <>
+    {ci.kind === 'armors' && ci.armor && <div>CA: {ci.armor.label}</div>}
+    {ci.kind === 'shields' && ci.shield && <div>Bonus de bouclier: +{ci.shield.bonus}</div>}
+    {ci.kind === 'weapons' && ci.weapon && (
+      <div className="space-y-0.5">
+        <div>Dégâts: {ci.weapon.damageDice} {ci.weapon.damageType}</div>
+        {ci.weapon.properties && <div>Propriété: {ci.weapon.properties}</div>}
+        {ci.weapon.range && <div>Portée: {ci.weapon.range}</div>}
+      </div>
+    )}
+    {ci.kind === 'gems' && <div className="text-purple-400">💎 Pierre précieuse</div>} {/* ✅ AJOUT */}
+    {(ci.kind === 'adventuring_gear' || ci.kind === 'tools') && (ci.description ? 'Voir le détail' : 'Équipement')}
+  </>
+);
 
               return (
                 <div 
