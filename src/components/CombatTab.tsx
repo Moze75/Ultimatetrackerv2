@@ -335,7 +335,7 @@ const AttackEditModal = ({ attack, onClose, onSave, onDelete }: AttackEditModalP
   );
 };
 
-export default function CombatTab({ player, onUpdate }: CombatTabProps) {
+export default function CombatTab({ player, inventory, onUpdate }: CombatTabProps) {
   const [attacks, setAttacks] = useState<Attack[]>([]);
   const [editingAttack, setEditingAttack] = useState<Attack | null>(null);
   const [showAttackModal, setShowAttackModal] = useState(false);
