@@ -190,6 +190,17 @@ export function InventoryItemEditModal({
         const initTags = PROPERTY_TAGS.filter(t => propRaw.toLowerCase().includes(t.toLowerCase()));
         setWeaponPropTags(initTags);
       }
+
+    // ✅ NOUVEAU : Initialisation des bonus
+      if (meta.bonuses) {
+        setBonusStr(meta.bonuses.strength ?? '');
+        setBonusDex(meta.bonuses.dexterity ?? '');
+        setBonusCon(meta.bonuses.constitution ?? '');
+        setBonusInt(meta.bonuses.intelligence ?? '');
+        setBonusWis(meta.bonuses.wisdom ?? '');
+        setBonusCha(meta.bonuses.charisma ?? '');
+        setBonusAC(meta.bonuses.armor_class ?? '');
+      }
     } else {
       // objet sans méta
       setType('equipment');
