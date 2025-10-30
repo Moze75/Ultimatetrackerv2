@@ -362,32 +362,68 @@ function parseGems(md: string): CatalogItem[] {
       const rawName = row[nameColIdx] || '';
       const name = stripPriceParentheses(rawName).trim();
       
-      if (!name || name === '---' || /^pierre|^gemme|^valeur/i.test(name)) continue;
+      // ✅ Filtrer les lignes vides, headers, et séparateurs
+      if (!name || 
+          name === '---' || 
+          name === '—' ||
+          name.length < 2 ||
+          /^pierre|^gemme|^valeur|^nom|^description/i.test(name) ||
+          /^-+$/.test(name)) {
+        continue;
+      }
       
       // Construire la description
       const parts: string[] = [];
       
       if (valueColIdx !== -1 && row[valueColIdx]) {
-        const value = row[valueColIdx].trim();
-        if (value && value !== '---') {
-          parts.push(`**Valeur**: ${value}`);
+        let value = row[valueColIdx].trim();
+        if (value && value !== '---' && value !== '—') {
+          // ✅ Conversion automatique en type de monnaie
+          const numMatch = value.match(/(\d+)\s*(po|pa|pc|or|argent|cuivre)?/i);
+          if (numMatch) {
+            const amount = numMatch[1];
+            let currency = numMatch[2] ? numMatch[2].toLowerCase() : '';
+            
+            // Déterminer la monnaie selon la valeur
+            if (!currency || currency === 'po' || currency === 'or') {
+              currency = parseInt(amount) >= 100 ? 'po' : 
+                         parseInt(amount) >= 10 ? 'pa' : 'pc';
+            } else if (currency === 'pa' || currency === 'argent') {
+              currency = 'pa';
+            } else if (currency === 'pc' || currency === 'cuivre') {
+              currency = 'pc';
+            }
+            
+            // Symboles de monnaie
+            const symbol = currency === 'po' ? '🟡' : 
+                          currency === 'pa' ? '⚪' : '🟤';
+            const label = currency === 'po' ? 'or' : 
+                         currency === 'pa' ? 'argent' : 'cuivre';
+            
+            parts.push(`**Valeur**: ${symbol} ${amount} ${label}`);
+          } else {
+            parts.push(`**Valeur**: ${value}`);
+          }
         }
       }
       
       if (descColIdx !== -1 && row[descColIdx]) {
         const desc = row[descColIdx].trim();
-        if (desc && desc !== '---') {
+        if (desc && desc !== '---' && desc !== '—') {
           parts.push(desc);
         }
       }
       
       const description = parts.join('\n\n');
       
+      // ✅ Ne pas ajouter si pas de description
+      if (!description) continue;
+      
       items.push({
         id: `gem:${name}`,
         kind: 'gems',
         name,
-        description: description || 'Pierre précieuse'
+        description
       });
     }
   }
