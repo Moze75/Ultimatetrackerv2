@@ -525,18 +525,18 @@ const effectiveFilters: FilterState = React.useMemo(() => {
 
  const noneSelected = !effectiveFilters.weapons && !effectiveFilters.armors && !effectiveFilters.shields && !effectiveFilters.adventuring_gear && !effectiveFilters.tools && !effectiveFilters.gems; // ✅ Ajout
 
-  const filtered = React.useMemo(() => {
-    if (noneSelected) return [];
-    const q = query.trim().toLowerCase();
-    return all.filter(ci => {
-      if (!effectiveFilters[ci.kind]) return false;
-      if (allowedKinds && !allowedKinds.includes(ci.kind)) return false;
-      if (!q) return true;
-      if (smartCapitalize(ci.name).toLowerCase().includes(q)) return true;
-      if ((ci.kind === 'adventuring_gear' || ci.kind === 'tools') && (ci.description || '').toLowerCase().includes(q)) return true;
-      return false;
-    });
-  }, [all, query, effectiveFilters, allowedKinds, noneSelected]);
+const filtered = React.useMemo(() => {
+  if (noneSelected) return [];
+  const q = query.trim().toLowerCase();
+  return all.filter(ci => {
+    if (!effectiveFilters[ci.kind]) return false;
+    if (allowedKinds && !allowedKinds.includes(ci.kind)) return false;
+    if (!q) return true;
+    if (smartCapitalize(ci.name).toLowerCase().includes(q)) return true;
+    if ((ci.kind === 'adventuring_gear' || ci.kind === 'tools' || ci.kind === 'gems') && (ci.description || '').toLowerCase().includes(q)) return true; // ✅ Ajout || ci.kind === 'gems'
+    return false;
+  });
+}, [all, query, effectiveFilters, allowedKinds, noneSelected]);
 
   // ✅ MODIFIÉ : Comportement conditionnel selon multiAdd
   const handlePick = async (ci: CatalogItem) => {
