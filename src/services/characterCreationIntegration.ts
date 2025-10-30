@@ -43,15 +43,9 @@ function feetToMeters(ft?: number): number {
   return Math.round(n * 0.3048 * 2) / 2;
 }
 
-function buildAbilitiesForTracker(
-  finalAbilities: Record<string, number>, 
-  proficientSkillsRaw: string[], 
-  level: number,
-  savingThrowProficiencies: string[] = [] // ✅ NOUVEAU PARAMÈTRE
-) {
+function buildAbilitiesForTracker(finalAbilities: Record<string, number>, proficientSkillsRaw: string[], level: number) {
   const proficiency = getProficiencyBonusForLevel(level);
   const profSet = new Set(proficientSkillsRaw.map(normalizeSkillForTracker));
-  const savingThrowSet = new Set(savingThrowProficiencies); // ✅ NOUVEAU
 
   const ORDER: Array<keyof typeof finalAbilities> = ['Force', 'Dextérité', 'Constitution', 'Intelligence', 'Sagesse', 'Charisme'];
 
@@ -67,9 +61,7 @@ function buildAbilitiesForTracker(
       return { name: skillName, bonus, isProficient, hasExpertise };
     });
 
-    // ✅ Appliquer le bonus de maîtrise si cette caractéristique est dans savingThrows
-    const isSavingThrowProficient = savingThrowSet.has(abilityName);
-    const savingThrow = modifier + (isSavingThrowProficient ? proficiency : 0);
+    const savingThrow = modifier;
 
     return { name: abilityName, score, modifier, savingThrow, skills: skillsDetails };
   });
@@ -442,12 +434,7 @@ export async function createCharacterFromCreatorPayload(
   const level = Math.max(1, payload.level ?? 1);
   const proficiency_bonus = getProficiencyBonusForLevel(level);
 
- const abilitiesArray = buildAbilitiesForTracker(
-  payload.finalAbilities || {}, 
-  payload.proficientSkills || [], 
-  level,
-  payload.savingThrows || [] // ✅ PASSER LES SAVING THROWS
-);
+  const abilitiesArray = buildAbilitiesForTracker(payload.finalAbilities || {}, payload.proficientSkills || [], level);
 
   // Don d’historique → feats.origins/origin
   const feats: any = {

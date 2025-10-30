@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Heart, Plus, Sword, Swords, Shield, Settings, Trash2, Brain } from 'lucide-react';
-import { Player, Attack } from '../types/dnd'; 
+import { Heart, Plus, Sword, Swords, Shield, Settings, Trash2 } from 'lucide-react';
+import { Player, Attack } from '../types/dnd';
 import toast from 'react-hot-toast';
 import { ConditionsSection } from './ConditionsSection';
 import { DiceRoller } from '../components/DiceRoller';
@@ -302,9 +302,6 @@ export default function CombatTab({ player, onUpdate }: CombatTabProps) {
   const [healValue, setHealValue] = useState('');
   const [tempHpValue, setTempHpValue] = useState('');
 
-  const [showConcentrationCheck, setShowConcentrationCheck] = useState(false);
-  const [concentrationDC, setConcentrationDC] = useState(10);
-  
   const [diceRollerOpen, setDiceRollerOpen] = useState(false);
   const [rollData, setRollData] = useState<{
     type: 'attack' | 'damage';
@@ -615,42 +612,35 @@ const rollAttack = (attack: Attack) => {
   };
 
   const applyDamage = async () => {
-  const damage = parseInt(damageValue) || 0;
-  if (damage <= 0) return;
+    const damage = parseInt(damageValue) || 0;
+    if (damage <= 0) return;
 
-  let newCurrentHP = player.current_hp;
-  let newTempHP = player.temporary_hp;
+    let newCurrentHP = player.current_hp;
+    let newTempHP = player.temporary_hp;
 
-  if (newTempHP > 0) {
-    if (damage >= newTempHP) {
-      const remainingDamage = damage - newTempHP;
-      newTempHP = 0;
-      newCurrentHP = Math.max(0, newCurrentHP - remainingDamage);
+    if (newTempHP > 0) {
+      if (damage >= newTempHP) {
+        const remainingDamage = damage - newTempHP;
+        newTempHP = 0;
+        newCurrentHP = Math.max(0, newCurrentHP - remainingDamage);
+      } else {
+        newTempHP = newTempHP - damage;
+      }
     } else {
-      newTempHP = newTempHP - damage;
+      newCurrentHP = Math.max(0, newCurrentHP - damage);
     }
-  } else {
-    newCurrentHP = Math.max(0, newCurrentHP - damage);
-  }
 
-  await updateHP(newCurrentHP, newTempHP);
-  setDamageValue('');
+    await updateHP(newCurrentHP, newTempHP);
+    setDamageValue('');
 
-  const hpElement = document.querySelector('.hp-bar');
-  if (hpElement) {
-    hpElement.classList.add('damage-animation');
-    setTimeout(() => hpElement.classList.remove('damage-animation'), 600);
-  }
+    const hpElement = document.querySelector('.hp-bar');
+    if (hpElement) {
+      hpElement.classList.add('damage-animation');
+      setTimeout(() => hpElement.classList.remove('damage-animation'), 600);
+    }
 
-  toast.success(`${damage} dégâts appliqués`);
-
-  // ✅ NOUVEAU : Vérifier la concentration
-  if (player.is_concentrating) {
-    const dc = Math.max(10, Math.floor(damage / 2));
-    setConcentrationDC(dc);
-    setShowConcentrationCheck(true);
-  }
-};
+    toast.success(`${damage} dégâts appliqués`);
+  };
 
   const applyHealing = async () => {
     const healing = parseInt(healValue) || 0;
@@ -872,106 +862,6 @@ const rollAttack = (attack: Attack) => {
       <ConditionsSection player={player} onUpdate={onUpdate} />
 
       <DiceRoller isOpen={diceRollerOpen} onClose={() => setDiceRollerOpen(false)} rollData={rollData} />
- {/* ✅ AJOUTEZ LE MODAL ICI, JUSTE APRÈS DiceRoller */}
-      {showConcentrationCheck && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full border border-purple-500/40 shadow-xl shadow-purple-500/20">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
-                <Brain className="w-6 h-6 text-purple-400 animate-pulse" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-100">Test de Concentration</h3>
-                <p className="text-sm text-purple-400">Vous avez subi des dégâts !</p>
-              </div>
-            </div>
-
-            <div className="bg-gray-900/50 rounded-lg p-4 mb-4 border border-gray-700">
-              <p className="text-gray-300 mb-3">
-                Vous devez réussir un jet de sauvegarde de Constitution pour maintenir votre concentration sur{' '}
-                <span className="text-purple-400 font-semibold">{player.concentration_spell || 'votre sort'}</span>.
-              </p>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">DD du test :</span>
-                  <span className="text-2xl font-bold text-red-400">
-                    {concentrationDC}
-                  </span>
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Votre modificateur de CON :</span>
-                  <span className="text-xl font-semibold text-green-400">
-                    {(() => {
-                      const conAbility = player.abilities?.find(a => a.name === 'Constitution');
-                      const conMod = conAbility?.modifier || 0;
-                      return conMod >= 0 ? `+${conMod}` : conMod;
-                    })()}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-3 mb-4">
-              <p className="text-sm text-gray-300">
-                <span className="font-semibold text-purple-400">Rappel :</span> Lancez 1d20 et ajoutez votre modificateur de Constitution. 
-                Si le résultat est égal ou supérieur à {concentrationDC}, vous maintenez votre concentration.
-              </p>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={async () => {
-                  try {
-                    const { error } = await supabase
-                      .from('players')
-                      .update({
-                        is_concentrating: false,
-                        concentration_spell: null
-                      })
-                      .eq('id', player.id);
-
-                    if (error) throw error;
-
-                    onUpdate({
-                      ...player,
-                      is_concentrating: false,
-                      concentration_spell: null
-                    });
-
-                    setShowConcentrationCheck(false);
-                    toast.error('Concentration perdue');
-                  } catch (error) {
-                    console.error('Erreur lors de l\'interruption de la concentration:', error);
-                    toast.error('Erreur lors de la mise à jour');
-                  }
-                }}
-                className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
-              >
-                J'ai raté le test
-              </button>
-              
-              <button
-                onClick={() => {
-                  setShowConcentrationCheck(false);
-                  toast.success('Concentration maintenue !');
-                }}
-                className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium"
-              >
-                J'ai réussi le test
-              </button>
-            </div>
-
-            <button
-              onClick={() => setShowConcentrationCheck(false)}
-              className="w-full mt-3 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition-colors text-sm"
-            >
-              Fermer (je gère plus tard)
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
