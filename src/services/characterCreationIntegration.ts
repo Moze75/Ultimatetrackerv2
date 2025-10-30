@@ -4,6 +4,7 @@ import { CharacterExportPayload, EnrichedEquipment, ItemMeta } from '../types/Ch
 import { attackService } from './attackService';
 import { checkWeaponProficiency, getPlayerWeaponProficiencies } from '../utils/weaponProficiencyChecker';
 import { getSpellSlotsByLevel } from '../utils/spellSlots2024';
+import inventoryService from './inventoryService'; // ✅ AJOUT
 
 // Skills utilisés par StatsTab (orthographe FR)
 const SKILL_GROUPS: Record<'Force' | 'Dextérité' | 'Constitution' | 'Intelligence' | 'Sagesse' | 'Charisme', string[]> = {
