@@ -155,10 +155,18 @@ async function createWeaponAttack(
   player: Player
 ): Promise<void> {
   try {
+    console.log('[createWeaponAttack] 🗡️ Création attaque pour:', weaponName);
+    console.log('[createWeaponAttack] Player ID:', playerId);
+    console.log('[createWeaponAttack] Weapon meta:', weaponMeta);
+    
     const weaponProficiencies = getPlayerWeaponProficiencies(player);
+    console.log('[createWeaponAttack] Proficiencies du player:', weaponProficiencies);
+    
     const explicitCategory = weaponMeta?.category;
     const weaponProperties = weaponMeta?.properties;
     const proficiencyResult = checkWeaponProficiency(weaponName, weaponProficiencies, explicitCategory, weaponProperties);
+    
+    console.log('[createWeaponAttack] Résultat proficiency check:', proficiencyResult);
 
     const payload = {
       player_id: playerId,
@@ -175,9 +183,12 @@ async function createWeaponAttack(
       ammo_count: 0,
     };
 
-    await attackService.addAttack(payload);
+    console.log('[createWeaponAttack] Payload à insérer:', payload);
+    const result = await attackService.addAttack(payload);
+    console.log('[createWeaponAttack] ✅ Attaque créée avec succès:', result);
   } catch (err) {
-    console.error('Création attaque échouée:', err);
+    console.error('[createWeaponAttack] ❌ ERREUR création attaque:', err);
+    console.error('[createWeaponAttack] Stack trace:', err);
   }
 }
 
