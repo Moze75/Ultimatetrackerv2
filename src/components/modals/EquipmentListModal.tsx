@@ -434,24 +434,26 @@ export function EquipmentListModal({
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-  React.useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const [armorsMd, shieldsMd, weaponsMd, gearMd, toolsMd] = await Promise.all([
-          fetchText(URLS.armors), fetchText(URLS.shields), fetchText(URLS.weapons),
-          fetchText(URLS.adventuring_gear), fetchText(URLS.tools),
-        ]);
+React.useEffect(() => {
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [armorsMd, shieldsMd, weaponsMd, gearMd, toolsMd, gemsMd] = await Promise.all([ // ✅ Ajout gemsMd
+        fetchText(URLS.armors), fetchText(URLS.shields), fetchText(URLS.weapons),
+        fetchText(URLS.adventuring_gear), fetchText(URLS.tools),
+        fetchText(URLS.gems), // ✅ AJOUT
+      ]);
 
-        const armorItems = parseArmors(armorsMd);
+      const armorItems = parseArmors(armorsMd);
 
-        const list: CatalogItem[] = [
-          ...armorItems,
-          ...parseShields(shieldsMd),
-          ...parseWeapons(weaponsMd),
-          ...parseTools(toolsMd),
-          ...parseSectionedList(gearMd, 'adventuring_gear'),
-        ];
+      const list: CatalogItem[] = [
+        ...armorItems,
+        ...parseShields(shieldsMd),
+        ...parseWeapons(weaponsMd),
+        ...parseTools(toolsMd),
+        ...parseGems(gemsMd), // ✅ AJOUT
+        ...parseSectionedList(gearMd, 'adventuring_gear'),
+      ];
 
         const seen = new Set<string>();
         const cleaned = list.filter(ci => {
