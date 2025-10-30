@@ -1301,27 +1301,27 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
 )}
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      {(isArmor || isShield || isWeapon) && (
-                        <button
-                          onClick={() => requestToggleWithConfirm(item)}
-                          disabled={pendingEquipment.has(item.id)}
-                          className={`px-2 py-1 rounded text-xs border ${
-                            pendingEquipment.has(item.id)
-                              ? 'border-gray-500 text-gray-500 bg-gray-800/50 cursor-not-allowed'
-                              : isEquipped
-                                ? (notProficient
-                                  ? 'border-amber-500/40 text-amber-300 bg-amber-900/20'
-                                  : 'border-green-500/40 text-green-300 bg-green-900/20')
-                                : (notProficient
-                                  ? 'border-amber-500/40 text-amber-300 hover:bg-amber-900/20'
-                                  : 'border-gray-600 text-gray-300 hover:bg-gray-700/40')
-                          }`}
-                          title={buttonTitle}
-                        >
-                          {buttonLabel}
-                        </button>
-                      )}
+                 <div className="flex items-center gap-2">
+  {(isArmor || isShield || isWeapon || isEquippableItem) && (
+    <button
+      onClick={() => requestToggleWithConfirm(item)}
+      disabled={pendingEquipment.has(item.id)}
+      className={`px-2 py-1 rounded text-xs border ${
+        pendingEquipment.has(item.id)
+          ? 'border-gray-500 text-gray-500 bg-gray-800/50 cursor-not-allowed'
+          : isEquipped
+            ? (notProficient
+              ? 'border-amber-500/40 text-amber-300 bg-amber-900/20'
+              : 'border-green-500/40 text-green-300 bg-green-900/20')
+            : (notProficient
+              ? 'border-amber-500/40 text-amber-300 hover:bg-amber-900/20'
+              : 'border-gray-600 text-gray-300 hover:bg-gray-700/40')
+      }`}
+      title={buttonTitle}
+    >
+      {buttonLabel}
+    </button>
+  )}
                       <button
                         onClick={() => {
                           setEditLockType(false);
