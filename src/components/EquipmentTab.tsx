@@ -1082,6 +1082,7 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
     armor: true, shield: true, weapon: true, equipment: true, potion: true, jewelry: true, tool: true, other: true
   });
   const [filtersOpen, setFiltersOpen] = useState(false);
+// ✅ CORRECTION : Nouveaux objets en haut
 const filteredInventory = useMemo(() => {
   const q = bagFilter.trim().toLowerCase();
   return inventory
@@ -1095,9 +1096,9 @@ const filteredInventory = useMemo(() => {
       return name.includes(q) || desc.includes(q);
     })
     .sort((a, b) => {
-      // ✅ AJOUT : Tri stable par ID pour maintenir l'ordre
-      // Cela empêche React de réorganiser les éléments lors des changements de métadonnées
-      return a.id.localeCompare(b.id);
+      // ✅ CORRECTION : Tri inverse par ID (nouveaux objets en haut)
+      // Les IDs plus récents (UUID générés plus tard) arrivent en premier
+      return b.id.localeCompare(a.id);
     });
 }, [inventory, bagFilter, bagKinds]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
