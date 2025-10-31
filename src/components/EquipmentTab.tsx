@@ -1082,7 +1082,7 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
     armor: true, shield: true, weapon: true, equipment: true, potion: true, jewelry: true, tool: true, other: true
   });
   const [filtersOpen, setFiltersOpen] = useState(false);
-// ✅ CORRECTION : Nouveaux objets en haut
+// ✅ CORRECTION : Tri par date de création (nouveaux objets en haut)
 const filteredInventory = useMemo(() => {
   const q = bagFilter.trim().toLowerCase();
   return inventory
@@ -1096,9 +1096,10 @@ const filteredInventory = useMemo(() => {
       return name.includes(q) || desc.includes(q);
     })
     .sort((a, b) => {
-      // ✅ CORRECTION : Tri inverse par ID (nouveaux objets en haut)
-      // Les IDs plus récents (UUID générés plus tard) arrivent en premier
-      return b.id.localeCompare(a.id);
+      // ✅ Tri par date de création (plus récent en premier)
+      const dateA = new Date(a.created_at || 0).getTime();
+      const dateB = new Date(b.created_at || 0).getTime();
+      return dateB - dateA; // Décroissant = nouveaux en haut
     });
 }, [inventory, bagFilter, bagKinds]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
