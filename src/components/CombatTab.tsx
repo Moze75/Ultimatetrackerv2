@@ -533,14 +533,6 @@ const getDamageBonus = (attack: Attack): number => {
   // ✅ Calculer les bonus d'équipement
   const equipmentBonuses = calculateEquipmentBonuses(inventory);
 
-    // ✅ AJOUT : 1) override_ability prime (IDENTIQUE à getAttackBonus)
-  if (attack.override_ability) {
-    const ability = player.abilities?.find((a) => a.name === attack.override_ability);
-    const baseAbilityMod = ability?.score ? Math.floor((ability.score - 10) / 2) : 0;
-    const equipmentBonus = equipmentBonuses[attack.override_ability] || 0;
-    return baseAbilityMod + equipmentBonus + weaponBonus;
-  }
-
   // 1) override_ability prime
   if (attack.override_ability) {
     const ability = player.abilities?.find((a) => a.name === attack.override_ability);
