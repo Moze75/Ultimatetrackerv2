@@ -732,17 +732,17 @@ export function KnownSpellsSection({ player, onUpdate }: KnownSpellsSectionProps
   const [showSpellbook, setShowSpellbook] = useState(false);
   const [selectedSpells, setSelectedSpells] = useState<Spell[]>([]);
   const [expandedSpell, setExpandedSpell] = useState<string | null>(null);
- const [collapsedLevels, setCollapsedLevels] = useState<Set<string>>(() => {
+const [collapsedLevels, setCollapsedLevels] = useState<Set<string>>(() => {
   const saved = localStorage.getItem(`spell-levels-state-${player.id}`);
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
       return new Set(parsed.collapsed || []);
     } catch {
-      return new Set(); // ✅ Par défaut : tout déplié (Set vide = rien n'est replié)
+      return new Set(); // ✅ Set vide = tout déplié
     }
   }
-  return new Set(); // ✅ Par défaut : tout déplié (Set vide = rien n'est replié)
+  return new Set(); // ✅ Set vide = tout déplié par défaut
 });
 
 // Utiliser sessionStorage pour savoir si c'est le premier rendu de la session
