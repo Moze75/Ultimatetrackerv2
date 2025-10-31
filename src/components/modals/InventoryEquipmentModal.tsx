@@ -4,14 +4,7 @@ import { InventoryItem } from '../../types/dnd';
 
 /* Types & utils alignés */
 type MetaType = 'armor' | 'shield' | 'weapon' | 'potion' | 'equipment' | 'jewelry' | 'tool' | 'other';
-interface WeaponMeta { 
-  damageDice: string; 
-  damageType: 'Tranchant' | 'Perforant' | 'Contondant'; 
-  properties: string; 
-  range: string; 
-  category?: string;
-  weapon_bonus?: number | null;
-}
+interface WeaponMeta { damageDice: string; damageType: 'Tranchant' | 'Perforant' | 'Contondant'; properties: string; range: string; }
 interface ArmorMeta { base: number; addDex: boolean; dexCap?: number | null; label: string; }
 interface ShieldMeta { bonus: number; }
 interface ItemMeta {
@@ -44,7 +37,6 @@ function parseMeta(description: string | null | undefined): ItemMeta | null {
   try { return JSON.parse(metaLine.slice(META_PREFIX.length)); } catch { return null; }
 }
 
-// ✅ MODIFICATION : Ajout du type 'weapon'
 export function InventoryEquipmentModal({
   onClose,
   onEquipItem,
@@ -54,7 +46,7 @@ export function InventoryEquipmentModal({
   onClose: () => void;
   onEquipItem: (item: InventoryItem) => void;
   inventory: InventoryItem[];
-  equipmentType: 'armor' | 'shield' | 'weapon'; // ✅ AJOUT
+  equipmentType: 'armor' | 'shield';
 }) {
   const [query, setQuery] = React.useState('');
 
@@ -83,23 +75,16 @@ export function InventoryEquipmentModal({
     });
   }, [availableItems, query]);
 
-  // ✅ MODIFICATION : Support du type 'weapon'
   const getTypeLabel = () => {
-    if (equipmentType === 'armor') return 'Armures';
-    if (equipmentType === 'shield') return 'Boucliers';
-    if (equipmentType === 'weapon') return 'Armes';
-    return 'Équipement';
+    return equipmentType === 'armor' ? 'Armures' : 'Boucliers';
   };
 
-  // ✅ MODIFICATION : Support du type 'weapon'
   const getEmptyMessage = () => {
-    if (equipmentType === 'armor') return 'Aucune armure dans votre sac';
-    if (equipmentType === 'shield') return 'Aucun bouclier dans votre sac';
-    if (equipmentType === 'weapon') return 'Aucune arme dans votre sac';
-    return 'Aucun équipement dans votre sac';
+    return equipmentType === 'armor' 
+      ? 'Aucune armure dans votre sac' 
+      : 'Aucun bouclier dans votre sac';
   };
 
-  // ✅ MODIFICATION : Support du type 'weapon'
   const renderItemPreview = (item: InventoryItem) => {
     const meta = parseMeta(item.description);
     if (!meta) return null;
@@ -110,16 +95,6 @@ export function InventoryEquipmentModal({
     
     if (equipmentType === 'shield' && meta.shield) {
       return <div className="text-xs text-gray-400">Bonus de bouclier: +{meta.shield.bonus}</div>;
-    }
-
-    // ✅ AJOUT : Aperçu pour les armes
-    if (equipmentType === 'weapon' && meta.weapon) {
-      return (
-        <div className="text-xs text-gray-400">
-          {meta.weapon.damageDice} {meta.weapon.damageType}
-          {meta.weapon.properties && ` • ${meta.weapon.properties}`}
-        </div>
-      );
     }
 
     return null;
@@ -157,7 +132,7 @@ export function InventoryEquipmentModal({
             <div className="text-center py-8">
               <div className="text-gray-500 text-sm mb-4">{getEmptyMessage()}</div>
               <div className="text-xs text-gray-600">
-                Ajoutez des {equipmentType === 'armor' ? 'armures' : equipmentType === 'shield' ? 'boucliers' : 'armes'} depuis le sac principal
+                Ajoutez des {equipmentType === 'armor' ? 'armures' : 'boucliers'} depuis le sac principal
               </div>
             </div>
           ) : filteredItems.length === 0 ? (
@@ -197,7 +172,7 @@ export function InventoryEquipmentModal({
                     <button 
                       onClick={() => onEquipItem(item)} 
                       disabled={isEquipped}
-                      className={`px-3 py-2 rounded-lg flex items-center gap-1 whitespace-nowrap ${
+                      className={`px-3 py-2 rounded-lg flex items-center gap-1 ${
                         isEquipped 
                           ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed' 
                           : 'btn-primary'
