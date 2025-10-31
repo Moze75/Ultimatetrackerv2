@@ -497,7 +497,8 @@ export function EquipmentTab({
   const prevEditMetaRef = useRef<ItemMeta | null>(null);
 
   const [showInventoryModal, setShowInventoryModal] = useState(false);
-  const [inventoryModalType, setInventoryModalType] = useState<'armor' | 'shield'>('armor');
+  // ✅ APRÈS
+const [inventoryModalType, setInventoryModalType] = useState<'armor' | 'shield' | 'weapon'>('armor');
 
   const [showBagModal, setShowBagModal] = useState(false);
   const [bagText, setBagText] = useState(bag?.description || '');
