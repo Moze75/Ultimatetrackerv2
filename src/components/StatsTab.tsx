@@ -454,24 +454,26 @@ React.useEffect(() => {
                   onClick={() => rollAbilityCheck(ability)}
                   title={!editing ? `Cliquer pour lancer 1d20+${ability.modifier}` : ''}
                 >
-                  {/* Nom de la caractéristique en haut */}
-                  <div className="absolute top-7 left-0 right-0 flex flex-col items-center pointer-events-none">
-                    <h4 className="text-[9px] font-normal text-gray-100 uppercase tracking-wide">
-                      {ability.name}
-                    </h4>
-                  </div>
+{/* Nom de la caractéristique en haut */}
+<div className="absolute top-7 left-0 right-0 flex flex-col items-center pointer-events-none">
+  <h4 className="text-[9px] font-normal text-gray-100 uppercase tracking-wide">
+    {ability.name}
+  </h4>
+</div>
 
-                       {/* Modificateur au centre */}
-<div className="absolute top-[48%] left-[48%] transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-  <div className="flex flex-col items-center">
-    <div className="text-3xl font-normal text-gray-100">
-      {displayModifier >= 0 ? '+' : ''}{displayModifier}
+{/* ✅ DÉPLACÉ : Indication du bonus au-dessus du contenant */}
+{equipmentBonus !== 0 && (
+  <div className="absolute top-2 left-1/2 transform -translate-x-1/2 pointer-events-none">
+    <div className="text-[10px] text-green-400 leading-none whitespace-nowrap bg-gray-900/80 px-2 py-0.5 rounded">
+      ({baseModifier >= 0 ? '+' : ''}{baseModifier} {equipmentBonus > 0 ? '+' : ''}{equipmentBonus})
     </div>
-    {equipmentBonus !== 0 && (
-      <div className="text-[10px] text-green-400 leading-none mt-1">
-        ({baseModifier >= 0 ? '+' : ''}{baseModifier} {equipmentBonus > 0 ? '+' : ''}{equipmentBonus})
-      </div>
-    )}
+  </div>
+)}
+
+{/* Modificateur au centre */}
+<div className="absolute top-[48%] left-[48%] transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+  <div className="text-3xl font-normal text-gray-100">
+    {displayModifier >= 0 ? '+' : ''}{displayModifier}
   </div>
 </div>
 
