@@ -528,8 +528,8 @@ if (hasVersatile && !hasHeavy) {
     return 'Force';
   })();
   
-  const ability = player.abilities?.find(a => a.name === inferredAbilityName);
-  const baseAbilityMod = ability?.score ? Math.floor((ability.score - 10) / 2) : 0;
+ Const abilityData = player.abilities?.[inferredAbilityName];
+const baseAbilityMod = abilityData?.score ? Math.floor((abilityData.score - 10) / 2) : 0;
   const equipmentBonus = equipmentBonuses[inferredAbilityName] || 0;
   const totalAbilityMod = baseAbilityMod + equipmentBonus;
   const masteryBonus = attack.expertise ? proficiencyBonus : 0;
