@@ -478,13 +478,11 @@ if (attack.override_ability) {
       nameLower.includes('javeline') || 
       nameLower.includes('hachette');
     
-    if (isThrown) {
-      const strAbility = player.abilities?.find(a => a.name === 'Force');
-      const dexAbility = player.abilities?.find(a => a.name === 'Dextérité');
-      const strScore = strAbility?.score || 10;
-      const dexScore = dexAbility?.score || 10;
-      return strScore >= dexScore ? 'Force' : 'Dextérité';
-    }
+if (isThrown) {
+  const strScore = player.abilities?.['Force']?.score || 10;
+  const dexScore = player.abilities?.['Dextérité']?.score || 10;
+  return strScore >= dexScore ? 'Force' : 'Dextérité';
+}
     
     // ✅ PRIORITÉ 2 : Finesse / Légère / Polyvalente (AJOUT)
     // Règle D&D : Utilise le meilleur entre Force et Dex
