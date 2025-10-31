@@ -739,7 +739,7 @@ const [collapsedLevels, setCollapsedLevels] = useState<Set<string>>(() => {
       const parsed = JSON.parse(saved);
       return new Set(parsed.collapsed || []);
     } catch {
-      return new Set(); // ✅ Set vide = tout déplié
+      return new Set(); // ✅ Set viapsedLevels(new Set(levelsToRede = tout déplié
     }
   }
   return new Set(); // ✅ Set vide = tout déplié par défaut
@@ -1041,14 +1041,7 @@ const fetchKnownSpells = async () => {
     return levels;
   }, [player.spell_slots, groupedSpells, allowedLevelsSet, casterType]);
 
-  // Initialiser tous les niveaux comme dépliés
-useEffect(() => {
-  const saved = localStorage.getItem(`spell-levels-state-${player.id}`);
-  if (!saved && levelsToRender.length > 0) {
-    // Premier chargement : tout replier
-    setCollapsedLevels(new Set(levelsToRender));
-  }
-}, [player.id, levelsToRender]);
+
   
   // Dépliage global: bouton livre à droite
   const allExpanded = useMemo(() => {
