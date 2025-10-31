@@ -1082,9 +1082,10 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
     armor: true, shield: true, weapon: true, equipment: true, potion: true, jewelry: true, tool: true, other: true
   });
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const filteredInventory = useMemo(() => {
-    const q = bagFilter.trim().toLowerCase();
-    return inventory.filter(i => {
+const filteredInventory = useMemo(() => {
+  const q = bagFilter.trim().toLowerCase();
+  return inventory
+    .filter(i => {
       const meta = parseMeta(i.description);
       const kind: MetaType = (meta?.type || 'equipment') as MetaType;
       if (!bagKinds[kind]) return false;
@@ -1092,8 +1093,13 @@ await createOrUpdateWeaponAttack(freshItem.name, weaponMetaToPass, freshItem.nam
       const name = stripPriceParentheses(i.name).toLowerCase();
       const desc = visibleDescription(i.description).toLowerCase();
       return name.includes(q) || desc.includes(q);
+    })
+    .sort((a, b) => {
+      // ✅ AJOUT : Tri stable par ID pour maintenir l'ordre
+      // Cela empêche React de réorganiser les éléments lors des changements de métadonnées
+      return a.id.localeCompare(b.id);
     });
-  }, [inventory, bagFilter, bagKinds]);
+}, [inventory, bagFilter, bagKinds]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const toggleExpand = (id: string) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
 
