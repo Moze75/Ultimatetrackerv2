@@ -394,14 +394,23 @@ interface EquipmentSlotProps {
   inventory?: InventoryItem[];
 }
 
+// ✅ CORRECTION : EquipmentSlot (ligne ~397-429)
 const EquipmentSlot = ({
   icon, position, equipment, type, onRequestOpenList, onToggleEquipFromSlot, onOpenEditFromSlot, isEquipped, onOpenWeaponsManageFromSlot, onOpenBagModal, bagText, inventory
 }: EquipmentSlotProps) => {
   const [showInfo, setShowInfo] = useState(false);
+  
   return (
     <>
       <button
-        onClick={() => setShowInfo(v => !v)}
+        onClick={() => {
+          // ✅ AJOUT : Si c'est une arme, ouvrir directement la modal de gestion
+          if (type === 'weapon') {
+            onOpenWeaponsManageFromSlot?.();
+          } else {
+            setShowInfo(v => !v);
+          }
+        }}
         className={`absolute ${position} ${type === 'bag' ? 'w-24 h-24' : 'w-12 h-12'} rounded-lg hover:bg-gray-700/20 border border-gray-600/50 flex items-center justify-center`}
         style={{ zIndex: showInfo ? 50 : 10 }}
       >
@@ -417,7 +426,7 @@ const EquipmentSlot = ({
           onToggleEquip={onToggleEquipFromSlot}
           isEquipped={isEquipped}
           onRequestOpenList={onRequestOpenList}
-            onOpenEditFromSlot={onOpenEditFromSlot}
+          onOpenEditFromSlot={onOpenEditFromSlot}
           onOpenWeaponsManage={onOpenWeaponsManageFromSlot}
           onOpenBagModal={onOpenBagModal}
           bagText={bagText}
