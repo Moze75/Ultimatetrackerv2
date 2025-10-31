@@ -1091,8 +1091,8 @@ const rollAttack = (attack: Attack) => {
                   <span className="text-gray-400">Votre modificateur de CON :</span>
                   <span className="text-xl font-semibold text-green-400">
                     {(() => {
-                      const conAbility = player.abilities?.find(a => a.name === 'Constitution');
-                      const conMod = conAbility?.modifier || 0;
+              const conAbility = player.abilities?.['Constitution'];
+const conMod = conAbility?.modifier || 0;
                       return conMod >= 0 ? `+${conMod}` : conMod;
                     })()}
                   </span>
