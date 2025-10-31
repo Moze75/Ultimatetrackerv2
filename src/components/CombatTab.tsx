@@ -137,7 +137,7 @@ const AttackEditModal = ({ attack, onClose, onSave, onDelete }: AttackEditModalP
     expertise: attack?.expertise || false,
     ammo_type: (attack as any)?.ammo_type || '',
   override_ability: attack?.override_ability || null,
-  weapon_bonus: attack?.weapon_bonus ?? null
+  weapon_bonus: attack?.weapon_bonus ?? null // ✅ AJOUT
 });
 
   const handleSave = () => {
@@ -156,7 +156,7 @@ const AttackEditModal = ({ attack, onClose, onSave, onDelete }: AttackEditModalP
       expertise: formData.expertise,
       ammo_type: formData.ammo_type.trim() || null,
       override_ability: formData.override_ability,
-      weapon_bonus: formData.weapon_bonus
+      weapon_bonus: formData.weapon_bonus // ✅ AJOUT
     });
   };
 
@@ -220,6 +220,7 @@ const AttackEditModal = ({ attack, onClose, onSave, onDelete }: AttackEditModalP
             </select>
           </div>
 
+          {/* Type de munition */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">Type de munition (optionnel)</label>
             <input
@@ -242,6 +243,7 @@ const AttackEditModal = ({ attack, onClose, onSave, onDelete }: AttackEditModalP
             />
           </div>
 
+          {/* ✅ AJOUT : Sélecteur de caractéristique */}
           <div className="border-t border-gray-700 pt-4">
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Caractéristique pour les calculs
@@ -264,6 +266,10 @@ const AttackEditModal = ({ attack, onClose, onSave, onDelete }: AttackEditModalP
             </p>
           </div>
 
+ 
+
+
+             {/* ✅ Bonus de l'arme (lecture seule) */}
           <div className="border-t border-gray-700 pt-4 mt-4">
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Bonus de l'arme
@@ -444,13 +450,16 @@ const getAttackBonus = (attack: Attack): number => {
   const weaponBonus = attack.weapon_bonus ?? 0;
   const proficiencyBonus = player.stats?.proficiency_bonus || 2;
   
+  // ✅ Calculer les bonus d'équipement
   const equipmentBonuses = calculateEquipmentBonuses(inventory);
+
+  // ✅ AJOUT : Protection pour éviter l'erreur .find()
+  const abilities = Array.isArray(player.abilities) ? player.abilities : [];
 
   // 1) override_ability prime
   if (attack.override_ability) {
-    // ✅ CORRECTION : Accès direct à l'objet abilities
-    const abilityData = player.abilities?.[attack.override_ability];
-    const baseAbilityMod = abilityData?.score ? Math.floor((abilityData.score - 10) / 2) : 0;
+    const ability = abilities.find((a) => a.name === attack.override_ability);
+    const baseAbilityMod = ability?.score ? Math.floor((ability.score - 10) / 2) : 0;
     const equipmentBonus = equipmentBonuses[attack.override_ability] || 0;
     const totalAbilityMod = baseAbilityMod + equipmentBonus;
     const masteryBonus = attack.expertise ? proficiencyBonus : 0;
@@ -471,9 +480,10 @@ const getAttackBonus = (attack: Attack): number => {
       nameLower.includes('hachette');
     
     if (isThrown) {
-      // ✅ CORRECTION : Accès direct
-      const strScore = player.abilities?.['Force']?.score || 10;
-      const dexScore = player.abilities?.['Dextérité']?.score || 10;
+      const strAbility = abilities.find(a => a.name === 'Force');
+      const dexAbility = abilities.find(a => a.name === 'Dextérité');
+      const strScore = strAbility?.score || 10;
+      const dexScore = dexAbility?.score || 10;
       return strScore >= dexScore ? 'Force' : 'Dextérité';
     }
     
@@ -483,16 +493,18 @@ const getAttackBonus = (attack: Attack): number => {
     const hasHeavy = props.includes('lourde') || props.includes('lourd') || props.includes('heavy');
     
     if (hasFinesse || hasLight || hasVersatile) {
-      // ✅ CORRECTION : Accès direct
-      const strScore = player.abilities?.['Force']?.score || 10;
-      const dexScore = player.abilities?.['Dextérité']?.score || 10;
+      const strAbility = abilities.find(a => a.name === 'Force');
+      const dexAbility = abilities.find(a => a.name === 'Dextérité');
+      const strScore = strAbility?.score || 10;
+      const dexScore = dexAbility?.score || 10;
       return strScore >= dexScore ? 'Force' : 'Dextérité';
     }
 
     if (hasVersatile && !hasHeavy) {
-      // ✅ CORRECTION : Accès direct
-      const strScore = player.abilities?.['Force']?.score || 10;
-      const dexScore = player.abilities?.['Dextérité']?.score || 10;
+      const strAbility = abilities.find(a => a.name === 'Force');
+      const dexAbility = abilities.find(a => a.name === 'Dextérité');
+      const strScore = strAbility?.score || 10;
+      const dexScore = dexAbility?.score || 10;
       return strScore >= dexScore ? 'Force' : 'Dextérité';
     }
     
@@ -513,9 +525,8 @@ const getAttackBonus = (attack: Attack): number => {
     return 'Force';
   })();
   
-  // ✅ CORRECTION : Accès direct
-  const abilityData = player.abilities?.[inferredAbilityName];
-  const baseAbilityMod = abilityData?.score ? Math.floor((abilityData.score - 10) / 2) : 0;
+  const ability = abilities.find(a => a.name === inferredAbilityName);
+  const baseAbilityMod = ability?.score ? Math.floor((ability.score - 10) / 2) : 0;
   const equipmentBonus = equipmentBonuses[inferredAbilityName] || 0;
   const totalAbilityMod = baseAbilityMod + equipmentBonus;
   const masteryBonus = attack.expertise ? proficiencyBonus : 0;
@@ -527,11 +538,13 @@ const getDamageBonus = (attack: Attack): number => {
   
   const equipmentBonuses = calculateEquipmentBonuses(inventory);
 
+  // ✅ AJOUT : Protection pour éviter l'erreur .find()
+  const abilities = Array.isArray(player.abilities) ? player.abilities : [];
+
   // 1) override_ability prime
   if (attack.override_ability) {
-    // ✅ CORRECTION : Accès direct
-    const abilityData = player.abilities?.[attack.override_ability];
-    const baseAbilityMod = abilityData?.score ? Math.floor((abilityData.score - 10) / 2) : 0;
+    const ability = abilities.find((a) => a.name === attack.override_ability);
+    const baseAbilityMod = ability?.score ? Math.floor((ability.score - 10) / 2) : 0;
     const equipmentBonus = equipmentBonuses[attack.override_ability] || 0;
     return baseAbilityMod + equipmentBonus + weaponBonus;
   }
@@ -555,23 +568,26 @@ const getDamageBonus = (attack: Attack): number => {
       nameLower.includes('hachette');
     
     if (isThrown) {
-      // ✅ CORRECTION : Accès direct
-      const strScore = player.abilities?.['Force']?.score || 10;
-      const dexScore = player.abilities?.['Dextérité']?.score || 10;
-      return strScore >= dexScore ? 'Force' : 'Dextérité';
+      const strAbility = abilities.find(a => a.name === 'Force');
+      const dexAbility = abilities.find(a => a.name === 'Dextérité');
+      const strScore = strAbility?.score || 10; 
+      const dexScore = dexAbility?.score || 10;
+      return strScore >= dexScore ? 'Force' : 'Dextérité'; 
     }
     
     if (hasFinesse || hasLight) {
-      // ✅ CORRECTION : Accès direct
-      const strScore = player.abilities?.['Force']?.score || 10;
-      const dexScore = player.abilities?.['Dextérité']?.score || 10;
+      const strAbility = abilities.find(a => a.name === 'Force');
+      const dexAbility = abilities.find(a => a.name === 'Dextérité');
+      const strScore = strAbility?.score || 10;
+      const dexScore = dexAbility?.score || 10;
       return strScore >= dexScore ? 'Force' : 'Dextérité';
     }
     
     if (hasVersatile && !hasHeavy) {
-      // ✅ CORRECTION : Accès direct
-      const strScore = player.abilities?.['Force']?.score || 10;
-      const dexScore = player.abilities?.['Dextérité']?.score || 10;
+      const strAbility = abilities.find(a => a.name === 'Force');
+      const dexAbility = abilities.find(a => a.name === 'Dextérité');
+      const strScore = strAbility?.score || 10;
+      const dexScore = dexAbility?.score || 10;
       return strScore >= dexScore ? 'Force' : 'Dextérité';
     }
     
@@ -592,9 +608,8 @@ const getDamageBonus = (attack: Attack): number => {
     return 'Force';
   })();
   
-  // ✅ CORRECTION : Accès direct
-  const abilityData = player.abilities?.[inferredAbilityName];
-  const baseAbilityMod = abilityData?.score ? Math.floor((abilityData.score - 10) / 2) : 0;
+  const ability = abilities.find(a => a.name === inferredAbilityName);
+  const baseAbilityMod = ability?.score ? Math.floor((ability.score - 10) / 2) : 0;
   const equipmentBonus = equipmentBonuses[inferredAbilityName] || 0;
   return baseAbilityMod + equipmentBonus + weaponBonus;
 };
@@ -644,6 +659,7 @@ const rollAttack = (attack: Attack) => {
     const ammoType = (attack as any).ammo_type || '';
     const ammoCount = (attack as any).ammo_count ?? 0;
 
+    // ✅ AJOUT : Afficher la caractéristique override si définie
     const overrideLabel = attack.override_ability ? ` (${attack.override_ability})` : '';
 
     return (
@@ -740,6 +756,8 @@ const rollAttack = (attack: Attack) => {
     );
   };
 
+  // ... (reste du code HP, soins, etc. inchangé)
+
   const totalHP = player.current_hp + player.temporary_hp;
   const isCriticalHealth = totalHP <= Math.floor(player.max_hp * 0.20);
 
@@ -806,6 +824,7 @@ const rollAttack = (attack: Attack) => {
 
   toast.success(`${damage} dégâts appliqués`);
 
+  // ✅ NOUVEAU : Vérifier la concentration
   if (player.is_concentrating) {
     const dc = Math.max(10, Math.floor(damage / 2));
     setConcentrationDC(dc);
@@ -863,6 +882,7 @@ const rollAttack = (attack: Attack) => {
 
   return (
     <div className="space-y-6">
+      {/* Points de vie */}
       <div className="stat-card">
         <div className="stat-header flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -984,6 +1004,7 @@ const rollAttack = (attack: Attack) => {
         </div>
       </div>
 
+      {/* Attaques */}
       <div className="stat-card">
         <div className="stat-header flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -1031,6 +1052,7 @@ const rollAttack = (attack: Attack) => {
       <ConditionsSection player={player} onUpdate={onUpdate} />
 
       <DiceRoller isOpen={diceRollerOpen} onClose={() => setDiceRollerOpen(false)} rollData={rollData} />
+ {/* ✅ AJOUTEZ LE MODAL ICI, JUSTE APRÈS DiceRoller */}
       {showConcentrationCheck && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full border border-purple-500/40 shadow-xl shadow-purple-500/20">
@@ -1062,8 +1084,7 @@ const rollAttack = (attack: Attack) => {
                   <span className="text-gray-400">Votre modificateur de CON :</span>
                   <span className="text-xl font-semibold text-green-400">
                     {(() => {
-                      // ✅ CORRECTION : Accès direct
-                      const conAbility = player.abilities?.['Constitution'];
+                      const conAbility = player.abilities?.find(a => a.name === 'Constitution');
                       const conMod = conAbility?.modifier || 0;
                       return conMod >= 0 ? `+${conMod}` : conMod;
                     })()}
