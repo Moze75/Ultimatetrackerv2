@@ -228,34 +228,35 @@ const InfoBubble = ({
         </div>
       </div>
 
-{equipment && type !== 'bag' ? (
-  <div className="space-y-2">
-    {equipment.name && <h5 className="font-medium text-gray-100 break-words">{smartCapitalize(equipment.name)}</h5>}
-    
-    {/* ✅ NOUVEAU : Affichage de l'image si présente */}
-    {(() => {
-      const item = equipment.inventory_item_id 
-        ? inventory?.find(i => i.id === equipment.inventory_item_id)
-        : null;
-      const meta = item ? parseMeta(item.description) : null;
-      const imageUrl = meta?.imageUrl;
-      
-      if (imageUrl) {
-        return (
-          <div className="my-3">
-            <img
-              src={imageUrl}
-              alt={equipment.name}
-              className="w-full max-w-xs rounded-lg border border-gray-600/50"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
-          </div>
-        );
-      }
-      return null;
-    })()}
+      {equipment && type !== 'bag' ? (
+        <div className="space-y-2">
+          {equipment.name && <h5 className="font-medium text-gray-100 break-words">{smartCapitalize(equipment.name)}</h5>}
+          
+          {/* ✅ Affichage de l'image si présente */}
+          {(() => {
+            const item = equipment.inventory_item_id 
+              ? inventory?.find(i => i.id === equipment.inventory_item_id)
+              : null;
+            const meta = item ? parseMeta(item.description) : null;
+            const imageUrl = meta?.imageUrl;
+            
+            if (imageUrl) {
+              return (
+                <div className="my-3">
+                  <img
+                    src={imageUrl}
+                    alt={equipment.name}
+                    className="w-full max-w-xs rounded-lg border border-gray-600/50"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                </div>
+              );
+            }
+            return null;
+          })()}
+          
           {equipment.description && <p className="text-sm text-gray-400 whitespace-pre-wrap">{equipment.description}</p>}
 
           {type === 'armor' && equipment.armor_formula && (
@@ -347,35 +348,34 @@ const InfoBubble = ({
             </button>
           </div>
         </div>
-) : (
-  (type === 'armor' || type === 'shield' || type === 'weapon') && (
-    <div className="text-sm text-gray-400">
-      {type === 'weapon' ? (
-        <>
-          {/* ✅ CORRECTION : Message vide si des armes équipées, sinon message */}
-          {equippedWeapons.length === 0 && <p className="mb-3">Aucune arme équipée.</p>}
-          <div className="mt-3">
-            <button onClick={() => onRequestOpenList?.()} className="btn-primary px-3 py-2 rounded-lg">
-              Équiper depuis le sac
-            </button>
-          </div>
-        </>
       ) : (
-        <>
-          Aucun {type === 'armor' ? 'armure' : 'bouclier'} équipé.
-          <div className="mt-3">
-            <button onClick={() => onRequestOpenList?.()} className="btn-primary px-3 py-2 rounded-lg">
-              Équiper depuis le sac
-            </button>
+        (type === 'armor' || type === 'shield' || type === 'weapon') && (
+          <div className="text-sm text-gray-400">
+            {type === 'weapon' ? (
+              <>
+                {/* ✅ CORRECTION : Pas de référence à equippedWeapons */}
+                <div className="mt-3">
+                  <button onClick={() => onRequestOpenList?.()} className="btn-primary px-3 py-2 rounded-lg">
+                    Équiper depuis le sac
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                Aucun {type === 'armor' ? 'armure' : 'bouclier'} équipé.
+                <div className="mt-3">
+                  <button onClick={() => onRequestOpenList?.()} className="btn-primary px-3 py-2 rounded-lg">
+                    Équiper depuis le sac
+                  </button>
+                </div>
+              </>
+            )}
           </div>
-        </>
+        )
       )}
     </div>
-  )
-)}
-    </div>
   </div>
-); 
+);
 
 interface EquipmentSlotProps {
   icon: React.ReactNode;
