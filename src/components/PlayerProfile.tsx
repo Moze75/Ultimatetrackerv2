@@ -25,7 +25,8 @@ import { CampaignPlayerModal } from './CampaignPlayerModal';
 export interface PlayerProfileProps {
   player: Player;
   onUpdate: (player: Player) => void;
-  onInventoryAdd?: (item: any) => void; // NEW optional callback to notify parent when modal yields an item
+  onInventoryAdd?: (item: any) => void;
+  inventory?: any[]; // ✅ AJOUT : Prop pour l'inventaire
 }
 
 /* ============================ Helpers ============================ */
@@ -67,7 +68,39 @@ function computeArmorAC(armor_formula: {
   return base + applied;
 }
 
-export function PlayerProfile({ player, onUpdate, onInventoryAdd }: PlayerProfileProps) {
+// ✅ AJOUT : Fonction pour calculer les bonus d'équipement depuis l'inventaire
+const calculateEquipmentBonuses = (inventory: any[]): { armor_class: number } => {
+  const bonuses = {
+    armor_class: 0
+  };
+
+  if (!inventory || !Array.isArray(inventory)) return bonuses;
+
+  for (const item of inventory) {
+    try {
+      const description = item.description || '';
+      const metaLine = description
+        .split('\n')
+        .reverse()
+        .find((l: string) => l.trim().startsWith('#meta:'));
+      
+      if (!metaLine) continue;
+      
+      const meta = JSON.parse(metaLine.trim().slice(6));
+      
+      // Vérifier si l'item est équipé et a des bonus
+      if (meta.equipped && meta.bonuses?.armor_class) {
+        bonuses.armor_class += meta.bonuses.armor_class;
+      }
+    } catch (e) {
+      continue;
+    }
+  }
+
+  return bonuses;
+};
+
+export function PlayerProfile({ player, onUpdate, onInventoryAdd, inventory }: PlayerProfileProps) {
   const [editing, setEditing] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<'ac' | 'speed' | 'initiative' | 'proficiency' | null>(null);
   const [showCampaignModal, setShowCampaignModal] = useState(false);
@@ -116,10 +149,15 @@ export function PlayerProfile({ player, onUpdate, onInventoryAdd }: PlayerProfil
     ? computeArmorAC(armorFormula, dexMod)
     : Math.max(baseACFromStats, monkUnarmoredDefense);
 
-  const acBonus = Number((stats as any).ac_bonus || 0);
-  const totalAC = armorAC + shieldBonus + acBonus;
+  // ✅ AJOUT : Récupérer les bonus d'équipement
+  const equipmentBonuses = calculateEquipmentBonuses(inventory || (player as any).inventory || []);
 
-  /* ============================ Repos court / long (inchangé) ============================ */
+  const acBonus = Number((stats as any).ac_bonus || 0);
+  
+  // ✅ MODIFIÉ : Ajouter le bonus d'équipement au calcul total
+  const totalAC = armorAC + shieldBonus + acBonus + equipmentBonuses.armor_class;
+
+  /* ============================ Repos court / long ============================ */
 
   const handleShortRest = async () => {
     if (!player.hit_dice || player.hit_dice.total - player.hit_dice.used <= 0) {
@@ -323,10 +361,10 @@ export function PlayerProfile({ player, onUpdate, onInventoryAdd }: PlayerProfil
               className="grid items-start gap-3 sm:gap-4"
               style={{ gridTemplateColumns: 'minmax(0,1fr) 8rem' }}
             >
-            <div className="relative w-full min-w-0 aspect-[7/10] sm:aspect-[2/3] md:aspect-[auto] md:h-[60vh] lg:h-[70vh] rounded-lg overflow-hidden bg-gray-800/50 flex items-center justify-center md:[&_img]:object-contain md:[&_img]:object-center"> 
+            <div className="relative w-full min-w-0 aspect-[7/10] sm:aspect-[2/3] md:aspect-[auto] md:h-[60vh] lg:h-[70vh] rounded-lg overflow-hidden bg-gray-800/50 flex items-center justify-center md:max-h-screen">
                 <button
                   onClick={() => setEditing(true)}
-                  className="absolute top-2 left-2 w-9 h-9 rounded-full bg-gray-900/40 backdrop-blur-sm text-white hover:bg-gray-800/50 hover:text-white flex items-center justify-center z-10 transition"
+                  className="absolute top-2 left-2 w-9 h-9 rounded-full bg-gray-900/40 backdrop-blur-sm text-white hover:bg-gray-800/50 hover:text-white flex items-center justify-center z-10 transition-colors"
                   title="Profil et caractéristiques"
                 >
                   <Menu className="w-5 h-5" />
@@ -356,10 +394,10 @@ export function PlayerProfile({ player, onUpdate, onInventoryAdd }: PlayerProfil
 
               <div className="flex flex-col gap-3 sm:gap-4 items-stretch w-32 justify-start">
                
-              {/* ✅ NOUVEAU : Bouton Campagnes */}
+              {/* ✅ Bouton Campagnes */}
                 <button
                   onClick={() => setShowCampaignModal(true)}
-                  className="w-32 h-9 rounded text-sm bg-gradient-to-r from-purple-600/20 to-blue-600/20 border border-purple-500/40 text-purple-300 hover:from-purple-600/30 hover:to-blue-600/30 flex items-center px-2"
+                  className="w-32 h-9 rounded text-sm bg-gradient-to-r from-purple-600/20 to-blue-600/20 border border-purple-500/40 text-purple-300 hover:from-purple-600/30 hover:to-blue-600/30 flex items-center justify-between px-2"
                 >
                   <span className="ml-1.5 flex-1 text-left">Campagnes</span>
                   <Scroll className="w-4 h-4" />
@@ -508,7 +546,7 @@ export function PlayerProfile({ player, onUpdate, onInventoryAdd }: PlayerProfil
               {activeTooltip === 'ac' && (
                 <>
                   <div className="fixed inset-0" onClick={() => setActiveTooltip(null)} />
-                  <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 bg-gray-900/95 backdrop-blur-sm text-sm text-gray-300 rounded-lg max-w-sm w-[90vw] shadow-xl border border-gray-800">
+                  <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 bg-gray-900/95 backdrop-blur-sm text-sm text-gray-300 rounded-lg max-w-sm w-[90vw] shadow-xl border border-gray-700 z-[9999]">
                     <h4 className="font-semibold text-gray-100 mb-1">Classe d'Armure</h4>
                     <p className="mb-2">Détermine la difficulté pour vous toucher en combat.</p>
                     <p className="text-gray-400">Calcul actuel :</p>
@@ -521,9 +559,13 @@ export function PlayerProfile({ player, onUpdate, onInventoryAdd }: PlayerProfil
                         <li>CA de base (profil): {baseACFromStats}</li>
                       )}
                       <li>+ Bonus de bouclier (équipement): {shieldBonus >= 0 ? `+${shieldBonus}` : shieldBonus}</li>
+                      {/* ✅ AJOUT : Afficher le bonus d'équipement */}
+                      {equipmentBonuses.armor_class !== 0 && (
+                        <li>+ Bonus d'équipement: {equipmentBonuses.armor_class >= 0 ? `+${equipmentBonuses.armor_class}` : equipmentBonuses.armor_class}</li>
+                      )}
                       <li>Total: {totalAC}</li>
                     </ul>
-                    <p className="text-xs text-gray-500 mt-2">L’armure équipée remplace la CA de base. La CA de base est configurable dans les paramètres si vous n’utilisez pas d’armure.</p>
+                    <p className="text-xs text-gray-500 mt-2">L'armure équipée remplace la CA de base. La CA de base est configurable dans les paramètres si vous n'utilisez pas d'armure.</p>
                   </div>
                 </>
               )}
@@ -543,7 +585,7 @@ export function PlayerProfile({ player, onUpdate, onInventoryAdd }: PlayerProfil
               {activeTooltip === 'speed' && (
                 <>
                   <div className="fixed inset-0" onClick={() => setActiveTooltip(null)} />
-                  <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 bg-gray-900/95 backdrop-blur-sm text-sm text-gray-300 rounded-lg max-w-sm w-[90vw] shadow-xl border border-gray-800">
+                  <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-4 bg-gray-900/95 backdrop-blur-sm text-sm text-gray-300 rounded-lg max-w-sm w-[90vw] shadow-xl border border-gray-700 z-[9999]">
                     <h4 className="font-semibold text-gray-100 mb-1">Vitesse</h4>
                     <p className="mb-2">Distance que vous pouvez parcourir en un tour.</p>
                     <div className="text-gray-400">
@@ -595,13 +637,13 @@ export function PlayerProfile({ player, onUpdate, onInventoryAdd }: PlayerProfil
         onUpdate={onUpdate}
       />
 
-      {/* ✅ NOUVEAU : Modal Campagnes */}
+      {/* ✅ Modal Campagnes */}
       <CampaignPlayerModal
         open={showCampaignModal}
         onClose={() => setShowCampaignModal(false)}
         player={player}
         onUpdate={onUpdate}
-        onInventoryAdd={onInventoryAdd} // pass through to notify GamePage when an item is created
+        onInventoryAdd={onInventoryAdd}
       />
     </>
   );
