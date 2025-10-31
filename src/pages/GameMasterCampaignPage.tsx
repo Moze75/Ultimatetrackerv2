@@ -1361,10 +1361,7 @@ function InventoryTab({
 }
 
 // =============================================
-// Modal d'édition d'objet de campagne
-// =============================================
-// =============================================
-// Modal d'édition d'objet de campagne (REMPLACER CE COMPOSANT EN ENTIER)
+// Modal d'édition d'objet de campagne (AVEC BONUS)
 // =============================================
 function EditCampaignItemModal({
   item,
@@ -1384,7 +1381,7 @@ function EditCampaignItemModal({
   const [saving, setSaving] = useState(false);
 
   // Méta spécifiques
-  const [type, setType] = useState<string | null>(null); // 'armor' | 'weapon' | 'shield' | null
+  const [type, setType] = useState<string | null>(null);
   // armor
   const [armorBase, setArmorBase] = useState<number | null>(null);
   const [armorAddDex, setArmorAddDex] = useState<boolean>(true);
@@ -1392,7 +1389,7 @@ function EditCampaignItemModal({
   // weapon
   const [weaponDamageDice, setWeaponDamageDice] = useState<string>('');
   const [weaponDamageType, setWeaponDamageType] = useState<string>('');
-  const [weaponProperties, setWeaponProperties] = useState<string>(''); // fallback libre
+  const [weaponProperties, setWeaponProperties] = useState<string>('');
   const [weaponRange, setWeaponRange] = useState<string>('');
   const [weaponCategory, setWeaponCategory] = useState<string>('');
   const [weaponBonus, setWeaponBonus] = useState<number | null>(null);
@@ -1400,6 +1397,15 @@ function EditCampaignItemModal({
   // shield
   const [shieldBonus, setShieldBonus] = useState<number | null>(null);
   const [imageUrl, setImageUrl] = React.useState<string>('');
+
+  // ✅ AJOUT : États pour les bonus (jewelry, equipment, tool, other)
+  const [bonusStr, setBonusStr] = React.useState<number | ''>('');
+  const [bonusDex, setBonusDex] = React.useState<number | ''>('');
+  const [bonusCon, setBonusCon] = React.useState<number | ''>('');
+  const [bonusInt, setBonusInt] = React.useState<number | ''>('');
+  const [bonusWis, setBonusWis] = React.useState<number | ''>('');
+  const [bonusCha, setBonusCha] = React.useState<number | ''>('');
+  const [bonusAC, setBonusAC] = React.useState<number | ''>('');
 
   // Listes de choix
   const DAMAGE_TYPES = ['Tranchant', 'Perforant', 'Contondant'] as const;
@@ -1440,7 +1446,7 @@ function EditCampaignItemModal({
       .trim();
   };
 
-  // Initialisation (OK: hook à la racine)
+  // Initialisation
   useEffect(() => {
     const vis = stripMetaFromDescription(item.description);
     setVisibleDescription(vis);
@@ -1466,7 +1472,7 @@ function EditCampaignItemModal({
         const propRaw = meta.weapon.properties || '';
         const initTags = PROPERTY_TAGS.filter(t => propRaw.toLowerCase().includes(t.toLowerCase()));
         setWeaponPropTags(initTags);
-        setWeaponProperties(propRaw); // conservation texto
+        setWeaponProperties(propRaw);
         setWeaponRange(
           (meta.weapon.range && (RANGES as readonly string[]).includes(meta.weapon.range as any))
             ? meta.weapon.range
@@ -1478,12 +1484,21 @@ function EditCampaignItemModal({
             : 'Armes courantes'
         );
         setWeaponBonus(meta.weapon.weapon_bonus ?? null);
-      } else {
-        // Si l'utilisateur bascule vers "weapon" ensuite, on mettra des défauts via le hook ci-dessous
       }
 
       if (meta.type === 'shield' && meta.shield) {
         setShieldBonus(meta.shield.bonus ?? null);
+      }
+
+      // ✅ AJOUT : Charger les bonus existants
+      if (meta.bonuses) {
+        setBonusStr(meta.bonuses.strength ?? '');
+        setBonusDex(meta.bonuses.dexterity ?? '');
+        setBonusCon(meta.bonuses.constitution ?? '');
+        setBonusInt(meta.bonuses.intelligence ?? '');
+        setBonusWis(meta.bonuses.wisdom ?? '');
+        setBonusCha(meta.bonuses.charisma ?? '');
+        setBonusAC(meta.bonuses.armor_class ?? '');
       }
 
       setImageUrl(meta.imageUrl || '');
@@ -1540,6 +1555,22 @@ function EditCampaignItemModal({
       baseMeta.shield = { bonus: shieldBonus ?? 0 };
     }
 
+    // ✅ AJOUT : Ajouter les bonus si présents (jewelry, equipment, tool, other)
+    const hasBonuses = 
+      bonusStr !== '' || bonusDex !== '' || bonusCon !== '' || 
+      bonusInt !== '' || bonusWis !== '' || bonusCha !== '' || bonusAC !== '';
+
+    if (hasBonuses) {
+      baseMeta.bonuses = {};
+      if (bonusStr !== '') baseMeta.bonuses.strength = Number(bonusStr);
+      if (bonusDex !== '') baseMeta.bonuses.dexterity = Number(bonusDex);
+      if (bonusCon !== '') baseMeta.bonuses.constitution = Number(bonusCon);
+      if (bonusInt !== '') baseMeta.bonuses.intelligence = Number(bonusInt);
+      if (bonusWis !== '') baseMeta.bonuses.wisdom = Number(bonusWis);
+      if (bonusCha !== '') baseMeta.bonuses.charisma = Number(bonusCha);
+      if (bonusAC !== '') baseMeta.bonuses.armor_class = Number(bonusAC);
+    }
+
     return baseMeta;
   };
 
@@ -1577,7 +1608,7 @@ function EditCampaignItemModal({
   return (
     <div className="fixed inset-0 z-[10000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
-      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(32rem,95vw)] max-h-[90vh] overflow-y-auto bg-gray-900/95 border border-gray-700 rounded-xl p-6">
+      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(40rem,95vw)] max-h-[90vh] overflow-y-auto bg-gray-900/95 border border-gray-700 rounded-xl p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-bold text-white">Modifier l'objet</h3>
           <button onClick={onClose} className="p-2 text-gray-400 hover:bg-gray-800 rounded-lg">
@@ -1621,6 +1652,10 @@ function EditCampaignItemModal({
                 <option value="armor">Armure</option>
                 <option value="shield">Bouclier</option>
                 <option value="weapon">Arme</option>
+                <option value="jewelry">Bijou</option>
+                <option value="equipment">Équipement</option>
+                <option value="tool">Outil</option>
+                <option value="other">Autre</option>
               </select>
             </div>
           </div>
@@ -1706,7 +1741,7 @@ function EditCampaignItemModal({
 
                 <div className="col-span-2">
                   <label className="text-xs text-gray-400">Propriétés (libre, optionnel)</label>
-                  <input className="input-dark w-full px-2 py-1 rounded" value={weaponProperties} onChange={(e) => setWeaponProperties(e.target.value)} placeholder="Compléments éventuels (si aucune case cochée)" />
+                  <input className="input-dark w-full px-2 py-1 rounded" value={weaponProperties} onChange={(e) => setWeaponProperties(e.target.value)} placeholder="Compléments éventuels" />
                 </div>
               </div>
             </div>
@@ -1722,6 +1757,88 @@ function EditCampaignItemModal({
             </div>
           )}
 
+          {/* ✅ AJOUT : Section bonus pour jewelry, equipment, tool, other */}
+          {(type === 'jewelry' || type === 'equipment' || type === 'tool' || type === 'other') && (
+            <div className="mt-4 space-y-3 border-t border-gray-700 pt-4">
+              <h4 className="text-sm font-medium text-gray-300">Bonus (optionnel)</h4>
+              <p className="text-xs text-gray-500">
+                Si cet objet confère des bonus, il deviendra équipable/déséquipable.
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Force</label>
+                  <input 
+                    type="number" 
+                    className="input-dark w-full px-3 py-2 rounded-md" 
+                    value={bonusStr} 
+                    onChange={(e) => setBonusStr(e.target.value ? parseInt(e.target.value) : '')} 
+                    placeholder="+0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Dextérité</label>
+                  <input 
+                    type="number" 
+                    className="input-dark w-full px-3 py-2 rounded-md" 
+                    value={bonusDex} 
+                    onChange={(e) => setBonusDex(e.target.value ? parseInt(e.target.value) : '')} 
+                    placeholder="+0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Constitution</label>
+                  <input 
+                    type="number" 
+                    className="input-dark w-full px-3 py-2 rounded-md" 
+                    value={bonusCon} 
+                    onChange={(e) => setBonusCon(e.target.value ? parseInt(e.target.value) : '')} 
+                    placeholder="+0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Intelligence</label>
+                  <input 
+                    type="number" 
+                    className="input-dark w-full px-3 py-2 rounded-md" 
+                    value={bonusInt} 
+                    onChange={(e) => setBonusInt(e.target.value ? parseInt(e.target.value) : '')} 
+                    placeholder="+0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Sagesse</label>
+                  <input 
+                    type="number" 
+                    className="input-dark w-full px-3 py-2 rounded-md" 
+                    value={bonusWis} 
+                    onChange={(e) => setBonusWis(e.target.value ? parseInt(e.target.value) : '')} 
+                    placeholder="+0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Charisme</label>
+                  <input 
+                    type="number" 
+                    className="input-dark w-full px-3 py-2 rounded-md" 
+                    value={bonusCha} 
+                    onChange={(e) => setBonusCha(e.target.value ? parseInt(e.target.value) : '')} 
+                    placeholder="+0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Classe d'Armure</label>
+                  <input 
+                    type="number" 
+                    className="input-dark w-full px-3 py-2 rounded-md" 
+                    value={bonusAC} 
+                    onChange={(e) => setBonusAC(e.target.value ? parseInt(e.target.value) : '')} 
+                    placeholder="+0"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           <div>
             <ImageUrlInput value={imageUrl} onChange={setImageUrl} />
           </div>
@@ -1733,7 +1850,7 @@ function EditCampaignItemModal({
               onChange={(e) => setVisibleDescription(e.target.value)}
               className="input-dark w-full px-4 py-2 rounded-lg"
               rows={4}
-              placeholder="Description que verront les joueurs (les méta sont cachées ici)"
+              placeholder="Description que verront les joueurs"
             />
             <p className="text-xs text-gray-500 mt-1">Les propriétés techniques sont sérialisées dans les méta.</p>
           </div>
