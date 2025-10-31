@@ -463,7 +463,7 @@ React.useEffect(() => {
 
 {/* ✅ DÉPLACÉ : Indication du bonus au-dessus du contenant */}
 {equipmentBonus !== 0 && (
-  <div className="absolute top-2 left-1/2 transform -translate-x-1/2 pointer-events-none">
+  <div className="absolute top-3 left-1/2 transform -translate-x-1/2 pointer-events-none">
     <div className="text-[10px] text-green-400 leading-none whitespace-nowrap bg-gray-900/80 px-2 py-0.5 rounded">
       ({baseModifier >= 0 ? '+' : ''}{baseModifier} {equipmentBonus > 0 ? '+' : ''}{equipmentBonus})
     </div>
