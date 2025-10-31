@@ -499,13 +499,11 @@ if (hasFinesse || hasLight || hasVersatile) {
 
           // ✅ PRIORITÉ 2.5 : Polyvalente SANS propriété Lourde
     // Règle maison : Bâton de combat, Lance, etc.
-    if (hasVersatile && !hasHeavy) {
-      const strAbility = player.abilities?.find(a => a.name === 'Force');
-      const dexAbility = player.abilities?.find(a => a.name === 'Dextérité');
-      const strScore = strAbility?.score || 10;
-      const dexScore = dexAbility?.score || 10;
-      return strScore >= dexScore ? 'Force' : 'Dextérité';
-    }
+if (hasVersatile && !hasHeavy) {
+  const strScore = player.abilities?.['Force']?.score || 10;
+  const dexScore = player.abilities?.['Dextérité']?.score || 10;
+  return strScore >= dexScore ? 'Force' : 'Dextérité';
+}
     
     // ✅ PRIORITÉ 3 : Arme à distance PURE (Arc, Arbalète)
     // Règle D&D : Toujours Dextérité
