@@ -357,32 +357,27 @@ const InfoBubble = ({
             </button>
           </div>
         </div>
-// ✅ CORRECTION dans InfoBubble (ligne ~361-375)
-) : (
-  (type === 'armor' || type === 'shield' || type === 'weapon') && (
-    <div className="text-sm text-gray-400">
-      {type === 'weapon' ? (
-        <>
-          {equippedWeapons.length === 0 ? 'Aucune arme équipée.' : ''}
-          <div className="mt-3">
-            <button onClick={() => onRequestOpenList?.()} className="btn-primary px-3 py-2 rounded-lg">
-              Équiper depuis le sac
-            </button>
-          </div>
-        </>
       ) : (
-        <>
-          Aucun {type === 'armor' ? 'armure' : 'bouclier'} équipé.
-          <div className="mt-3">
-            <button onClick={() => onRequestOpenList?.()} className="btn-primary px-3 py-2 rounded-lg">
-              Équiper depuis le sac
-            </button>
+        (type === 'armor' || type === 'shield' || type === 'weapon') && (
+          <div className="text-sm text-gray-400">
+            {type === 'weapon' ? (
+              <div className="mt-3">
+                <button onClick={() => onOpenWeaponsManage?.()} className="btn-primary px-3 py-2 rounded-lg">Gérer mes armes</button>
+              </div>
+            ) : (
+              <>
+                Aucun {type === 'armor' ? 'armure' : 'bouclier'} équipé.
+                <div className="mt-3">
+                  <button onClick={() => onRequestOpenList?.()} className="btn-primary px-3 py-2 rounded-lg">Équiper depuis le sac</button>
+                </div>
+              </>
+            )}
           </div>
-        </>
+        )
       )}
     </div>
-  )
-)}
+  </div>
+); 
 
 interface EquipmentSlotProps {
   icon: React.ReactNode;
