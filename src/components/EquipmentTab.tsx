@@ -409,14 +409,7 @@ const EquipmentSlot = ({
   return (
     <>
       <button
-        onClick={() => {
-          // ✅ AJOUT : Si c'est une arme, ouvrir directement la modal de gestion
-          if (type === 'weapon') {
-            onOpenWeaponsManageFromSlot?.();
-          } else {
-            setShowInfo(v => !v);
-          }
-        }}
+        onClick={() => setShowInfo(v => !v)}
         className={`absolute ${position} ${type === 'bag' ? 'w-24 h-24' : 'w-12 h-12'} rounded-lg hover:bg-gray-700/20 border border-gray-600/50 flex items-center justify-center`}
         style={{ zIndex: showInfo ? 50 : 10 }}
       >
