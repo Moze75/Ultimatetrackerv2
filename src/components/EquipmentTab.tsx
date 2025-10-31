@@ -1310,7 +1310,6 @@ const filteredInventory = useMemo(() => {
                 <div key={item.id} className="bg-gray-800/40 border border-gray-700/40 rounded-md">
 <div className="flex items-start justify-between p-2">
   <div className="flex-1 mr-2">
-// ✅ SOLUTION : Utiliser flex-wrap et inline-flex
 <div className="flex items-center gap-2 flex-wrap">
   <button onClick={() => toggleExpand(item.id)} className="text-left text-gray-100 font-medium hover:underline break-words inline">
     {smartCapitalize(item.name)}
@@ -1325,7 +1324,6 @@ const filteredInventory = useMemo(() => {
   {meta?.type === 'potion' && <span className="text-xs px-2 py-0.5 rounded bg-green-900/30 text-green-300 whitespace-nowrap">Potion/Poison</span>}
   {meta?.type === 'other' && <span className="text-xs px-2 py-0.5 rounded bg-slate-900/30 text-slate-300 whitespace-nowrap">Autre</span>}
 </div>
-
 {expanded[item.id] && (
   <div className="mt-2 space-y-2">
     {/* ✅ Image en grand quand dépliée */}
