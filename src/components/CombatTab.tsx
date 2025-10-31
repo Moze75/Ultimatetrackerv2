@@ -542,12 +542,12 @@ const getDamageBonus = (attack: Attack): number => {
   const equipmentBonuses = calculateEquipmentBonuses(inventory);
 
   // 1) override_ability prime
-  if (attack.override_ability) {
-    const ability = player.abilities?.find((a) => a.name === attack.override_ability);
-    const baseAbilityMod = ability?.score ? Math.floor((ability.score - 10) / 2) : 0;
-    const equipmentBonus = equipmentBonuses[attack.override_ability] || 0;
-    return baseAbilityMod + equipmentBonus + weaponBonus;
-  }
+if (attack.override_ability) {
+  const abilityData = player.abilities?.[attack.override_ability];
+  const baseAbilityMod = abilityData?.score ? Math.floor((abilityData.score - 10) / 2) : 0;
+  const equipmentBonus = equipmentBonuses[attack.override_ability] || 0;
+  return baseAbilityMod + equipmentBonus + weaponBonus;
+}
 
   // 2) inférence depuis properties/portée
   const inferredAbilityName = (() => {
