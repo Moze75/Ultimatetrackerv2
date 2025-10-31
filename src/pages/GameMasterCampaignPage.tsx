@@ -2400,46 +2400,43 @@ if (matchingMember) {
             </div>
           </div>
 
-{/* Sélection des destinataires - CORRIGER LES DEUX ENDROITS */}
-{distributionMode === 'individual' && (
-  <div className="bg-gray-800/30 rounded-lg p-3">
-    <div className="flex items-center justify-between mb-2">
-      <div className="text-sm font-medium text-gray-300">Destinataires</div>
-      <label className="text-xs text-gray-400 inline-flex items-center gap-2">
-        <input
-          type="checkbox"
-          checked={selectAllRecipients}
-          onChange={(e) => setSelectAllRecipients(e.target.checked)}
-        />
-        <span>Tous</span>
-      </label>
-    </div>
+          {/* Sélection des destinataires */} 
+          {distributionMode === 'individual' && (
+            <div className="bg-gray-800/30 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-medium text-gray-300">Destinataires</div>
+                <label className="text-xs text-gray-400 inline-flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectAllRecipients}
+                    onChange={(e) => setSelectAllRecipients(e.target.checked)}
+                  />
+                  <span>Tous</span>
+                </label> 
+              </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-y-auto">
-      {members.map((m) => {
-        const uid = m.user_id;
-        if (!uid) {
-          console.warn('⚠️ Member sans user_id:', m);
-          return null;
-        }
-        
-        return (
-          <label 
-            key={m.id}  {/* ✅ CORRECTION : Utiliser m.id au lieu de uid */}
-            className="inline-flex items-center gap-2 text-sm"
-          >
-            <input
-              type="checkbox"
-              checked={selectedRecipients.includes(uid)}
-              onChange={() => toggleRecipient(uid)}
-            />
-            <span className="ml-1">{m.player_name || m.email}</span>
-          </label>
-        );
-      })}
-    </div>
-  </div>
-)}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+ {members.map((m) => {
+  const uid = m.user_id;  // ✅ TOUJOURS user_id uniquement
+  if (!uid) {
+    console.warn('⚠️ Member sans user_id:', m);
+    return null;  // ✅ Skip si pas de user_id
+  }
+  
+  return (
+    <label key={uid} className="inline-flex items-center gap-2 text-sm">
+      <input
+        type="checkbox"
+        checked={selectedRecipients.includes(uid)}
+        onChange={() => toggleRecipient(uid)}
+      />
+      <span className="ml-1">{m.player_name || m.email}</span>
+    </label>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Message */}
           <div>
