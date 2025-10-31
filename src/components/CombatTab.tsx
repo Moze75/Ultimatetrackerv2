@@ -500,7 +500,18 @@ const getAttackBonus = (attack: Attack): number => {
       return strScore >= dexScore ? 'Force' : 'Dextérité';
     }
 
-     
+         // ✅ PRIORITÉ 2.5 : Polyvalente SANS propriété Lourde
+    // Règle maison : Bâton de combat, Lance, etc.
+    const hasVersatile = props.includes('polyvalente') || props.includes('versatile');
+    const hasHeavy = props.includes('lourde') || props.includes('lourd') || props.includes('heavy');
+    
+    if (hasVersatile && !hasHeavy) {
+      const strAbility = player.abilities?.find(a => a.name === 'Force');
+      const dexAbility = player.abilities?.find(a => a.name === 'Dextérité');
+      const strScore = strAbility?.score || 10;
+      const dexScore = dexAbility?.score || 10;
+      return strScore >= dexScore ? 'Force' : 'Dextérité';
+    }
     
     // ✅ PRIORITÉ 3 : Arme à distance PURE (Arc, Arbalète)
     // Règle D&D : Toujours Dextérité
