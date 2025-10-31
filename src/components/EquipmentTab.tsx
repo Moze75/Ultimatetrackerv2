@@ -1157,18 +1157,22 @@ const filteredInventory = useMemo(() => {
               inventory={inventory}
             />
 
-            <EquipmentSlot
-              icon={<Sword size={24} className="text-red-500" />}
-              position="top-[50%] right-[15%]"
-              equipment={weaponsSummary}
-              type="weapon"
-              onRequestOpenList={() => { setAllowedKinds(['weapons']); setShowList(true); }}
-              onToggleEquipFromSlot={() => {}}
-              onOpenEditFromSlot={() => {}}
-              onOpenWeaponsManageFromSlot={() => setShowWeaponsModal(true)}
-              isEquipped={equippedWeapons.length > 0}
-              inventory={inventory}
-            />
+// ✅ CORRECTION : Utiliser le même système que armure/bouclier
+<EquipmentSlot
+  icon={<Sword size={24} className="text-red-500" />}
+  position="top-[50%] right-[15%]"
+  equipment={weaponsSummary}
+  type="weapon"
+  onRequestOpenList={() => { 
+    setInventoryModalType('weapon'); // ✅ AJOUT : Nouveau type
+    setShowInventoryModal(true); 
+  }}
+  onToggleEquipFromSlot={() => {}}
+  onOpenEditFromSlot={() => {}}
+  onOpenWeaponsManageFromSlot={() => {}} // Plus utilisé
+  isEquipped={equippedWeapons.length > 0}
+  inventory={inventory}
+/>
 
             <EquipmentSlot
               icon={<Flask size={24} className="text-green-500" />}
