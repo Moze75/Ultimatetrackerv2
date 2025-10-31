@@ -215,7 +215,17 @@ const InfoBubble = ({
               {isEquipped ? 'Équipé' : 'Non équipé'}
             </button>
           )}
-
+          {type === 'weapon' && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenWeaponsManage?.();
+              }}
+              className="px-3 py-1 rounded text-xs border border-gray-600 text-gray-200 hover:bg-gray-700/50"
+            >
+              Gérer / Équiper
+            </button>
+          )}
           {(type === 'armor' || type === 'shield') && (
             <button
               onClick={(e) => { e.stopPropagation(); onOpenEditFromSlot?.(); }}
@@ -228,35 +238,34 @@ const InfoBubble = ({
         </div>
       </div>
 
-      {equipment && type !== 'bag' ? (
-        <div className="space-y-2">
-          {equipment.name && <h5 className="font-medium text-gray-100 break-words">{smartCapitalize(equipment.name)}</h5>}
-          
-          {/* ✅ Affichage de l'image si présente */}
-          {(() => {
-            const item = equipment.inventory_item_id 
-              ? inventory?.find(i => i.id === equipment.inventory_item_id)
-              : null;
-            const meta = item ? parseMeta(item.description) : null;
-            const imageUrl = meta?.imageUrl;
-            
-            if (imageUrl) {
-              return (
-                <div className="my-3">
-                  <img
-                    src={imageUrl}
-                    alt={equipment.name}
-                    className="w-full max-w-xs rounded-lg border border-gray-600/50"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                </div>
-              );
-            }
-            return null;
-          })()}
-          
+{equipment && type !== 'bag' ? (
+  <div className="space-y-2">
+    {equipment.name && <h5 className="font-medium text-gray-100 break-words">{smartCapitalize(equipment.name)}</h5>}
+    
+    {/* ✅ NOUVEAU : Affichage de l'image si présente */}
+    {(() => {
+      const item = equipment.inventory_item_id 
+        ? inventory?.find(i => i.id === equipment.inventory_item_id)
+        : null;
+      const meta = item ? parseMeta(item.description) : null;
+      const imageUrl = meta?.imageUrl;
+      
+      if (imageUrl) {
+        return (
+          <div className="my-3">
+            <img
+              src={imageUrl}
+              alt={equipment.name}
+              className="w-full max-w-xs rounded-lg border border-gray-600/50"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+          </div>
+        );
+      }
+      return null;
+    })()}
           {equipment.description && <p className="text-sm text-gray-400 whitespace-pre-wrap">{equipment.description}</p>}
 
           {type === 'armor' && equipment.armor_formula && (
@@ -352,21 +361,14 @@ const InfoBubble = ({
         (type === 'armor' || type === 'shield' || type === 'weapon') && (
           <div className="text-sm text-gray-400">
             {type === 'weapon' ? (
-              <>
-                {/* ✅ CORRECTION : Pas de référence à equippedWeapons */}
-                <div className="mt-3">
-                  <button onClick={() => onRequestOpenList?.()} className="btn-primary px-3 py-2 rounded-lg">
-                    Équiper depuis le sac
-                  </button>
-                </div>
-              </>
+              <div className="mt-3">
+                <button onClick={() => onOpenWeaponsManage?.()} className="btn-primary px-3 py-2 rounded-lg">Gérer mes armes</button>
+              </div>
             ) : (
               <>
                 Aucun {type === 'armor' ? 'armure' : 'bouclier'} équipé.
                 <div className="mt-3">
-                  <button onClick={() => onRequestOpenList?.()} className="btn-primary px-3 py-2 rounded-lg">
-                    Équiper depuis le sac
-                  </button>
+                  <button onClick={() => onRequestOpenList?.()} className="btn-primary px-3 py-2 rounded-lg">Équiper depuis le sac</button>
                 </div>
               </>
             )}
@@ -396,7 +398,6 @@ const EquipmentSlot = ({
   icon, position, equipment, type, onRequestOpenList, onToggleEquipFromSlot, onOpenEditFromSlot, isEquipped, onOpenWeaponsManageFromSlot, onOpenBagModal, bagText, inventory
 }: EquipmentSlotProps) => {
   const [showInfo, setShowInfo] = useState(false);
-  
   return (
     <>
       <button
@@ -416,7 +417,7 @@ const EquipmentSlot = ({
           onToggleEquip={onToggleEquipFromSlot}
           isEquipped={isEquipped}
           onRequestOpenList={onRequestOpenList}
-          onOpenEditFromSlot={onOpenEditFromSlot}
+            onOpenEditFromSlot={onOpenEditFromSlot}
           onOpenWeaponsManage={onOpenWeaponsManageFromSlot}
           onOpenBagModal={onOpenBagModal}
           bagText={bagText}
@@ -488,8 +489,7 @@ export function EquipmentTab({
   const prevEditMetaRef = useRef<ItemMeta | null>(null);
 
   const [showInventoryModal, setShowInventoryModal] = useState(false);
-  // ✅ APRÈS
-const [inventoryModalType, setInventoryModalType] = useState<'armor' | 'shield' | 'weapon'>('armor');
+  const [inventoryModalType, setInventoryModalType] = useState<'armor' | 'shield'>('armor');
 
   const [showBagModal, setShowBagModal] = useState(false);
   const [bagText, setBagText] = useState(bag?.description || '');
@@ -1149,22 +1149,18 @@ const filteredInventory = useMemo(() => {
               inventory={inventory}
             />
 
-
-<EquipmentSlot
-  icon={<Sword size={24} className="text-red-500" />}
-  position="top-[50%] right-[15%]"
-  equipment={weaponsSummary}
-  type="weapon"
-  onRequestOpenList={() => { 
-    setInventoryModalType('weapon'); // ✅ AJOUT : Nouveau type
-    setShowInventoryModal(true); 
-  }}
-  onToggleEquipFromSlot={() => {}}
-  onOpenEditFromSlot={() => {}}
-  onOpenWeaponsManageFromSlot={() => {}} // Plus utilisé
-  isEquipped={equippedWeapons.length > 0}
-  inventory={inventory}
-/>
+            <EquipmentSlot
+              icon={<Sword size={24} className="text-red-500" />}
+              position="top-[50%] right-[15%]"
+              equipment={weaponsSummary}
+              type="weapon"
+              onRequestOpenList={() => { setAllowedKinds(['weapons']); setShowList(true); }}
+              onToggleEquipFromSlot={() => {}}
+              onOpenEditFromSlot={() => {}}
+              onOpenWeaponsManageFromSlot={() => setShowWeaponsModal(true)}
+              isEquipped={equippedWeapons.length > 0}
+              inventory={inventory}
+            />
 
             <EquipmentSlot
               icon={<Flask size={24} className="text-green-500" />}
