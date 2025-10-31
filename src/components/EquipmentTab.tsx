@@ -362,7 +362,8 @@ const InfoBubble = ({
     <div className="text-sm text-gray-400">
       {type === 'weapon' ? (
         <>
-          {equippedWeapons.length === 0 ? 'Aucune arme équipée.' : ''}
+          {/* ✅ CORRECTION : Message vide si des armes équipées, sinon message */}
+          {equippedWeapons.length === 0 && <p className="mb-3">Aucune arme équipée.</p>}
           <div className="mt-3">
             <button onClick={() => onRequestOpenList?.()} className="btn-primary px-3 py-2 rounded-lg">
               Équiper depuis le sac
