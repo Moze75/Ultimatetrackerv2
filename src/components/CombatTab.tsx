@@ -486,9 +486,13 @@ const getAttackBonus = (attack: Attack): number => {
       return strScore >= dexScore ? 'Force' : 'Dextérité';
     }
     
-    // ✅ PRIORITÉ 2 : Finesse (Dague, Rapière)
-    // Règle D&D : Utilise le meilleur entre Force et Dex 
-    if (props.includes('finesse')) {
+    // ✅ PRIORITÉ 2 : Finesse / Légère / Polyvalente (AJOUT)
+    // Règle D&D : Utilise le meilleur entre Force et Dex
+    const hasFinesse = props.includes('finesse');
+    const hasLight = props.includes('légère') || props.includes('legere');
+    const hasVersatile = props.includes('polyvalente') || props.includes('versatile');
+    
+    if (hasFinesse || hasLight || hasVersatile) {
       const strAbility = player.abilities?.find(a => a.name === 'Force');
       const dexAbility = player.abilities?.find(a => a.name === 'Dextérité');
       const strScore = strAbility?.score || 10;
