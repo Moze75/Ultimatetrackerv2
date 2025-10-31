@@ -1158,7 +1158,7 @@ const filteredInventory = useMemo(() => {
               inventory={inventory}
             />
 
-// ✅ CORRECTION : Utiliser le même système que armure/bouclier
+
 <EquipmentSlot
   icon={<Sword size={24} className="text-red-500" />}
   position="top-[50%] right-[15%]"
