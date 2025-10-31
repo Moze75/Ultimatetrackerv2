@@ -1082,13 +1082,15 @@ const rollAttack = (attack: Attack) => {
                 
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400">Votre modificateur de CON :</span>
-                  <span className="text-xl font-semibold text-green-400">
-                    {(() => {
-                      const conAbility = player.abilities?.find(a => a.name === 'Constitution');
-                      const conMod = conAbility?.modifier || 0;
-                      return conMod >= 0 ? `+${conMod}` : conMod;
-                    })()}
-                  </span>
+<span className="text-xl font-semibold text-green-400">
+  {(() => {
+    // ✅ AJOUT : Protection
+    const abilities = Array.isArray(player.abilities) ? player.abilities : [];
+    const conAbility = abilities.find(a => a.name === 'Constitution');
+    const conMod = conAbility?.modifier || 0;
+    return conMod >= 0 ? `+${conMod}` : conMod;
+  })()}
+</span>
                 </div>
               </div>
             </div>
