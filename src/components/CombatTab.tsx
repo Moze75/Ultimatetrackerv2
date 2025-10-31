@@ -454,14 +454,14 @@ const getAttackBonus = (attack: Attack): number => {
   const equipmentBonuses = calculateEquipmentBonuses(inventory);
 
   // 1) override_ability prime
-if (attack.override_ability) {
-  const abilityData = player.abilities?.[attack.override_ability];
-  const baseAbilityMod = abilityData?.score ? Math.floor((abilityData.score - 10) / 2) : 0;
-  const equipmentBonus = equipmentBonuses[attack.override_ability] || 0;
-  const totalAbilityMod = baseAbilityMod + equipmentBonus;
-  const masteryBonus = attack.expertise ? proficiencyBonus : 0;
-  return totalAbilityMod + masteryBonus + weaponBonus;
-}
+  if (attack.override_ability) {
+    const ability = player.abilities?.find((a) => a.name === attack.override_ability);
+    const baseAbilityMod = ability?.score ? Math.floor((ability.score - 10) / 2) : 0;
+    const equipmentBonus = equipmentBonuses[attack.override_ability] || 0;
+    const totalAbilityMod = baseAbilityMod + equipmentBonus;
+    const masteryBonus = attack.expertise ? proficiencyBonus : 0;
+    return totalAbilityMod + masteryBonus + weaponBonus;
+  }
 
   // 2) inférence depuis properties/portée
   const inferredAbilityName = (() => {
@@ -478,11 +478,13 @@ if (attack.override_ability) {
       nameLower.includes('javeline') || 
       nameLower.includes('hachette');
     
-if (isThrown) {
-  const strScore = player.abilities?.['Force']?.score || 10;
-  const dexScore = player.abilities?.['Dextérité']?.score || 10;
-  return strScore >= dexScore ? 'Force' : 'Dextérité';
-}
+    if (isThrown) {
+      const strAbility = player.abilities?.find(a => a.name === 'Force');
+      const dexAbility = player.abilities?.find(a => a.name === 'Dextérité');
+      const strScore = strAbility?.score || 10;
+      const dexScore = dexAbility?.score || 10;
+      return strScore >= dexScore ? 'Force' : 'Dextérité';
+    }
     
     // ✅ PRIORITÉ 2 : Finesse / Légère / Polyvalente (AJOUT)
     // Règle D&D : Utilise le meilleur entre Force et Dex
@@ -490,20 +492,23 @@ if (isThrown) {
     const hasLight = props.includes('légère') || props.includes('legere');
     const hasVersatile = props.includes('polyvalente') || props.includes('versatile');
     
-// ✅ APRÈS
-if (hasFinesse || hasLight || hasVersatile) {
-  const strScore = player.abilities?.['Force']?.score || 10;
-  const dexScore = player.abilities?.['Dextérité']?.score || 10;
-  return strScore >= dexScore ? 'Force' : 'Dextérité';
-}
+    if (hasFinesse || hasLight || hasVersatile) {
+      const strAbility = player.abilities?.find(a => a.name === 'Force');
+      const dexAbility = player.abilities?.find(a => a.name === 'Dextérité');
+      const strScore = strAbility?.score || 10;
+      const dexScore = dexAbility?.score || 10;
+      return strScore >= dexScore ? 'Force' : 'Dextérité';
+    }
 
           // ✅ PRIORITÉ 2.5 : Polyvalente SANS propriété Lourde
     // Règle maison : Bâton de combat, Lance, etc.
-if (hasVersatile && !hasHeavy) {
-  const strScore = player.abilities?.['Force']?.score || 10;
-  const dexScore = player.abilities?.['Dextérité']?.score || 10;
-  return strScore >= dexScore ? 'Force' : 'Dextérité';
-}
+    if (hasVersatile && !hasHeavy) {
+      const strAbility = player.abilities?.find(a => a.name === 'Force');
+      const dexAbility = player.abilities?.find(a => a.name === 'Dextérité');
+      const strScore = strAbility?.score || 10;
+      const dexScore = dexAbility?.score || 10;
+      return strScore >= dexScore ? 'Force' : 'Dextérité';
+    }
     
     // ✅ PRIORITÉ 3 : Arme à distance PURE (Arc, Arbalète)
     // Règle D&D : Toujours Dextérité
@@ -528,8 +533,8 @@ if (hasVersatile && !hasHeavy) {
     return 'Force';
   })();
   
- const abilityData = player.abilities?.[inferredAbilityName];
-const baseAbilityMod = abilityData?.score ? Math.floor((abilityData.score - 10) / 2) : 0;
+  const ability = player.abilities?.find(a => a.name === inferredAbilityName);
+  const baseAbilityMod = ability?.score ? Math.floor((ability.score - 10) / 2) : 0;
   const equipmentBonus = equipmentBonuses[inferredAbilityName] || 0;
   const totalAbilityMod = baseAbilityMod + equipmentBonus;
   const masteryBonus = attack.expertise ? proficiencyBonus : 0;
@@ -542,12 +547,12 @@ const getDamageBonus = (attack: Attack): number => {
   const equipmentBonuses = calculateEquipmentBonuses(inventory);
 
   // 1) override_ability prime
-if (attack.override_ability) {
-  const abilityData = player.abilities?.[attack.override_ability];
-  const baseAbilityMod = abilityData?.score ? Math.floor((abilityData.score - 10) / 2) : 0;
-  const equipmentBonus = equipmentBonuses[attack.override_ability] || 0;
-  return baseAbilityMod + equipmentBonus + weaponBonus;
-}
+  if (attack.override_ability) {
+    const ability = player.abilities?.find((a) => a.name === attack.override_ability);
+    const baseAbilityMod = ability?.score ? Math.floor((ability.score - 10) / 2) : 0;
+    const equipmentBonus = equipmentBonuses[attack.override_ability] || 0;
+    return baseAbilityMod + equipmentBonus + weaponBonus;
+  }
 
   // 2) inférence depuis properties/portée
   const inferredAbilityName = (() => {
@@ -1091,8 +1096,8 @@ const rollAttack = (attack: Attack) => {
                   <span className="text-gray-400">Votre modificateur de CON :</span>
                   <span className="text-xl font-semibold text-green-400">
                     {(() => {
-              const conAbility = player.abilities?.['Constitution'];
-const conMod = conAbility?.modifier || 0;
+                      const conAbility = player.abilities?.find(a => a.name === 'Constitution');
+                      const conMod = conAbility?.modifier || 0;
                       return conMod >= 0 ? `+${conMod}` : conMod;
                     })()}
                   </span>
