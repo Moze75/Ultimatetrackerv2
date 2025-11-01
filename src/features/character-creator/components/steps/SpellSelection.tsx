@@ -53,18 +53,34 @@ const MAGIC_SCHOOLS = [
   'Transmutation'
 ];
 
-// ✅ Fonction pour générer un UUID déterministe basé sur le nom du sort
+// ✅ NOUVELLE VERSION
 const generateSpellId = (name: string): string => {
-  // Normalise le nom : lowercase, retire accents et caractères spéciaux
+  // Normalise le nom
   const normalized = name
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Retire les accents
-    .replace(/[^a-z0-9]/g, '-')      // Remplace tout sauf lettres/chiffres par -
-    .replace(/-+/g, '-')             // Remplace multiples - par un seul
-    .replace(/^-|-$/g, '');          // Retire - au début/fin
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '')
+    .trim();
   
-  return `spell-${normalized}`;
+  // Créer un hash simple mais déterministe
+  let hash = 0;
+  for (let i = 0; i < normalized.length; i++) {
+    const char = normalized.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0; // Convert to 32bit integer
+  }
+  
+  // Générer un UUID v4 valide mais déterministe basé sur le hash
+  const hex = Math.abs(hash).toString(16).padStart(8, '0');
+  
+  // Créer des segments additionnels basés sur le nom
+  const segment2 = normalized.substring(0, 4).split('').map(c => c.charCodeAt(0).toString(16)).join('').padEnd(4, '0').slice(0, 4);
+  const segment3 = '4' + normalized.substring(4, 7).split('').map(c => c.charCodeAt(0).toString(16)).join('').padEnd(3, '0').slice(0, 3);
+  const segment4 = '8' + normalized.substring(7, 10).split('').map(c => c.charCodeAt(0).toString(16)).join('').padEnd(3, '0').slice(0, 3);
+  const segment5 = (normalized + normalized).substring(0, 12).split('').map(c => c.charCodeAt(0).toString(16)).join('').padEnd(12, '0').slice(0, 12);
+  
+  return `${hex}-${segment2}-${segment3}-${segment4}-${segment5}`;
 };
 
 const SpellSelection: React.FC<SpellSelectionProps> = ({
