@@ -142,20 +142,27 @@ export function PlayerProfile({ player, onUpdate, onInventoryAdd, inventory }: P
   const baseACFromStats = Number(stats.armor_class || 0);
 
   const monkUnarmoredDefense = player.class === 'Moine' && !armorFormula
-    ? 10 + dexMod + wisMod
-    : 0;
+  ? 10 + dexMod + wisMod
+  : 0;
 
-  const armorAC = armorFormula
+// ✅ MODIFIÉ : Vérifier si la CA a été saisie manuellement
+const hasManualOverride = (stats as any)?.manual_ac_override === true;
+
+const armorAC = hasManualOverride
+  ? baseACFromStats  // ✅ Si override manuel, utiliser directement la valeur saisie
+  : armorFormula
     ? computeArmorAC(armorFormula, dexMod)
     : Math.max(baseACFromStats, monkUnarmoredDefense);
 
-  // ✅ AJOUT : Récupérer les bonus d'équipement
-  const equipmentBonuses = calculateEquipmentBonuses(inventory || (player as any).inventory || []);
+// ✅ AJOUT : Récupérer les bonus d'équipement
+const equipmentBonuses = calculateEquipmentBonuses(inventory || (player as any).inventory || []);
 
-  const acBonus = Number((stats as any).ac_bonus || 0);
-  
-  // ✅ MODIFIÉ : Ajouter le bonus d'équipement au calcul total
-  const totalAC = armorAC + shieldBonus + acBonus + equipmentBonuses.armor_class;
+const acBonus = Number((stats as any).ac_bonus || 0);
+
+// ✅ MODIFIÉ : Si override manuel, ne pas ajouter les bonus (ils sont déjà inclus dans la valeur saisie)
+const totalAC = hasManualOverride
+  ? armorAC  // La CA manuelle est déjà le total final
+  : armorAC + shieldBonus + acBonus + equipmentBonuses.armor_class;
 
   /* ============================ Repos court / long ============================ */
 
