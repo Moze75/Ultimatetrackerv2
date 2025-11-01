@@ -53,6 +53,20 @@ const MAGIC_SCHOOLS = [
   'Transmutation'
 ];
 
+// ✅ Fonction pour générer un UUID déterministe basé sur le nom du sort
+const generateSpellId = (name: string): string => {
+  // Normalise le nom : lowercase, retire accents et caractères spéciaux
+  const normalized = name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Retire les accents
+    .replace(/[^a-z0-9]/g, '-')      // Remplace tout sauf lettres/chiffres par -
+    .replace(/-+/g, '-')             // Remplace multiples - par un seul
+    .replace(/^-|-$/g, '');          // Retire - au début/fin
+  
+  return `spell-${normalized}`;
+};
+
 const SpellSelection: React.FC<SpellSelectionProps> = ({
   selectedClass,
   selectedCantrips,
@@ -107,7 +121,7 @@ const SpellSelection: React.FC<SpellSelectionProps> = ({
     sections.forEach((section) => {
       const lines = section.split('\n');
       const spell: Partial<Spell> = {
-        id: crypto.randomUUID(),
+        id: '', // ✅ Sera défini après avoir trouvé le nom
         classes: [],
         components: { V: false, S: false, M: null },
         level: 0,
@@ -128,6 +142,8 @@ const SpellSelection: React.FC<SpellSelectionProps> = ({
 
         if (trimmedLine.startsWith('# ')) {
           spell.name = trimmedLine.substring(2).trim();
+          // ✅ Génère l'ID déterministe basé sur le nom
+          spell.id = generateSpellId(spell.name);
           continue;
         }
 
