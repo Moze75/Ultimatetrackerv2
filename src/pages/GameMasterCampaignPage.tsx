@@ -2706,86 +2706,82 @@ function RandomLootModal({
   };
 
   // Envoyer le loot
-  const handleSend = async () => {
-    if (distributionMode === 'individual' && selectedRecipients.length === 0) {
-      toast.error('Sélectionnez au moins un destinataire');
+const handleSend = async () => {
+  if (distributionMode === 'individual' && selectedRecipients.length === 0) {
+    toast.error('Sélectionnez au moins un destinataire');
+    return;
+  }
+
+  if (giftType === 'item') {
+    if (selectedItems.size === 0) {
+      toast.error('Sélectionnez au moins un objet');
       return;
     }
-
-    if (!previewLoot) {
-      toast.error('Générez d\'abord le loot');
+  } else {
+    if (gold <= 0 && silver <= 0 && copper <= 0) {
+      toast.error('Entrez un montant');
       return;
     }
+  }
 
-    try {
-      setGenerating(true);
-      const recipientIds = distributionMode === 'individual' ? selectedRecipients : null;
+  try {
+    setSending(true);
+    const recipientIds = distributionMode === 'individual' ? selectedRecipients : null;
 
-      // Envoi de la monnaie
-      if (previewLoot.copper > 0 || previewLoot.silver > 0 || previewLoot.gold > 0) {
-        await campaignService.sendGift(campaignId, 'currency', {
-          gold: previewLoot.gold,
-          silver: previewLoot.silver,
-          copper: previewLoot.copper,
-          distributionMode,
-          message: message.trim() || `🎲 Loot aléatoire (Niveau ${levelRange}, ${difficulty}, ${enemyCount} ennemi${enemyCount === '1' ? '' : 's'})`,
-          recipientIds: recipientIds || undefined,
-        });
-      }
+    if (giftType === 'item') {
+      for (const [itemId, quantity] of selectedItems.entries()) {
+        const item = inventory.find(i => i.id === itemId);
+        if (!item) continue;
 
-      // Envoi des équipements
-      for (const equip of previewLoot.equipment) {
-        const metaLine = `${META_PREFIX}${JSON.stringify(equip.meta)}`;
-        const visibleDesc = (equip.description || '').trim();
-        const fullDescription = visibleDesc 
-          ? `${visibleDesc}\n${metaLine}`
-          : metaLine;
-
+        // ✅ CORRECTION : Ne pas envoyer inventoryItemId si on duplique
         await campaignService.sendGift(campaignId, 'item', {
-          itemName: equip.name,
-          itemDescription: fullDescription,
-          itemQuantity: 1,
+          itemName: item.name,
+          itemDescription: getFullDescription(item),
+          itemQuantity: quantity,
           gold: 0,
           silver: 0,
           copper: 0,
           distributionMode,
-          message: message.trim() || `🎲 Loot aléatoire (Niveau ${levelRange}, ${difficulty})`,
+          message: message.trim() || undefined,
           recipientIds: recipientIds || undefined,
+          // ✅ NE PAS ENVOYER inventoryItemId si on duplique (pour éviter la suppression automatique)
+          ...(removeFromInventory ? { inventoryItemId: item.id } : {}),
         });
-      }
 
-      // Envoi des gemmes
-      if (previewLoot.gems && previewLoot.gems.length > 0) {
-        for (const gem of previewLoot.gems) {
-          const metaLine = `${META_PREFIX}${JSON.stringify(gem.meta)}`;
-          const visibleDesc = (gem.description || '').trim();
-          const fullDescription = visibleDesc 
-            ? `${visibleDesc}\n${metaLine}`
-            : metaLine;
-
-          await campaignService.sendGift(campaignId, 'item', {
-            itemName: gem.name,
-            itemDescription: fullDescription,
-            itemQuantity: 1,
-            gold: 0,
-            silver: 0,
-            copper: 0,
-            distributionMode,
-            message: message.trim() || `🎲 Loot aléatoire - Pierre précieuse (Niveau ${levelRange}, ${difficulty})`,
-            recipientIds: recipientIds || undefined,
-          });
+        // ✅ Décrémenter l'inventaire UNIQUEMENT si removeFromInventory est true
+        if (removeFromInventory) {
+          const newQuantity = item.quantity - quantity;
+          if (newQuantity > 0) {
+            await campaignService.updateCampaignItem(item.id, {
+              quantity: newQuantity,
+            });
+          } else {
+            await campaignService.deleteCampaignItem(item.id);
+          }
         }
       }
 
-      toast.success('Loot aléatoire envoyé !');
-      onSent();
-    } catch (error) {
-      console.error(error);
-      toast.error('Erreur lors de l\'envoi');
-    } finally {
-      setGenerating(false);
+      const action = removeFromInventory ? 'envoyé' : 'dupliqué et envoyé';
+      toast.success(`${selectedItems.size} objet${selectedItems.size > 1 ? 's' : ''} ${action}${selectedItems.size > 1 ? 's' : ''} !`);
+    } else {
+      await campaignService.sendGift(campaignId, 'currency', {
+        gold,
+        silver,
+        copper,
+        distributionMode,
+        message: message.trim() || undefined,
+        recipientIds: recipientIds || undefined,
+      });
     }
-  };
+
+    onSent();
+  } catch (error) {
+    console.error(error);
+    toast.error('Erreur lors de l\'envoi');
+  } finally {
+    setSending(false);
+  }
+};
 
   return (
     <div className="fixed inset-0 z-[10000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
