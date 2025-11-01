@@ -2489,7 +2489,7 @@ if (matchingMember) {
 }
 
 // =============================================
-// Modal de génération de loot aléatoire - VERSION COMPLÈTE
+// Modal de génération de loot aléatoire - VERSION COMPLÈTE ET CORRIGÉE
 // =============================================
 function RandomLootModal({
   campaignId,
@@ -2620,9 +2620,9 @@ function RandomLootModal({
     return filtered[randomIndex];
   };
 
-  // ✅ CORRECTION : Générer le loot avec les bonnes probabilités
+  // ✅ CORRECTION COMPLÈTE : Générer le loot STRICTEMENT selon les probabilités
   const generateLoot = () => {
-    const actualProbs = probs; // Utilise les bonnes probabilités
+    const actualProbs = probs;
     const currencyRanges = CURRENCY_AMOUNTS[levelRange];
     const gemRange = GEM_AMOUNTS[levelRange];
     
@@ -2635,24 +2635,25 @@ function RandomLootModal({
     const roll = Math.random() * 100;
     
     if (roll < actualProbs.copper) {
+      // ========== CUIVRE SEULEMENT ==========
       copper = Math.floor(
         Math.random() * (currencyRanges.copper.max - currencyRanges.copper.min + 1) + currencyRanges.copper.min
       );
       
     } else if (roll < actualProbs.copper + actualProbs.silver) {
+      // ========== ARGENT SEULEMENT ==========
       silver = Math.floor(
         Math.random() * (currencyRanges.silver.max - currencyRanges.silver.min + 1) + currencyRanges.silver.min
       );
-      copper = Math.floor(Math.random() * 11);
       
     } else if (roll < actualProbs.copper + actualProbs.silver + actualProbs.gold) {
+      // ========== OR SEULEMENT ==========
       gold = Math.floor(
         Math.random() * (currencyRanges.gold.max - currencyRanges.gold.min + 1) + currencyRanges.gold.min
       );
-      silver = Math.floor(Math.random() * 6);
-      copper = Math.floor(Math.random() * 11);
       
     } else if (roll < actualProbs.copper + actualProbs.silver + actualProbs.gold + actualProbs.equipment) {
+      // ========== ÉQUIPEMENT SEULEMENT ==========
       const numItems = 
         levelRange === '1-4' ? 1 : 
         levelRange === '5-10' ? (Math.random() < 0.5 ? 1 : 2) : 
@@ -2682,12 +2683,8 @@ function RandomLootModal({
         }
       }
       
-      silver = Math.floor(
-        Math.random() * (currencyRanges.silver.max * 0.3 - currencyRanges.silver.min * 0.1 + 1) + currencyRanges.silver.min * 0.1
-      );
-      copper = Math.floor(Math.random() * 11);
-      
     } else {
+      // ========== PIERRES PRÉCIEUSES SEULEMENT ==========
       const numGems = Math.floor(
         Math.random() * (gemRange.max - gemRange.min + 1) + gemRange.min
       );
@@ -2704,11 +2701,6 @@ function RandomLootModal({
           });
         }
       }
-      
-      silver = Math.floor(
-        Math.random() * (currencyRanges.silver.max * 0.2) + currencyRanges.silver.min
-      );
-      copper = Math.floor(Math.random() * 11);
     }
 
     return { copper, silver, gold, equipment, gems };
@@ -3052,7 +3044,7 @@ function RandomLootModal({
                       total: totalProb,
                       valid: probsValid
                     });
-                    toast.success(`Probabilités ${probsValid ? 'valides' : 'invalides'} (${totalProb}%)`);
+                    toast.success(`Probabilités ${probsValid ? 'valides ✓' : 'invalides ✗'} (${totalProb}%)`);
                   }}
                   className="px-3 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm"
                   title="Tester les probabilités"
@@ -3070,9 +3062,9 @@ function RandomLootModal({
               <div className="space-y-2">
                 {(previewLoot.gold > 0 || previewLoot.silver > 0 || previewLoot.copper > 0) && (
                   <div className="flex items-center gap-4 text-sm flex-wrap">
-                    {previewLoot.gold > 0 && <span className="text-yellow-400">🟡 {previewLoot.gold} or</span>}
-                    {previewLoot.silver > 0 && <span className="text-gray-300">⚪ {previewLoot.silver} argent</span>}
-                    {previewLoot.copper > 0 && <span className="text-orange-400">🟤 {previewLoot.copper} cuivre</span>}
+                    {previewLoot.gold > 0 && <span className="text-yellow-400 font-semibold">🟡 {previewLoot.gold} or</span>}
+                    {previewLoot.silver > 0 && <span className="text-gray-300 font-semibold">⚪ {previewLoot.silver} argent</span>}
+                    {previewLoot.copper > 0 && <span className="text-orange-400 font-semibold">🟤 {previewLoot.copper} cuivre</span>}
                   </div>
                 )}
                 {previewLoot.equipment.length > 0 && (
@@ -3081,7 +3073,7 @@ function RandomLootModal({
                     {previewLoot.equipment.map((eq, idx) => (
                       <div key={idx} className="text-sm text-purple-300 flex items-center gap-2">
                         <span>⚔️</span>
-                        <span>{eq.name}</span>
+                        <span className="font-medium">{eq.name}</span>
                         {eq.meta.type === 'weapon' && eq.meta.weapon && (
                           <span className="text-xs text-gray-400">
                             ({eq.meta.weapon.damageDice} {eq.meta.weapon.damageType})
@@ -3107,7 +3099,7 @@ function RandomLootModal({
                     {previewLoot.gems.map((gem, idx) => (
                       <div key={idx} className="text-sm text-pink-300 flex items-center gap-2">
                         <span>💎</span>
-                        <span>{gem.name}</span>
+                        <span className="font-medium">{gem.name}</span>
                       </div>
                     ))}
                   </div>
@@ -3117,7 +3109,7 @@ function RandomLootModal({
                  previewLoot.gold === 0 && 
                  previewLoot.equipment.length === 0 && 
                  (!previewLoot.gems || previewLoot.gems.length === 0) && (
-                  <div className="text-sm text-gray-500">Aucun loot généré</div>
+                  <div className="text-sm text-gray-500">Aucun loot généré cette fois-ci 🎲</div>
                 )}
               </div>
             </div>
