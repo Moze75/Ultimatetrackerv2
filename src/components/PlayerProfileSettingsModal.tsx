@@ -916,16 +916,7 @@ export function PlayerProfileSettingsModal({
                       setAcField(e.target.value);
                       setDirty(true);
                     }}
-                    onBlur={() => {
-                      if (acField === '' || parseInt(acField, 10) <= 0) {
-                        const dm = getDexModFromPlayer(player);
-                        const next = String(10 + dm);
-                        if (next !== acField) {
-                          setAcField(next);
-                          setDirty(true);
-                        }
-                      }
-                    }}
+              
                     className="input-dark w-full px-3 py-2 rounded-md"
                     placeholder="Auto si vide: 10 + mod DEX"
                   />
