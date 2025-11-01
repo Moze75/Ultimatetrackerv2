@@ -139,28 +139,27 @@ export function PlayerProfile({ player, onUpdate, onInventoryAdd, inventory }: P
   const armorFormula = (player as any)?.equipment?.armor?.armor_formula || null;
   const shieldBonus = Number((player as any)?.equipment?.shield?.shield_bonus ?? 0) || 0;
 
- const baseACFromStats = Number(stats.armor_class || 0);
+const baseACFromStats = Number(stats.armor_class || 0);
 
 const monkUnarmoredDefense = player.class === 'Moine' && !armorFormula
   ? 10 + dexMod + wisMod
   : 0;
 
-// ✅ MODIFIÉ : Vérifier si la CA a été saisie manuellement
-const hasManualOverride = (stats as any)?.manual_ac_override === true;
-
-// Calculer la CA de base (avant bonus d'équipement/bouclier/don)
-const baseAC = hasManualOverride
-  ? baseACFromStats  // ✅ Si override manuel, utiliser la valeur saisie comme base
-  : armorFormula
-    ? computeArmorAC(armorFormula, dexMod)  // Sinon, calcul depuis l'armure équipée
-    : Math.max(baseACFromStats, monkUnarmoredDefense);  // Ou CA de base / Moine
+// ✅ LOGIQUE INTELLIGENTE :
+// 1. Si une armure est équipée → utiliser sa formule (ignorer stats.armor_class)
+// 2. Sinon → utiliser stats.armor_class (CA des paramètres)
+const baseAC = armorFormula
+  ? computeArmorAC(armorFormula, dexMod)  // Armure équipée = prioritaire
+  : baseACFromStats > 0
+    ? baseACFromStats  // Pas d'armure = utiliser CA des paramètres
+    : monkUnarmoredDefense;  // Ou défense sans armure du moine
 
 // ✅ Récupérer les bonus d'équipement
 const equipmentBonuses = calculateEquipmentBonuses(inventory || (player as any).inventory || []);
 
 const acBonus = Number((stats as any).ac_bonus || 0);
 
-// ✅ TOUJOURS ajouter les bonus (équipement, bouclier, dons) à la CA de base
+// ✅ Toujours ajouter les bonus à la base
 const totalAC = baseAC + shieldBonus + acBonus + equipmentBonuses.armor_class;
 
   /* ============================ Repos court / long ============================ */
