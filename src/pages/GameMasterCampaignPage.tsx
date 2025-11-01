@@ -2489,7 +2489,7 @@ if (matchingMember) {
 }
 
 // =============================================
-// Modal de génération de loot aléatoire
+// Modal de génération de loot aléatoire - COMPLET
 // =============================================
 function RandomLootModal({
   campaignId,
@@ -2534,11 +2534,27 @@ function RandomLootModal({
 
   const META_PREFIX = '#meta:';
 
-  // ... (gardez le reste du code existant jusqu'à la définition de `probs`)
-
   // ✅ MODIFIÉ : Utiliser les probabilités personnalisées ou par défaut
   const defaultProbs = LOOT_TABLES[levelRange][difficulty][enemyCount];
   const probs = customMode ? customProbs : defaultProbs;
+
+  // ✅ Charger le catalogue d'équipements
+  useEffect(() => {
+    const loadCatalog = async () => {
+      setLoadingCatalog(true);
+      try {
+        const { loadEquipmentCatalog } = await import('../services/equipmentCatalogService');
+        const items = await loadEquipmentCatalog();
+        setCatalog(items);
+      } catch (error) {
+        console.error('Erreur chargement catalogue:', error);
+        toast.error('Erreur de chargement du catalogue d\'équipements');
+      } finally {
+        setLoadingCatalog(false);
+      }
+    };
+    loadCatalog();
+  }, []);
 
   // ✅ NOUVEAU : Initialiser les probabilités personnalisées quand on change les paramètres
   useEffect(() => {
@@ -2547,6 +2563,16 @@ function RandomLootModal({
       setCustomProbs(newDefaultProbs);
     }
   }, [levelRange, difficulty, enemyCount, customMode]);
+
+  // ✅ Sync selectAllRecipients
+  useEffect(() => {
+    if (selectAllRecipients) {
+      const allIds = members.map(m => m.user_id || m.player_id || m.id).filter(Boolean) as string[];
+      setSelectedRecipients(allIds);
+    } else {
+      setSelectedRecipients([]);
+    }
+  }, [selectAllRecipients, members]);
 
   // ✅ NOUVEAU : Fonction pour mettre à jour une probabilité
   const updateProbability = (key: keyof typeof customProbs, value: number) => {
@@ -2561,7 +2587,230 @@ function RandomLootModal({
   const totalProb = customProbs.copper + customProbs.silver + customProbs.gold + customProbs.equipment + customProbs.gems;
   const probsValid = totalProb === 100;
 
-  // ... (gardez tout le code existant jusqu'au return)
+  // ✅ Toggle destinataire
+  const toggleRecipient = (userId: string) => {
+    setSelectedRecipients(prev => {
+      if (prev.includes(userId)) return prev.filter(id => id !== userId);
+      return [...prev, userId];
+    });
+    setSelectAllRecipients(false);
+  };
+
+  // ✅ Sélectionner un équipement aléatoire du catalogue
+  const getRandomEquipmentFromCatalog = () => {
+    if (catalog.length === 0) return null;
+    
+    let types: any[] = [];
+    
+    if (levelRange === '1-4') {
+      types = ['weapons', 'adventuring_gear', 'tools'];
+    } else if (levelRange === '5-10') {
+      types = ['weapons', 'armors', 'shields', 'adventuring_gear'];
+    } else if (levelRange === '11-16') {
+      types = ['weapons', 'armors', 'shields', 'adventuring_gear', 'tools'];
+    } else {
+      types = ['weapons', 'armors', 'shields'];
+    }
+    
+    const filtered = catalog.filter(item => types.includes(item.kind));
+    if (filtered.length === 0) return null;
+    
+    const randomIndex = Math.floor(Math.random() * filtered.length);
+    return filtered[randomIndex];
+  };
+
+  // ✅ Générer le loot
+  const generateLoot = () => {
+    const currencyRanges = CURRENCY_AMOUNTS[levelRange];
+    const gemRange = GEM_AMOUNTS[levelRange];
+    
+    let copper = 0;
+    let silver = 0;
+    let gold = 0;
+    const equipment: Array<{ name: string; meta: any; description?: string }> = [];
+    const gems: Array<{ name: string; meta: any; description?: string }> = [];
+
+    const roll = Math.random() * 100;
+    
+    if (roll < probs.copper) {
+      // ========== CUIVRE SEULEMENT ==========
+      copper = Math.floor(
+        Math.random() * (currencyRanges.copper.max - currencyRanges.copper.min + 1) + currencyRanges.copper.min
+      );
+      
+    } else if (roll < probs.copper + probs.silver) {
+      // ========== ARGENT ==========
+      silver = Math.floor(
+        Math.random() * (currencyRanges.silver.max - currencyRanges.silver.min + 1) + currencyRanges.silver.min
+      );
+      copper = Math.floor(Math.random() * 11);
+      
+    } else if (roll < probs.copper + probs.silver + probs.gold) {
+      // ========== OR ==========
+      gold = Math.floor(
+        Math.random() * (currencyRanges.gold.max - currencyRanges.gold.min + 1) + currencyRanges.gold.min
+      );
+      silver = Math.floor(Math.random() * 6);
+      copper = Math.floor(Math.random() * 11);
+      
+    } else if (roll < probs.copper + probs.silver + probs.gold + probs.equipment) {
+      // ========== ÉQUIPEMENT ==========
+      const numItems = 
+        levelRange === '1-4' ? 1 : 
+        levelRange === '5-10' ? (Math.random() < 0.5 ? 1 : 2) : 
+        levelRange === '11-16' ? (Math.random() < 0.3 ? 1 : Math.random() < 0.7 ? 2 : 3) :
+        (Math.random() < 0.2 ? 1 : Math.random() < 0.6 ? 2 : 3);
+      
+      for (let i = 0; i < numItems; i++) {
+        const item = getRandomEquipmentFromCatalog();
+        if (item) {
+          let meta: any = { type: 'equipment', quantity: 1, equipped: false };
+          
+          if (item.kind === 'armors' && item.armor) {
+            meta = { type: 'armor', quantity: 1, equipped: false, armor: item.armor };
+          } else if (item.kind === 'shields' && item.shield) {
+            meta = { type: 'shield', quantity: 1, equipped: false, shield: item.shield };
+          } else if (item.kind === 'weapons' && item.weapon) {
+            meta = { type: 'weapon', quantity: 1, equipped: false, weapon: item.weapon };
+          } else if (item.kind === 'tools') {
+            meta = { type: 'tool', quantity: 1, equipped: false };
+          }
+          
+          equipment.push({
+            name: item.name,
+            meta,
+            description: item.description || ''
+          });
+        }
+      }
+      
+      // Argent bonus avec l'équipement
+      silver = Math.floor(
+        Math.random() * (currencyRanges.silver.max * 0.3 - currencyRanges.silver.min * 0.1 + 1) + currencyRanges.silver.min * 0.1
+      );
+      copper = Math.floor(Math.random() * 11);
+      
+    } else {
+      // ========== PIERRES PRÉCIEUSES ==========
+      const numGems = Math.floor(
+        Math.random() * (gemRange.max - gemRange.min + 1) + gemRange.min
+      );
+      
+      // Filtrer les gemmes du catalogue
+      const gemItems = catalog.filter(item => item.kind === 'gems');
+      
+      if (gemItems.length > 0) {
+        for (let i = 0; i < numGems; i++) {
+          const randomGem = gemItems[Math.floor(Math.random() * gemItems.length)];
+          gems.push({
+            name: randomGem.name,
+            meta: { type: 'jewelry', quantity: 1, equipped: false },
+            description: randomGem.description || ''
+          });
+        }
+      }
+      
+      // Un peu d'argent bonus avec les gemmes
+      silver = Math.floor(
+        Math.random() * (currencyRanges.silver.max * 0.2) + currencyRanges.silver.min
+      );
+      copper = Math.floor(Math.random() * 11);
+    }
+
+    return { copper, silver, gold, equipment, gems };
+  };
+
+  // ✅ Prévisualiser le loot
+  const handlePreview = () => {
+    if (loadingCatalog) {
+      toast.error('Chargement du catalogue en cours...');
+      return;
+    }
+    const loot = generateLoot();
+    setPreviewLoot(loot);
+  };
+
+  // ✅ Envoyer le loot
+  const handleSend = async () => {
+    if (distributionMode === 'individual' && selectedRecipients.length === 0) {
+      toast.error('Sélectionnez au moins un destinataire');
+      return;
+    }
+
+    if (!previewLoot) {
+      toast.error('Générez d\'abord le loot');
+      return;
+    }
+
+    try {
+      setGenerating(true);
+      const recipientIds = distributionMode === 'individual' ? selectedRecipients : null;
+
+      // Envoi de la monnaie
+      if (previewLoot.copper > 0 || previewLoot.silver > 0 || previewLoot.gold > 0) {
+        await campaignService.sendGift(campaignId, 'currency', {
+          gold: previewLoot.gold,
+          silver: previewLoot.silver,
+          copper: previewLoot.copper,
+          distributionMode,
+          message: message.trim() || `🎲 Loot aléatoire (Niveau ${levelRange}, ${difficulty}, ${enemyCount} ennemi${enemyCount === '1' ? '' : 's'})`,
+          recipientIds: recipientIds || undefined,
+        });
+      }
+
+      // Envoi des équipements
+      for (const equip of previewLoot.equipment) {
+        const metaLine = `${META_PREFIX}${JSON.stringify(equip.meta)}`;
+        const visibleDesc = (equip.description || '').trim();
+        const fullDescription = visibleDesc 
+          ? `${visibleDesc}\n${metaLine}`
+          : metaLine;
+
+        await campaignService.sendGift(campaignId, 'item', {
+          itemName: equip.name,
+          itemDescription: fullDescription,
+          itemQuantity: 1,
+          gold: 0,
+          silver: 0,
+          copper: 0,
+          distributionMode,
+          message: message.trim() || `🎲 Loot aléatoire (Niveau ${levelRange}, ${difficulty})`,
+          recipientIds: recipientIds || undefined,
+        });
+      }
+
+      // ✅ Envoi des pierres précieuses
+      if (previewLoot.gems && previewLoot.gems.length > 0) {
+        for (const gem of previewLoot.gems) {
+          const metaLine = `${META_PREFIX}${JSON.stringify(gem.meta)}`;
+          const visibleDesc = (gem.description || '').trim();
+          const fullDescription = visibleDesc 
+            ? `${visibleDesc}\n${metaLine}`
+            : metaLine;
+
+          await campaignService.sendGift(campaignId, 'item', {
+            itemName: gem.name,
+            itemDescription: fullDescription,
+            itemQuantity: 1,
+            gold: 0,
+            silver: 0,
+            copper: 0,
+            distributionMode,
+            message: message.trim() || `🎲 Loot aléatoire - Pierre précieuse (Niveau ${levelRange}, ${difficulty})`,
+            recipientIds: recipientIds || undefined,
+          });
+        }
+      }
+
+      toast.success('Loot aléatoire envoyé !');
+      onSent();
+    } catch (error) {
+      console.error(error);
+      toast.error('Erreur lors de l\'envoi');
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[10000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
@@ -2775,66 +3024,67 @@ function RandomLootModal({
             </button>
           </div>
 
-{previewLoot && (
-  <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
-    <h4 className="text-sm font-semibold text-green-300 mb-3">🎁 Loot généré :</h4>
-    <div className="space-y-2">
-      {(previewLoot.gold > 0 || previewLoot.silver > 0 || previewLoot.copper > 0) && (
-        <div className="flex items-center gap-4 text-sm flex-wrap">
-          {previewLoot.gold > 0 && <span className="text-yellow-400">🟡 {previewLoot.gold} or</span>}
-          {previewLoot.silver > 0 && <span className="text-gray-300">⚪ {previewLoot.silver} argent</span>}
-          {previewLoot.copper > 0 && <span className="text-orange-400">🟤 {previewLoot.copper} cuivre</span>}
-        </div>
-      )}
-      {previewLoot.equipment.length > 0 && (
-        <div>
-          <div className="text-xs text-gray-400 mb-1">Équipements :</div>
-          {previewLoot.equipment.map((eq, idx) => (
-            <div key={idx} className="text-sm text-purple-300 flex items-center gap-2">
-              <span>⚔️</span>
-              <span>{eq.name}</span>
-              {eq.meta.type === 'weapon' && eq.meta.weapon && (
-                <span className="text-xs text-gray-400">
-                  ({eq.meta.weapon.damageDice} {eq.meta.weapon.damageType})
-                </span>
-              )}
-              {eq.meta.type === 'armor' && eq.meta.armor && (
-                <span className="text-xs text-gray-400">
-                  (CA {eq.meta.armor.label})
-                </span>
-              )}
-              {eq.meta.type === 'shield' && eq.meta.shield && (
-                <span className="text-xs text-gray-400">
-                  (+{eq.meta.shield.bonus} CA)
-                </span>
-              )}
+          {/* Prévisualisation du loot (reste de l'interface) */}
+          {previewLoot && (
+            <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
+              <h4 className="text-sm font-semibold text-green-300 mb-3">🎁 Loot généré :</h4>
+              <div className="space-y-2">
+                {(previewLoot.gold > 0 || previewLoot.silver > 0 || previewLoot.copper > 0) && (
+                  <div className="flex items-center gap-4 text-sm flex-wrap">
+                    {previewLoot.gold > 0 && <span className="text-yellow-400">🟡 {previewLoot.gold} or</span>}
+                    {previewLoot.silver > 0 && <span className="text-gray-300">⚪ {previewLoot.silver} argent</span>}
+                    {previewLoot.copper > 0 && <span className="text-orange-400">🟤 {previewLoot.copper} cuivre</span>}
+                  </div>
+                )}
+                {previewLoot.equipment.length > 0 && (
+                  <div>
+                    <div className="text-xs text-gray-400 mb-1">Équipements :</div>
+                    {previewLoot.equipment.map((eq, idx) => (
+                      <div key={idx} className="text-sm text-purple-300 flex items-center gap-2">
+                        <span>⚔️</span>
+                        <span>{eq.name}</span>
+                        {eq.meta.type === 'weapon' && eq.meta.weapon && (
+                          <span className="text-xs text-gray-400">
+                            ({eq.meta.weapon.damageDice} {eq.meta.weapon.damageType})
+                          </span>
+                        )}
+                        {eq.meta.type === 'armor' && eq.meta.armor && (
+                          <span className="text-xs text-gray-400">
+                            (CA {eq.meta.armor.label})
+                          </span>
+                        )}
+                        {eq.meta.type === 'shield' && eq.meta.shield && (
+                          <span className="text-xs text-gray-400">
+                            (+{eq.meta.shield.bonus} CA)
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {previewLoot.gems && previewLoot.gems.length > 0 && (
+                  <div>
+                    <div className="text-xs text-gray-400 mb-1">Pierres précieuses :</div>
+                    {previewLoot.gems.map((gem, idx) => (
+                      <div key={idx} className="text-sm text-pink-300 flex items-center gap-2">
+                        <span>💎</span>
+                        <span>{gem.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {previewLoot.copper === 0 && 
+                 previewLoot.silver === 0 && 
+                 previewLoot.gold === 0 && 
+                 previewLoot.equipment.length === 0 && 
+                 (!previewLoot.gems || previewLoot.gems.length === 0) && (
+                  <div className="text-sm text-gray-500">Aucun loot généré</div>
+                )}
+              </div>
             </div>
-          ))}
-        </div>
-      )}
-      {/* ✅ AJOUT : Affichage des gemmes */}
-      {previewLoot.gems && previewLoot.gems.length > 0 && (
-        <div>
-          <div className="text-xs text-gray-400 mb-1">Pierres précieuses :</div>
-          {previewLoot.gems.map((gem, idx) => (
-            <div key={idx} className="text-sm text-pink-300 flex items-center gap-2">
-              <span>💎</span>
-              <span>{gem.name}</span>
-            </div>
-          ))}
-        </div>
-      )}
-      {previewLoot.copper === 0 && 
-       previewLoot.silver === 0 && 
-       previewLoot.gold === 0 && 
-       previewLoot.equipment.length === 0 && 
-       (!previewLoot.gems || previewLoot.gems.length === 0) && (
-        <div className="text-sm text-gray-500">Aucun loot généré</div>
-      )}
-    </div>
-  </div>
-)}
+          )}
 
+          {/* Mode de distribution et destinataires */}
           {previewLoot && (
             <>
               <div>
