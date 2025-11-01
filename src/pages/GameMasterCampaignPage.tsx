@@ -1991,8 +1991,10 @@ return (
 }
 
 // =============================================
-// Modal d'envoi de cadeaux - AVEC OPTION DE DUPLICATION
+// Modal d'envoi de cadeaux
 // =============================================
+
+
 function SendGiftModal({
   campaignId,
   members,
@@ -2008,7 +2010,7 @@ function SendGiftModal({
   onClose: () => void;
   onSent: () => void;
 }) {
-  // États pour multi-sélection d'objets
+  // ✅ NOUVEAU : États pour multi-sélection d'objets
   const [selectedItems, setSelectedItems] = useState<Map<string, number>>(new Map());
   
   // États pour l'argent
@@ -2022,9 +2024,6 @@ function SendGiftModal({
 
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   const [selectAllRecipients, setSelectAllRecipients] = useState(false);
-
-  // ✅ NOUVEAU : Option pour supprimer ou dupliquer
-  const [removeFromInventory, setRemoveFromInventory] = useState(true);
 
   const META_PREFIX = '#meta:';
   
@@ -2058,12 +2057,13 @@ function SendGiftModal({
     return visibleDesc ? `${visibleDesc}\n${metaLine}` : metaLine;
   };
 
+  // ✅ NOUVEAU : Gestion de la sélection d'items
   const toggleItem = (itemId: string) => {
     const newMap = new Map(selectedItems);
     if (newMap.has(itemId)) {
       newMap.delete(itemId);
     } else {
-      newMap.set(itemId, 1);
+      newMap.set(itemId, 1); // Quantité par défaut: 1
     }
     setSelectedItems(newMap);
   };
@@ -2080,6 +2080,7 @@ function SendGiftModal({
     setSelectedItems(newMap);
   };
 
+  // Sync selectAllRecipients <-> selectedRecipients
   useEffect(() => {
     if (selectAllRecipients) {
       const allIds = members.map(m => m.user_id || m.player_id || m.id).filter(Boolean) as string[];
@@ -2098,6 +2099,8 @@ function SendGiftModal({
   };
 
   const handleSend = async () => {
+    // Validation
+    
     if (distributionMode === 'individual' && selectedRecipients.length === 0) {
       toast.error('Sélectionnez au moins un destinataire');
       return;
@@ -2114,12 +2117,39 @@ function SendGiftModal({
         return;
       }
     }
+   // ✅ DEBUG LOGS
+ console.log('📤 DEBUG ENVOI:');
+console.log('- Mode:', distributionMode);
+console.log('- Recipients sélectionnés:', selectedRecipients);
 
+// ✅ LOG DÉTAILLÉ des members
+members.forEach((m, index) => {
+  console.log(`  Member ${index + 1}:`, {
+    name: m.player_name || m.email,
+    user_id: m.user_id,
+    player_id: m.player_id,
+    email: m.email
+  });
+});
+
+// ✅ VÉRIF : Est-ce que le destinataire sélectionné est dans la liste ?
+const matchingMember = members.find(m => m.user_id === selectedRecipients[0]);
+console.log('- Destinataire trouvé dans members ?', matchingMember ? 'OUI' : 'NON');
+if (matchingMember) {
+  console.log('  → Détails:', {
+    name: matchingMember.player_name,
+    user_id: matchingMember.user_id,
+    email: matchingMember.email
+  });
+}
     try {
       setSending(true);
+ 
+      
       const recipientIds = distributionMode === 'individual' ? selectedRecipients : null;
 
       if (giftType === 'item') {
+        // ✅ Envoyer chaque objet sélectionné
         for (const [itemId, quantity] of selectedItems.entries()) {
           const item = inventory.find(i => i.id === itemId);
           if (!item) continue;
@@ -2137,21 +2167,20 @@ function SendGiftModal({
             inventoryItemId: item.id,
           });
 
-          if (removeFromInventory) {
-            const newQuantity = item.quantity - quantity;
-            if (newQuantity > 0) {
-              await campaignService.updateCampaignItem(item.id, {
-                quantity: newQuantity,
-              });
-            } else {
-              await campaignService.deleteCampaignItem(item.id);
-            }
+          // Décrémenter l'inventaire
+          const newQuantity = item.quantity - quantity;
+          if (newQuantity > 0) {
+            await campaignService.updateCampaignItem(item.id, {
+              quantity: newQuantity,
+            });
+          } else {
+            await campaignService.deleteCampaignItem(item.id);
           }
         }
 
-        const action = removeFromInventory ? 'envoyé' : 'dupliqué et envoyé';
-        toast.success(`${selectedItems.size} objet${selectedItems.size > 1 ? 's' : ''} ${action}${selectedItems.size > 1 ? 's' : ''} !`);
+        toast.success(`${selectedItems.size} objet${selectedItems.size > 1 ? 's' : ''} envoyé${selectedItems.size > 1 ? 's' : ''} !`);
       } else {
+        // Envoi d'argent (inchangé)
         await campaignService.sendGift(campaignId, 'currency', {
           gold,
           silver,
@@ -2187,6 +2216,7 @@ function SendGiftModal({
         <div className="space-y-6">
           {giftType === 'item' ? (
             <>
+              {/* ✅ NOUVEAU : Interface multi-sélection */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <label className="text-sm font-medium text-gray-300">
@@ -2217,29 +2247,33 @@ function SendGiftModal({
                             : 'bg-gray-800/40 border-gray-700/50 hover:bg-gray-700/40'
                         }`}
                       >
-                        <div className="flex items-start gap-3">
-                          {meta?.imageUrl && (
-                            <img
-                              src={meta.imageUrl}
-                              alt={item.name}
-                              className="w-12 h-12 rounded object-cover border border-gray-600/50 flex-shrink-0"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = 'none';
-                              }}
-                            />
-                          )}
-                          
-                          <input
-                            type="checkbox"
+<div className="flex items-start gap-3">
+  {/* ✅ NOUVEAU : Miniature de l'item */}
+  {meta?.imageUrl && (
+    <img
+      src={meta.imageUrl}
+      alt={item.name}
+      className="w-12 h-12 rounded object-cover border border-gray-600/50 flex-shrink-0"
+      onError={(e) => {
+        (e.target as HTMLImageElement).style.display = 'none';
+      }}
+    />
+  )}
+  
+  {/* Checkbox */}
+  <input
+    type="checkbox"
                             checked={isSelected}
                             onChange={() => toggleItem(item.id)}
                             className="mt-1 w-4 h-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500"
                           />
 
+                          {/* Info item */}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <h4 className="font-semibold text-white truncate">{item.name}</h4>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-semibold text-white">{item.name}</h4>
                               
+                              {/* Badges type */}
                               {meta?.type === 'armor' && (
                                 <span className="text-xs px-2 py-0.5 rounded bg-purple-900/30 text-purple-300 border border-purple-500/30">
                                   Armure
@@ -2261,6 +2295,7 @@ function SendGiftModal({
                               {item.quantity} disponible{item.quantity > 1 ? 's' : ''}
                             </p>
 
+                            {/* Sélecteur de quantité (si sélectionné) */}
                             {isSelected && (
                               <div className="mt-2 flex items-center gap-2">
                                 <label className="text-xs text-gray-400">Quantité:</label>
@@ -2289,37 +2324,9 @@ function SendGiftModal({
                   )}
                 </div>
               </div>
-
-              {selectedItems.size > 0 && (
-                <div className="bg-gray-800/30 rounded-lg p-3">
-                  <label className="flex items-start gap-3 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={removeFromInventory}
-                      onChange={(e) => setRemoveFromInventory(e.target.checked)}
-                      className="mt-0.5 w-4 h-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500"
-                    />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-gray-200 group-hover:text-white transition-colors">
-                        Supprimer de l'inventaire
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {removeFromInventory 
-                          ? "Les objets seront retirés de votre inventaire après l'envoi"
-                          : "Les objets seront dupliqués et resteront dans votre inventaire"
-                        }
-                      </div>
-                    </div>
-                    {!removeFromInventory && (
-                      <div className="flex-shrink-0 text-xs bg-blue-900/30 text-blue-300 px-2 py-1 rounded border border-blue-500/30">
-                        Duplication
-                      </div>
-                    )}
-                  </label>
-                </div>
-              )}
             </>
           ) : (
+            // Argent (inchangé)
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
                 <div>
@@ -2356,6 +2363,7 @@ function SendGiftModal({
             </div>
           )}
 
+          {/* Mode de distribution */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">Mode de distribution</label>
             <div className="grid grid-cols-2 gap-3">
@@ -2392,6 +2400,7 @@ function SendGiftModal({
             </div>
           </div>
 
+          {/* Sélection des destinataires */} 
           {distributionMode === 'individual' && (
             <div className="bg-gray-800/30 rounded-lg p-3">
               <div className="flex items-center justify-between mb-2">
@@ -2403,32 +2412,33 @@ function SendGiftModal({
                     onChange={(e) => setSelectAllRecipients(e.target.checked)}
                   />
                   <span>Tous</span>
-                </label>
+                </label> 
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-y-auto">
-                {members.map((m) => {
-                  const uid = m.user_id;
-                  if (!uid) {
-                    console.warn('⚠️ Member sans user_id:', m);
-                    return null;
-                  }
-                  
-                  return (
-                    <label key={uid} className="inline-flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={selectedRecipients.includes(uid)}
-                        onChange={() => toggleRecipient(uid)}
-                      />
-                      <span className="ml-1">{m.player_name || m.email}</span>
-                    </label>
+ {members.map((m) => {
+  const uid = m.user_id;  // ✅ TOUJOURS user_id uniquement
+  if (!uid) {
+    console.warn('⚠️ Member sans user_id:', m);
+    return null;  // ✅ Skip si pas de user_id
+  }
+  
+  return (
+    <label key={uid} className="inline-flex items-center gap-2 text-sm">
+      <input
+        type="checkbox"
+        checked={selectedRecipients.includes(uid)}
+        onChange={() => toggleRecipient(uid)}
+      />
+      <span className="ml-1">{m.player_name || m.email}</span>
+    </label>
                   );
                 })}
               </div>
             </div>
           )}
 
+          {/* Message */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Message (optionnel)
@@ -2443,6 +2453,7 @@ function SendGiftModal({
           </div>
         </div>
 
+        {/* Boutons */}
         <div className="flex justify-end gap-3 mt-6">
           <button
             onClick={onClose}
@@ -2465,7 +2476,7 @@ function SendGiftModal({
               <>
                 <Send size={18} />
                 {giftType === 'item' && selectedItems.size > 0 
-                  ? `${removeFromInventory ? 'Envoyer' : 'Dupliquer'} ${selectedItems.size} objet${selectedItems.size > 1 ? 's' : ''}`
+                  ? `Envoyer ${selectedItems.size} objet${selectedItems.size > 1 ? 's' : ''}`
                   : 'Envoyer'
                 }
               </>
@@ -2706,82 +2717,86 @@ function RandomLootModal({
   };
 
   // Envoyer le loot
-const handleSend = async () => {
-  if (distributionMode === 'individual' && selectedRecipients.length === 0) {
-    toast.error('Sélectionnez au moins un destinataire');
-    return;
-  }
-
-  if (giftType === 'item') {
-    if (selectedItems.size === 0) {
-      toast.error('Sélectionnez au moins un objet');
+  const handleSend = async () => {
+    if (distributionMode === 'individual' && selectedRecipients.length === 0) {
+      toast.error('Sélectionnez au moins un destinataire');
       return;
     }
-  } else {
-    if (gold <= 0 && silver <= 0 && copper <= 0) {
-      toast.error('Entrez un montant');
+
+    if (!previewLoot) {
+      toast.error('Générez d\'abord le loot');
       return;
     }
-  }
 
-  try {
-    setSending(true);
-    const recipientIds = distributionMode === 'individual' ? selectedRecipients : null;
+    try {
+      setGenerating(true);
+      const recipientIds = distributionMode === 'individual' ? selectedRecipients : null;
 
-    if (giftType === 'item') {
-      for (const [itemId, quantity] of selectedItems.entries()) {
-        const item = inventory.find(i => i.id === itemId);
-        if (!item) continue;
+      // Envoi de la monnaie
+      if (previewLoot.copper > 0 || previewLoot.silver > 0 || previewLoot.gold > 0) {
+        await campaignService.sendGift(campaignId, 'currency', {
+          gold: previewLoot.gold,
+          silver: previewLoot.silver,
+          copper: previewLoot.copper,
+          distributionMode,
+          message: message.trim() || `🎲 Loot aléatoire (Niveau ${levelRange}, ${difficulty}, ${enemyCount} ennemi${enemyCount === '1' ? '' : 's'})`,
+          recipientIds: recipientIds || undefined,
+        });
+      }
 
-        // ✅ CORRECTION : Ne pas envoyer inventoryItemId si on duplique
+      // Envoi des équipements
+      for (const equip of previewLoot.equipment) {
+        const metaLine = `${META_PREFIX}${JSON.stringify(equip.meta)}`;
+        const visibleDesc = (equip.description || '').trim();
+        const fullDescription = visibleDesc 
+          ? `${visibleDesc}\n${metaLine}`
+          : metaLine;
+
         await campaignService.sendGift(campaignId, 'item', {
-          itemName: item.name,
-          itemDescription: getFullDescription(item),
-          itemQuantity: quantity,
+          itemName: equip.name,
+          itemDescription: fullDescription,
+          itemQuantity: 1,
           gold: 0,
           silver: 0,
           copper: 0,
           distributionMode,
-          message: message.trim() || undefined,
+          message: message.trim() || `🎲 Loot aléatoire (Niveau ${levelRange}, ${difficulty})`,
           recipientIds: recipientIds || undefined,
-          // ✅ NE PAS ENVOYER inventoryItemId si on duplique (pour éviter la suppression automatique)
-          ...(removeFromInventory ? { inventoryItemId: item.id } : {}),
         });
+      }
 
-        // ✅ Décrémenter l'inventaire UNIQUEMENT si removeFromInventory est true
-        if (removeFromInventory) {
-          const newQuantity = item.quantity - quantity;
-          if (newQuantity > 0) {
-            await campaignService.updateCampaignItem(item.id, {
-              quantity: newQuantity,
-            });
-          } else {
-            await campaignService.deleteCampaignItem(item.id);
-          }
+      // Envoi des gemmes
+      if (previewLoot.gems && previewLoot.gems.length > 0) {
+        for (const gem of previewLoot.gems) {
+          const metaLine = `${META_PREFIX}${JSON.stringify(gem.meta)}`;
+          const visibleDesc = (gem.description || '').trim();
+          const fullDescription = visibleDesc 
+            ? `${visibleDesc}\n${metaLine}`
+            : metaLine;
+
+          await campaignService.sendGift(campaignId, 'item', {
+            itemName: gem.name,
+            itemDescription: fullDescription,
+            itemQuantity: 1,
+            gold: 0,
+            silver: 0,
+            copper: 0,
+            distributionMode,
+            message: message.trim() || `🎲 Loot aléatoire - Pierre précieuse (Niveau ${levelRange}, ${difficulty})`,
+            recipientIds: recipientIds || undefined,
+          });
         }
       }
 
-      const action = removeFromInventory ? 'envoyé' : 'dupliqué et envoyé';
-      toast.success(`${selectedItems.size} objet${selectedItems.size > 1 ? 's' : ''} ${action}${selectedItems.size > 1 ? 's' : ''} !`);
-    } else {
-      await campaignService.sendGift(campaignId, 'currency', {
-        gold,
-        silver,
-        copper,
-        distributionMode,
-        message: message.trim() || undefined,
-        recipientIds: recipientIds || undefined,
-      });
+      toast.success('Loot aléatoire envoyé !');
+      onSent();
+    } catch (error) {
+      console.error(error);
+      toast.error('Erreur lors de l\'envoi');
+    } finally {
+      setGenerating(false);
     }
-
-    onSent();
-  } catch (error) {
-    console.error(error);
-    toast.error('Erreur lors de l\'envoi');
-  } finally {
-    setSending(false);
-  }
-};
+  };
 
   return (
     <div className="fixed inset-0 z-[10000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
@@ -3223,6 +3238,6 @@ const handleSend = async () => {
       </div>
     </div>
   );
-}
+} 
 
 export default GameMasterCampaignPage;
