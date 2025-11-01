@@ -6,8 +6,8 @@ import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { getSpellSlotsByLevel, getSpellKnowledgeInfo } from '../utils/spellSlots2024';
 import { loadSectionsSmart } from './ClassesTab/modals/ClassDataModal';
-import { AbilitySection } from './ClassesTab/modals/ClassUtilsModal';
-import { AbilityCard } from './ClassesTab/modals/ClassAbilitiesModal';
+import { AbilitySection, sentenceCase, slug } from './ClassesTab/modals/ClassUtilsModal';
+import { MarkdownLite } from '../lib/markdownLite';
 
 interface LevelUpModalProps {
   isOpen: boolean;
@@ -75,6 +75,86 @@ function mapClassForRpc(pClass: DndClass | null | undefined): string | null | un
   return pClass;
 }
 
+/* ============================ Composant AbilityCard simplifié (sans badge) ============================ */
+
+function CompactAbilityCard({
+  section,
+  defaultOpen,
+  ctx,
+}: {
+  section: AbilitySection;
+  defaultOpen?: boolean;
+  ctx: any;
+}) {
+  const [open, setOpen] = useState(!!defaultOpen);
+  const contentId = `ability-preview-${section.origin}-${section.level ?? 'x'}-${slug(section.title)}`;
+  const innerRef = React.useRef<HTMLDivElement | null>(null);
+  const [maxHeight, setMaxHeight] = useState<number>(0);
+
+  useEffect(() => {
+    const el = innerRef.current;
+    if (!el) return;
+    if (open) {
+      setMaxHeight(el.scrollHeight);
+      const ro = new ResizeObserver(() => {
+        setMaxHeight(el.scrollHeight);
+      });
+      ro.observe(el);
+      return () => ro.disconnect();
+    } else {
+      setMaxHeight(0);
+    }
+  }, [open, section.content]);
+
+  return (
+    <article
+      className={[
+        'rounded-xl border ring-1 ring-black/5 shadow-lg shadow-black/20',
+        'border-gray-700/30',
+        'bg-gray-800/50',
+      ].join(' ')}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        aria-controls={contentId}
+        className="w-full text-left"
+      >
+        <div className="flex items-start gap-3 p-4">
+          <div className="min-w-0 flex-1">
+            {/* Titre SANS le badge pour gagner de la place */}
+            <h3 className="text-white font-semibold text-sm sm:text-base">
+              {sentenceCase(section.title)}
+            </h3>
+          </div>
+          <div className="ml-2 mt-0.5 text-white/80 shrink-0">
+            {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </div>
+        </div>
+      </button>
+
+      <div
+        id={contentId}
+        className="overflow-hidden transition-[max-height,opacity] duration-300"
+        style={{ maxHeight: open ? maxHeight : 0, opacity: open ? 1 : 0 }}
+      >
+        <div ref={innerRef} className="px-4 pt-1 pb-4">
+          <div className="text-sm text-white/90 leading-relaxed space-y-2">
+            <MarkdownLite
+              text={section.content}
+              ctx={{
+                ...ctx,
+                section: { level: Number(section.level) || 0, origin: section.origin, title: section.title },
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
 /* ============================ Nouveau composant : Prévisualisation Sous-classe ============================ */
 
 interface SubclassPreviewProps {
@@ -137,7 +217,7 @@ function SubclassPreview({ subclassName, className, level, isSelected, onSelect 
           <div className="flex items-center gap-2">
             <div 
               className={`
-                w-5 h-5 rounded-full border-2 flex items-center justify-center
+                w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0
                 ${isSelected ? 'border-amber-500 bg-amber-500' : 'border-gray-600'}
               `}
             >
@@ -158,7 +238,7 @@ function SubclassPreview({ subclassName, className, level, isSelected, onSelect 
             e.stopPropagation();
             setShowDetails(!showDetails);
           }}
-          className="p-2 text-gray-400 hover:text-gray-300 hover:bg-gray-700/50 rounded-lg transition-colors"
+          className="p-2 text-gray-400 hover:text-gray-300 hover:bg-gray-700/50 rounded-lg transition-colors shrink-0"
           title="Voir les détails"
         >
           {showDetails ? <ChevronUp size={20} /> : <Eye size={20} />}
@@ -184,7 +264,7 @@ function SubclassPreview({ subclassName, className, level, isSelected, onSelect 
           ) : (
             <div className="space-y-3">
               {sections.map((s, i) => (
-                <AbilityCard
+                <CompactAbilityCard
                   key={`${s.origin}-${s.level ?? 'x'}-${i}`}
                   section={s}
                   defaultOpen={false}
@@ -195,7 +275,6 @@ function SubclassPreview({ subclassName, className, level, isSelected, onSelect 
                     checkedMap: new Map(),
                     onToggle: () => {},
                   }}
-                  disableContentWhileLoading={false}
                 />
               ))}
             </div>
@@ -636,7 +715,7 @@ export function LevelUpModal({ isOpen, onClose, player, onUpdate }: LevelUpModal
             </div>
           </div>
 
-          {/* Sous-classe (niveau 3) - VERSION AMÉLIORÉE */}
+          {/* Sous-classe (niveau 3) - VERSION COMPACTE */}
           {newLevel === 3 && (
             <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
               <div className="flex items-center gap-2 mb-4">
