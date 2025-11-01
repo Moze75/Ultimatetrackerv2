@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, TrendingUp, Heart, Dices, BookOpen, Eye, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, TrendingUp, Heart, Dices, BookOpen, Eye, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { Player, DndClass } from '../types/dnd';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
@@ -606,8 +606,22 @@ export function LevelUpModal({ isOpen, onClose, player, onUpdate }: LevelUpModal
     }
   };
 
-  const spellInfo = getSpellKnowledgeInfo(player.class, newLevel);
-  const isCaster = spellInfo.kind !== 'none';
+  // Calcul des informations de sorts
+  const currentSpellInfo = getSpellKnowledgeInfo(player.class, player.level);
+  const newSpellInfo = getSpellKnowledgeInfo(player.class, newLevel);
+  const isCaster = newSpellInfo.kind !== 'none';
+
+  // Calcul des nouveaux sorts à apprendre
+  const cantripsGain = 
+    (newSpellInfo.kind === 'prepared' && typeof newSpellInfo.cantrips === 'number' && 
+     currentSpellInfo.kind === 'prepared' && typeof currentSpellInfo.cantrips === 'number')
+      ? newSpellInfo.cantrips - currentSpellInfo.cantrips
+      : 0;
+
+  const preparedGain = 
+    (newSpellInfo.kind === 'prepared' && currentSpellInfo.kind === 'prepared')
+      ? newSpellInfo.prepared - currentSpellInfo.prepared
+      : 0;
 
   const modalContent = (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 overscroll-contain">
@@ -756,34 +770,71 @@ export function LevelUpModal({ isOpen, onClose, player, onUpdate }: LevelUpModal
             </div>
           )}
 
-          {/* Sorts à ajouter (indicatif) */}
-          {isCaster && (
+          {/* Sorts à ajouter - VERSION AMÉLIORÉE */}
+          {isCaster && newSpellInfo.kind === 'prepared' && (
             <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
               <div className="flex items-center gap-2 mb-3">
                 <BookOpen className="w-5 h-5 text-purple-400" />
-                <h5 className="font-medium text-gray-200">Sorts à ajouter (indicatif)</h5>
+                <h5 className="font-medium text-gray-200">Nouveaux sorts à apprendre</h5>
               </div>
 
-              {spellInfo.kind === 'prepared' && (
-                <div className="space-y-1 text-sm">
-                  <p className="text-gray-300">
-                    Classe: <span className="font-semibold">{spellInfo.label}</span>
-                  </p>
-                  {typeof spellInfo.cantrips === 'number' && spellInfo.cantrips > 0 && (
-                    <p className="text-gray-300">
-                      Sorts mineurs au niveau {newLevel}: <span className="font-semibold">{spellInfo.cantrips}</span>
-                    </p>
-                  )}
-                  <p className="text-gray-300">
-                    Sorts préparés au niveau {newLevel}: <span className="font-semibold">{spellInfo.prepared}</span>
-                  </p>
-                  {spellInfo.note && (
-                    <p className="text-xs text-gray-500 mt-2">
-                      {spellInfo.note}. Gérez vos sorts dans l'onglet Sorts.
-                    </p>
-                  )}
+              <div className="space-y-3">
+                {/* Sorts mineurs */}
+                {typeof newSpellInfo.cantrips === 'number' && newSpellInfo.cantrips > 0 && (
+                  <div className="bg-gray-700/30 rounded-lg p-3 border border-gray-600/30">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-200 mb-1">
+                          Sorts mineurs
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {currentSpellInfo.kind === 'prepared' && typeof currentSpellInfo.cantrips === 'number'
+                            ? `${currentSpellInfo.cantrips} → ${newSpellInfo.cantrips}`
+                            : `Total : ${newSpellInfo.cantrips}`
+                          }
+                        </p>
+                      </div>
+                      {cantripsGain > 0 && (
+                        <div className="flex items-center gap-1 bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full">
+                          <Plus className="w-4 h-4" />
+                          <span className="text-sm font-bold">{cantripsGain}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Sorts préparés/connus */}
+                <div className="bg-gray-700/30 rounded-lg p-3 border border-gray-600/30">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-200 mb-1">
+                        Sorts préparés
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {currentSpellInfo.kind === 'prepared'
+                          ? `${currentSpellInfo.prepared} → ${newSpellInfo.prepared}`
+                          : `Total : ${newSpellInfo.prepared}`
+                        }
+                      </p>
+                    </div>
+                    {preparedGain > 0 && (
+                      <div className="flex items-center gap-1 bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full">
+                        <Plus className="w-4 h-4" />
+                        <span className="text-sm font-bold">{preparedGain}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
+
+                {/* Message d'aide */}
+                <p className="text-xs text-gray-500 text-center">
+                  {cantripsGain > 0 || preparedGain > 0
+                    ? 'Ajoutez vos nouveaux sorts dans l\'onglet Sorts après la montée de niveau.'
+                    : 'Aucun nouveau sort à apprendre à ce niveau.'
+                  }
+                </p>
+              </div>
             </div>
           )}
         </div>
