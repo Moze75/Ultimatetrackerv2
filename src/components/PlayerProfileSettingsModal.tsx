@@ -566,67 +566,61 @@ export function PlayerProfileSettingsModal({
       };
 
       const currentStats = (player.stats as any) || {};
-
-
-     const originalAC = Number(currentStats.armor_class || 0);
-    const hasManualACOverride = Number.isFinite(acVal) && acVal !== originalAC;
-    
-    const finalizedStats: any = {
-      ...currentStats,
-      armor_class: Number.isFinite(acVal) && acVal > 0 ? acVal : 10 + dexMod,
-      initiative: Number.isFinite(initVal) ? initVal : dexMod,
-      speed: Number.isFinite(speedVal) && speedVal > 0 ? speedVal : 9,
-      proficiency_bonus: profAuto,
-      ac_bonus: acBonus,
-      manual_ac_override: hasManualACOverride, // ✅ NOUVEAU FLAG
-      feats: featsData,
-      creator_meta: {
-        ...currentStats.creator_meta,
+      const finalizedStats: any = {
+        ...currentStats,
+        armor_class: Number.isFinite(acVal) && acVal > 0 ? acVal : 10 + dexMod,
+        initiative: Number.isFinite(initVal) ? initVal : dexMod,
+        speed: Number.isFinite(speedVal) && speedVal > 0 ? speedVal : 9,
+        proficiency_bonus: profAuto,
+        ac_bonus: acBonus,
+        feats: featsData,
+        creator_meta: {
+          ...currentStats.creator_meta,
+          weapon_proficiencies: weaponProficiencies,
+          armor_proficiencies: armorProficiencies,
+        },
         weapon_proficiencies: weaponProficiencies,
         armor_proficiencies: armorProficiencies,
-      },
-      weapon_proficiencies: weaponProficiencies,
-      armor_proficiencies: armorProficiencies,
-    };
+      };
 
-    const updateData = {
-      adventurer_name: adventurerName.trim() || null,
-      race: selectedRace || null,
-      class: selectedClass || null,
-      subclass: selectedSubclass || null,
-      background: (selectedBackground as string) || null,
-      alignment: selectedAlignment || null,
-      languages: selectedLanguages,
-      max_hp: Math.max(1, maxHp),
-      current_hp: Math.max(0, Math.min(maxHp, currentHp)),
-      temporary_hp: Math.max(0, tempHp),
-      age: age.trim() || null,
-      gender: gender.trim() || null,
-      character_history: characterHistory.trim() || null,
-      level: level,
-      hit_dice: {
-        total: level,
-        used: Math.min(hitDice.used, level),
-      },
-      stats: finalizedStats as PlayerStats,
-    };
+      const updateData = {
+        adventurer_name: adventurerName.trim() || null,
+        race: selectedRace || null,
+        class: selectedClass || null,
+        subclass: selectedSubclass || null,
+        background: (selectedBackground as string) || null,
+        alignment: selectedAlignment || null,
+        languages: selectedLanguages,
+        max_hp: Math.max(1, maxHp),
+        current_hp: Math.max(0, Math.min(maxHp, currentHp)),
+        temporary_hp: Math.max(0, tempHp),
+        age: age.trim() || null,
+        gender: gender.trim() || null,
+        character_history: characterHistory.trim() || null,
+        level: level,
+        hit_dice: {
+          total: level,
+          used: Math.min(hitDice.used, level),
+        },
+        stats: finalizedStats as PlayerStats,
+      };
 
-    const { error } = await supabase.from('players').update(updateData).eq('id', player.id);
-    if (error) throw error;
+      const { error } = await supabase.from('players').update(updateData).eq('id', player.id);
+      if (error) throw error;
 
-    onUpdate({
-      ...player,
-      ...updateData,
-    });
+      onUpdate({
+        ...player,
+        ...updateData,
+      });
 
-    toast.success('Profil mis à jour');
-    setDirty(false);
-    smoothClose();
-  } catch (error) {
-    console.error('Erreur lors de la mise à jour du profil:', error);
-    toast.error('Erreur lors de la mise à jour');
-  }
-};
+      toast.success('Profil mis à jour');
+      setDirty(false);
+      smoothClose();
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du profil:', error);
+      toast.error('Erreur lors de la mise à jour');
+    }
+  };
 
   const [enter, setEnter] = useState(false);
   useEffect(() => {
