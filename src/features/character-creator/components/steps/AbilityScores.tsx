@@ -2,16 +2,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Button from '../ui/Button';
 import Card, { CardContent, CardHeader } from '../ui/Card';
 import { calculateModifier, validatePointBuy, standardArray, rollAbilityScore, applyBackgroundBonuses } from '../../utils/dndCalculations';
-import { Dice1, RotateCcw, Calculator } from 'lucide-react';
+import { Dice1, RotateCcw, Calculator, TrendingUp } from 'lucide-react';
 import type { DndBackground } from '../../types/character';
 
 interface AbilityScoresProps {
-  abilities: Record<string, number>; // scores de base (point buy / array / jets)
+  abilities: Record<string, number>;
   onAbilitiesChange: (abilities: Record<string, number>) => void;
   onNext: () => void;
   onPrevious: () => void;
-
-  // Nouveau: background sélectionné et callback facultatif pour remonter les scores finaux (base + background)
   selectedBackground?: DndBackground | null;
   onEffectiveAbilitiesChange?: (abilities: Record<string, number>) => void;
 }
@@ -29,23 +27,18 @@ export default function AbilityScores({
   const [method, setMethod] = useState<'pointbuy' | 'array' | 'roll'>('pointbuy');
   const [rolledScores, setRolledScores] = useState<number[]>([]);
   const [assignedScores, setAssignedScores] = useState<Record<string, number>>({});
-
-  // Nouveau: état pour les bonus d'historique
   const [bgMode, setBgMode] = useState<'twoPlusOne' | 'oneOneOne'>('twoPlusOne');
   const [bgAssignments, setBgAssignments] = useState<{ plusTwo?: string; plusOne?: string }>({});
 
-  // Recalcul des scores finaux (base + bonus background)
   const effectiveAbilities = useMemo(() => {
     if (!selectedBackground) return abilities;
     return applyBackgroundBonuses(abilities, selectedBackground.abilityScores, bgMode, bgAssignments);
   }, [abilities, selectedBackground, bgMode, bgAssignments]);
 
-  // Remonter les scores finaux si demandé
   useEffect(() => {
     onEffectiveAbilitiesChange?.(effectiveAbilities);
   }, [effectiveAbilities, onEffectiveAbilitiesChange]);
 
-  // Reset des affectations quand on change de background ou de mode
   useEffect(() => {
     setBgAssignments({});
   }, [selectedBackground, bgMode]);
@@ -63,7 +56,6 @@ export default function AbilityScores({
     } else if (method === 'roll') {
       rollAllAbilities();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [method]);
 
   const rollAllAbilities = () => {
@@ -82,14 +74,12 @@ export default function AbilityScores({
     if (method === 'array') {
       const newAssigned = { ...assignedScores };
       
-      // Remove previous assignment of this ability
       Object.keys(newAssigned).forEach(key => {
         if (newAssigned[key] === scoreIndex) {
           delete newAssigned[key];
         }
       });
       
-      // Remove previous assignment of this score
       if (newAssigned[ability] !== undefined) {
         delete newAssigned[ability];
       }
@@ -103,7 +93,6 @@ export default function AbilityScores({
     } else if (method === 'roll') {
       const newAssigned = { ...assignedScores };
       
-      // Remove previous assignments
       Object.keys(newAssigned).forEach(key => {
         if (newAssigned[key] === scoreIndex) {
           delete newAssigned[key];
@@ -127,8 +116,6 @@ export default function AbilityScores({
   const isArrayComplete = method === 'array' && Object.keys(assignedScores).length === 6;
   const isRollComplete = method === 'roll' && Object.keys(assignedScores).length === 6;
 
-  // Validation background: si un background est sélectionné et que le mode est +2/+1,
-  // il faut que les deux attributions soient faites et différentes.
   const isBackgroundComplete =
     !selectedBackground
       ? true
@@ -136,13 +123,6 @@ export default function AbilityScores({
 
   const canProceed =
     ((method === 'pointbuy' && pointBuyValidation.valid) || isArrayComplete || isRollComplete) && isBackgroundComplete;
-
-  // Helper pour afficher le bonus appliqué à une carac
-  const getBackgroundBonusFor = (ability: string) => {
-    const base = abilities[ability] ?? 8;
-    const eff = effectiveAbilities[ability] ?? base;
-    return eff - base;
-  };
 
   return (
     <div className="wizard-step space-y-6">
@@ -183,7 +163,7 @@ export default function AbilityScores({
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-semibold text-white">Point Buy System</h3>
               <div className="text-sm text-gray-400">
-                Points utilisés: {pointBuyValidation.pointsUsed}/27
+                Points utilisés: <span className="text-white font-semibold">{pointBuyValidation.pointsUsed}/27</span>
               </div>
             </div>
           </CardHeader>
@@ -196,33 +176,40 @@ export default function AbilityScores({
                 const effMod = calculateModifier(effVal);
 
                 return (
-                  <div key={ability} className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-300">{ability}</label>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="range"
-                        min="8"
-                        max="15"
-                        value={baseVal}
-                        onChange={(e) => handlePointBuyChange(ability, parseInt(e.target.value))}
-                        className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-                      />
-                      <div className="w-24 text-center">
-                        <span className="text-lg font-bold text-white">{effVal}</span>
-                        <div className="text-xs text-gray-400">
-                          {effMod >= 0 ? '+' : ''}{effMod}
-                        </div>
-                        {selectedBackground && (
-                          <div className="text-[10px] text-gray-500 mt-1">
-                            Base: {baseVal}{' '}
-                            {bonus !== 0 && (
-                              <span className={bonus > 0 ? 'text-green-400' : 'text-red-400'}>
-                                ({bonus > 0 ? `+${bonus}` : bonus})
-                              </span>
-                            )}
-                          </div>
-                        )}
+                  <div key={ability} className="p-4 rounded-lg bg-gray-800/50 border border-gray-700 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-300">{ability}</span>
+                      {bonus !== 0 && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-900/30 text-green-400 border border-green-700/50">
+                          +{bonus} historique
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <span className="text-3xl font-bold text-white">{effVal}</span>
+                        <span className="text-xs text-gray-500">score</span>
                       </div>
+                      <div className="flex flex-col items-end">
+                        <span className={`text-4xl font-bold ${effMod >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {effMod >= 0 ? '+' : ''}{effMod}
+                        </span>
+                        <span className="text-xs text-gray-500">modificateur</span>
+                      </div>
+                    </div>
+
+                    <input
+                      type="range"
+                      min="8"
+                      max="15"
+                      value={baseVal}
+                      onChange={(e) => handlePointBuyChange(ability, parseInt(e.target.value))}
+                      className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-red-500"
+                    />
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>8</span>
+                      <span>15</span>
                     </div>
                   </div>
                 );
@@ -245,49 +232,80 @@ export default function AbilityScores({
         <Card>
           <CardHeader>
             <h3 className="text-lg font-semibold text-white">Tableau Standard</h3>
+            <p className="text-sm text-gray-400 mt-1">Assignez les scores suivants à vos caractéristiques</p>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="grid grid-cols-6 gap-2 mb-4">
-                {standardArray.map((score, index) => (
-                  <div
-                    key={index}
-                    className={`text-center py-2 rounded-lg border-2 transition-colors ${
-                      Object.values(assignedScores).includes(index)
-                        ? 'border-red-500 bg-red-900/20'
-                        : 'border-gray-600 bg-gray-800'
-                    }`}
-                  >
-                    <div className="text-lg font-bold text-white">{score}</div>
-                    <div className="text-xs text-gray-400">
-                      {calculateModifier(score) >= 0 ? '+' : ''}{calculateModifier(score)}
+              <div className="grid grid-cols-6 gap-2 mb-6">
+                {standardArray.map((score, index) => {
+                  const mod = calculateModifier(score);
+                  const isUsed = Object.values(assignedScores).includes(index);
+                  return (
+                    <div
+                      key={index}
+                      className={`text-center py-3 rounded-lg border-2 transition-all ${
+                        isUsed
+                          ? 'border-gray-600 bg-gray-800/30 opacity-40'
+                          : 'border-red-500/50 bg-red-900/10 hover:bg-red-900/20'
+                      }`}
+                    >
+                      <div className="text-2xl font-bold text-white">{score}</div>
+                      <div className={`text-lg font-semibold ${mod >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {mod >= 0 ? '+' : ''}{mod}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {abilityNames.map((ability) => (
-                  <div key={ability} className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-300">{ability}</label>
-                    <select
-                      value={assignedScores[ability] !== undefined ? assignedScores[ability] : ''}
-                      onChange={(e) => e.target.value && assignScore(ability, parseInt(e.target.value))}
-                      className="input-dark w-full"
-                    >
-                      <option value="">Sélectionner...</option>
-                      {standardArray.map((score, index) => (
-                        <option
-                          key={index}
-                          value={index}
-                          disabled={Object.values(assignedScores).includes(index)}
-                        >
-                          {score} ({calculateModifier(score) >= 0 ? '+' : ''}{calculateModifier(score)})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
+                {abilityNames.map((ability) => {
+                  const assignedIndex = assignedScores[ability];
+                  const baseVal = abilities[ability] ?? 0;
+                  const effVal = effectiveAbilities[ability] ?? baseVal;
+                  const bonus = effVal - baseVal;
+                  const effMod = baseVal > 0 ? calculateModifier(effVal) : 0;
+
+                  return (
+                    <div key={ability} className="p-4 rounded-lg bg-gray-800/50 border border-gray-700">
+                      <label className="block text-sm font-medium text-gray-300 mb-2">{ability}</label>
+                      <select
+                        value={assignedIndex !== undefined ? assignedIndex : ''}
+                        onChange={(e) => e.target.value && assignScore(ability, parseInt(e.target.value))}
+                        className="input-dark w-full mb-3"
+                      >
+                        <option value="">Sélectionner...</option>
+                        {standardArray.map((score, index) => {
+                          const mod = calculateModifier(score);
+                          return (
+                            <option
+                              key={index}
+                              value={index}
+                              disabled={Object.values(assignedScores).includes(index) && assignedScores[ability] !== index}
+                            >
+                              {score} (mod: {mod >= 0 ? '+' : ''}{mod})
+                            </option>
+                          );
+                        })}
+                      </select>
+                      
+                      {baseVal > 0 && (
+                        <div className="flex items-center justify-between pt-2 border-t border-gray-700">
+                          <div>
+                            <div className="text-xl font-bold text-white">{effVal}</div>
+                            <div className="text-xs text-gray-500">score final</div>
+                          </div>
+                          <div className="text-right">
+                            <div className={`text-2xl font-bold ${effMod >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                              {effMod >= 0 ? '+' : ''}{effMod}
+                            </div>
+                            <div className="text-xs text-gray-500">modificateur</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </CardContent>
@@ -298,7 +316,10 @@ export default function AbilityScores({
         <Card>
           <CardHeader>
             <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-white">Lancer de dés (4d6, garder les 3 meilleurs)</h3>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Lancer de dés</h3>
+                <p className="text-sm text-gray-400 mt-1">4d6, garder les 3 meilleurs</p>
+              </div>
               <Button
                 variant="secondary"
                 size="sm"
@@ -311,70 +332,92 @@ export default function AbilityScores({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="grid grid-cols-6 gap-2 mb-4">
-                {rolledScores.map((score, index) => (
-                  <div
-                    key={index}
-                    className={`text-center py-2 rounded-lg border-2 transition-colors ${
-                      Object.values(assignedScores).includes(index)
-                        ? 'border-red-500 bg-red-900/20'
-                        : 'border-gray-600 bg-gray-800'
-                    }`}
-                  >
-                    <div className="text-lg font-bold text-white">{score}</div>
-                    <div className="text-xs text-gray-400">
-                      {calculateModifier(score) >= 0 ? '+' : ''}{calculateModifier(score)}
+              <div className="grid grid-cols-6 gap-2 mb-6">
+                {rolledScores.map((score, index) => {
+                  const mod = calculateModifier(score);
+                  const isUsed = Object.values(assignedScores).includes(index);
+                  return (
+                    <div
+                      key={index}
+                      className={`text-center py-3 rounded-lg border-2 transition-all ${
+                        isUsed
+                          ? 'border-gray-600 bg-gray-800/30 opacity-40'
+                          : 'border-red-500/50 bg-red-900/10 hover:bg-red-900/20'
+                      }`}
+                    >
+                      <div className="text-2xl font-bold text-white">{score}</div>
+                      <div className={`text-lg font-semibold ${mod >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {mod >= 0 ? '+' : ''}{mod}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {abilityNames.map((ability) => (
-                  <div key={ability} className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-300">{ability}</label>
-                    <select
-                      value={assignedScores[ability] !== undefined ? assignedScores[ability] : ''}
-                      onChange={(e) => e.target.value && assignScore(ability, parseInt(e.target.value))}
-                      className="input-dark w-full"
-                    >
-                      <option value="">Sélectionner...</option>
-                      {rolledScores.map((score, index) => (
-                        <option
-                          key={index}
-                          value={index}
-                          disabled={Object.values(assignedScores).includes(index)}
-                        >
-                          {score} ({calculateModifier(score) >= 0 ? '+' : ''}{calculateModifier(score)})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
+                {abilityNames.map((ability) => {
+                  const assignedIndex = assignedScores[ability];
+                  const baseVal = abilities[ability] ?? 0;
+                  const effVal = effectiveAbilities[ability] ?? baseVal;
+                  const bonus = effVal - baseVal;
+                  const effMod = baseVal > 0 ? calculateModifier(effVal) : 0;
+
+                  return (
+                    <div key={ability} className="p-4 rounded-lg bg-gray-800/50 border border-gray-700">
+                      <label className="block text-sm font-medium text-gray-300 mb-2">{ability}</label>
+                      <select
+                        value={assignedIndex !== undefined ? assignedIndex : ''}
+                        onChange={(e) => e.target.value && assignScore(ability, parseInt(e.target.value))}
+                        className="input-dark w-full mb-3"
+                      >
+                        <option value="">Sélectionner...</option>
+                        {rolledScores.map((score, index) => {
+                          const mod = calculateModifier(score);
+                          return (
+                            <option
+                              key={index}
+                              value={index}
+                              disabled={Object.values(assignedScores).includes(index) && assignedScores[ability] !== index}
+                            >
+                              {score} (mod: {mod >= 0 ? '+' : ''}{mod})
+                            </option>
+                          );
+                        })}
+                      </select>
+                      
+                      {baseVal > 0 && (
+                        <div className="flex items-center justify-between pt-2 border-t border-gray-700">
+                          <div>
+                            <div className="text-xl font-bold text-white">{effVal}</div>
+                            <div className="text-xs text-gray-500">score final</div>
+                          </div>
+                          <div className="text-right">
+                            <div className={`text-2xl font-bold ${effMod >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                              {effMod >= 0 ? '+' : ''}{effMod}
+                            </div>
+                            <div className="text-xs text-gray-500">modificateur</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Ajustements issus de l'historique */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-white">Ajustements d'historique</h3>
-            {selectedBackground ? (
-              <span className="text-sm text-gray-400">Historique: {selectedBackground.name}</span>
-            ) : (
-              <span className="text-sm text-gray-500">Aucun historique sélectionné</span>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          {!selectedBackground ? (
-            <p className="text-gray-400 text-sm">
-              Sélectionnez un historique pour appliquer des bonus aux caractéristiques.
-            </p>
-          ) : (
+      {selectedBackground && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-blue-400" />
+              <h3 className="text-lg font-semibold text-white">Bonus d'historique</h3>
+              <span className="text-sm text-gray-400 ml-auto">{selectedBackground.name}</span>
+            </div>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-4">
               <div className="flex gap-3">
                 <Button
@@ -382,20 +425,20 @@ export default function AbilityScores({
                   size="sm"
                   onClick={() => setBgMode('twoPlusOne')}
                 >
-                  +2 et +1 (deux caracs différentes)
+                  +2 et +1
                 </Button>
                 <Button
                   variant={bgMode === 'oneOneOne' ? 'primary' : 'secondary'}
                   size="sm"
                   onClick={() => setBgMode('oneOneOne')}
                 >
-                  +1 +1 +1 (sur les 3 caracs de l'historique)
+                  +1 +1 +1
                 </Button>
               </div>
 
-              <div className="text-xs text-gray-400">
-                Caractéristiques autorisées par l'historique:&nbsp;
-                <span className="text-gray-300">
+              <div className="text-xs text-gray-400 p-2 rounded bg-gray-800/50">
+                Caractéristiques autorisées:&nbsp;
+                <span className="text-gray-300 font-medium">
                   {selectedBackground.abilityScores.join(' • ')}
                 </span>
               </div>
@@ -403,7 +446,7 @@ export default function AbilityScores({
               {bgMode === 'twoPlusOne' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">+2 à</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Bonus de +2</label>
                     <select
                       className="input-dark w-full"
                       value={bgAssignments.plusTwo ?? ''}
@@ -424,7 +467,7 @@ export default function AbilityScores({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">+1 à</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Bonus de +1</label>
                     <select
                       className="input-dark w-full"
                       value={bgAssignments.plusOne ?? ''}
@@ -446,56 +489,20 @@ export default function AbilityScores({
                   </div>
                 </div>
               ) : (
-                <div className="p-3 rounded-md bg-gray-800 border border-gray-700 text-sm text-gray-300">
-                  +1 s’applique automatiquement à chacune de: {selectedBackground.abilityScores.join(', ')}.
+                <div className="p-3 rounded-md bg-blue-900/20 border border-blue-700/50 text-sm text-blue-200">
+                  ✓ Bonus de +1 appliqué automatiquement à: {selectedBackground.abilityScores.join(', ')}
+                </div>
+              )}
+
+              {!isBackgroundComplete && (
+                <div className="mt-3 p-2 rounded bg-yellow-900/20 border border-yellow-700/50 text-sm text-yellow-200">
+                  ⚠️ Sélectionnez deux caractéristiques différentes pour continuer
                 </div>
               )}
             </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Aperçu des scores finaux (base + background) */}
-      <Card>
-        <CardHeader>
-          <h3 className="text-lg font-semibold text-white">Aperçu des scores finaux</h3>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {abilityNames.map((ability) => {
-              const baseVal = abilities[ability] ?? 8;
-              const effVal = effectiveAbilities[ability] ?? baseVal;
-              const bonus = effVal - baseVal;
-              const mod = calculateModifier(effVal);
-
-              return (
-                <div key={ability} className="p-3 rounded-lg bg-gray-800 border border-gray-700">
-                  <div className="flex items-baseline justify-between">
-                    <span className="text-sm text-gray-400">{ability}</span>
-                    <span className="text-xs text-gray-500">Mod: {mod >= 0 ? `+${mod}` : mod}</span>
-                  </div>
-                  <div className="mt-1 flex items-center justify-between">
-                    <span className="text-xl font-bold text-white">{effVal}</span>
-                    <span className="text-xs text-gray-400">
-                      Base: {baseVal}{' '}
-                      {bonus !== 0 && (
-                        <span className={bonus > 0 ? 'text-green-400' : 'text-red-400'}>
-                          ({bonus > 0 ? `+${bonus}` : bonus})
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          {!isBackgroundComplete && (
-            <div className="mt-3 text-sm text-yellow-300">
-              Assignez vos bonus (+2 et +1) sur deux caractéristiques différentes pour continuer.
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex justify-between pt-6">
         <Button
