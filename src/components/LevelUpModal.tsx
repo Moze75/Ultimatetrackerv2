@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, TrendingUp, Heart, Dices, BookOpen } from 'lucide-react';
+import { X, TrendingUp, Heart, Dices, BookOpen, Eye, ChevronDown, ChevronUp } from 'lucide-react';
 import { Player, DndClass } from '../types/dnd';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { getSpellSlotsByLevel, getSpellKnowledgeInfo } from '../utils/spellSlots2024';
+import { loadSectionsSmart } from './ClassesTab/modals/ClassDataModal';
+import { AbilitySection } from './ClassesTab/modals/ClassUtilsModal';
+import { AbilityCard } from './ClassesTab/modals/ClassAbilitiesModal';
 
 interface LevelUpModalProps {
   isOpen: boolean;
@@ -72,6 +75,136 @@ function mapClassForRpc(pClass: DndClass | null | undefined): string | null | un
   return pClass;
 }
 
+/* ============================ Nouveau composant : Prévisualisation Sous-classe ============================ */
+
+interface SubclassPreviewProps {
+  subclassName: string;
+  className: string;
+  level: number;
+  isSelected: boolean;
+  onSelect: () => void;
+}
+
+function SubclassPreview({ subclassName, className, level, isSelected, onSelect }: SubclassPreviewProps) {
+  const [sections, setSections] = useState<AbilitySection[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    
+    const loadSections = async () => {
+      setLoading(true);
+      try {
+        const res = await loadSectionsSmart({
+          className,
+          subclassName,
+          level,
+        });
+        if (!mounted) return;
+        
+        // Filtrer uniquement les aptitudes de sous-classe de niveau 3
+        const subclassSections = res.filter(
+          s => s.origin === 'subclass' && (typeof s.level === 'number' ? s.level <= level : true)
+        );
+        setSections(subclassSections);
+      } catch (e) {
+        console.debug('[SubclassPreview] loadSectionsSmart error:', e);
+        if (!mounted) return;
+        setSections([]);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    loadSections();
+    return () => { mounted = false; };
+  }, [className, subclassName, level]);
+
+  return (
+    <div 
+      className={`
+        rounded-lg border-2 p-4 cursor-pointer transition-all
+        ${isSelected 
+          ? 'border-amber-500 bg-amber-500/10' 
+          : 'border-gray-700 bg-gray-800/30 hover:border-gray-600'
+        }
+      `}
+      onClick={onSelect}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <div 
+              className={`
+                w-5 h-5 rounded-full border-2 flex items-center justify-center
+                ${isSelected ? 'border-amber-500 bg-amber-500' : 'border-gray-600'}
+              `}
+            >
+              {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
+            </div>
+            <h4 className="font-semibold text-gray-100">{subclassName}</h4>
+          </div>
+          
+          {sections.length > 0 && (
+            <p className="text-sm text-gray-400 mt-2">
+              {sections.length} aptitude{sections.length > 1 ? 's' : ''} au niveau {level}
+            </p>
+          )}
+        </div>
+
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowDetails(!showDetails);
+          }}
+          className="p-2 text-gray-400 hover:text-gray-300 hover:bg-gray-700/50 rounded-lg transition-colors"
+          title="Voir les détails"
+        >
+          {showDetails ? <ChevronUp size={20} /> : <Eye size={20} />}
+        </button>
+      </div>
+
+      {/* Détails des aptitudes */}
+      {showDetails && (
+        <div className="mt-4 pt-4 border-t border-gray-700/50">
+          {loading ? (
+            <div className="flex items-center justify-center py-4">
+              <img
+                src="/icons/wmremove-transformed.png"
+                alt="Chargement..."
+                className="animate-spin h-6 w-6 object-contain"
+                style={{ backgroundColor: 'transparent' }}
+              />
+            </div>
+          ) : sections.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-2">
+              Aucune aptitude trouvée
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {sections.map((s, i) => (
+                <AbilityCard
+                  key={`${s.origin}-${s.level ?? 'x'}-${i}`}
+                  section={s}
+                  defaultOpen={false}
+                  ctx={{
+                    characterId: null,
+                    className: className,
+                    subclassName: subclassName,
+                    checkedMap: new Map(),
+                    onToggle: () => {},
+                  }}
+                  disableContentWhileLoading={false}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /* ============================ Composant ============================ */
 
@@ -402,7 +535,7 @@ export function LevelUpModal({ isOpen, onClose, player, onUpdate }: LevelUpModal
       <div
         className="
           bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-2xl
-          max-w-md w-full border border-gray-700/50 overflow-hidden
+          max-w-3xl w-full border border-gray-700/50 overflow-hidden
           flex flex-col max-h-[90vh]
         "
         role="dialog"
@@ -503,39 +636,42 @@ export function LevelUpModal({ isOpen, onClose, player, onUpdate }: LevelUpModal
             </div>
           </div>
 
-          {/* Sous-classe (niveau 3) */}
+          {/* Sous-classe (niveau 3) - VERSION AMÉLIORÉE */}
           {newLevel === 3 && (
             <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-4">
                 <BookOpen className="w-5 h-5 text-amber-400" />
-                <h5 className="font-medium text-gray-200">Sous-classe</h5>
+                <h5 className="font-medium text-gray-200">Choix de sous-classe</h5>
               </div>
 
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">Choisissez votre sous-classe</label>
-                <select
-                  value={selectedSubclass}
-                  onChange={(e) => setSelectedSubclass(e.target.value)}
-                  className="input-dark w-full px-3 py-2 rounded-md"
-                  disabled={availableSubclasses.length === 0}
-                >
-                  <option value="">{availableSubclasses.length ? 'Sélectionnez une sous-classe' : 'Aucune sous-classe disponible'}</option>
-                  {availableSubclasses.map((sub) => (
-                    <option key={sub} value={sub}>
-                      {sub}
-                    </option>
-                  ))}
-                </select>
+              <div className="space-y-3">
+                {availableSubclasses.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-2">
+                    Aucune sous-classe disponible. Vous pourrez la définir plus tard dans les paramètres du personnage.
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-sm text-gray-300 mb-3">
+                      Cliquez sur <Eye className="inline w-4 h-4" /> pour consulter les aptitudes de chaque sous-classe :
+                    </p>
+                    
+                    {availableSubclasses.map((subclass) => (
+                      <SubclassPreview
+                        key={subclass}
+                        subclassName={subclass}
+                        className={player.class || ''}
+                        level={newLevel}
+                        isSelected={selectedSubclass === subclass}
+                        onSelect={() => setSelectedSubclass(subclass)}
+                      />
+                    ))}
 
-                {!player.subclass && availableSubclasses.length > 0 && (
-                  <p className="text-xs text-gray-500">
-                    La sous-classe est requise au niveau 3. Vous pourrez consulter vos nouvelles aptitudes dans l’onglet Classe.
-                  </p>
-                )}
-                {availableSubclasses.length === 0 && (
-                  <p className="text-xs text-gray-500">
-                    Impossible de charger les sous-classes pour {player.class}. Vous pourrez la définir plus tard dans les paramètres du personnage.
-                  </p>
+                    {!player.subclass && (
+                      <p className="text-xs text-gray-500 mt-4 text-center">
+                        La sous-classe est requise au niveau 3. Consultez les aptitudes ci-dessus pour faire votre choix.
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </div>
