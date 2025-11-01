@@ -2489,7 +2489,7 @@ if (matchingMember) {
 }
 
 // =============================================
-// Modal de génération de loot aléatoire - COMPLET
+// Modal de génération de loot aléatoire - VERSION COMPLÈTE
 // =============================================
 function RandomLootModal({
   campaignId,
@@ -2504,6 +2504,7 @@ function RandomLootModal({
   onClose: () => void;
   onSent: () => void;
 }) {
+  // États principaux
   const [levelRange, setLevelRange] = useState<LevelRange>('1-4');
   const [difficulty, setDifficulty] = useState<Difficulty>('facile');
   const [enemyCount, setEnemyCount] = useState<EnemyCount>('1');
@@ -2522,7 +2523,7 @@ function RandomLootModal({
   const [loadingCatalog, setLoadingCatalog] = useState(false);
   const [catalog, setCatalog] = useState<any[]>([]);
 
-  // ✅ NOUVEAU : États pour la personnalisation des probabilités
+  // États pour la personnalisation des probabilités
   const [customMode, setCustomMode] = useState(false);
   const [customProbs, setCustomProbs] = useState({
     copper: 0,
@@ -2534,11 +2535,11 @@ function RandomLootModal({
 
   const META_PREFIX = '#meta:';
 
-  // ✅ MODIFIÉ : Utiliser les probabilités personnalisées ou par défaut
+  // Calculer les probabilités à utiliser
   const defaultProbs = LOOT_TABLES[levelRange][difficulty][enemyCount];
   const probs = customMode ? customProbs : defaultProbs;
 
-  // ✅ Charger le catalogue d'équipements
+  // Charger le catalogue d'équipements
   useEffect(() => {
     const loadCatalog = async () => {
       setLoadingCatalog(true);
@@ -2556,7 +2557,7 @@ function RandomLootModal({
     loadCatalog();
   }, []);
 
-  // ✅ NOUVEAU : Initialiser les probabilités personnalisées quand on change les paramètres
+  // Initialiser les probabilités personnalisées
   useEffect(() => {
     if (!customMode) {
       const newDefaultProbs = LOOT_TABLES[levelRange][difficulty][enemyCount];
@@ -2564,7 +2565,7 @@ function RandomLootModal({
     }
   }, [levelRange, difficulty, enemyCount, customMode]);
 
-  // ✅ Sync selectAllRecipients
+  // Synchroniser la sélection de tous les destinataires
   useEffect(() => {
     if (selectAllRecipients) {
       const allIds = members.map(m => m.user_id || m.player_id || m.id).filter(Boolean) as string[];
@@ -2574,7 +2575,7 @@ function RandomLootModal({
     }
   }, [selectAllRecipients, members]);
 
-  // ✅ NOUVEAU : Fonction pour mettre à jour une probabilité
+  // Fonction pour mettre à jour une probabilité
   const updateProbability = (key: keyof typeof customProbs, value: number) => {
     const clampedValue = Math.max(0, Math.min(100, value));
     setCustomProbs(prev => ({
@@ -2583,11 +2584,11 @@ function RandomLootModal({
     }));
   };
 
-  // ✅ NOUVEAU : Calculer le total des probabilités
+  // Calculer le total et valider
   const totalProb = customProbs.copper + customProbs.silver + customProbs.gold + customProbs.equipment + customProbs.gems;
   const probsValid = totalProb === 100;
 
-  // ✅ Toggle destinataire
+  // Toggle destinataire
   const toggleRecipient = (userId: string) => {
     setSelectedRecipients(prev => {
       if (prev.includes(userId)) return prev.filter(id => id !== userId);
@@ -2596,7 +2597,7 @@ function RandomLootModal({
     setSelectAllRecipients(false);
   };
 
-  // ✅ Sélectionner un équipement aléatoire du catalogue
+  // Sélectionner un équipement aléatoire
   const getRandomEquipmentFromCatalog = () => {
     if (catalog.length === 0) return null;
     
@@ -2619,8 +2620,9 @@ function RandomLootModal({
     return filtered[randomIndex];
   };
 
-  // ✅ Générer le loot
+  // ✅ CORRECTION : Générer le loot avec les bonnes probabilités
   const generateLoot = () => {
+    const actualProbs = probs; // Utilise les bonnes probabilités
     const currencyRanges = CURRENCY_AMOUNTS[levelRange];
     const gemRange = GEM_AMOUNTS[levelRange];
     
@@ -2632,29 +2634,25 @@ function RandomLootModal({
 
     const roll = Math.random() * 100;
     
-    if (roll < probs.copper) {
-      // ========== CUIVRE SEULEMENT ==========
+    if (roll < actualProbs.copper) {
       copper = Math.floor(
         Math.random() * (currencyRanges.copper.max - currencyRanges.copper.min + 1) + currencyRanges.copper.min
       );
       
-    } else if (roll < probs.copper + probs.silver) {
-      // ========== ARGENT ==========
+    } else if (roll < actualProbs.copper + actualProbs.silver) {
       silver = Math.floor(
         Math.random() * (currencyRanges.silver.max - currencyRanges.silver.min + 1) + currencyRanges.silver.min
       );
       copper = Math.floor(Math.random() * 11);
       
-    } else if (roll < probs.copper + probs.silver + probs.gold) {
-      // ========== OR ==========
+    } else if (roll < actualProbs.copper + actualProbs.silver + actualProbs.gold) {
       gold = Math.floor(
         Math.random() * (currencyRanges.gold.max - currencyRanges.gold.min + 1) + currencyRanges.gold.min
       );
       silver = Math.floor(Math.random() * 6);
       copper = Math.floor(Math.random() * 11);
       
-    } else if (roll < probs.copper + probs.silver + probs.gold + probs.equipment) {
-      // ========== ÉQUIPEMENT ==========
+    } else if (roll < actualProbs.copper + actualProbs.silver + actualProbs.gold + actualProbs.equipment) {
       const numItems = 
         levelRange === '1-4' ? 1 : 
         levelRange === '5-10' ? (Math.random() < 0.5 ? 1 : 2) : 
@@ -2684,19 +2682,16 @@ function RandomLootModal({
         }
       }
       
-      // Argent bonus avec l'équipement
       silver = Math.floor(
         Math.random() * (currencyRanges.silver.max * 0.3 - currencyRanges.silver.min * 0.1 + 1) + currencyRanges.silver.min * 0.1
       );
       copper = Math.floor(Math.random() * 11);
       
     } else {
-      // ========== PIERRES PRÉCIEUSES ==========
       const numGems = Math.floor(
         Math.random() * (gemRange.max - gemRange.min + 1) + gemRange.min
       );
       
-      // Filtrer les gemmes du catalogue
       const gemItems = catalog.filter(item => item.kind === 'gems');
       
       if (gemItems.length > 0) {
@@ -2710,7 +2705,6 @@ function RandomLootModal({
         }
       }
       
-      // Un peu d'argent bonus avec les gemmes
       silver = Math.floor(
         Math.random() * (currencyRanges.silver.max * 0.2) + currencyRanges.silver.min
       );
@@ -2720,7 +2714,7 @@ function RandomLootModal({
     return { copper, silver, gold, equipment, gems };
   };
 
-  // ✅ Prévisualiser le loot
+  // Prévisualiser le loot
   const handlePreview = () => {
     if (loadingCatalog) {
       toast.error('Chargement du catalogue en cours...');
@@ -2730,7 +2724,7 @@ function RandomLootModal({
     setPreviewLoot(loot);
   };
 
-  // ✅ Envoyer le loot
+  // Envoyer le loot
   const handleSend = async () => {
     if (distributionMode === 'individual' && selectedRecipients.length === 0) {
       toast.error('Sélectionnez au moins un destinataire');
@@ -2779,7 +2773,7 @@ function RandomLootModal({
         });
       }
 
-      // ✅ Envoi des pierres précieuses
+      // Envoi des gemmes
       if (previewLoot.gems && previewLoot.gems.length > 0) {
         for (const gem of previewLoot.gems) {
           const metaLine = `${META_PREFIX}${JSON.stringify(gem.meta)}`;
@@ -2816,6 +2810,8 @@ function RandomLootModal({
     <div className="fixed inset-0 z-[10000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
       <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(40rem,95vw)] max-h-[90vh] overflow-y-auto bg-gray-900/95 border border-gray-700 rounded-xl p-6">
+        
+        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center">
@@ -2828,6 +2824,7 @@ function RandomLootModal({
           </button>
         </div>
 
+        {/* Chargement du catalogue */}
         {loadingCatalog && (
           <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mb-4">
             <div className="flex items-center gap-3">
@@ -2838,6 +2835,7 @@ function RandomLootModal({
         )}
 
         <div className="space-y-6">
+          {/* Paramètres de la rencontre */}
           <div className="bg-gray-800/30 rounded-lg p-4 space-y-4">
             <h4 className="text-sm font-semibold text-gray-300 mb-3">Paramètres de la rencontre</h4>
             
@@ -2887,7 +2885,7 @@ function RandomLootModal({
               </div>
             </div>
 
-            {/* ✅ NOUVEAU : Toggle mode personnalisé */}
+            {/* Toggle mode personnalisé */}
             <div className="flex items-center justify-between bg-gray-900/40 rounded p-3">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-300">Mode personnalisé</span>
@@ -2907,7 +2905,7 @@ function RandomLootModal({
               </button>
             </div>
 
-            {/* ✅ NOUVEAU : Interface de modification des probabilités */}
+            {/* Interface de modification des probabilités */}
             {customMode && (
               <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4 space-y-3">
                 <div className="flex items-center justify-between mb-3">
@@ -3000,31 +2998,72 @@ function RandomLootModal({
               </div>
             )}
 
-            {/* Affichage des probabilités actuelles */}
+            {/* Affichage des probabilités */}
             <div className="bg-gray-900/40 rounded p-3 text-xs text-gray-400">
-              <div className="font-semibold text-gray-300 mb-2">
-                {customMode ? 'Probabilités personnalisées :' : 'Probabilités :'}
+              <div className="flex items-center justify-between mb-2">
+                <div className="font-semibold text-gray-300">
+                  {customMode ? '🎯 Probabilités personnalisées :' : 'Probabilités par défaut :'}
+                </div>
+                {customMode && probsValid && (
+                  <div className="text-xs bg-purple-900/30 text-purple-300 px-2 py-1 rounded border border-purple-500/30">
+                    ✓ Personnalisées
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                <div>🟤 Cuivre: {probs.copper}%</div>
-                <div>⚪ Argent: {probs.silver}%</div>
-                <div>🟡 Or: {probs.gold}%</div>
-                <div>⚔️ Équipement: {probs.equipment}%</div>
-                <div>💎 Gemmes: {probs.gems}%</div>
+                <div className={customMode && probs.copper !== defaultProbs.copper ? 'text-purple-300 font-semibold' : ''}>
+                  🟤 Cuivre: {probs.copper}%
+                </div>
+                <div className={customMode && probs.silver !== defaultProbs.silver ? 'text-purple-300 font-semibold' : ''}>
+                  ⚪ Argent: {probs.silver}%
+                </div>
+                <div className={customMode && probs.gold !== defaultProbs.gold ? 'text-purple-300 font-semibold' : ''}>
+                  🟡 Or: {probs.gold}%
+                </div>
+                <div className={customMode && probs.equipment !== defaultProbs.equipment ? 'text-purple-300 font-semibold' : ''}>
+                  ⚔️ Équipement: {probs.equipment}%
+                </div>
+                <div className={customMode && probs.gems !== defaultProbs.gems ? 'text-purple-300 font-semibold' : ''}>
+                  💎 Gemmes: {probs.gems}%
+                </div>
               </div>
             </div>
 
-            <button
-              onClick={handlePreview}
-              disabled={loadingCatalog || (customMode && !probsValid)}
-              className="w-full btn-primary px-4 py-2 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              <Dices size={18} />
-              {loadingCatalog ? 'Chargement...' : 'Générer le loot'}
-            </button>
+            {/* Bouton de génération */}
+            <div className="flex gap-2">
+              <button
+                onClick={handlePreview}
+                disabled={loadingCatalog || (customMode && !probsValid)}
+                className="flex-1 btn-primary px-4 py-2 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                <Dices size={18} />
+                {loadingCatalog ? 'Chargement...' : 'Générer le loot'}
+              </button>
+              
+              {customMode && (
+                <button
+                  onClick={() => {
+                    console.log('🎲 Test des probabilités:', {
+                      copper: probs.copper,
+                      silver: probs.silver,
+                      gold: probs.gold,
+                      equipment: probs.equipment,
+                      gems: probs.gems,
+                      total: totalProb,
+                      valid: probsValid
+                    });
+                    toast.success(`Probabilités ${probsValid ? 'valides' : 'invalides'} (${totalProb}%)`);
+                  }}
+                  className="px-3 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm"
+                  title="Tester les probabilités"
+                >
+                  🧪
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Prévisualisation du loot (reste de l'interface) */}
+          {/* Prévisualisation du loot */}
           {previewLoot && (
             <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
               <h4 className="text-sm font-semibold text-green-300 mb-3">🎁 Loot généré :</h4>
@@ -3084,7 +3123,7 @@ function RandomLootModal({
             </div>
           )}
 
-          {/* Mode de distribution et destinataires */}
+          {/* Mode de distribution */}
           {previewLoot && (
             <>
               <div>
@@ -3123,6 +3162,7 @@ function RandomLootModal({
                 </div>
               </div>
 
+              {/* Sélection des destinataires */}
               {distributionMode === 'individual' && (
                 <div className="bg-gray-800/30 rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
@@ -3157,6 +3197,7 @@ function RandomLootModal({
                 </div>
               )}
 
+              {/* Message */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Message (optionnel)
@@ -3173,6 +3214,7 @@ function RandomLootModal({
           )}
         </div>
 
+        {/* Boutons d'action */}
         <div className="flex justify-end gap-3 mt-6">
           <button
             onClick={onClose}
