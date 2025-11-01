@@ -206,7 +206,7 @@ useEffect(() => {
     }
   }, [selectedCharacter]);
 
- // Gestion du bouton "retour"
+// Gestion du bouton "retour"
 useEffect(() => {
   try {
     window.history.pushState({ ut: 'keepalive' }, '');
@@ -215,7 +215,7 @@ useEffect(() => {
   }
 
   const onPopState = (_ev: PopStateEvent) => {
-    // ✅ CAS 1 : Depuis le jeu (personnage sélectionné) → demander confirmation
+    // ✅ CAS 1 : Depuis le jeu (personnage sélectionné) → demander confirmation pour retourner à la sélection
     if (sessionRef.current && selectedCharacterRef.current) {
       console.log('[App] ⬅️ Retour détecté depuis le jeu');
       
@@ -244,8 +244,7 @@ useEffect(() => {
               <button
                 onClick={() => {
                   toast.dismiss(t.id);
-                  console.log('[App] ✅ Confirmation: retour à la sélection');
-                  // ✅ RETOUR À LA SÉLECTION (pas quitter l'app)
+                  console.log('[App] ✅ Retour à la sélection confirmé');
                   try {
                     sessionStorage.setItem(SKIP_AUTO_RESUME_ONCE, '1');
                     appContextService.setContext('selection');
@@ -253,7 +252,6 @@ useEffect(() => {
                     // no-op
                   }
                   setSelectedCharacter(null);
-                  // Remettre l'état après le retour
                   try {
                     window.history.pushState({ ut: 'keepalive' }, '');
                   } catch {
@@ -273,21 +271,21 @@ useEffect(() => {
         }
       );
       
-      // Remettre l'état pour ne pas naviguer immédiatement
+      // Bloquer la navigation
       try {
         window.history.pushState({ ut: 'keepalive' }, '');
       } catch {
         // no-op
       }
-      return;
+      return; // ← Important : on s'arrête ici, jamais de double-clic pour quitter depuis le jeu
     }
 
-    // ✅ CAS 2 : Depuis la sélection des personnages → double appui pour QUITTER l'app
+    // ✅ CAS 2 : Depuis la sélection des personnages → double appui pour quitter l'app
     const now = Date.now();
     if (now - (backPressRef.current ?? 0) < 1500) {
       console.log('[App] ⬅️ Double appui: quitter l\'application');
       window.removeEventListener('popstate', onPopState);
-      window.history.back(); // ← Ici on QUITTE vraiment
+      window.history.back();
     } else {
       backPressRef.current = now;
       toast('Appuyez à nouveau pour quitter l\'application', { icon: '↩️' });
