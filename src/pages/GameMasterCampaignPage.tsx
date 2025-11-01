@@ -2097,79 +2097,85 @@ function SendGiftModal({
     setSelectAllRecipients(false);
   };
 
-  const handleSend = async () => {
-    if (distributionMode === 'individual' && selectedRecipients.length === 0) {
-      toast.error('Sélectionnez au moins un destinataire');
+  // ✅ CORRECTION COMPLÈTE du handleSend dans SendGiftModal
+const handleSend = async () => {
+  if (distributionMode === 'individual' && selectedRecipients.length === 0) {
+    toast.error('Sélectionnez au moins un destinataire');
+    return;
+  }
+
+  if (giftType === 'item') {
+    if (selectedItems.size === 0) {
+      toast.error('Sélectionnez au moins un objet');
       return;
     }
+  } else {
+    if (gold <= 0 && silver <= 0 && copper <= 0) {
+      toast.error('Entrez un montant');
+      return;
+    }
+  }
+
+  try {
+    setSending(true);
+    const recipientIds = distributionMode === 'individual' ? selectedRecipients : null;
 
     if (giftType === 'item') {
-      if (selectedItems.size === 0) {
-        toast.error('Sélectionnez au moins un objet');
-        return;
-      }
-    } else {
-      if (gold <= 0 && silver <= 0 && copper <= 0) {
-        toast.error('Entrez un montant');
-        return;
-      }
-    }
+      // ✅ Envoyer chaque objet sélectionné
+      for (const [itemId, quantity] of selectedItems.entries()) {
+        const item = inventory.find(i => i.id === itemId);
+        if (!item) continue;
 
-    try {
-      setSending(true);
-      const recipientIds = distributionMode === 'individual' ? selectedRecipients : null;
-
-      if (giftType === 'item') {
-        for (const [itemId, quantity] of selectedItems.entries()) {
-          const item = inventory.find(i => i.id === itemId);
-          if (!item) continue;
-
-          await campaignService.sendGift(campaignId, 'item', {
-            itemName: item.name,
-            itemDescription: getFullDescription(item),
-            itemQuantity: quantity,
-            gold: 0,
-            silver: 0,
-            copper: 0,
-            distributionMode,
-            message: message.trim() || undefined,
-            recipientIds: recipientIds || undefined,
-            inventoryItemId: item.id,
-          });
-
-          if (removeFromInventory) {
-            const newQuantity = item.quantity - quantity;
-            if (newQuantity > 0) {
-              await campaignService.updateCampaignItem(item.id, {
-                quantity: newQuantity,
-              });
-            } else {
-              await campaignService.deleteCampaignItem(item.id);
-            }
-          }
-        }
-
-        const action = removeFromInventory ? 'envoyé' : 'dupliqué et envoyé';
-        toast.success(`${selectedItems.size} objet${selectedItems.size > 1 ? 's' : ''} ${action}${selectedItems.size > 1 ? 's' : ''} !`);
-      } else {
-        await campaignService.sendGift(campaignId, 'currency', {
-          gold,
-          silver,
-          copper,
+        // ✅ CORRECTION : Ne PAS envoyer inventoryItemId si on duplique
+        await campaignService.sendGift(campaignId, 'item', {
+          itemName: item.name,
+          itemDescription: getFullDescription(item),
+          itemQuantity: quantity,
+          gold: 0,
+          silver: 0,
+          copper: 0,
           distributionMode,
           message: message.trim() || undefined,
           recipientIds: recipientIds || undefined,
+          // ✅ CLEF : N'envoyer inventoryItemId que si on veut supprimer
+          ...(removeFromInventory ? { inventoryItemId: item.id } : {}),
         });
+
+        // ✅ Décrémenter l'inventaire UNIQUEMENT si removeFromInventory est true
+        if (removeFromInventory) {
+          const newQuantity = item.quantity - quantity;
+          if (newQuantity > 0) {
+            await campaignService.updateCampaignItem(item.id, {
+              quantity: newQuantity,
+            });
+          } else {
+            await campaignService.deleteCampaignItem(item.id);
+          }
+        }
       }
 
-      onSent();
-    } catch (error) {
-      console.error(error);
-      toast.error('Erreur lors de l\'envoi');
-    } finally {
-      setSending(false);
+      const action = removeFromInventory ? 'envoyé' : 'dupliqué et envoyé';
+      toast.success(`${selectedItems.size} objet${selectedItems.size > 1 ? 's' : ''} ${action}${selectedItems.size > 1 ? 's' : ''} !`);
+    } else {
+      // Envoi d'argent (inchangé)
+      await campaignService.sendGift(campaignId, 'currency', {
+        gold,
+        silver,
+        copper,
+        distributionMode,
+        message: message.trim() || undefined,
+        recipientIds: recipientIds || undefined,
+      });
     }
-  };
+
+    onSent();
+  } catch (error) {
+    console.error(error);
+    toast.error('Erreur lors de l\'envoi');
+  } finally {
+    setSending(false);
+  }
+};
 
   return (
     <div className="fixed inset-0 z-[10000]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
