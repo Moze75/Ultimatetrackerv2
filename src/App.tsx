@@ -206,102 +206,53 @@ useEffect(() => {
     }
   }, [selectedCharacter]);
 
-// Gestion du bouton "retour"
-useEffect(() => {
-  try {
-    window.history.pushState({ ut: 'keepalive' }, '');
-  } catch {
-    // no-op
-  }
+  // Gestion du bouton "retour"
+  useEffect(() => {
+    try {
+      window.history.pushState({ ut: 'keepalive' }, '');
+    } catch {
+      // no-op
+    }
 
-  const onPopState = (_ev: PopStateEvent) => {
-    // ✅ CAS 1 : Depuis le jeu (personnage sélectionné) → demander confirmation pour retourner à la sélection
-    if (sessionRef.current && selectedCharacterRef.current) {
-      console.log('[App] ⬅️ Retour détecté depuis le jeu');
-      
-      // Afficher un toast de confirmation avec boutons
-      toast(
-        (t) => (
-          <div className="flex flex-col gap-3">
-            <p className="text-sm font-medium">
-              Retourner à la sélection des personnages ?
-            </p>
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => {
-                  toast.dismiss(t.id);
-                  // Rester sur le jeu
-                  try {
-                    window.history.pushState({ ut: 'keepalive' }, '');
-                  } catch {
-                    // no-op
-                  }
-                }}
-                className="px-3 py-1.5 rounded bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={() => {
-                  toast.dismiss(t.id);
-                  console.log('[App] ✅ Retour à la sélection confirmé');
-                  try {
-                    sessionStorage.setItem(SKIP_AUTO_RESUME_ONCE, '1');
-                    appContextService.setContext('selection');
-                  } catch {
-                    // no-op
-                  }
-                  setSelectedCharacter(null);
-                  try {
-                    window.history.pushState({ ut: 'keepalive' }, '');
-                  } catch {
-                    // no-op
-                  }
-                }}
-                className="px-3 py-1.5 rounded bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition-colors"
-              >
-                Retour à la sélection
-              </button>
-            </div>
-          </div>
-        ),
-        {
-          duration: 6000,
-          icon: '⚠️',
+    const onPopState = (_ev: PopStateEvent) => {
+      if (sessionRef.current && selectedCharacterRef.current) {
+        console.log('[App] ⬅️ Retour: jeu → sélection');
+        try {
+          sessionStorage.setItem(SKIP_AUTO_RESUME_ONCE, '1');
+          appContextService.setContext('selection');
+        } catch {
+          // no-op
         }
-      );
-      
-      // Bloquer la navigation
-      try {
-        window.history.pushState({ ut: 'keepalive' }, '');
-      } catch {
-        // no-op
+        setSelectedCharacter(null);
+        try {
+          window.history.pushState({ ut: 'keepalive' }, '');
+        } catch {
+          // no-op
+        }
+        return;
       }
-      return; // ← Important : on s'arrête ici, jamais de double-clic pour quitter depuis le jeu
-    }
 
-    // ✅ CAS 2 : Depuis la sélection des personnages → double appui pour quitter l'app
-    const now = Date.now();
-    if (now - (backPressRef.current ?? 0) < 1500) {
-      console.log('[App] ⬅️ Double appui: quitter l\'application');
+      const now = Date.now();
+      if (now - (backPressRef.current ?? 0) < 1500) {
+        console.log('[App] ⬅️ Double appui: quitter');
+        window.removeEventListener('popstate', onPopState);
+        window.history.back();
+      } else {
+        backPressRef.current = now;
+        toast('Appuyez à nouveau pour quitter', { icon: '↩️' });
+        try {
+          window.history.pushState({ ut: 'keepalive' }, '');
+        } catch {
+          // no-op
+        }
+      }
+    };
+
+    window.addEventListener('popstate', onPopState);
+    return () => {
       window.removeEventListener('popstate', onPopState);
-      window.history.back();
-    } else {
-      backPressRef.current = now;
-      toast('Appuyez à nouveau pour quitter l\'application', { icon: '↩️' });
-      try {
-        window.history.pushState({ ut: 'keepalive' }, '');
-      } catch {
-        // no-op
-      }
-    }
-  };
-
-  window.addEventListener('popstate', onPopState);
-  return () => {
-    window.removeEventListener('popstate', onPopState);
-  };
-}, []);
+    };
+  }, []);
 
   // ✅ MODIFIÉ : Écran d'erreur de chargement
   if (componentLoadError) {
